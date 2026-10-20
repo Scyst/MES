@@ -119,7 +119,11 @@ $evaluateLearningByTier = function (int $skillCount, ?string $position, ?string 
         || mb_strpos($posUpper, 'บริหาร', 0, 'UTF-8') !== false
         || mb_strpos($posUpper, 'MINI MD', 0, 'UTF-8') !== false
         || mb_strpos($posUpper, 'วิศวกร', 0, 'UTF-8') !== false
-        || mb_strpos($posUpper, 'ENGINEER', 0, 'UTF-8') !== false;
+        || mb_strpos($posUpper, 'ENGINEER', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'ADMIN', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'CREATOR', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'SYSTEM', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'ผู้ดูแลระบบ', 0, 'UTF-8') !== false;
 
     $isTier2 = !$isTier3 && (
         in_array($roleLower, ['supervisor', 'qc', 'maintenance', 'planner'], true)
@@ -535,6 +539,18 @@ try {
 
         $resolvedEmpId = $emp['emp_id'];
 
+        // ค้นหา sys_role ของพนักงานที่กำลังดูจาก dbo.USERS เพื่อให้คำนวณ Tier 3/2/1 ได้แม่นยำตรงกับ get_current_user
+        $targetSysRole = '';
+        $stmtTargetRole = $pdo->prepare("
+            SELECT TOP 1 role
+            FROM dbo.USERS WITH (NOLOCK)
+            WHERE (emp_id = ? AND ? <> '') OR (fullname = ? AND ? <> '') OR (username = ? AND ? <> '')
+            ORDER BY is_active DESC, id ASC
+        ");
+        $empNameTh = trim($emp['name_th'] ?? '');
+        $stmtTargetRole->execute([$resolvedEmpId, $resolvedEmpId, $empNameTh, $empNameTh, $resolvedEmpId, $resolvedEmpId]);
+        $targetSysRole = (string)($stmtTargetRole->fetchColumn() ?: '');
+
         // คอร์สที่บันทึกไว้ใน LEARNING_RECORDS
         $stmtRecords = $pdo->prepare("
             SELECT course_id, course_title, category, status, quiz_score, quiz_total, 
@@ -572,7 +588,7 @@ try {
         }
 
         $effectiveSkillCount = max($skillCount, $passedCoursesCount);
-        $tierEval = $evaluateLearningByTier($effectiveSkillCount, $emp['position'] ?? '', '');
+        $tierEval = $evaluateLearningByTier($effectiveSkillCount, $emp['position'] ?? '', $targetSysRole);
         $systemLearningGrade = $tierEval['grade'];
 
         // ผลการประเมินเกรดล่าสุด

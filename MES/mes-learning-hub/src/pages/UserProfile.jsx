@@ -149,43 +149,48 @@ export default function UserProfile() {
   };
 
   return (
-    <div className="learning-container max-w-6xl py-6 space-y-8">
-      {/* Top Breadcrumb & Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className={`inline-flex items-center gap-2 text-xs sm:text-sm transition-colors ${
-            isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 font-medium'
-          }`}
-        >
-          <FiArrowLeft /> ย้อนกลับ
-        </button>
+    <div className="learning-container py-6 space-y-6">
+      {/* Unified Page Header */}
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
+        <div>
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+            isDark ? 'text-white' : 'text-slate-900'
+          }`}>
+            <FiUser className="text-fuchsia-500 flex-shrink-0" />
+            <span>สมุดพกสมรรถนะและประวัติการฝึกอบรม (Competency Passport)</span>
+          </h1>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            ข้อมูลการรับรองทักษะ ประวัติการทำแบบทดสอบ และความสอดคล้องตามมาตรฐานตำแหน่งงานรายบุคคล
+          </p>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {!currentUserIsMe && (
             <button
               onClick={handleResetToMyProfile}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
                 isDark
                   ? 'bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-300 hover:text-white border-emerald-700/60'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
               }`}
               title="กลับไปดูพาสปอร์ตสมรรถนะและเกรดของบัญชีคุณ"
             >
-              <FiUser className="w-3.5 h-3.5 text-emerald-500" />
-              <span>โปรไฟล์ของฉัน ({currentUser.name})</span>
+              <FiArrowLeft className="w-3.5 h-3.5 text-emerald-500" />
+              <span>กลับไปโปรไฟล์ของฉัน ({currentUser.name})</span>
             </button>
           )}
 
           {/* Employee Directory / Switcher Modal Button */}
           <button
             onClick={() => setIsEmpSelectorOpen(true)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm ${
               isDark
                 ? 'bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 hover:text-white border-indigo-700/60'
                 : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
             }`}
-            title="ค้นหาและตรวจสอบพาสปอร์ตสมรรถนะของพนักงานโรงงานจากฐานข้อมูลจริง 405 คน"
+            title="ค้นหาและตรวจสอบพาสปอร์ตสมรรถนะของพนักงานโรงงานจากฐานข้อมูลจริง"
           >
             <FiUsers className="w-3.5 h-3.5 text-indigo-500" />
             <span>ค้นหาพาสปอร์ตพนักงาน ({employeeDirectory.employees?.length ? `${employeeDirectory.employees.length} คน` : '405 คน'})</span>
@@ -193,70 +198,59 @@ export default function UserProfile() {
 
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm ${
               isDark
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
                 : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300'
             }`}
           >
             <FiPrinter className="w-3.5 h-3.5 text-cyan-500" />
-            <span>พิมพ์พาสปอร์ตสมรรถนะ (Print Passport)</span>
+            <span>พิมพ์พาสปอร์ต</span>
           </button>
         </div>
       </div>
 
       {/* Industrial Plant ID Card / Employee Hero Badge */}
-      <div className={`relative rounded-3xl p-6 sm:p-8 shadow-xl overflow-hidden border transition-all ${
+      <div className={`relative rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden border transition-all ${
         isDark
-          ? 'bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-slate-700/80 shadow-2xl'
-          : 'bg-white border-slate-200 shadow-md'
+          ? 'bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-slate-700/80'
+          : 'bg-white border-slate-200'
       }`}>
-        {/* Ambient Corner Glow */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-fuchsia-600/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
           {/* Avatar and Identity */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="relative flex-shrink-0">
               <img
                 src={employee.avatar || DEFAULT_AVATAR}
                 alt={employee.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-fuchsia-500/60 shadow-xl"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-fuchsia-500/60 shadow-lg"
                 onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
               />
-              <span className="absolute -bottom-2 -right-2 text-2xl sm:text-3xl filter drop-shadow-md" title={rank.name}>
+              <span className="absolute -bottom-1.5 -right-1.5 text-xl sm:text-2xl filter drop-shadow-md" title={rank.name}>
                 {rank.badge}
               </span>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className={`text-xl sm:text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <h2 className={`text-lg sm:text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {employee.name}
-                </h1>
-                <span className={`px-2.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
-                  isDark ? 'bg-slate-800 border border-slate-700 text-fuchsia-400 shadow-inner' : 'bg-slate-100 border border-slate-200 text-fuchsia-700'
+                </h2>
+                <span className={`px-2 py-0.5 rounded-lg font-mono text-xs font-bold ${
+                  isDark ? 'bg-slate-800 border border-slate-700 text-fuchsia-400' : 'bg-slate-100 border border-slate-200 text-fuchsia-700'
                 }`}>
                   {employee.empId}
                 </span>
                 {currentUserIsMe && (
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${
                     isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
                   }`}>
                     บัญชีของคุณ
                   </span>
                 )}
-                {currentUser.isLoggedInReal && currentUserIsMe && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  }`}>
-                    MES Live
-                  </span>
-                )}
               </div>
 
-              <div className={`text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <div className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 {employee.role}
               </div>
 
@@ -267,13 +261,13 @@ export default function UserProfile() {
               </div>
 
               {/* Gamification Rank & EXP Progress Bar */}
-              <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${rank.color} border border-white/20 shadow-sm self-start sm:self-auto`}>
+              <div className="pt-1.5 flex flex-wrap items-center gap-2.5">
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold text-white bg-gradient-to-r ${rank.color} border border-white/20 shadow-sm`}>
                   Lv.{rank.level} {rank.name}
                 </span>
 
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-40 sm:w-48 rounded-full h-2 overflow-hidden border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-200 border-slate-300'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-36 sm:w-44 rounded-full h-2 overflow-hidden border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-200 border-slate-300'}`}>
                     <div
                       className="bg-gradient-to-r from-fuchsia-500 to-amber-400 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${rank.progressPercent}%` }}
@@ -287,114 +281,92 @@ export default function UserProfile() {
             </div>
           </div>
 
-          {/* Right Status Badge */}
-          <div className={`flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-            <div className="text-left lg:text-right">
-              <div className={`text-[11px] font-medium uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                สถานะความสอดคล้อง ISO 9001 Clause 7.2
-              </div>
-              {passport.isAuditReady ? (
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
-                  isDark ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                }`}>
-                  <FiCheck className="w-4 h-4 text-emerald-500" />
-                  <span>สมรรถนะพร้อมรับออดิท 100%</span>
-                </div>
-              ) : (
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
-                  isDark ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
-                }`}>
-                  <FiAlertTriangle className="w-4 h-4 text-amber-500" />
-                  <span>ต้องอบรมเพิ่ม ({passport.skillGaps.length} วิชา)</span>
-                </div>
-              )}
+          {/* Right Status Summary */}
+          <div className={`flex flex-col items-start lg:items-end gap-1.5 w-full lg:w-auto pt-3 lg:pt-0 border-t lg:border-t-0 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              สถานะความสอดคล้องตามเกณฑ์ตำแหน่ง (ISO 9001 Clause 7.2)
             </div>
-
-            <Link
-              to="/audit"
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors ${
-                isDark 
-                  ? 'bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border-slate-700' 
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300 hover:border-slate-400 shadow-sm'
-              }`}
-            >
-              <FiShield className="w-3.5 h-3.5 text-cyan-500" />
-              <span>เปิดตรวจสอบใน Audit Matrix</span>
-            </Link>
+            {passport.isAuditReady ? (
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
+                isDark ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+              }`}>
+                <FiCheck className="w-4 h-4 text-emerald-500" />
+                <span>สมรรถนะพร้อมรับออดิท 100%</span>
+              </div>
+            ) : (
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
+                isDark ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
+              }`}>
+                <FiAlertTriangle className="w-4 h-4 text-amber-500" />
+                <span>ต้องอบรมเพิ่ม ({passport.skillGaps.length} วิชาบังคับ)</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 4-Dimension Manpower Employee Grading Matrix Card (Strictly Admin / Manager / Creator Only) */}
       {canViewGrading && activeGrading && (
-      <div className={`relative rounded-3xl p-6 sm:p-7 shadow-xl overflow-hidden border transition-all ${
+      <div className={`relative rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden border transition-all ${
         isDark 
-          ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/40 border-indigo-500/30 shadow-indigo-950/20' 
-          : 'bg-white border-indigo-100 shadow-lg shadow-indigo-100/50'
+          ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/30 border-indigo-500/30' 
+          : 'bg-white border-indigo-100'
       }`}>
         {/* Top Header of Grading Card */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5 ${
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 ${
           isDark ? 'border-slate-700/60' : 'border-slate-200'
         }`}>
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 border ${
-                isDark ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-              }`}>
-                <FiActivity className="w-3.5 h-3.5 text-indigo-500" />
-                <span>ผลการประเมินเกรดพนักงาน 4 มิติ (Manpower 4D Grading Matrix)</span>
-              </span>
-              <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md ${
-                isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
-              }`}>
-                รอบประเมิน: {activeGrading.evaluation_period || '2026-10'}
-              </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <FiActivity className="w-4 h-4 text-indigo-500" />
+              <h2 className={`text-base sm:text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                ผลการประเมินเกรดสมรรถนะ 4 มิติ (ผู้บริหาร)
+              </h2>
             </div>
-            <h2 className={`text-lg sm:text-xl font-black flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              <span>ระดับเกรดสมรรถนะรวม:</span>
-              <span className={`px-3 py-0.5 rounded-xl font-black text-xl border ${
-                (activeGrading.grade_overall === 'A') 
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
-                  : (activeGrading.grade_overall === 'B')
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                    : (activeGrading.grade_overall === 'C')
-                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                      : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-              }`}>
-                Grade {activeGrading.grade_overall || 'B'}
-              </span>
-            </h2>
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              เชื่อมโยงข้อมูลสดแบบ Two-Way กับระบบ Manpower Grading และ SQL Server (<code className="font-mono text-cyan-400">dbo.EMP_SKILLS</code> และ <code className="font-mono text-indigo-400">dbo.EMPLOYEE_GRADES</code>)
-            </p>
+            <span className={`px-3 py-0.5 rounded-xl font-black text-sm border ${
+              (activeGrading.grade_overall === 'A') 
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                : (activeGrading.grade_overall === 'B')
+                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                  : (activeGrading.grade_overall === 'C')
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                    : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+            }`}>
+              เกรดรวม: {activeGrading.grade_overall || 'B'}
+            </span>
+            <span className={`text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg ${
+              isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+            }`}>
+              งวด {activeGrading.evaluation_period || '2026-10'}
+            </span>
           </div>
 
           <a
             href="../MES/MES/page/manpower/employeeGrading.php"
             target="_blank"
             rel="noopener noreferrer"
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-2 transition-all shadow-sm self-start sm:self-auto ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm self-start sm:self-auto ${
               isDark
                 ? 'bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white border-indigo-700/50'
                 : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
             }`}
           >
-            <span>ระบบตัดเกรดหลัก (MES)</span>
+            <span>เปิดหน้าต่างประเมินเกรดหลัก</span>
             <FiExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
 
         {/* 4 Dimension Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4">
           {/* Dimension 1: IPH */}
-          <div className={`rounded-2xl p-4 border transition-all ${
+          <div className={`rounded-xl p-3.5 border transition-all ${
             isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
           }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 1. รายได้ต่อหัว (IPH)
               </span>
-              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
                 activeGrading.grade_iph === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
                 activeGrading.grade_iph === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
                 activeGrading.grade_iph === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
@@ -403,23 +375,23 @@ export default function UserProfile() {
                 Grade {activeGrading.grade_iph || 'B'}
               </span>
             </div>
-            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              ประสิทธิภาพการผลิตเทียบอัตราต้นทุนค่าแรงของพนักงาน (Income Per Head Ratio)
+            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              ประสิทธิภาพการผลิตเทียบต้นทุนแรงงาน
             </div>
-            <div className={`mt-3 text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              เกณฑ์: Ratio ≥ 2.0 (A) / ≥ 1.5 (B) / ≥ 1.0 (C)
+            <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              เกณฑ์: Ratio ≥ 2.0 (A) · ≥ 1.5 (B) · ≥ 1.0 (C)
             </div>
           </div>
 
           {/* Dimension 2: 5S Audit */}
-          <div className={`rounded-2xl p-4 border transition-all ${
+          <div className={`rounded-xl p-3.5 border transition-all ${
             isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
           }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 2. การตรวจ 5 ส (5S Audit)
               </span>
-              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
                 activeGrading.grade_5s === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
                 activeGrading.grade_5s === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
                 activeGrading.grade_5s === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
@@ -428,23 +400,23 @@ export default function UserProfile() {
                 Grade {activeGrading.grade_5s || 'A'}
               </span>
             </div>
-            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              สุขอนามัย ความเป็นระเบียบ และการคัดแยกในพื้นที่ปฏิบัติงาน (Seiri, Seiton, Seiso)
+            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              ความเป็นระเบียบและความปลอดภัยพื้นที่งาน
             </div>
-            <div className={`mt-3 text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              เกณฑ์: คะแนน 85+ (A) / 70+ (B) / 55+ (C)
+            <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              เกณฑ์: คะแนน ≥ 85 (A) · ≥ 70 (B) · ≥ 55 (C)
             </div>
           </div>
 
           {/* Dimension 3: Attendance */}
-          <div className={`rounded-2xl p-4 border transition-all ${
+          <div className={`rounded-xl p-3.5 border transition-all ${
             isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
           }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 3. การมาทำงาน (Attendance)
               </span>
-              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
                 activeGrading.grade_attendance === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
                 activeGrading.grade_attendance === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
                 activeGrading.grade_attendance === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
@@ -453,26 +425,26 @@ export default function UserProfile() {
                 Grade {activeGrading.grade_attendance || 'A'}
               </span>
             </div>
-            <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              ความตรงต่อเวลาและการปฏิบัติตามวินัยกะ (นับรวมวันมาสายและวันขาดงาน)
+            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              ความตรงต่อเวลาและวินัยการทำงานรายเดือน
             </div>
-            <div className={`mt-3 text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              เกณฑ์: สาย/ขาด ≤ 0 วัน (A) / ≤ 1 วัน (B) / ≤ 3 วัน (C)
+            <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              เกณฑ์: สาย/ขาด 0 วัน (A) · ≤ 1 วัน (B) · ≤ 3 วัน (C)
             </div>
           </div>
 
-          {/* Dimension 4: Learning & Skills (MES Learning Hub Direct Sync) */}
-          <div className={`rounded-2xl p-4 border relative overflow-hidden transition-all ${
+          {/* Dimension 4: Learning & Skills */}
+          <div className={`rounded-xl p-3.5 border relative overflow-hidden transition-all ${
             isDark 
-              ? 'bg-gradient-to-br from-indigo-900/40 to-fuchsia-900/30 border-indigo-400/50 shadow-md' 
-              : 'bg-gradient-to-br from-indigo-50 to-fuchsia-50/50 border-indigo-300 shadow-sm'
+              ? 'bg-gradient-to-br from-indigo-900/40 to-fuchsia-900/30 border-indigo-400/50' 
+              : 'bg-gradient-to-br from-indigo-50 to-fuchsia-50/50 border-indigo-300'
           }`}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <span className={`text-xs font-black flex items-center gap-1.5 ${isDark ? 'text-indigo-300' : 'text-indigo-900'}`}>
-                <span>4. ทักษะ & การเรียนรู้</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Live Auto-Grading"></span>
+                <span>4. ทักษะ &amp; การเรียนรู้</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="ซิงค์อัตโนมัติ"></span>
               </span>
-              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black shadow-sm border ${
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
                 activeGrading.grade_learning === 'A' ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400' :
                 activeGrading.grade_learning === 'B' ? 'bg-blue-500/25 text-blue-300 border-blue-400' :
                 activeGrading.grade_learning === 'C' ? 'bg-amber-500/25 text-amber-300 border-amber-400' :
@@ -482,22 +454,13 @@ export default function UserProfile() {
               </span>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ทักษะรับรอง / เป้าเกรด A:</span>
-                <span className="font-mono text-cyan-400 font-black">
-                  {activeGrading.skill_count || 0}/{activeGrading.learning_target_a || 3} ทักษะ
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>คอร์สที่สอบผ่าน (≥ 80%):</span>
-                <span className="font-mono text-fuchsia-400 font-black">{activeGrading.passed_courses || passport.totalPassedCount || 0} คอร์ส</span>
-              </div>
+            <div className={`text-[11px] flex items-center justify-between ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <span>ทักษะสะสม / เป้าเกรด A:</span>
+              <strong className="font-mono text-cyan-400">{activeGrading.skill_count || 0} / {activeGrading.learning_target_a || 3} ทักษะ</strong>
             </div>
 
-            <div className={`mt-2.5 pt-2 border-t text-[10px] leading-tight space-y-0.5 ${isDark ? 'border-indigo-500/20 text-indigo-200/80' : 'border-indigo-200 text-indigo-900'}`}>
-              <div className="font-bold text-amber-400">{activeGrading.learning_tier_name || 'เกณฑ์ตามระดับตำแหน่ง (3-Tier)'}</div>
-              <div>{activeGrading.learning_criteria_label || 'A ≥ 3 (ปฏิบัติการ) · A ≥ 5 (หัวหน้า/เทคนิค) · A ≥ 8 (บริหาร/วิศวกร)'}</div>
+            <div className={`mt-2 text-[11px] font-semibold truncate ${isDark ? 'text-amber-300' : 'text-indigo-900'}`} title={activeGrading.learning_tier_name}>
+              {activeGrading.learning_tier_name || 'เกณฑ์ตามระดับตำแหน่ง (3-Tier)'}
             </div>
           </div>
         </div>
@@ -1045,7 +1008,7 @@ export default function UserProfile() {
                     ทำเนียบพนักงานโรงงาน (Factory Employee Roster)
                   </h3>
                   <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    เลือกพนักงานเพื่อดูสมุดพาสปอร์ตสมรรถนะและเกรด 4 มิติจากฐานข้อมูลจริง <span className="font-mono text-cyan-400">dbo.MANPOWER_EMPLOYEES</span>
+                    เลือกพนักงานเพื่อตรวจสอบสมุดพกสมรรถนะและประวัติการฝึกอบรมรายบุคคล
                   </p>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { FiBook, FiAward, FiUsers, FiLayers, FiPlus, FiTool, FiShield, FiSun, FiMoon, FiLock, FiLogIn, FiLogOut } from 'react-icons/fi';
+import { FiBook, FiAward, FiUsers, FiLayers, FiShield, FiSun, FiMoon, FiLock, FiLogIn, FiLogOut } from 'react-icons/fi';
 import { getCurrentUser, calculateRank, fetchRealUserSession, getMesLoginUrl, logoutFromMes } from '../../data/communityStore';
 import { DEFAULT_AVATAR } from '../../data/offlineAssets';
 import { useTheme } from '../../context/ThemeContext';
@@ -154,35 +154,6 @@ export default function Navbar() {
 
         {/* Right User Status & Actions */}
         <div className="flex items-center gap-2">
-          {isAuthenticated && (
-            <>
-              <Link
-                to="/admin/course-builder"
-                className={`hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                  isDark 
-                    ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
-                    : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
-                }`}
-                title="สร้างหลักสูตรมาตรฐานโรงงาน (Admin Studio)"
-              >
-                <FiTool className={`w-3.5 h-3.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
-                <span>สร้างหลักสูตร</span>
-              </Link>
-
-              <Link
-                to="/community/new"
-                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
-                    : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
-                }`}
-              >
-                <FiPlus className={`w-3.5 h-3.5 ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-600'}`} />
-                <span>เขียนบทเรียน</span>
-              </Link>
-            </>
-          )}
-
           {/* Theme Switcher (Dark / Light) */}
           <button
             type="button"
@@ -296,4 +267,3 @@ export default function Navbar() {
     </nav>
   );
 }
-

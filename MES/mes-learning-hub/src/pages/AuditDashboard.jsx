@@ -121,32 +121,35 @@ export default function AuditDashboard() {
   };
 
   return (
-    <div className="learning-container max-w-7xl py-6 space-y-8">
-      {/* Page Header */}
-      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-6 ${
+    <div className="learning-container py-6 space-y-6">
+      {/* Unified Page Header */}
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className={`px-2.5 py-0.5 rounded-md border text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              isDark ? 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-300'
-            }`}>
-              <FiShield className="w-3.5 h-3.5" /> ISO 9001 Clause 7.2 & IATF 16949
-            </span>
-            <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>ระบบบริหารสมรรถนะบุคลากรโรงงาน</span>
-          </div>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
-            <span>ระบบติดตามผลการฝึกอบรมและตรวจรับรอง (Training Audit Matrix)</span>
+            <FiShield className="text-emerald-500 flex-shrink-0" />
+            <span>ติดตามผลการฝึกอบรมและตรวจรับรอง (Training Audit Matrix)</span>
           </h1>
-          <p className={`text-sm mt-1 max-w-3xl leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            ศูนย์รวมข้อมูลประวัติการอบรม ผลการทดสอบ (Quiz Evaluation) อัตราความสอดคล้องตามข้อกำหนด 
-            และการวิเคราะห์ทักษะสองมิติ (มุมมองหลักสูตร vs มุมมองพนักงาน) เพื่อรองรับการตรวจรับรองคุณภาพ
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            ศูนย์รวมประวัติการอบรม ผลการทดสอบ และอัตราความสอดคล้องตามข้อกำหนด ISO 9001 Clause 7.2 &amp; IATF 16949
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {liveAuditData && (
+            <div className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs font-semibold ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="เชื่อมต่อข้อมูลจริงแล้ว"></span>
+              <span>บุคลากร <strong className="text-cyan-400 font-black">{liveAuditData.total_employees}</strong> คน</span>
+              <span className={isDark ? 'text-slate-600' : 'text-slate-300'}>|</span>
+              <span>รับรองแล้ว <strong className="text-emerald-400 font-black">{liveAuditData.total_certifications}</strong> ใบ</span>
+            </div>
+          )}
+
           <button
             onClick={() => setIsPrintModalOpen(true)}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border shadow-sm flex items-center gap-2 hover:-translate-y-0.5 ${
@@ -157,79 +160,47 @@ export default function AuditDashboard() {
             title="พิมพ์รายงานรับรองการฝึกอบรมสำหรับ Auditor"
           >
             <FiPrinter className="w-4 h-4 text-cyan-500" />
-            <span>พิมพ์รายงานออดิท (Print Audit Evidence)</span>
+            <span>พิมพ์รายงานออดิท</span>
           </button>
         </div>
       </div>
 
-      {/* Live MES SQL Server Integration Status Banner */}
-      {liveAuditData && (
-        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${
-          isDark 
-            ? 'bg-gradient-to-r from-cyan-950/40 via-slate-900 to-indigo-950/40 border-cyan-500/30 text-slate-300' 
-            : 'bg-gradient-to-r from-cyan-50 via-white to-indigo-50 border-cyan-200 text-slate-800'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-600/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 flex-shrink-0">
-              <FiDatabase className="w-4 h-4" />
-            </div>
-            <div className="text-xs">
-              <div className="font-bold flex items-center gap-2">
-                <span>เชื่อมโยงข้อมูลสดกับ MES IIOT_TOOLBOX Database</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              </div>
-              <div className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                พนักงานในระบบ {liveAuditData.total_employees} คน · ได้รับการรับรองแล้ว {liveAuditData.certified_employees} คน ({liveAuditData.total_certifications} ใบรับรอง) · คะแนนเฉลี่ย {liveAuditData.avg_score}%
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
-              dbo.LEARNING_RECORDS & dbo.EMP_SKILLS
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Perspective Tabs Switcher */}
-      <div className={`flex items-center gap-2 border-b pb-2 overflow-x-auto ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab('course')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'course'
-              ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-lg shadow-fuchsia-600/20'
+              ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-600/20'
               : (isDark ? 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60' : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 shadow-sm')
           }`}
         >
           <FiLayers className="w-4 h-4" />
-          <span>มุมมองตามหลักสูตร (Course-Centric View)</span>
+          <span>มุมมองตามหลักสูตร (Course View)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('employee')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'employee'
-              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/20'
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20'
               : (isDark ? 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60' : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 shadow-sm')
           }`}
         >
           <FiUser className="w-4 h-4" />
-          <span>มุมมองตามพนักงาน (Competency Passport)</span>
+          <span>มุมมองตามพนักงาน (Employee View)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'overview'
-              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-600/20'
+              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-600/20'
               : (isDark ? 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60' : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 shadow-sm')
           }`}
         >
           <FiBarChart2 className="w-4 h-4" />
-          <span>ภาพรวมโรงงาน & เตือนต่ออายุ (Analytics & Alerts)</span>
+          <span>ภาพรวมโรงงาน &amp; แจ้งเตือนต่ออายุ</span>
         </button>
       </div>
 

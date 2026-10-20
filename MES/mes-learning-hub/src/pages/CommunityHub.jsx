@@ -13,16 +13,12 @@ import {
   FiSearch, 
   FiHeart, 
   FiMessageSquare, 
-  FiEye, 
   FiClock, 
-  FiAward, 
   FiX, 
-  FiTrendingUp,
   FiCompass,
   FiBookOpen,
   FiStar,
-  FiImage,
-  FiShield
+  FiUsers
 } from 'react-icons/fi';
 
 const COMMUNITY_CATEGORIES = [
@@ -52,8 +48,6 @@ export default function CommunityHub() {
     setPosts(getCommunityPosts());
   }, []);
 
-  const rank = useMemo(() => calculateRank(currentUser.exp), [currentUser.exp]);
-
   const filteredPosts = useMemo(() => {
     return posts.filter(post => {
       const matchCat = selectedCategory === 'ทั้งหมด' || post.category === selectedCategory;
@@ -68,131 +62,53 @@ export default function CommunityHub() {
   }, [posts, selectedCategory, searchQuery]);
 
   return (
-    <div className="learning-container">
-      {/* User Gamification & Level Status Card */}
-      <div className={`border rounded-2xl p-6 mb-8 shadow-sm ${
-        isDark 
-          ? 'bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700 shadow-lg shadow-black/20' 
-          : 'bg-gradient-to-r from-slate-50 via-white to-slate-50 border-slate-200 text-slate-800'
+    <div className="learning-container py-6 space-y-6">
+      {/* Unified Page Header */}
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <img 
-                src={currentUser.avatar || DEFAULT_AVATAR} 
-                alt={currentUser.name} 
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-fuchsia-500/50 shadow-md"
-                onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
-              />
-              <span className="absolute -bottom-1 -right-1 text-xl" title={rank.name}>
-                {rank.badge}
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`font-bold text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>{currentUser.name}</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${rank.color} border border-white/20 shadow-sm`}>
-                  Lv.{rank.level} {rank.name}
-                </span>
-                {currentUser.isLoggedInReal && (
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                    isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                  }`}>
-                    MES Live
-                  </span>
-                )}
-              </div>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{currentUser.role} · {currentUser.emp_id}</p>
-              
-              {/* EXP Progress Bar */}
-              <div className="mt-2.5 flex items-center gap-3">
-                <div className={`w-48 rounded-full h-2.5 overflow-hidden border ${
-                  isDark ? 'bg-slate-700/80 border-slate-600' : 'bg-slate-200 border-slate-300'
-                }`}>
-                  <div 
-                    className="bg-gradient-to-r from-fuchsia-500 to-amber-400 h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${rank.progressPercent}%` }}
-                  ></div>
-                </div>
-                <span className={`text-[11px] font-mono font-bold ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
-                  {currentUser.exp} EXP
-                  {rank.nextRank && <span className={isDark ? 'text-slate-400 font-normal' : 'text-slate-500 font-normal'}> (ขาดอีก {rank.expNeeded} EXP สู่ Lv.{rank.nextRank.level})</span>}
-                </span>
-              </div>
-            </div>
+        <div>
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+            isDark ? 'text-white' : 'text-slate-900'
+          }`}>
+            <FiUsers className="text-cyan-500 flex-shrink-0" />
+            <span>คลังความรู้ชุมชน &amp; ทริคหน้างาน (Community Hub)</span>
+          </h1>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            พื้นที่แลกเปลี่ยนประสบการณ์จริง คู่มือเครื่องจักร วิธีแก้ปัญหา และเทคนิคการทำงานจากเพื่อนร่วมงานทุกแผนก
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className={`text-xs font-semibold px-4 py-2 rounded-xl border ${
+            isDark 
+              ? 'text-slate-300 bg-slate-800/80 border-slate-700/80' 
+              : 'text-slate-700 bg-white border-slate-200 shadow-sm'
+          }`}>
+            บทเรียนหน้างาน <strong className="text-fuchsia-500 font-black">{posts.length}</strong> เรื่อง
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => navigate('/community/new')}
-              className="px-5 py-3 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-fuchsia-600/30 inline-flex items-center gap-2 hover:-translate-y-0.5"
-            >
-              <FiPlus className="w-5 h-5" />
-              <span>เขียนบทเรียน / แชร์ความรู้</span>
-              <span className="bg-black/30 px-1.5 py-0.5 rounded text-[10px] text-amber-300 font-mono">+50 EXP</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/profile')}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2 border ${
-                isDark 
-                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white' 
-                  : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
-              }`}
-              title="ดูประวัติการอบรมและสมรรถนะ (Competency Passport)"
-            >
-              <FiShield className="w-4 h-4 text-cyan-500" />
-              <span className="hidden sm:inline">โปรไฟล์ &amp; สมรรถนะ</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/ranks')}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-2 border ${
-                isDark 
-                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white' 
-                  : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
-              }`}
-              title="ดูทำเนียบยศและคะแนนพนักงาน"
-            >
-              <FiAward className="w-4 h-4 text-amber-500" />
-              <span className="hidden sm:inline">ทำเนียบยศ</span>
-            </button>
-          </div>
+          <button
+            onClick={() => navigate('/community/new')}
+            className="px-4 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-fuchsia-600/20 inline-flex items-center gap-2 hover:-translate-y-0.5"
+          >
+            <FiPlus className="w-4 h-4" />
+            <span>เขียนบทเรียน / แชร์ความรู้</span>
+            <span className="bg-black/30 px-1.5 py-0.5 rounded text-[10px] text-amber-300 font-mono">+50 EXP</span>
+          </button>
         </div>
       </div>
 
-      {/* Header & Search */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-          <div>
-            <h2 className={`text-2xl md:text-3xl font-black mb-1 ${
-              isDark ? 'text-white' : 'text-slate-900'
-            }`}>
-              คลังความรู้ชุมชน &amp; ทริคหน้างาน
-            </h2>
-            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              พื้นที่แลกเปลี่ยนประสบการณ์จริง คู่มือเครื่องจักร วิธีแก้ปัญหา และเทคนิคการทำงานจากเพื่อนร่วมงานทุกแผนก
-            </p>
-          </div>
-
-          <div className={`text-xs font-semibold px-4 py-2 rounded-xl border self-start md:self-auto ${
-            isDark 
-              ? 'text-slate-400 bg-slate-800/80 border-slate-700/80' 
-              : 'text-slate-700 bg-white border-slate-200 shadow-sm'
-          }`}>
-            มีบทเรียนทั้งหมด <span className="text-fuchsia-600 font-bold">{posts.length}</span> เรื่อง
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative max-w-xl mb-4">
-          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+      {/* Unified Search & Category Filter Bar */}
+      <div className="space-y-3">
+        <div className="relative max-w-xl">
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
           <input 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ค้นหาทริคหน้างาน, ชื่อเครื่องจักร, ปัญหาที่พบ, ผู้เขียน..."
-            className={`w-full border rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm ${
+            className={`w-full border rounded-xl pl-11 pr-10 py-2.5 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm ${
               isDark 
                 ? 'bg-slate-800/90 border-slate-700 text-slate-200 placeholder-slate-400' 
                 : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
@@ -204,6 +120,7 @@ export default function CommunityHub() {
               className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
                 isDark ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
+              title="ล้างข้อความค้นหา"
             >
               <FiX className="w-4 h-4" />
             </button>
@@ -211,7 +128,7 @@ export default function CommunityHub() {
         </div>
 
         {/* Categories Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-700">
           {COMMUNITY_CATEGORIES.map(category => {
             const count = category === 'ทั้งหมด' 
               ? posts.length 
@@ -221,7 +138,7 @@ export default function CommunityHub() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none border ${
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none border ${
                   isActive
                     ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-500/20 border-transparent'
                     : (isDark 
@@ -278,7 +195,7 @@ export default function CommunityHub() {
                     </div>
                   )}
 
-                  <div className="p-6">
+                  <div className="p-5">
                     {/* Category & Date */}
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md border truncate ${
@@ -311,7 +228,7 @@ export default function CommunityHub() {
                     </p>
 
                     {/* Steps preview badge */}
-                    <div className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg border mb-2 ${
+                    <div className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg border ${
                       isDark 
                         ? 'text-slate-300 bg-slate-900/60 border-slate-700/60' 
                         : 'text-slate-700 bg-slate-100 border-slate-200'
@@ -323,7 +240,7 @@ export default function CommunityHub() {
                 </div>
 
                 {/* Footer: Author & Social Metrics */}
-                <div className={`px-6 pb-5 pt-3 border-t flex items-center justify-between gap-3 ${
+                <div className={`px-5 pb-4 pt-3 border-t flex items-center justify-between gap-3 ${
                   isDark ? 'border-slate-700/80 bg-slate-800/40' : 'border-slate-100 bg-slate-50'
                 }`}>
                   <div 

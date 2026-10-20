@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { getAllMergedCourses, getCurrentUser } from '../data/communityStore';
 import { getUserCourseStatus } from '../data/trainingAuditStore';
 import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
@@ -9,14 +10,13 @@ import {
   FiPlayCircle, 
   FiSearch, 
   FiLayers, 
-  FiCheckCircle, 
-  FiBookOpen,
   FiX,
   FiPlus,
   FiAward,
   FiStar,
   FiEdit2,
-  FiCheck
+  FiCheck,
+  FiTool
 } from 'react-icons/fi';
 
 const CATEGORIES = [
@@ -30,6 +30,7 @@ const CATEGORIES = [
 ];
 
 export default function Catalog() {
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,84 +83,101 @@ export default function Catalog() {
   }, [allCourses]);
 
   return (
-    <div className="learning-container">
-      {/* Hero Header */}
-      <div className="header-section">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4">
-          <div>
-            <h1>MES Learning Hub</h1>
-            <p className="subtitle text-slate-400 mt-1">
-              คลังคู่มือปฏิบัติงาน ระบบงาน และสื่อการเรียนรู้สำหรับพนักงาน
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Quick Metrics Bar */}
-            <div className="flex items-center gap-3 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 shadow-inner flex-shrink-0">
-              <div className="px-3 py-1.5 text-center border-r border-slate-700">
-                <div className="text-xl font-black text-fuchsia-400">{allCourses.length}</div>
-                <div className="text-[11px] font-medium text-slate-400">หลักสูตร</div>
-              </div>
-              <div className="px-3 py-1.5 text-center border-r border-slate-700">
-                <div className="text-xl font-black text-cyan-400">{totalModulesCount}</div>
-                <div className="text-[11px] font-medium text-slate-400">บทเรียน</div>
-              </div>
-              <div className="px-3 py-1.5 text-center">
-                <div className="text-xl font-black text-emerald-400">All Roles</div>
-                <div className="text-[11px] font-medium text-slate-400">ทุกแผนก</div>
-              </div>
-            </div>
-          </div>
+    <div className="learning-container py-6 space-y-6">
+      {/* Unified Page Header */}
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
+        <div>
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2.5 ${
+            isDark ? 'text-white' : 'text-slate-900'
+          }`}>
+            <FiLayers className="text-fuchsia-500 flex-shrink-0" />
+            <span>หลักสูตรมาตรฐานโรงงาน (Standard Curriculum)</span>
+          </h1>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            คลังคู่มือปฏิบัติงาน ระบบเครื่องจักร มาตรฐานคุณภาพ และสื่อการเรียนรู้เพื่อรับรองสมรรถนะพนักงาน
+          </p>
         </div>
 
-        {/* Search & Filter Controls */}
-        <div className="space-y-4">
-          {/* Search Box */}
-          <div className="relative max-w-xl">
-            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาคู่มือเครื่องจักร, โปรแกรมระบบ, SOP, ขั้นตอนการทำงาน, มาตรฐาน ISO, ผู้สอน..."
-              className="w-full bg-slate-800/90 border border-slate-700 text-slate-200 placeholder-slate-400 rounded-xl pl-12 pr-10 py-3 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                title="ล้างข้อความค้นหา"
-              >
-                <FiX className="w-4 h-4" />
-              </button>
-            )}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Compact Stats Pill */}
+          <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border text-xs font-semibold ${
+            isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
+          }`}>
+            <span>หลักสูตร <strong className="text-fuchsia-500 font-black">{allCourses.length}</strong> วิชา</span>
+            <span className={isDark ? 'text-slate-600' : 'text-slate-300'}>|</span>
+            <span>เนื้อหา <strong className="text-cyan-500 font-black">{totalModulesCount}</strong> บทเรียน</span>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {CATEGORIES.map(category => {
-              const count = categoryCounts[category] || 0;
-              const isActive = selectedCategory === category;
-              return (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
-                    isActive
-                      ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-500/20'
-                      : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700/80'
-                  }`}
-                >
-                  <span>{category}</span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    isActive ? 'bg-black/30 text-white' : 'bg-slate-700 text-slate-300'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {currentUser?.isLoggedInReal && (
+            <button
+              type="button"
+              onClick={() => navigate('/admin/course-builder')}
+              className="px-4 py-2.5 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-fuchsia-600/20 inline-flex items-center gap-2 hover:-translate-y-0.5"
+              title="สร้างหรือจัดการหลักสูตรมาตรฐานโรงงาน"
+            >
+              <FiPlus className="w-4 h-4" />
+              <span>สร้างหลักสูตรใหม่</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Unified Search & Category Filter Bar */}
+      <div className="space-y-3">
+        <div className="relative max-w-xl">
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="ค้นหาคู่มือเครื่องจักร, โปรแกรมระบบ, SOP, มาตรฐาน ISO, ผู้สอน..."
+            className={`w-full border rounded-xl pl-11 pr-10 py-2.5 text-sm focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-colors shadow-sm ${
+              isDark 
+                ? 'bg-slate-800/90 border-slate-700 text-slate-200 placeholder-slate-400' 
+                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+            }`}
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+              title="ล้างข้อความค้นหา"
+            >
+              <FiX className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {CATEGORIES.map(category => {
+            const count = categoryCounts[category] || 0;
+            const isActive = selectedCategory === category;
+            return (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none border ${
+                  isActive
+                    ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-500/20 border-transparent'
+                    : (isDark 
+                        ? 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border-slate-700/80' 
+                        : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border-slate-200 shadow-sm')
+                }`}
+              >
+                <span>{category}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  isActive 
+                    ? 'bg-black/30 text-white' 
+                    : (isDark ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-700 font-semibold')
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
