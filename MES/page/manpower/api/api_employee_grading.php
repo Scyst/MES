@@ -5,8 +5,9 @@ require_once __DIR__ . '/../../components/init.php';
 
 header('Content-Type: application/json');
 
-if (!hasPermission('manage_manpower')) {
-    echo json_encode(['success' => false, 'message' => 'Permission denied.']);
+if (!hasRole(['creator', 'admin', 'manager']) || !hasPermission('manage_manpower')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access denied. Employee Grading is restricted to Admin and Manager level only.']);
     exit;
 }
 
@@ -252,19 +253,47 @@ try {
                 }
             }
             
-            // Calculate System Learning Grade from skill count and passed courses
+            // Calculate System Learning Grade using 3-Tier Position Criteria
+            // Tier 1 (Operator / พนักงานทั่วไป): A >= 3, B = 2, C = 1
+            // Tier 2 (Supervisor / หัวหน้าแผนก / ช่างเทคนิค): A >= 5, B = 3-4, C = 1-2
+            // Tier 3 (Executive / ผู้จัดการ / Mini MD / วิศวกร): A >= 8, B = 5-7, C = 2-4
             $skillCount = (int)($emp['skill_count'] ?? 0);
             $passedCourses = (int)($emp['passed_courses'] ?? 0);
             $effectiveLearningCount = max($skillCount, $passedCourses);
-            $learningGrade = 'N/A';
-            if ($effectiveLearningCount >= 5) {
-                $learningGrade = 'A';
-            } elseif ($effectiveLearningCount >= 3) {
-                $learningGrade = 'B';
-            } elseif ($effectiveLearningCount >= 1) {
-                $learningGrade = 'C';
+
+            $posUpper = mb_strtoupper(trim($emp['position'] ?? ''), 'UTF-8');
+            $isTier3 = mb_strpos($posUpper, 'ผู้จัดการ', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'บริหาร', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'MINI MD', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'วิศวกร', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'ENGINEER', 0, 'UTF-8') !== false;
+
+            $isTier2 = !$isTier3 && (
+                mb_strpos($posUpper, 'หัวหน้า', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'SUPERVISOR', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'LEADER', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'SPECIAL', 0, 'UTF-8') !== false
+                || mb_strpos($posUpper, 'เทคนิค', 0, 'UTF-8') !== false
+            );
+
+            if ($isTier3) {
+                $lrnTargetA = 8; $lrnTargetB = 5; $lrnTargetC = 2;
+                $lrnTierName = 'ระดับบริหาร/วิศวกร (เกณฑ์ A≥8, B≥5, C≥2)';
+            } elseif ($isTier2) {
+                $lrnTargetA = 5; $lrnTargetB = 3; $lrnTargetC = 1;
+                $lrnTierName = 'ระดับหัวหน้างาน/เทคนิค (เกณฑ์ A≥5, B≥3, C≥1)';
             } else {
-                $learningGrade = 'D';
+                $lrnTargetA = 3; $lrnTargetB = 2; $lrnTargetC = 1;
+                $lrnTierName = 'ระดับปฏิบัติการทั่วไป (เกณฑ์ A≥3, B=2, C=1)';
+            }
+
+            $learningGrade = 'D';
+            if ($effectiveLearningCount >= $lrnTargetA) {
+                $learningGrade = 'A';
+            } elseif ($effectiveLearningCount >= $lrnTargetB) {
+                $learningGrade = 'B';
+            } elseif ($effectiveLearningCount >= $lrnTargetC) {
+                $learningGrade = 'C';
             }
 
             $results[] = [
@@ -287,6 +316,8 @@ try {
                 'score_5s'                 => (int)($emp['score_5s'] ?? 0),
                 'skill_count'              => $effectiveLearningCount,
                 'passed_courses'           => $passedCourses,
+                'learning_target_a'        => $lrnTargetA,
+                'learning_tier_name'       => $lrnTierName,
                 'system_grade_learning'    => $learningGrade,
                 'grade'                    => $emp['grade'] ?? '',
                 'grade_iph'                => $emp['grade_iph'] ?? '',

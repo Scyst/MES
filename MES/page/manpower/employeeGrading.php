@@ -2,8 +2,8 @@
 // page/manpower/employeeGrading.php
 require_once __DIR__ . '/../components/init.php';
 
-// Only Admin/Executive or Manpower Manager can view this
-if (!hasPermission('manage_manpower')) {
+// Strictly restricted to Admin / Manager / Creator level (Confidential Evaluation & Bonus Data)
+if (!hasRole(['creator', 'admin', 'manager']) || !hasPermission('manage_manpower')) {
     header("Location: ../dailyLog/dailyLogUI.php");
     exit;
 }
@@ -141,6 +141,10 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                     <div class="vr mx-1 text-muted opacity-25 my-1"></div>
                     
                     <div class="d-flex align-items-center ms-auto">
+                        <button class="btn btn-light btn-sm text-primary fw-bold rounded-pill shadow-sm d-flex align-items-center justify-content-center px-3 me-2 border border-primary border-opacity-25" style="height: 32px; font-size: 0.8rem;" data-bs-toggle="modal" data-bs-target="#gradingFormulaModal" title="คู่มือสูตรการคำนวณและเกณฑ์การตัดเกรด 4 มิติ">
+                            <i class="fas fa-calculator me-1"></i> สูตร & เกณฑ์ตัดเกรด
+                        </button>
+
                         <button class="btn btn-light btn-sm text-secondary rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; padding: 0;" data-bs-toggle="modal" data-bs-target="#analyticsModal" title="Open Analytics">
                             <i class="fas fa-chart-pie"></i>
                         </button>
@@ -278,11 +282,11 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                                         Total Wage 
                                         <i class="fas fa-eye-slash ms-1 text-muted" id="thWageEyeToggle" style="cursor: pointer;" onclick="event.stopPropagation(); App.toggleWageVisibility()" title="Show/Hide Wage"></i>
                                     </th>
-                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_iph" role="button">IPH <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_5s" role="button">5S <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_attendance" role="button">Attd <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_learning" role="button">Learn <i class="fas fa-sort text-muted ms-1"></i></th>
-                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_overall" role="button">Overall <i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_iph" role="button" title="มิติที่ 1: รายได้ต่อหัวเทียบค่าแรง (IPH Ratio = Income / Total Wage)">IPH <i class="fas fa-info-circle text-primary opacity-50 small ms-1"></i><i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_5s" role="button" title="มิติที่ 2: คะแนนตรวจ 5 ส ประจำสายการผลิต (A ≥ 85, B ≥ 70, C ≥ 55, D < 55)">5S <i class="fas fa-info-circle text-success opacity-50 small ms-1"></i><i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_attendance" role="button" title="มิติที่ 3: วินัยการมาทำงาน (ผลรวมวันมาสาย + วันขาดงาน)">Attd <i class="fas fa-info-circle text-info opacity-50 small ms-1"></i><i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_learning" role="button" title="มิติที่ 4: ทักษะและการเรียนรู้ 3 ระดับตำแหน่ง (ปฏิบัติการ A≥3, หัวหน้า/เทคนิค A≥5, บริหาร/วิศวกร A≥8)">Learn <i class="fas fa-info-circle text-warning opacity-75 small ms-1"></i><i class="fas fa-sort text-muted ms-1"></i></th>
+                                    <th style="width: 8%; text-align: center;" class="sortable" data-sort="grade_overall" role="button" title="เกรดรวมถ่วงน้ำหนัก GPA 4.0 (A ≥ 3.50, B ≥ 2.50, C ≥ 1.50, D < 1.50)">Overall <i class="fas fa-info-circle text-danger opacity-50 small ms-1"></i><i class="fas fa-sort text-muted ms-1"></i></th>
                                     <th style="width: 10%;">Notes</th>
                                 </tr>
                             </thead>
@@ -767,6 +771,254 @@ $pageHeaderSubtitle = "ระบบตัดเกรดพนักงานแ
                 <div class="modal-footer border-top-0">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveWeightage">Save Weightage</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Grading Formula & 3-Tier Criteria Guide Modal -->
+    <div class="modal fade" id="gradingFormulaModal" tabindex="-1" aria-labelledby="gradingFormulaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg overflow-hidden">
+                <div class="modal-header border-0 py-3 px-4" style="background: linear-gradient(135deg, #1e293b 0%, #1e3a8a 60%, #2563eb 100%);">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <div>
+                            <h5 class="modal-title fw-bold text-white mb-0" id="gradingFormulaModalLabel">
+                                <i class="fas fa-calculator me-2 text-warning"></i>คู่มือสูตรการคำนวณและเกณฑ์การประเมินเกรดพนักงาน 4 มิติ (Executive Grading Guide)
+                            </h5>
+                            <div class="text-white opacity-75 small mt-1">
+                                เอกสารอ้างอิงสำหรับผู้บริหารและผู้จัดการ (สิทธิ์เข้าถึงเฉพาะระดับ Admin / Manager ขึ้นไป)
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+
+                <div class="modal-body p-4" style="background: #f8fafc;">
+                    <div class="alert alert-warning border-warning d-flex align-items-center gap-3 mb-4 py-2 px-3 shadow-sm">
+                        <i class="fas fa-user-shield fa-lg text-warning-emphasis"></i>
+                        <div class="small text-dark">
+                            <strong>ข้อมูลชั้นความลับสำหรับผู้บริหาร (Strictly Confidential):</strong>
+                            ระบบการประเมินเกรด 4 มิติใช้ประกอบการพิจารณาปรับขึ้นเงินเดือนและโบนัสประจำปี จึงจำกัดสิทธิ์การเข้าชมเฉพาะผู้บริหารระดับ <strong>Admin / Manager / Creator</strong> เท่านั้น พนักงานทั่วไปจะไม่สามารถมองเห็นเกรดในหน้านี้หรือในพาสปอร์ตการเรียนรู้ได้
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-primary"><i class="fas fa-coins me-2 text-warning"></i>1. มิติที่ 1: รายได้ต่อหัวเทียบค่าแรง (IPH Ratio)</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">ค่าเริ่มต้น 25%</span>
+                                </div>
+                                <div class="card-body small">
+                                    <p class="text-secondary mb-2">วัดความคุ้มค่าของผลผลิตที่พนักงานสร้างได้เทียบกับต้นทุนค่าแรงจริง (DL + OT) ในช่วงเวลาที่เลือก:</p>
+                                    <div class="p-2 rounded bg-light border font-monospace mb-2" style="font-size: 0.78rem;">
+                                        <div><strong>1) รายได้ต่อหัว (Income):</strong> Σ [ สัดส่วนคน × จำนวนชิ้นงานที่ผลิต × (Cost_DL + Cost_OH) ]</div>
+                                        <div class="mt-1"><strong>2) ต้นทุนค่าแรงรวม (Total Wage):</strong> ค่าแรงปกติ (DL) + ค่าล่วงเวลา (OT 1.5 เท่า)</div>
+                                        <div class="mt-1 text-primary"><strong>3) สูตร IPH Ratio:</strong> <code>Ratio = Income / Total Wage</code> (จุดคุ้มทุน = 1.00x)</div>
+                                    </div>
+                                    <table class="table table-sm table-bordered text-center mb-1">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>เกรด A (ดีเยี่ยม)</th>
+                                                <th>เกรด B (ดี)</th>
+                                                <th>เกรด C (ผ่านเกณฑ์)</th>
+                                                <th>เกรด D (ต่ำกว่าเกณฑ์)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="text-success fw-bold">Ratio ≥ 2.00x</td>
+                                                <td class="text-primary fw-bold">1.50x – 1.99x</td>
+                                                <td class="text-warning-emphasis fw-bold">1.00x – 1.49x</td>
+                                                <td class="text-danger fw-bold">&lt; 1.00x</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="text-muted" style="font-size: 0.75rem;">* สามารถปรับเพดาน Ratio แยกตามแต่ละ Production Line ได้ที่ปุ่ม <i class="fas fa-cog"></i> Criteria Settings</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-success"><i class="fas fa-broom me-2"></i>2. มิติที่ 2: การตรวจประเมินพื้นที่ 5 ส (5S Audit)</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">ค่าเริ่มต้น 25%</span>
+                                </div>
+                                <div class="card-body small">
+                                    <p class="text-secondary mb-2">ประเมินระเบียบวินัยและความปลอดภัยของสายการผลิต (Line) จากผลตรวจ 5 หมวด (หมวดละ 20 คะแนน):</p>
+                                    <div class="p-2 rounded bg-light border font-monospace mb-2" style="font-size: 0.78rem;">
+                                        <div><strong>สูตรคะแนน 5S (เต็ม 100):</strong> <code>S1 (สะสาง) + S2 (สะดวก) + S3 (สะอาด) + S4 (สุขลักษณะ) + S5 (สร้างนิสัย)</code></div>
+                                        <div class="mt-1 text-success">ใช้ผลตรวจล่าสุดของ Production Line ในรอบเดือนนั้นเป็นเกรดประจำสายการผลิต</div>
+                                    </div>
+                                    <table class="table table-sm table-bordered text-center mb-1">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>เกรด A (ดีเยี่ยม)</th>
+                                                <th>เกรด B (ดี)</th>
+                                                <th>เกรด C (พอใช้)</th>
+                                                <th>เกรด D (ต้องปรับปรุง)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="text-success fw-bold">85 – 100 คะแนน</td>
+                                                <td class="text-primary fw-bold">70 – 84 คะแนน</td>
+                                                <td class="text-warning-emphasis fw-bold">55 – 69 คะแนน</td>
+                                                <td class="text-danger fw-bold">&lt; 55 คะแนน</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="text-muted" style="font-size: 0.75rem;">* บันทึกคะแนนและดูประวัติย้อนหลังได้ที่ปุ่ม <i class="fas fa-broom text-success"></i> 5S Audit บนแถบเครื่องมือ</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-5">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-info-emphasis"><i class="fas fa-clock me-2 text-primary"></i>3. มิติที่ 3: วินัยการมาทำงาน (Attendance)</span>
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">ค่าเริ่มต้น 25%</span>
+                                </div>
+                                <div class="card-body small">
+                                    <p class="text-secondary mb-2">คำนวณจากบันทึกการลงเวลาจริงใน <code>MANPOWER_DAILY_LOGS</code>:</p>
+                                    <div class="p-2 rounded bg-light border font-monospace mb-2" style="font-size: 0.78rem;">
+                                        <strong>สูตรนับวันผิดวินัย:</strong><br>
+                                        <code>Penalty Days = จำนวนวันมาสาย (LATE) + จำนวนวันขาดงาน (ABSENT)</code>
+                                    </div>
+                                    <table class="table table-sm table-bordered text-center mb-1">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>เกรด A</th>
+                                                <th>เกรด B</th>
+                                                <th>เกรด C</th>
+                                                <th>เกรด D</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="text-success fw-bold">0 วัน</td>
+                                                <td class="text-primary fw-bold">≤ 1 วัน</td>
+                                                <td class="text-warning-emphasis fw-bold">2 – 3 วัน</td>
+                                                <td class="text-danger fw-bold">&gt; 3 วัน</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="text-muted" style="font-size: 0.75rem;">* ปรับเกณฑ์จำนวนวันสาย/ขาดของแต่ละ Line ได้ที่ปุ่ม <i class="fas fa-cog"></i> Criteria Settings</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-7">
+                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+                                <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-dark"><i class="fas fa-graduation-cap me-2 text-warning"></i>4. มิติที่ 4: ทักษะและการเรียนรู้ (เกณฑ์ 3 ระดับตามตำแหน่งงาน)</span>
+                                    <span class="badge bg-warning-subtle text-dark border border-warning">Live Sync จาก Learning Hub</span>
+                                </div>
+                                <div class="card-body small">
+                                    <p class="text-secondary mb-2">
+                                        ซิงค์อัตโนมัติจากจำนวนหลักสูตรที่พนักงานสอบผ่านเกณฑ์ (Post-Test ≥ 80%) ใน <strong>MES Learning Hub</strong> และทักษะใน <code>EMP_SKILLS</code> (Level ≥ 2) โดย<strong>แบ่งเกณฑ์ตามระดับตำแหน่ง (3-Tier Criteria)</strong> เพื่อความเหมาะสมกับความรับผิดชอบ:
+                                    </p>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered align-middle text-center mb-1">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-start">ระดับตำแหน่งงาน (Position Tier)</th>
+                                                    <th class="text-success">เกรด A</th>
+                                                    <th class="text-primary">เกรด B</th>
+                                                    <th class="text-warning-emphasis">เกรด C</th>
+                                                    <th class="text-danger">เกรด D</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="text-start">
+                                                        <strong>Tier 1: ระดับปฏิบัติการทั่วไป</strong>
+                                                        <div class="text-muted" style="font-size: 0.72rem;">พนักงาน, พนักงานสัญญาจ้าง, นักศึกษาฝึกงาน</div>
+                                                    </td>
+                                                    <td class="fw-bold text-success">≥ 3 ทักษะ</td>
+                                                    <td class="fw-bold text-primary">2 ทักษะ</td>
+                                                    <td class="fw-bold text-warning-emphasis">1 ทักษะ</td>
+                                                    <td class="fw-bold text-danger">0 ทักษะ</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-start">
+                                                        <strong>Tier 2: ระดับหัวหน้างาน &amp; เทคนิค</strong>
+                                                        <div class="text-muted" style="font-size: 0.72rem;">หัวหน้าแผนก, Supervisor, ช่างเทคนิค, QC, Special List</div>
+                                                    </td>
+                                                    <td class="fw-bold text-success">≥ 5 ทักษะ</td>
+                                                    <td class="fw-bold text-primary">3 – 4 ทักษะ</td>
+                                                    <td class="fw-bold text-warning-emphasis">1 – 2 ทักษะ</td>
+                                                    <td class="fw-bold text-danger">0 ทักษะ</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-start">
+                                                        <strong>Tier 3: ระดับบริหาร &amp; วิศวกร</strong>
+                                                        <div class="text-muted" style="font-size: 0.72rem;">ผู้จัดการแผนก/ฝ่าย, Mini MD, วิศวกร, Admin</div>
+                                                    </td>
+                                                    <td class="fw-bold text-success">≥ 8 ทักษะ</td>
+                                                    <td class="fw-bold text-primary">5 – 7 ทักษะ</td>
+                                                    <td class="fw-bold text-warning-emphasis">2 – 4 ทักษะ</td>
+                                                    <td class="fw-bold text-danger">0 – 1 ทักษะ</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm bg-white">
+                                <div class="card-body p-3 small">
+                                    <div class="row align-items-center g-3">
+                                        <div class="col-12 col-lg-7">
+                                            <h6 class="fw-bold text-dark mb-2">
+                                                <i class="fas fa-award text-danger me-2"></i>5. สูตรการคำนวณเกรดรวม (Overall Grade — ระบบ GPA 4.0 ถ่วงน้ำหนัก)
+                                            </h6>
+                                            <p class="text-secondary mb-2">
+                                                ระบบแปลงเกรดทั้ง 4 มิติเป็นแต้มคะแนน (<strong>A = 4.0</strong>, <strong>B = 3.0</strong>, <strong>C = 2.0</strong>, <strong>D = 1.0</strong>) แล้วคูณด้วยเปอร์เซ็นต์น้ำหนักของแต่ละมิติ (ปรับสัดส่วนได้ที่ปุ่ม <i class="fas fa-balance-scale"></i> Team Weightage Settings):
+                                            </p>
+                                            <div class="p-2 rounded bg-light border font-monospace text-dark">
+                                                <code>Total GPA = [ (Score_IPH × W_IPH%) + (Score_5S × W_5S%) + (Score_Attd × W_Attd%) + (Score_Learn × W_Learn%) ] ÷ 100</code>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-lg-5">
+                                            <table class="table table-sm table-bordered text-center mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th colspan="4">เกณฑ์ตัดสินเกรดรวม (Overall Grade)</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="text-success">Grade A</th>
+                                                        <th class="text-primary">Grade B</th>
+                                                        <th class="text-warning-emphasis">Grade C</th>
+                                                        <th class="text-danger">Grade D</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="fw-bold text-success">3.50 – 4.00</td>
+                                                        <td class="fw-bold text-primary">2.50 – 3.49</td>
+                                                        <td class="fw-bold text-warning-emphasis">1.50 – 2.49</td>
+                                                        <td class="fw-bold text-danger">&lt; 1.50</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer py-2 px-4 border-top bg-white">
+                    <span class="text-muted small me-auto">
+                        <i class="fas fa-magic text-warning me-1"></i>กดปุ่ม <strong>Auto Grade</strong> บนแถบเครื่องมือเพื่อคำนวณและเติมเกรดทั้ง 4 มิติพร้อมเกรดรวมให้อัตโนมัติตามสูตรข้างต้น
+                    </span>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" data-bs-dismiss="modal">รับทราบ / ปิดหน้าต่าง</button>
                 </div>
             </div>
         </div>

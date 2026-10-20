@@ -39,6 +39,7 @@ export const GUEST_USER = {
   exp: 0,
   isLoggedInReal: false,
   isAdmin: false,
+  can_view_grading: false,
   grading: null
 };
 
@@ -197,23 +198,25 @@ export function getUserGrading() {
 }
 
 export function saveUserGrading(grading) {
-  if (grading) {
-    localStorage.setItem('mes_learning_user_grading', JSON.stringify(grading));
-    try {
-      const rawUser = localStorage.getItem('mes_learning_current_user');
-      if (rawUser) {
-        const parsedUser = JSON.parse(rawUser);
-        if (parsedUser && parsedUser.isLoggedInReal) {
-          parsedUser.grading = grading;
-          localStorage.setItem('mes_learning_current_user', JSON.stringify(parsedUser));
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('mes-user-updated', { detail: parsedUser }));
-          }
+  if (!grading) {
+    localStorage.removeItem('mes_learning_user_grading');
+    return;
+  }
+  localStorage.setItem('mes_learning_user_grading', JSON.stringify(grading));
+  try {
+    const rawUser = localStorage.getItem('mes_learning_current_user');
+    if (rawUser) {
+      const parsedUser = JSON.parse(rawUser);
+      if (parsedUser && parsedUser.isLoggedInReal && parsedUser.can_view_grading) {
+        parsedUser.grading = grading;
+        localStorage.setItem('mes_learning_current_user', JSON.stringify(parsedUser));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('mes-user-updated', { detail: parsedUser }));
         }
       }
-    } catch {
-      // Ignore localStorage parse errors
     }
+  } catch {
+    // Ignore localStorage parse errors
   }
 }
 
@@ -255,6 +258,10 @@ function buildSyncedUserFromApi(u, grading = null) {
   const userExpKey = `mes_learning_exp_${realUserId}`;
   const storedExp = localStorage.getItem(userExpKey);
   const exp = storedExp !== null ? parseInt(storedExp, 10) : (u.exp || 450);
+  const sysRoleLower = String(u.sys_role || u.role || '').toLowerCase();
+  const canViewGrading = Boolean(
+    u.can_view_grading ?? ['creator', 'admin', 'manager'].includes(sysRoleLower)
+  );
 
   return {
     id: realUserId,
@@ -270,7 +277,8 @@ function buildSyncedUserFromApi(u, grading = null) {
     exp: exp,
     isLoggedInReal: true,
     isAdmin: Boolean(u.is_admin ?? true),
-    grading: grading
+    can_view_grading: canViewGrading,
+    grading: canViewGrading ? grading : null
   };
 }
 
@@ -359,7 +367,8 @@ export async function fetchRealUserSession() {
       const json = await res.json();
 
       if (json && json.authenticated === true && json.data && json.data.user) {
-        const grading = json.data.grading || null;
+        const canView = Boolean(json.data.user.can_view_grading);
+        const grading = canView ? (json.data.grading || null) : null;
         saveUserGrading(grading);
         const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
         saveCurrentUser(synchedUser);

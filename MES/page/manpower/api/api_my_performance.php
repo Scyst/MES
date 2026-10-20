@@ -13,6 +13,32 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+// Strict confidentiality: Only Admin / Manager / Creator can view 4D evaluation grades
+$sessionRole = strtolower(trim($_SESSION['user']['role'] ?? ''));
+$canViewGrading = in_array($sessionRole, ['creator', 'admin', 'manager'], true);
+if (!$canViewGrading) {
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'has_data'        => false,
+            'restricted'      => true,
+            'grade'           => '-',
+            'grade_iph'       => '-',
+            'grade_5s'        => '-',
+            'grade_attendance'=> '-',
+            'grade_learning'  => '-',
+            'grade_overall'   => '-',
+            'income_per_head' => 0,
+            'total_wage'      => 0,
+            'income_ratio'    => 0,
+            'skill_count'     => 0,
+            'passed_courses'  => 0,
+            'trend'           => [],
+        ]
+    ]);
+    exit;
+}
+
 $emp_id = trim($_SESSION['user']['emp_id'] ?? '');
 if (empty($emp_id)) {
     $fullName = trim($_SESSION['user']['fullname'] ?? '');
@@ -53,6 +79,7 @@ try {
     // ── Main: Current month performance ──────────────────────────────────
     $sql = "
         SELECT
+            E.position,
             G.grade,
             G.grade_iph,
             G.grade_5s,
@@ -139,10 +166,41 @@ try {
 
     $skillCount = max($rawSkillCount, $passedCourses);
 
+    $posUpper = mb_strtoupper(trim((string)($data['position'] ?? '')), 'UTF-8');
+    $isTier3 = (
+        in_array($sessionRole, ['creator', 'admin', 'manager'], true) ||
+        mb_strpos($posUpper, 'ผู้จัดการ') !== false ||
+        mb_strpos($posUpper, 'MINI MD') !== false ||
+        mb_strpos($posUpper, 'ประธาน') !== false ||
+        mb_strpos($posUpper, 'บริหาร') !== false ||
+        mb_strpos($posUpper, 'วิศวกร') !== false ||
+        mb_strpos($posUpper, 'ENGINEER') !== false
+    );
+    $isTier2 = !$isTier3 && (
+        in_array($sessionRole, ['supervisor', 'leader', 'planner'], true) ||
+        mb_strpos($posUpper, 'หัวหน้า') !== false ||
+        mb_strpos($posUpper, 'SUPERVISOR') !== false ||
+        mb_strpos($posUpper, 'LEADER') !== false ||
+        mb_strpos($posUpper, 'SPECIAL') !== false ||
+        mb_strpos($posUpper, 'เทคนิค') !== false ||
+        mb_strpos($posUpper, 'QC') !== false ||
+        mb_strpos($posUpper, 'QA') !== false
+    );
+
     $systemLearningGrade = 'D';
-    if ($skillCount >= 5)      $systemLearningGrade = 'A';
-    elseif ($skillCount >= 3)  $systemLearningGrade = 'B';
-    elseif ($skillCount >= 1)  $systemLearningGrade = 'C';
+    if ($isTier3) {
+        if ($skillCount >= 8)      $systemLearningGrade = 'A';
+        elseif ($skillCount >= 5)  $systemLearningGrade = 'B';
+        elseif ($skillCount >= 2)  $systemLearningGrade = 'C';
+    } elseif ($isTier2) {
+        if ($skillCount >= 5)      $systemLearningGrade = 'A';
+        elseif ($skillCount >= 3)  $systemLearningGrade = 'B';
+        elseif ($skillCount >= 1)  $systemLearningGrade = 'C';
+    } else {
+        if ($skillCount >= 3)      $systemLearningGrade = 'A';
+        elseif ($skillCount >= 2)  $systemLearningGrade = 'B';
+        elseif ($skillCount >= 1)  $systemLearningGrade = 'C';
+    }
 
     // ── 3-month trend ──────────────────────────────────────────────────
     $stmtTrend = $pdo->prepare("

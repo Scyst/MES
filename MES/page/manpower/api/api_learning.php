@@ -106,6 +106,75 @@ $calculateWeightedOverallGrade = function (
     return 'D';
 };
 
+// Helper: Evaluate Learning Grade by Position Tier (3-Tier Industrial Competency Standard)
+// - Tier 1 (Operator / พนักงานทั่วไป / นักศึกษาฝึกงาน): A >= 3, B >= 2, C >= 1, D = 0
+// - Tier 2 (Supervisor / หัวหน้าแผนก / ช่างเทคนิค / QC): A >= 5, B >= 3, C >= 1, D = 0
+// - Tier 3 (Executive / ผู้จัดการ / Mini MD / วิศวกร / Admin): A >= 8, B >= 5, C >= 2, D <= 1
+$evaluateLearningByTier = function (int $skillCount, ?string $position, ?string $sysRole = ''): array {
+    $posUpper = mb_strtoupper(trim($position ?? ''), 'UTF-8');
+    $roleLower = strtolower(trim($sysRole ?? ''));
+
+    $isTier3 = in_array($roleLower, ['creator', 'admin', 'manager'], true)
+        || mb_strpos($posUpper, 'ผู้จัดการ', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'บริหาร', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'MINI MD', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'วิศวกร', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'ENGINEER', 0, 'UTF-8') !== false;
+
+    $isTier2 = !$isTier3 && (
+        in_array($roleLower, ['supervisor', 'qc', 'maintenance', 'planner'], true)
+        || mb_strpos($posUpper, 'หัวหน้า', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'SUPERVISOR', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'LEADER', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'SPECIAL', 0, 'UTF-8') !== false
+        || mb_strpos($posUpper, 'เทคนิค', 0, 'UTF-8') !== false
+    );
+
+    if ($isTier3) {
+        $targetA = 8;
+        $targetB = 5;
+        $targetC = 2;
+        $tierCode = 'TIER_3_EXEC_ENG';
+        $tierName = 'ระดับบริหาร/วิศวกร (A≥8, B≥5, C≥2)';
+    } elseif ($isTier2) {
+        $targetA = 5;
+        $targetB = 3;
+        $targetC = 1;
+        $tierCode = 'TIER_2_SUPERVISOR';
+        $tierName = 'ระดับหัวหน้างาน/เทคนิค (A≥5, B≥3, C≥1)';
+    } else {
+        $targetA = 3;
+        $targetB = 2;
+        $targetC = 1;
+        $tierCode = 'TIER_1_OPERATOR';
+        $tierName = 'ระดับปฏิบัติการทั่วไป (A≥3, B≥2, C≥1)';
+    }
+
+    $grade = 'D';
+    if ($skillCount >= $targetA) {
+        $grade = 'A';
+    } elseif ($skillCount >= $targetB) {
+        $grade = 'B';
+    } elseif ($skillCount >= $targetC) {
+        $grade = 'C';
+    }
+
+    return [
+        'grade'     => $grade,
+        'tier_code' => $tierCode,
+        'tier_name' => $tierName,
+        'target_a'  => $targetA,
+        'target_b'  => $targetB,
+        'target_c'  => $targetC
+    ];
+};
+
+// Helper: Check if the current session user is authorized to view confidential 4D Grading (Admin / Manager / Creator only)
+$sessionRoleLower = strtolower(trim($_SESSION['user']['role'] ?? ''));
+$canCurrentUserViewGrading = !empty($_SESSION['user'])
+    && in_array($sessionRoleLower, ['creator', 'admin', 'manager'], true)
+    && hasPermission('manage_manpower');
+
 try {
     // ─────────────────────────────────────────────────────────────────────────
     // Helper: Format Role & Position Display Title
@@ -253,18 +322,14 @@ try {
         $passedCoursesCount = (int)($learnStat['passed_count'] ?? 0);
         $effectiveSkillCount = max($skillCount, $passedCoursesCount);
 
-        // คำนวณ Learning Grade ตามเกณฑ์ของฝ่ายบริหาร (A >= 5, B >= 3, C >= 1, D = 0)
-        $systemLearningGrade = 'D';
-        if ($effectiveSkillCount >= 5) {
-            $systemLearningGrade = 'A';
-        } elseif ($effectiveSkillCount >= 3) {
-            $systemLearningGrade = 'B';
-        } elseif ($effectiveSkillCount >= 1) {
-            $systemLearningGrade = 'C';
-        }
+        // คำนวณ Learning Grade ตามเกณฑ์ 3 ระดับตำแหน่ง (Tier 1: A>=3, Tier 2: A>=5, Tier 3: A>=8)
+        $tierEval = $evaluateLearningByTier($effectiveSkillCount, $empPos, $sysRole);
+        $systemLearningGrade = $tierEval['grade'];
 
         $baseExp = $isAdmin ? 450 : 150;
         $computedExp = $baseExp + ($passedCoursesCount * 50) + ($skillCount * 30);
+
+        $canViewGrading = in_array(strtolower($sysRole), ['creator', 'admin', 'manager'], true) && hasPermission('manage_manpower');
 
         echo json_encode([
             'success'       => true,
@@ -283,9 +348,13 @@ try {
                     'profile_picture'  => $profilePic,
                     'is_logged_in_real'=> true,
                     'is_admin'         => $isAdmin,
+                    'can_view_grading' => $canViewGrading,
+                    'skill_count'      => $effectiveSkillCount,
+                    'passed_courses'   => $passedCoursesCount,
                     'exp'              => $computedExp,
                 ],
-                'grading' => [
+                // ข้อมูลเกรด ABCD ส่งเฉพาะระดับ Admin / Manager เท่านั้น (ปกป้องข้อมูลความลับทางบริหาร)
+                'grading' => $canViewGrading ? [
                     'evaluation_period'     => $gradeRow['evaluation_period'] ?? date('Y-m'),
                     'grade_overall'         => $gradeRow['grade_overall'] ?? $gradeRow['grade'] ?? 'B',
                     'grade_iph'             => $gradeRow['grade_iph'] ?? 'B',
@@ -293,10 +362,14 @@ try {
                     'grade_attendance'      => $gradeRow['grade_attendance'] ?? 'A',
                     'grade_learning'        => !empty($gradeRow['grade_learning']) ? $gradeRow['grade_learning'] : $systemLearningGrade,
                     'system_grade_learning' => $systemLearningGrade,
+                    'learning_tier_name'    => $tierEval['tier_name'],
+                    'learning_target_a'     => $tierEval['target_a'],
+                    'learning_target_b'     => $tierEval['target_b'],
+                    'learning_target_c'     => $tierEval['target_c'],
                     'skill_count'           => $effectiveSkillCount,
                     'passed_courses'        => $passedCoursesCount,
                     'avg_score'             => round((float)($learnStat['avg_score'] ?? 0), 1),
-                ]
+                ] : null
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -379,15 +452,24 @@ try {
         $stmt->execute($params);
         $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        if (!$canCurrentUserViewGrading) {
+            foreach ($employees as &$empItem) {
+                $empItem['grade_learning'] = null;
+                $empItem['grade_overall']  = null;
+            }
+            unset($empItem);
+        }
+
         // ดึงรายการ Line ทั้งหมดที่มี
         $lines = $pdo->query("SELECT DISTINCT line FROM dbo.MANPOWER_EMPLOYEES WHERE is_active = 1 AND line IS NOT NULL ORDER BY line")->fetchAll(PDO::FETCH_COLUMN);
 
         echo json_encode([
             'success' => true,
             'data' => [
-                'employees' => $employees,
-                'lines'     => $lines,
-                'count'     => count($employees)
+                'employees'        => $employees,
+                'lines'            => $lines,
+                'count'            => count($employees),
+                'can_view_grading' => $canCurrentUserViewGrading
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -490,14 +572,8 @@ try {
         }
 
         $effectiveSkillCount = max($skillCount, $passedCoursesCount);
-        $systemLearningGrade = 'D';
-        if ($effectiveSkillCount >= 5) {
-            $systemLearningGrade = 'A';
-        } elseif ($effectiveSkillCount >= 3) {
-            $systemLearningGrade = 'B';
-        } elseif ($effectiveSkillCount >= 1) {
-            $systemLearningGrade = 'C';
-        }
+        $tierEval = $evaluateLearningByTier($effectiveSkillCount, $emp['position'] ?? '', '');
+        $systemLearningGrade = $tierEval['grade'];
 
         // ผลการประเมินเกรดล่าสุด
         $stmtGrade = $pdo->prepare("
@@ -517,6 +593,10 @@ try {
             'grade_attendance'      => $gradeRow['grade_attendance'] ?? 'A',
             'grade_learning'        => !empty($gradeRow['grade_learning']) ? $gradeRow['grade_learning'] : $systemLearningGrade,
             'system_grade_learning' => $systemLearningGrade,
+            'learning_tier_name'    => $tierEval['tier_name'],
+            'learning_target_a'     => $tierEval['target_a'],
+            'learning_target_b'     => $tierEval['target_b'],
+            'learning_target_c'     => $tierEval['target_c'],
             'skill_count'           => $effectiveSkillCount,
             'passed_courses'        => $passedCoursesCount,
             'notes'                 => $gradeRow['notes'] ?? null
@@ -528,7 +608,8 @@ try {
                 'employee'         => $emp,
                 'learning_records' => $learningRecords,
                 'skills'           => $skills,
-                'grading'          => $gradingData
+                'can_view_grading' => $canCurrentUserViewGrading,
+                'grading'          => $canCurrentUserViewGrading ? $gradingData : null
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -651,7 +732,7 @@ try {
             }
         }
 
-        // 3. คำนวณ Learning Grade ใหม่แบบเรียลไทม์
+        // 3. คำนวณ Learning Grade ใหม่แบบเรียลไทม์ตามเกณฑ์ 3 ระดับตำแหน่ง (Tier 1: A>=3, Tier 2: A>=5, Tier 3: A>=8)
         $stmtNewSkills = $pdo->prepare("SELECT COUNT(*) FROM dbo.EMP_SKILLS WHERE emp_id = ? AND level >= 2");
         $stmtNewSkills->execute([$empId]);
         $newSkillCount = (int)$stmtNewSkills->fetchColumn();
@@ -662,18 +743,10 @@ try {
 
         $effectiveSkillCount = max($newSkillCount, $passedCoursesCnt);
 
-        $newLearningGrade = 'D';
-        if ($effectiveSkillCount >= 5) {
-            $newLearningGrade = 'A';
-        } elseif ($effectiveSkillCount >= 3) {
-            $newLearningGrade = 'B';
-        } elseif ($effectiveSkillCount >= 1) {
-            $newLearningGrade = 'C';
-        }
-
         // 4. เชื่อมต่อและบันทึกลงตารางเกรดหลัก dbo.EMPLOYEE_GRADES อัตโนมัติ (4-Dimension Grading Live Sync)
         $stmtWeights = $pdo->prepare("
             SELECT TOP 1
+                E.position,
                 ISNULL(TS.weight_iph, 25) AS weight_iph,
                 ISNULL(TS.weight_5s, 25) AS weight_5s,
                 ISNULL(TS.weight_attendance, 25) AS weight_attendance,
@@ -684,8 +757,11 @@ try {
         ");
         $stmtWeights->execute([$empId]);
         $weights = $stmtWeights->fetch(PDO::FETCH_ASSOC) ?: [
-            'weight_iph' => 25, 'weight_5s' => 25, 'weight_attendance' => 25, 'weight_learning' => 25
+            'position' => '', 'weight_iph' => 25, 'weight_5s' => 25, 'weight_attendance' => 25, 'weight_learning' => 25
         ];
+
+        $tierEval = $evaluateLearningByTier($effectiveSkillCount, $weights['position'] ?? '', '');
+        $newLearningGrade = $tierEval['grade'];
 
         $wIph = (int)($weights['weight_iph'] ?? 25);
         $w5s  = (int)($weights['weight_5s'] ?? 25);
@@ -797,7 +873,7 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => $passed ? "บันทึกผลการอบรม ออกใบรับรอง $certificateId และอัปเดตเกรดการเรียนรู้ ($newLearningGrade) สำเร็จ" : "บันทึกความคืบหน้าสำเร็จ",
+            'message' => $passed ? "บันทึกผลการอบรมและออกใบรับรอง $certificateId สำเร็จ" : "บันทึกความคืบหน้าสำเร็จ",
             'data' => [
                 'emp_id'           => $empId,
                 'course_id'        => $courseId,
@@ -807,8 +883,9 @@ try {
                 'skill_code'       => $skillCode,
                 'new_skill_count'  => $effectiveSkillCount,
                 'passed_courses'   => $passedCoursesCnt,
-                'learning_grade'   => $newLearningGrade,
-                'grade_overall'    => $newOverallGrade,
+                'can_view_grading' => $canCurrentUserViewGrading,
+                'learning_grade'   => $canCurrentUserViewGrading ? $newLearningGrade : null,
+                'grade_overall'    => $canCurrentUserViewGrading ? $newOverallGrade : null,
                 'exp_bonus'        => $passed ? 50 : 5
             ]
         ], JSON_UNESCAPED_UNICODE);

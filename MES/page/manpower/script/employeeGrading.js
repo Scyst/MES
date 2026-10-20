@@ -300,10 +300,10 @@ const App = {
                             ${renderSelect('grade_learning', emp.grade_learning, emp.system_grade_learning || null)}
                             <a href="/iot-toolbox/sandbox-b9/LearningHub/index.html#/profile/${encodeURIComponent(emp.emp_id)}"
                                target="_blank"
-                               class="badge rounded-pill text-decoration-none ${(emp.skill_count || 0) > 0 ? 'bg-info bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-light text-muted border'}"
+                               class="badge rounded-pill text-decoration-none ${(emp.skill_count || 0) >= (emp.learning_target_a || 3) ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : (emp.skill_count || 0) > 0 ? 'bg-info bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-light text-muted border'}"
                                style="font-size: 0.65rem; padding: 2px 6px;"
-                               title="ดูพาสปอร์ตสมรรถนะและใบรับรองใน MES Learning Hub (ผ่าน ${emp.passed_courses || 0} หลักสูตร / รับรอง ${emp.skill_count || 0} ทักษะ)">
-                                <i class="fas fa-graduation-cap me-1"></i>${emp.skill_count || 0} ทักษะ
+                               title="เกณฑ์ตำแหน่ง [${emp.learning_tier_name || 'ระดับปฏิบัติการ'}]: เกรด A ต้องมี ≥ ${emp.learning_target_a || 3} ทักษะ (ปัจจุบันผ่าน ${emp.passed_courses || 0} หลักสูตร / รับรอง ${emp.skill_count || 0} ทักษะ) — คลิกเพื่อดูพาสปอร์ต">
+                                <i class="fas fa-graduation-cap me-1"></i>${emp.skill_count || 0}/${emp.learning_target_a || 3} ทักษะ
                             </a>
                         </div>
                     </td>

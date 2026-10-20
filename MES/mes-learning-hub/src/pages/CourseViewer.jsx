@@ -357,7 +357,7 @@ export default function CourseViewer() {
               }`}>
                 🎉 ได้รับโบนัสเกียรติยศ +50 EXP
               </div>
-              {userGrading && (
+              {currentUser?.can_view_grading && userGrading && userGrading.grade_learning && (
                 <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[11px] font-bold ${
                   isDark ? 'border-slate-750 text-slate-300' : 'border-slate-200 text-slate-700'
                 }`}>
@@ -365,7 +365,7 @@ export default function CourseViewer() {
                   <span className={`px-2 py-0.5 rounded-md font-black ${
                     isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                   }`}>
-                    Learning {userGrading.grade_learning || 'C'} · Overall {userGrading.grade_overall || 'B'} ({userGrading.skill_count || 1} ทักษะ)
+                    Learning {userGrading.grade_learning || 'C'} · Overall {userGrading.grade_overall || 'B'} ({userGrading.skill_count || 1}/{userGrading.learning_target_a || 3} ทักษะ)
                   </span>
                 </div>
               )}

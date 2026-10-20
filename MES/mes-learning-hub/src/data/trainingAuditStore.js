@@ -870,8 +870,81 @@ export async function syncCourseProgressToBackend({
   return null;
 }
 
+export function evaluateLearningByPositionTier(skillCount = 0, position = '', sysRole = '') {
+  const posUpper = String(position || '').toUpperCase();
+  const roleLower = String(sysRole || '').toLowerCase();
+
+  const isTier3 =
+    ['creator', 'admin', 'manager'].includes(roleLower) ||
+    posUpper.includes('ผู้จัดการ') ||
+    posUpper.includes('MINI MD') ||
+    posUpper.includes('ประธาน') ||
+    posUpper.includes('บริหาร') ||
+    posUpper.includes('วิศวกร') ||
+    posUpper.includes('ENGINEER');
+
+  const isTier2 =
+    !isTier3 &&
+    (['supervisor', 'leader', 'planner'].includes(roleLower) ||
+      posUpper.includes('หัวหน้า') ||
+      posUpper.includes('SUPERVISOR') ||
+      posUpper.includes('LEADER') ||
+      posUpper.includes('SPECIAL') ||
+      posUpper.includes('เทคนิค') ||
+      posUpper.includes('QC') ||
+      posUpper.includes('QA'));
+
+  if (isTier3) {
+    let grade = 'D';
+    if (skillCount >= 8) grade = 'A';
+    else if (skillCount >= 5) grade = 'B';
+    else if (skillCount >= 2) grade = 'C';
+    return {
+      grade,
+      tier_name: 'ระดับบริหารและวิศวกร (Tier 3)',
+      target_a: 8,
+      target_b: 5,
+      target_c: 2,
+      criteria_label: 'A (≥ 8 ทักษะ) · B (5-7 ทักษะ) · C (2-4 ทักษะ) · D (0-1 ทักษะ)'
+    };
+  }
+
+  if (isTier2) {
+    let grade = 'D';
+    if (skillCount >= 5) grade = 'A';
+    else if (skillCount >= 3) grade = 'B';
+    else if (skillCount >= 1) grade = 'C';
+    return {
+      grade,
+      tier_name: 'ระดับหัวหน้างานและเทคนิค (Tier 2)',
+      target_a: 5,
+      target_b: 3,
+      target_c: 1,
+      criteria_label: 'A (≥ 5 ทักษะ) · B (3-4 ทักษะ) · C (1-2 ทักษะ) · D (0 ทักษะ)'
+    };
+  }
+
+  let grade = 'D';
+  if (skillCount >= 3) grade = 'A';
+  else if (skillCount >= 2) grade = 'B';
+  else if (skillCount >= 1) grade = 'C';
+  return {
+    grade,
+    tier_name: 'ระดับปฏิบัติการทั่วไป (Tier 1)',
+    target_a: 3,
+    target_b: 2,
+    target_c: 1,
+    criteria_label: 'A (≥ 3 ทักษะ) · B (2 ทักษะ) · C (1 ทักษะ) · D (0 ทักษะ)'
+  };
+}
+
 function applyOptimisticLearningGradeUpdate(empId) {
   try {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.can_view_grading) {
+      localStorage.removeItem('mes_learning_user_grading');
+      return null;
+    }
     const records = getTrainingRecords();
     const passedCount = records.filter(r => r.empId === empId && r.passed).length;
     const currentGrading = getUserGrading() || {
@@ -886,10 +959,8 @@ function applyOptimisticLearningGradeUpdate(empId) {
     };
 
     const nextSkillCount = Math.max(Number(currentGrading.skill_count || 0), passedCount);
-    let nextLearningGrade = 'D';
-    if (nextSkillCount >= 5) nextLearningGrade = 'A';
-    else if (nextSkillCount >= 3) nextLearningGrade = 'B';
-    else if (nextSkillCount >= 1) nextLearningGrade = 'C';
+    const tierEval = evaluateLearningByPositionTier(nextSkillCount, currentUser.role, currentUser.sys_role);
+    const nextLearningGrade = tierEval.grade;
 
     const mapScore = g => (g === 'A' ? 4 : g === 'B' ? 3 : g === 'C' ? 2 : g === 'D' ? 1 : 3);
     const avgScore = (
@@ -906,7 +977,10 @@ function applyOptimisticLearningGradeUpdate(empId) {
       passed_courses: passedCount,
       grade_learning: nextLearningGrade,
       system_grade_learning: nextLearningGrade,
-      grade_overall: nextOverall
+      grade_overall: nextOverall,
+      learning_tier_name: tierEval.tier_name,
+      learning_target_a: tierEval.target_a,
+      learning_criteria_label: tierEval.criteria_label
     };
     saveUserGrading(updatedGrading);
     return updatedGrading;

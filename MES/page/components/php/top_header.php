@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Fetch Performance Data
-    <?php if (isset($_SESSION['user']['emp_id'])): ?>
+    // Fetch Performance Data (Strictly Admin / Manager / Creator only)
+    <?php if (isset($_SESSION['user']['emp_id']) && in_array(strtolower($_SESSION['user']['role'] ?? ''), ['creator', 'admin', 'manager'], true)): ?>
     setTimeout(() => {
         fetch('<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/manpower/api/api_my_performance.php')
             .then(res => res.json())

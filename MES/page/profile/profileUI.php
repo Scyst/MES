@@ -352,8 +352,9 @@ $currentUserId = (int)$_SESSION['user']['id'];
 
             <hr class="text-muted opacity-25">
 
-            <!-- Performance Widget -->
-            <div class="p-3 mb-3 rounded border text-start" id="sidebarPerformanceCard" style="background-color: var(--bs-tertiary-bg);">
+            <!-- Performance Widget (Strictly Admin / Manager / Creator only) -->
+            <?php if (in_array(strtolower($_SESSION['user']['role'] ?? ''), ['creator', 'admin', 'manager'], true)): ?>
+            <div class="p-3 mb-3 rounded border text-start d-none" id="sidebarPerformanceCard" style="background-color: var(--bs-tertiary-bg);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="small fw-bold text-muted"><i class="fas fa-star text-warning me-1"></i><?php _e('header.eval_grade'); ?></span>
                     <span class="badge bg-secondary" id="sidebarGradeDisplay"><?php _e('header.grade_waiting'); ?></span>
@@ -367,6 +368,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
                     <span class="small fw-bold text-success" id="sidebarRatioDisplay">0.00</span>
                 </div>
             </div>
+            <?php endif; ?>
 
             <div class="text-start mt-3">
                 <div class="sidebar-meta-row">
@@ -690,7 +692,7 @@ $currentUserId = (int)$_SESSION['user']['id'];
          MY PERFORMANCE SECTION (4 Dimensions + Trend)
          Only visible to employees who are linked to MANPOWER_EMPLOYEES
     ═══════════════════════════════════════════════════════════════════════ -->
-    <?php if (!empty($_SESSION['user']['emp_id'])): ?>
+    <?php if (!empty($_SESSION['user']['emp_id']) && in_array(strtolower($_SESSION['user']['role'] ?? ''), ['creator', 'admin', 'manager'], true)): ?>
     <div class="container-fluid px-3 pb-3 mt-0">
         <div class="card shadow-sm border-0">
             <div class="card-header border-0 py-3 px-4" style="background: linear-gradient(135deg, #1a1f5e 0%, #2d3561 50%, #1e4fa3 100%);">
@@ -1189,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<?php if (!empty($_SESSION['user']['emp_id'])): ?>
+<?php if (!empty($_SESSION['user']['emp_id']) && in_array(strtolower($_SESSION['user']['role'] ?? ''), ['creator', 'admin', 'manager'], true)): ?>
 <script>
 // ── My Performance Section ────────────────────────────────────────────────────
 (async function loadMyPerformance() {

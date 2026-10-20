@@ -97,17 +97,23 @@ export default function UserProfile() {
 
   const { employee, currentUserIsMe, rank, exp, userPosts, totalLikesReceived } = passport;
 
-  // Active 4-Dimension Grading state
-  const activeGrading = viewedPassportData?.grading || passport.grading || currentUser.grading || getUserGrading() || {
-    evaluation_period: '2026-10',
-    grade_overall: 'B',
-    grade_iph: 'B',
-    grade_5s: 'A',
-    grade_attendance: 'A',
-    grade_learning: 'C',
-    skill_count: 1,
-    passed_courses: passport.totalPassedCount || 1
-  };
+  // Active 4-Dimension Grading state (Strictly visible to Admin / Manager / Creator only)
+  const canViewGrading = Boolean(currentUser?.can_view_grading);
+  const activeGrading = canViewGrading
+    ? (viewedPassportData?.grading || passport.grading || currentUser.grading || getUserGrading() || {
+        evaluation_period: '2026-10',
+        grade_overall: 'B',
+        grade_iph: 'B',
+        grade_5s: 'A',
+        grade_attendance: 'A',
+        grade_learning: 'C',
+        skill_count: 1,
+        passed_courses: passport.totalPassedCount || 1,
+        learning_tier_name: 'ระดับบริหารและวิศวกร (Tier 3)',
+        learning_target_a: 8,
+        learning_criteria_label: 'A (≥ 8 ทักษะ) · B (5-7 ทักษะ) · C (2-4 ทักษะ) · D (0-1 ทักษะ)'
+      })
+    : null;
 
   // Inspect another employee's Competency Passport without overwriting own logged-in session
   const handleSelectEmployee = (targetEmp) => {
@@ -319,7 +325,8 @@ export default function UserProfile() {
         </div>
       </div>
 
-      {/* 4-Dimension Manpower Employee Grading Matrix Card */}
+      {/* 4-Dimension Manpower Employee Grading Matrix Card (Strictly Admin / Manager / Creator Only) */}
+      {canViewGrading && activeGrading && (
       <div className={`relative rounded-3xl p-6 sm:p-7 shadow-xl overflow-hidden border transition-all ${
         isDark 
           ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/40 border-indigo-500/30 shadow-indigo-950/20' 
@@ -477,8 +484,10 @@ export default function UserProfile() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ทักษะรับรอง (Level ≥ 2):</span>
-                <span className="font-mono text-cyan-400 font-black">{activeGrading.skill_count || 0} ทักษะ</span>
+                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ทักษะรับรอง / เป้าเกรด A:</span>
+                <span className="font-mono text-cyan-400 font-black">
+                  {activeGrading.skill_count || 0}/{activeGrading.learning_target_a || 3} ทักษะ
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>คอร์สที่สอบผ่าน (≥ 80%):</span>
@@ -486,12 +495,14 @@ export default function UserProfile() {
               </div>
             </div>
 
-            <div className={`mt-2.5 pt-2 border-t text-[10px] leading-tight ${isDark ? 'border-indigo-500/20 text-indigo-200/80' : 'border-indigo-200 text-indigo-900'}`}>
-              เกณฑ์: A (≥ 5 ทักษะ) · B (3-4 ทักษะ) · C (1-2 ทักษะ) · D (0 ทักษะ)
+            <div className={`mt-2.5 pt-2 border-t text-[10px] leading-tight space-y-0.5 ${isDark ? 'border-indigo-500/20 text-indigo-200/80' : 'border-indigo-200 text-indigo-900'}`}>
+              <div className="font-bold text-amber-400">{activeGrading.learning_tier_name || 'เกณฑ์ตามระดับตำแหน่ง (3-Tier)'}</div>
+              <div>{activeGrading.learning_criteria_label || 'A ≥ 3 (ปฏิบัติการ) · A ≥ 5 (หัวหน้า/เทคนิค) · A ≥ 8 (บริหาร/วิศวกร)'}</div>
             </div>
           </div>
         </div>
       </div>
+      )}
 
       {/* 4 Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1149,19 +1160,27 @@ export default function UserProfile() {
                           </div>
                         </div>
 
-                        <div className="text-right flex-shrink-0">
-                          <div className={`px-2.5 py-1 rounded-xl text-xs font-black border ${
-                            emp.grade_learning === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                            emp.grade_learning === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                            emp.grade_learning === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                            'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                          }`}>
-                            Lrn: {emp.grade_learning || 'D'}
+                        {canViewGrading ? (
+                          <div className="text-right flex-shrink-0">
+                            <div className={`px-2.5 py-1 rounded-xl text-xs font-black border ${
+                              emp.grade_learning === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                              emp.grade_learning === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                              emp.grade_learning === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                              'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                            }`}>
+                              Lrn: {emp.grade_learning || 'D'}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              รวม: <span className="font-bold text-white">{emp.grade_overall || 'B'}</span>
+                            </div>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-1">
-                            รวม: <span className="font-bold text-white">{emp.grade_overall || 'B'}</span>
+                        ) : (
+                          <div className="text-right flex-shrink-0">
+                            <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                              ดูพาสปอร์ต
+                            </span>
                           </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
