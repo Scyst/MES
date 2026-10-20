@@ -89,13 +89,15 @@ export default function Catalog() {
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
         <div className="min-w-0">
-          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
+          <h1 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
-            <FiLayers className="text-fuchsia-500 flex-shrink-0" />
-            <span>หลักสูตรมาตรฐานโรงงาน (Standard Curriculum)</span>
+            <span>หลักสูตรมาตรฐานโรงงาน</span>
+            <span className="text-sm sm:text-base lg:text-lg font-bold opacity-75 whitespace-nowrap ml-2">
+              (Standard Curriculum)
+            </span>
           </h1>
-          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             คลังคู่มือปฏิบัติงาน ระบบเครื่องจักร มาตรฐานคุณภาพ และสื่อการเรียนรู้เพื่อรับรองสมรรถนะพนักงาน
           </p>
         </div>

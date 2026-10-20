@@ -68,13 +68,15 @@ export default function CommunityHub() {
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
         <div className="min-w-0">
-          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
+          <h1 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
-            <FiUsers className="text-cyan-500 flex-shrink-0" />
-            <span>คลังความรู้ชุมชน &amp; ทริคหน้างาน (Community Hub)</span>
+            <span>คลังความรู้ชุมชน &amp; ทริคหน้างาน</span>
+            <span className="text-sm sm:text-base lg:text-lg font-bold opacity-75 whitespace-nowrap ml-2">
+              (Community Hub)
+            </span>
           </h1>
-          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             พื้นที่แลกเปลี่ยนประสบการณ์จริง คู่มือเครื่องจักร วิธีแก้ปัญหา และเทคนิคการทำงานจากเพื่อนร่วมงานทุกแผนก
           </p>
         </div>

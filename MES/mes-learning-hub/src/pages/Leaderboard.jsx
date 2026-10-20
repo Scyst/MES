@@ -32,13 +32,15 @@ export default function Leaderboard() {
         isDark ? 'border-slate-800' : 'border-slate-200'
       }`}>
         <div className="min-w-0">
-          <h1 className={`text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5 ${
+          <h1 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight ${
             isDark ? 'text-white' : 'text-slate-900'
           }`}>
-            <FiAward className="text-amber-500 flex-shrink-0" />
-            <span>ทำเนียบเกียรติยศ (Knowledge Hall of Fame)</span>
+            <span>ทำเนียบเกียรติยศ</span>
+            <span className="text-sm sm:text-base lg:text-lg font-bold opacity-75 whitespace-nowrap ml-2">
+              (Knowledge Hall of Fame)
+            </span>
           </h1>
-          <p className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-xs sm:text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ยกย่องพนักงานและหัวหน้างานผู้มีส่วนร่วมในการแบ่งปันประสบการณ์ เทคนิคหน้างาน และยกระดับมาตรฐานความรู้ของโรงงาน
           </p>
         </div>
