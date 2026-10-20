@@ -229,6 +229,10 @@ $pageHelpId = "";
                                     <i class="fas fa-ellipsis-v fa-fw"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-1" aria-labelledby="btnReceivingMoreMenu" style="font-size: 0.85rem; min-width: 250px; z-index: 1060;">
+                                    <li><h6 class="dropdown-header text-muted fw-bold"><i class="fas fa-check-square me-1"></i> เลือกรายการ (Selection)</h6></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-primary" href="#" onclick="toggleSelectAllOption(true); return false;"><i class="fas fa-check-double fa-fw me-2"></i> เลือกทั้งหมดในหน้านี้</a></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-secondary" href="#" onclick="toggleSelectAllOption(false); return false;"><i class="fas fa-times fa-fw me-2"></i> ยกเลิกการเลือกทั้งหมด</a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><h6 class="dropdown-header text-success fw-bold"><i class="fas fa-database me-1"></i> จัดการข้อมูล (Data)</h6></li>
                                     <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="exportToExcel(); return false;"><i class="fas fa-file-export fa-fw me-2 text-success"></i> Export to Excel</a></li>
                                     <?php if($canManageRM): ?>
@@ -294,6 +298,19 @@ $pageHelpId = "";
                                 <tr><td colspan="14" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Mobile Selection & Counter Bar (Visible only on mobile < 768px) -->
+                    <div class="d-md-none d-flex justify-content-between align-items-center px-3 py-2 bg-body-tertiary border-bottom" id="mobileSelectAllBar" style="font-size: 0.85rem;">
+                        <div class="form-check mb-0 d-flex align-items-center gap-2">
+                            <input class="form-check-input mt-0" type="checkbox" id="mobileSelectAllCheckbox" onchange="toggleSelectAll(this)" style="transform: scale(1.15); cursor: pointer;">
+                            <label class="form-check-label fw-bold text-dark user-select-none" for="mobileSelectAllCheckbox" style="cursor: pointer;">
+                                เลือกทั้งหมด
+                            </label>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1" id="mobileTotalItemsBadge">
+                            <span id="mobileTotalCount">0</span> รายการ (เลือก <span id="mobileSelectedCountText">0</span>)
+                        </span>
                     </div>
 
                     <div class="d-md-none flex-grow-1 overflow-auto p-2" id="historyCardContainer" style="background-color: var(--bs-body-bg);">

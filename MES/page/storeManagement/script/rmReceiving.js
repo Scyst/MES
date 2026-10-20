@@ -249,7 +249,7 @@ async function loadHistory() {
             // 2. สร้าง CARD สำหรับ Mobile
             let borderLeftColor = row.status === 'AVAILABLE' ? 'var(--bs-success)' : (row.status === 'PENDING' ? 'var(--bs-warning)' : 'var(--bs-info)');
             htmlCards += `
-                <div class="card shadow-sm mb-3 border-0" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
+                <div class="card shadow-sm mb-3 border-0 tag-card-item" onclick="handleCardClick(this, event)" style="border-left: 4px solid ${borderLeftColor} !important; border-radius: 0.5rem;">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="d-flex align-items-center gap-2">
@@ -295,6 +295,7 @@ async function loadHistory() {
 
         if (tbody) tbody.innerHTML = htmlTable;
         if (cardContainer) cardContainer.innerHTML = htmlCards;
+        updateBatchPrintBtn();
 
         if (result.pagination) {
             totalPages = result.pagination.total_pages || 1;
@@ -622,16 +623,62 @@ async function submitToDatabase() {
     }
 }
 
+window.handleCardClick = function(cardEl, event) {
+    if (event.target.closest('button, a, .dropdown, .dropdown-menu')) {
+        return;
+    }
+    const checkbox = cardEl.querySelector('.row-checkbox');
+    if (!checkbox) return;
+    if (event.target === checkbox) return;
+    
+    checkbox.checked = !checkbox.checked;
+    syncCheckbox(checkbox);
+    updateBatchPrintBtn();
+};
+
 window.syncCheckbox = function(source) {
     const matchingCheckboxes = document.querySelectorAll(`.row-checkbox[value="${source.value}"]`);
-    matchingCheckboxes.forEach(cb => cb.checked = source.checked);
+    matchingCheckboxes.forEach(cb => {
+        cb.checked = source.checked;
+        const cardItem = cb.closest('.tag-card-item');
+        if (cardItem) {
+            if (source.checked) {
+                cardItem.classList.add('tag-card-selected');
+            } else {
+                cardItem.classList.remove('tag-card-selected');
+            }
+        }
+    });
 };
 
 function toggleSelectAll(source) {
+    const isChecked = typeof source === 'boolean' ? source : source.checked;
     const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(cb => cb.checked = source.checked);
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+        const cardItem = cb.closest('.tag-card-item');
+        if (cardItem) {
+            if (isChecked) {
+                cardItem.classList.add('tag-card-selected');
+            } else {
+                cardItem.classList.remove('tag-card-selected');
+            }
+        }
+    });
     updateBatchPrintBtn();
 }
+window.toggleSelectAll = toggleSelectAll;
+
+window.toggleSelectAllOption = function(selectBool) {
+    const desktopSelectAll = document.getElementById('selectAllCheckbox');
+    if (desktopSelectAll) desktopSelectAll.checked = selectBool;
+    const mobileSelectAll = document.getElementById('mobileSelectAllCheckbox');
+    if (mobileSelectAll) {
+        mobileSelectAll.checked = selectBool;
+        mobileSelectAll.indeterminate = false;
+    }
+    toggleSelectAll(selectBool);
+};
 
 function updateBatchPrintBtn() {
     const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
@@ -644,7 +691,13 @@ function updateBatchPrintBtn() {
     
     const btnPrintDropdown = document.getElementById('btnBatchPrintDropdown');
     const selectAllCb = document.getElementById('selectAllCheckbox');
+    const mobileSelectAllCb = document.getElementById('mobileSelectAllCheckbox');
+    const mobileTotalCount = document.getElementById('mobileTotalCount');
+    const mobileSelectedCountText = document.getElementById('mobileSelectedCountText');
     const actionWrapper = document.getElementById('actionWrapper');
+    
+    if (mobileTotalCount) mobileTotalCount.innerText = totalCount;
+    if (mobileSelectedCountText) mobileSelectedCountText.innerText = checkedCount;
     
     if(checkedCount > 0) {
         if(btnPrintDropdown) { 
@@ -669,6 +722,22 @@ function updateBatchPrintBtn() {
     }
     
     if(selectAllCb) selectAllCb.checked = (checkedCount === totalCount && totalCount > 0);
+    
+    if(mobileSelectAllCb) {
+        if (totalCount === 0) {
+            mobileSelectAllCb.checked = false;
+            mobileSelectAllCb.indeterminate = false;
+        } else if (checkedCount === totalCount) {
+            mobileSelectAllCb.checked = true;
+            mobileSelectAllCb.indeterminate = false;
+        } else if (checkedCount > 0) {
+            mobileSelectAllCb.checked = false;
+            mobileSelectAllCb.indeterminate = true;
+        } else {
+            mobileSelectAllCb.checked = false;
+            mobileSelectAllCb.indeterminate = false;
+        }
+    }
 }
 
 window.bulkReceiveTags = async function() {
