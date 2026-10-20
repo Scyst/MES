@@ -39,6 +39,14 @@
         .kpi-micro .kpi-title { font-size: 0.75rem; font-weight: bold; color: #6c757d; margin: 0; }
         .kpi-micro .kpi-value { font-size: 1.25rem; font-weight: bold; margin: 0; line-height: 1; }
 
+        /* Normalize input placeholders to consistent font-size and normal weight */
+        input::placeholder, select::placeholder, textarea::placeholder {
+            font-weight: normal !important;
+            font-size: 0.85rem !important;
+            color: #6c757d !important;
+            opacity: 0.75;
+        }
+
         /* 🖨️ Print CSS */
         @media print {
             @page { font-family: 'Arial', 'Tahoma', sans-serif !important; size: 4in 2in landscape; margin: 0; }
@@ -107,7 +115,7 @@
                                         <label class="form-label fw-bold small text-secondary mb-1">ค้นหา Item (Part / SAP)</label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                                            <input type="text" id="item_search" class="form-control fw-bold text-primary" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off" required>
+                                            <input type="text" id="item_search" class="form-control form-control-sm fw-bold text-primary" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off" required>
                                         </div>
                                         <div id="item_search-results" class="autocomplete-results shadow"></div>
                                         <input type="hidden" id="item_id" name="item_id" required>
@@ -118,7 +126,7 @@
                                     </div>
                                     <div>
                                         <label class="form-label fw-bold small text-secondary mb-1">หมายเหตุ (Remark)</label>
-                                        <input type="text" id="notes" name="notes" class="form-control form-control-sm" placeholder="ใส่หมายเหตุถ้ามี...">
+                                        <input type="text" id="notes" name="notes" class="form-control form-control-sm fw-bold text-dark" placeholder="ใส่หมายเหตุถ้ามี...">
                                     </div>
                                 </div>
 
@@ -127,7 +135,7 @@
                                     <div class="row g-2">
                                         <div class="col-12">
                                             <label class="form-label fw-bold small text-primary mb-1">ยอดรวมใน Lot (Total Lot Size)</label>
-                                            <input type="number" id="lot_no" name="lot_no" class="form-control form-control-sm text-center border-primary fw-bold fs-6 text-primary" min="1" required placeholder="ระบุจำนวนทั้งหมดในล็อตนี้ (ระบบจะสร้างแท็กตามจำนวนนี้)">
+                                            <input type="number" id="lot_no" name="lot_no" class="form-control form-control-sm text-center border-primary fw-bold text-primary" min="1" required placeholder="ระบุจำนวนทั้งหมดในล็อตนี้ (ระบบจะสร้างแท็กตามจำนวนนี้)">
                                         </div>
                                     </div>
                                 </div>
@@ -211,7 +219,7 @@
                                     <option value="COMPLETED">COMPLETED</option>
                                 </select>
                                 <span class="input-group-text bg-white text-muted border-start-0"><i class="fas fa-search"></i></span>
-                                <input type="text" id="historySearch" class="form-control border-start-0 ps-0" placeholder="ค้นหาจาก UUID, Lot, SAP, Part No..." autocomplete="off">
+                                <input type="text" id="historySearch" class="form-control form-control-sm border-start-0 ps-0" placeholder="ค้นหาจาก UUID, Lot, SAP, Part No..." autocomplete="off">
                             </div>
                         </div>
                         <div class="card-body p-0 flex-grow-1">
@@ -259,7 +267,7 @@
                 <div class="modal-body bg-light">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-secondary">เลข Lot / Master Pallet <span class="text-danger">*</span></label>
-                        <input type="text" id="bc_lot_no" class="form-control text-uppercase fw-bold" placeholder="เช่น L-202604">
+                        <input type="text" id="bc_lot_no" class="form-control form-control-sm text-uppercase fw-bold" placeholder="เช่น L-202604">
                     </div>
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="bc_is_range" onchange="toggleBcRange()">
@@ -268,11 +276,11 @@
                     <div class="row g-2 d-none" id="bc_range_div">
                         <div class="col-6">
                             <label class="form-label small fw-bold text-secondary">ตั้งแต่ดวงที่</label>
-                            <input type="number" id="bc_start_no" class="form-control fw-bold text-danger text-center" min="1" placeholder="เช่น 1">
+                            <input type="number" id="bc_start_no" class="form-control form-control-sm fw-bold text-danger text-center" min="1" placeholder="เช่น 1">
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-bold text-secondary">ถึงดวงที่</label>
-                            <input type="number" id="bc_end_no" class="form-control fw-bold text-danger text-center" min="1" placeholder="เช่น 800">
+                            <input type="number" id="bc_end_no" class="form-control form-control-sm fw-bold text-danger text-center" min="1" placeholder="เช่น 800">
                         </div>
                     </div>
                     <div class="alert alert-warning mt-4 mb-0 small border-warning border-opacity-50">
@@ -299,16 +307,16 @@
                 <div class="modal-body bg-light">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-secondary">เลข Lot / Master Pallet <span class="text-danger">*</span></label>
-                        <input type="text" id="bp_lot_no" class="form-control text-uppercase fw-bold" placeholder="เช่น L-202604">
+                        <input type="text" id="bp_lot_no" class="form-control form-control-sm text-uppercase fw-bold" placeholder="เช่น L-202604">
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold text-secondary">ตั้งแต่ดวงที่</label>
-                            <input type="number" id="bp_start_no" class="form-control fw-bold text-primary text-center" min="1" placeholder="เช่น 1" required>
+                            <input type="number" id="bp_start_no" class="form-control form-control-sm fw-bold text-primary text-center" min="1" placeholder="เช่น 1" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-bold text-secondary">ถึงดวงที่</label>
-                            <input type="number" id="bp_end_no" class="form-control fw-bold text-primary text-center" min="1" placeholder="เช่น 500" required>
+                            <input type="number" id="bp_end_no" class="form-control form-control-sm fw-bold text-primary text-center" min="1" placeholder="เช่น 500" required>
                         </div>
                     </div>
                     <div class="alert alert-info mt-3 mb-0 small border-info border-opacity-50">
@@ -360,7 +368,7 @@
 
                     <div class="mb-2">
                         <label class="form-label fw-bold small text-secondary mb-1">หมายเหตุ (Remark)</label>
-                        <input type="text" id="be_notes" class="form-control form-control-sm">
+                        <input type="text" id="be_notes" class="form-control form-control-sm fw-bold text-dark" placeholder="ใส่หมายเหตุถ้ามี...">
                     </div>
                 </div>
                 <div class="modal-footer bg-white">

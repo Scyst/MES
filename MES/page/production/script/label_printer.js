@@ -182,7 +182,7 @@ async function loadLabelHistory(page = historyCurrentPage) {
                         <td class="px-2">${displayTimeHTML}</td>
                         <td class="fw-bold text-primary">${displayUuid}</td>
                         <td>${itemDisplay}</td>
-                        <td class="text-end fw-bold fs-6">${Math.floor(row.quantity)}</td>
+                        <td class="text-end fw-bold">${Math.floor(row.quantity)}</td>
                         <td class="text-center">${statusBadge}</td>
                         <td class="text-center px-3">${actionBtns}</td>
                     </tr>
