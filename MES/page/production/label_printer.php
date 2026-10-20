@@ -77,8 +77,9 @@
                         <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-tags me-2"></i> สร้างแท็กส่งงาน</h5>
                             <div>
-                                <button type="button" class="btn btn-sm btn-outline-success me-1 fw-bold" data-bs-toggle="modal" data-bs-target="#thermalPrinterModal" onclick="if(window.openThermalPrinterModal) openThermalPrinterModal();" title="ตั้งค่าและทดสอบโหมดพิมพ์ด่วน">
-                                    <i class="fas fa-bolt me-1"></i> โหมดพิมพ์ด่วน (ZPL/Kiosk)
+                                <button type="button" class="btn btn-sm btn-outline-success me-1 fw-bold d-inline-flex align-items-center" id="btnThermalConfig" data-bs-toggle="modal" data-bs-target="#thermalPrinterModal" onclick="if(window.openThermalPrinterModal) openThermalPrinterModal();" title="ตั้งค่าและทดสอบโหมดพิมพ์ด่วน (ZPL/Kiosk)">
+                                    <i class="fas fa-bolt me-1"></i> พิมพ์ด่วน
+                                    <span id="thermalUsbActiveDot" class="badge bg-success rounded-pill ms-1 d-none" style="font-size: 0.65rem;">USB</span>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPrinterForm()" title="ล้างค่าทั้งหมด">
                                     <i class="fas fa-broom"></i> ล้าง
@@ -382,8 +383,8 @@
                             <i class="fas fa-bolt fa-lg"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold mb-0">ศูนย์ทดสอบและตั้งค่าพิมพ์ด่วน (Zero-Click Thermal Printer)</h5>
-                            <small class="text-white-50">สำหรับ Honeywell PC42E-T (203dpi) และเครื่องพิมพ์ ZPL ผ่านสาย USB</small>
+                            <h5 class="modal-title fw-bold mb-0">ศูนย์ตั้งค่าและทดสอบพิมพ์ด่วน</h5>
+                            <small class="text-white-50">สำหรับ Honeywell PC42E-T (203 DPI) และเครื่องพิมพ์ ZPL</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -392,17 +393,17 @@
                     <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded border shadow-sm" id="printerTab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active fw-bold py-2" id="kiosk-tab" data-bs-toggle="pill" data-bs-target="#kiosk-content" type="button" role="tab">
-                                <i class="fab fa-chrome me-1 text-primary"></i> 1. Chrome Kiosk Silent (แนะนำทันที)
+                                <i class="fab fa-chrome me-1 text-primary"></i> Chrome Kiosk
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold py-2" id="zpl-tab" data-bs-toggle="pill" data-bs-target="#zpl-content" type="button" role="tab">
-                                <i class="fas fa-microchip me-1 text-success"></i> 2. Direct USB ZPL (Web Serial)
+                                <i class="fas fa-usb me-1 text-success"></i> Direct ZPL
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold py-2" id="preview-tab" data-bs-toggle="pill" data-bs-target="#preview-content" type="button" role="tab">
-                                <i class="fas fa-eye me-1 text-info"></i> 3. ตัวอย่างฉลาก 4" × 2"
+                                <i class="fas fa-eye me-1 text-info"></i> ตัวอย่างฉลาก
                             </button>
                         </li>
                     </ul>

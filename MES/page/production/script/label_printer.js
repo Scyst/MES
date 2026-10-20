@@ -888,17 +888,26 @@ function clearPrinterForm() {
     document.getElementById('item_search').focus();
 }
 
-function executeHiddenPrint(labelsArray) {
+async function executeHiddenPrint(labelsArray) {
     // If ThermalPrinter is active via USB Serial, print ZPL directly!
     if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected()) {
-        labelsArray.forEach(async (d) => {
-            const zpl = window.ThermalPrinter.generateProductionZpl(d);
-            await window.ThermalPrinter.printZplUsb(zpl);
-        });
-        if (typeof showToast === 'function') {
-            showToast(`ส่งคำสั่ง ZPL ไปยังเครื่องพิมพ์ USB สำเร็จ (${labelsArray.length} ป้าย)`, 'var(--bs-success)');
+        try {
+            let combinedZpl = '';
+            for (const d of labelsArray) {
+                combinedZpl += window.ThermalPrinter.generateProductionZpl(d) + '\n';
+            }
+            await window.ThermalPrinter.printZplUsb(combinedZpl);
+            if (typeof showToast === 'function') {
+                showToast(`ส่งคำสั่ง ZPL ตรงเข้าเครื่องพิมพ์ USB สำเร็จ (${labelsArray.length} ป้าย)`, 'var(--bs-success)');
+            }
+            return;
+        } catch (err) {
+            console.error('USB ZPL Print failed, falling back to standard print:', err);
+            if (typeof showToast === 'function') {
+                showToast('การพิมพ์ผ่าน USB ขัดข้อง กำลังสลับไปใช้โหมดปกติ...', 'var(--bs-warning)');
+            }
+            // Fallback to standard window.print below
         }
-        return;
     }
 
     const printArea = document.getElementById('printArea');
@@ -1025,6 +1034,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (form) {
             form.addEventListener('submit', handleGenerateLabel);
         }
+
+        // Check if Thermal Printer was previously connected via USB
+        if (window.ThermalPrinter && typeof window.ThermalPrinter.tryAutoReconnectUsb === 'function') {
+            window.ThermalPrinter.tryAutoReconnectUsb().then(connected => {
+                updateUsbUiState(connected);
+            });
+        }
     }
 });
 
@@ -1128,6 +1144,7 @@ function updateUsbUiState(connected) {
     const badge = document.getElementById('usbConnectionBadge');
     const btnConnect = document.getElementById('btnConnectUsb');
     const btnDisconnect = document.getElementById('btnDisconnectUsb');
+    const activeDot = document.getElementById('thermalUsbActiveDot');
     if (badge) {
         if (connected) {
             badge.className = 'badge bg-success';
@@ -1139,4 +1156,5 @@ function updateUsbUiState(connected) {
     }
     if (btnConnect) btnConnect.classList.toggle('d-none', connected);
     if (btnDisconnect) btnDisconnect.classList.toggle('d-none', !connected);
+    if (activeDot) activeDot.classList.toggle('d-none', !connected);
 }

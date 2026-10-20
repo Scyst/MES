@@ -59,6 +59,26 @@
         },
 
         /**
+         * Try auto-reconnecting to previously paired USB printer
+         */
+        async tryAutoReconnectUsb(baudRate = 9600) {
+            if (!this.isSerialSupported()) return false;
+            if (localStorage.getItem('mes_thermal_usb_active') !== '1') return false;
+            try {
+                const ports = await navigator.serial.getPorts();
+                if (ports && ports.length > 0) {
+                    activeSerialPort = ports[0];
+                    await activeSerialPort.open({ baudRate: baudRate });
+                    return true;
+                }
+            } catch (err) {
+                console.warn('Auto-reconnect USB skipped/busy:', err);
+                activeSerialPort = null;
+            }
+            return false;
+        },
+
+        /**
          * Disconnect active USB Serial Port
          */
         async disconnectUsb() {
