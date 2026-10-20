@@ -86,8 +86,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global Actions
     document.querySelectorAll('.logout-action').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.preventDefault(); 
-            ['pdTableFilters', 'inventoryUIFilters', 'sidebarState'].forEach(key => localStorage.removeItem(key));
+            e.preventDefault();
+            window.__mesSessionRedirecting = true;
+            [
+                'pdTableFilters',
+                'inventoryUIFilters',
+                'sidebarState',
+                'mes_learning_current_user',
+                'mes_learning_user_grading',
+                'mes_learning_active_emp_id'
+            ].forEach(key => localStorage.removeItem(key));
+            try {
+                localStorage.setItem('mes_auth_logout_ts', String(Date.now()));
+                if (typeof BroadcastChannel !== 'undefined') {
+                    const ch = new BroadcastChannel('mes_auth_channel');
+                    ch.postMessage({ type: 'LOGOUT', ts: Date.now() });
+                    ch.close();
+                }
+            } catch (_) {}
             window.location.href = btn.getAttribute('href');
         });
     });
@@ -123,39 +139,163 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) bootstrap.Offcanvas.getOrCreateInstance(el).toggle();
         });
     }
+});
 
-    const originalFetch = window.fetch;
-    window.fetch = async function() {
+// ============================================================================
+// REAL-TIME SESSION GUARD & GLOBAL HTTP 401 INTERCEPTOR (Event-Driven Sync)
+// ============================================================================
+(function initGlobalMesSessionGuard() {
+    if (window.__mesSessionGuardInstalled) return;
+    window.__mesSessionGuardInstalled = true;
+
+    const rawFetch = window.fetch.bind(window);
+    let isCheckingSession = false;
+
+    function resolveMesBaseUrl() {
+        if (window.MES_AUTH_CONFIG && window.MES_AUTH_CONFIG.baseUrl) {
+            return window.MES_AUTH_CONFIG.baseUrl.replace(/\/+$/, '');
+        }
+        if (window.location.pathname.includes('/page/')) {
+            return window.location.pathname.split('/page/')[0];
+        }
+        return '/MES/MES';
+    }
+
+    function clearClientAuthStorage() {
+        [
+            'pdTableFilters',
+            'inventoryUIFilters',
+            'mes_learning_current_user',
+            'mes_learning_user_grading',
+            'mes_learning_active_emp_id'
+        ].forEach(key => {
+            try { localStorage.removeItem(key); } catch (_) {}
+        });
+    }
+
+    window.__mesTriggerSessionLogout = function triggerSessionLogout(broadcast = true) {
+        if (window.__mesSessionRedirecting) return;
+
+        const cfg = window.MES_AUTH_CONFIG || {};
+        // If page allows guest access and was already loaded as guest, do nothing
+        if (cfg.allowGuest && !cfg.isAuthenticated) {
+            return;
+        }
+
+        window.__mesSessionRedirecting = true;
+        clearClientAuthStorage();
+
+        if (broadcast) {
+            try {
+                localStorage.setItem('mes_auth_logout_ts', String(Date.now()));
+                if (typeof BroadcastChannel !== 'undefined') {
+                    const ch = new BroadcastChannel('mes_auth_channel');
+                    ch.postMessage({ type: 'LOGOUT', ts: Date.now() });
+                    ch.close();
+                }
+            } catch (_) {}
+        }
+
+        // If page supports Guest Mode (e.g. OEE_Shopfloor) and was loaded while logged in, reload into Guest state
+        if (cfg.allowGuest && cfg.isAuthenticated) {
+            window.location.reload();
+            return;
+        }
+
+        const baseUrl = resolveMesBaseUrl();
+        const redirectTarget = encodeURIComponent(window.location.href);
+        window.location.replace(`${baseUrl}/auth/login_form.php?redirect=${redirectTarget}`);
+    };
+
+    async function verifyMesSessionLive() {
+        if (window.__mesSessionRedirecting || isCheckingSession) return;
+        const cfg = window.MES_AUTH_CONFIG || {};
+        if (cfg.allowGuest && !cfg.isAuthenticated) return;
+
+        isCheckingSession = true;
         try {
-            const response = await originalFetch.apply(this, arguments);
-            
-            if (response.status === 401) {
-                let logoutUrl = '/MES/MES/auth/logout.php';
-                const logoutBtn = document.querySelector('.logout-action');
-                if (logoutBtn && logoutBtn.getAttribute('href')) {
-                    logoutUrl = logoutBtn.getAttribute('href');
-                } else if (window.location.pathname.includes('/page/')) {
-                    logoutUrl = window.location.pathname.split('/page/')[0] + '/auth/logout.php';
+            const baseUrl = resolveMesBaseUrl();
+            const res = await rawFetch(`${baseUrl}/auth/api_verify.php?silent=1&_t=${Date.now()}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
+            });
 
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'เซสชั่นหมดอายุ',
-                        text: 'กรุณาเข้าสู่ระบบใหม่อีกครั้งเพื่อความปลอดภัย',
-                        confirmButtonText: 'ตกลง',
-                        allowOutsideClick: false
-                    }).then(() => {
-                        window.location.href = logoutUrl;
-                    });
-                } else {
-                    window.location.href = logoutUrl;
+            if (res.status === 401 || (res.redirected && res.url && res.url.includes('login_form.php'))) {
+                window.__mesTriggerSessionLogout(true);
+                return;
+            }
+
+            if (res.ok) {
+                const json = await res.json().catch(() => null);
+                if (json && (json.authenticated === false || json.success === false)) {
+                    window.__mesTriggerSessionLogout(true);
                 }
-                return Promise.reject('Unauthorized 401');
+            }
+        } catch (_) {
+            // Ignore transient network errors when offline
+        } finally {
+            isCheckingSession = false;
+        }
+    }
+
+    // 1. Instant Cross-Tab Logout Sync via Storage & BroadcastChannel
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'mes_auth_logout_ts' && e.newValue) {
+            window.__mesTriggerSessionLogout(false);
+        }
+    });
+
+    if (typeof BroadcastChannel !== 'undefined') {
+        try {
+            const authChannel = new BroadcastChannel('mes_auth_channel');
+            authChannel.addEventListener('message', (e) => {
+                if (e.data && e.data.type === 'LOGOUT') {
+                    window.__mesTriggerSessionLogout(false);
+                }
+            });
+        } catch (_) {}
+    }
+
+    // 2. Instant Session Check on Tab Focus, Visibility Change & BFCache Restore
+    window.addEventListener('focus', verifyMesSessionLive);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            verifyMesSessionLive();
+        }
+    });
+    window.addEventListener('pageshow', (e) => {
+        if (e.persisted) {
+            verifyMesSessionLive();
+        }
+    });
+
+    // 3. Lightweight Heartbeat while page is open & visible (every 45s)
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            verifyMesSessionLive();
+        }
+    }, 45000);
+
+    // 4. Global Fetch Interceptor for HTTP 401 & Login Redirects
+    window.fetch = async function(input, init) {
+        try {
+            const response = await rawFetch(input, init);
+
+            const isLoginRedirect = response.redirected && response.url && response.url.includes('login_form.php');
+            if (response.status === 401 || isLoginRedirect) {
+                window.__mesTriggerSessionLogout(true);
+                const authErr = new Error('เซสชันหมดอายุ กำลังนำทางไปยังหน้าเข้าสู่ระบบ...');
+                authErr.isSessionExpired = true;
+                return Promise.reject(authErr);
             }
 
             if (response.status === 500) {
-                if (typeof Swal !== 'undefined') {
+                if (typeof Swal !== 'undefined' && !window.__mesSessionRedirecting) {
                     Swal.fire({
                         icon: 'error',
                         title: 'System Error',
@@ -163,15 +303,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmButtonText: 'ปิด'
                     });
                 }
-                return Promise.reject('Server Error 500'); 
+                const srvErr = new Error('Server Error 500');
+                return Promise.reject(srvErr);
             }
 
             return response;
         } catch (error) {
-            if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+            if (error && error.name === 'TypeError' && error.message === 'Failed to fetch') {
                 console.error('Network or CORS error:', error);
             }
             throw error;
         }
     };
-});
+})();

@@ -35,7 +35,11 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
 
         const options = {
             method: method.toUpperCase(),
-            headers: {}
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         };
 
         // Add CSRF token for non-GET requests
@@ -54,6 +58,15 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
         // Try to parse JSON regardless of status, but prioritize error message if response not ok
         const result = await response.json().catch(() => ({})); // Default to empty object on JSON parse error
 
+        if (response.status === 401 || result.is_expired === true || (response.redirected && response.url && response.url.includes('login_form.php'))) {
+            if (typeof window.__mesTriggerSessionLogout === 'function') {
+                window.__mesTriggerSessionLogout();
+            }
+            const authErr = new Error(result.message || 'Session expired');
+            authErr.isSessionExpired = true;
+            throw authErr;
+        }
+
         if (!response.ok) {
             // Use message from JSON if available, otherwise use status text or default
             const errorMessage = result.message || response.statusText || `HTTP error! status: ${response.status}`;
@@ -70,14 +83,18 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
         return result;
 
     } catch (error) {
+        if (window.__mesSessionRedirecting || (error && error.isSessionExpired)) {
+            return { success: false, is_expired: true, message: 'Session expired' };
+        }
+        const msg = (error && error.message) ? error.message : String(error || 'An unexpected network or server error occurred.');
         console.error(`Request for action '${action}' to endpoint '${endpoint}' failed:`, error);
         // Ensure showToast exists before calling it (it should come from toast.js included in common_head)
         if (typeof showToast === 'function') {
-             showToast(`Error: ${error.message}` || 'An unexpected network or server error occurred.', 'var(--bs-danger)');
+             showToast(`Error: ${msg}`, 'var(--bs-danger)');
         } else {
-             alert(`Error: ${error.message}` || 'An unexpected network or server error occurred.'); // Fallback alert
+             alert(`Error: ${msg}`); // Fallback alert
         }
         // Return a standard error structure
-        return { success: false, message: error.message || "Network or server error." };
+        return { success: false, message: msg };
     }
 }

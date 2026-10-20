@@ -19,6 +19,14 @@
         document.documentElement.setAttribute('data-bs-theme', theme);
     })();
 
+    // Global Auth & Session Sync Metadata
+    window.MES_AUTH_CONFIG = {
+        isAuthenticated: <?php echo !empty($_SESSION['user']) ? 'true' : 'false'; ?>,
+        allowGuest: <?php echo (defined('ALLOW_GUEST_ACCESS') && ALLOW_GUEST_ACCESS) ? 'true' : 'false'; ?>,
+        userId: <?php echo json_encode($_SESSION['user']['id'] ?? null); ?>,
+        baseUrl: <?php echo json_encode(defined('BASE_URL') ? BASE_URL : '/MES/MES'); ?>
+    };
+
     // i18n Translation Engine
     window.Translations = <?php echo isset($GLOBALS['i18n_translations']) ? json_encode($GLOBALS['i18n_translations'], JSON_UNESCAPED_UNICODE) : '{}'; ?>;
     window.__ = function(keyPath, fallback = null) {
@@ -66,7 +74,14 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
         }
         const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
         const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
-        const options = { method: method.toUpperCase(), headers: {} };
+        const options = {
+            method: method.toUpperCase(),
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        };
         if (options.method !== 'GET' && csrfToken) { options.headers['X-CSRF-TOKEN'] = csrfToken; }
         if (body && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH')) {
             options.headers['Content-Type'] = 'application/json';
@@ -74,17 +89,29 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
         }
         const response = await fetch(url, options);
         const result = await response.json().catch(() => ({}));
+        if (response.status === 401 || result.is_expired === true || (response.redirected && response.url && response.url.includes('login_form.php'))) {
+            if (typeof window.__mesTriggerSessionLogout === 'function') {
+                window.__mesTriggerSessionLogout();
+            }
+            const authErr = new Error(result.message || 'Session expired');
+            authErr.isSessionExpired = true;
+            throw authErr;
+        }
         if (!response.ok) { throw new Error(result.message || response.statusText || `HTTP error! status: ${response.status}`); }
         if (typeof result.success === 'undefined') { result.success = false; }
         return result;
     } catch (error) {
+        if (window.__mesSessionRedirecting || (error && error.isSessionExpired)) {
+            return { success: false, is_expired: true, message: 'Session expired' };
+        }
+        const msg = (error && error.message) ? error.message : String(error || 'An unexpected error occurred.');
         console.error(`Request failed:`, error);
         if (typeof showToast === 'function') {
-             showToast(`Error: ${error.message}` || 'An unexpected error occurred.', 'var(--bs-danger)');
+             showToast(`Error: ${msg}`, 'var(--bs-danger)');
         } else {
-             alert(`Error: ${error.message}` || 'An unexpected error occurred.');
+             alert(`Error: ${msg}`);
         }
-        return { success: false, message: error.message || "Network error." };
+        return { success: false, message: msg };
     }
 }
 </script>

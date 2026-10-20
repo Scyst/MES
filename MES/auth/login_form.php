@@ -105,6 +105,32 @@ function getFriendlyPageName($url) {
     </div>
 
     <script>
+        // Immediately notify any other open MES / Learning Hub tabs that session is logged out
+        (function syncAuthStateOnLoginScreen() {
+            const redirectUrl = <?php echo json_encode($redirectTarget); ?>;
+            try {
+                localStorage.removeItem('mes_learning_current_user');
+                localStorage.removeItem('mes_learning_user_grading');
+                localStorage.removeItem('mes_learning_active_emp_id');
+                localStorage.setItem('mes_auth_logout_ts', String(Date.now()));
+                if (typeof BroadcastChannel !== 'undefined') {
+                    const ch = new BroadcastChannel('mes_auth_channel');
+                    ch.postMessage({ type: 'LOGOUT', ts: Date.now() });
+                    ch.addEventListener('message', (e) => {
+                        if (e.data && e.data.type === 'LOGIN') {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                }
+            } catch (_) {}
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'mes_auth_login_ts' && e.newValue) {
+                    window.location.href = redirectUrl;
+                }
+            });
+        })();
+
         document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
             
@@ -135,6 +161,14 @@ function getFriendlyPageName($url) {
                 const result = await response.json();
                 
                 if (result.success) {
+                    try {
+                        localStorage.setItem('mes_auth_login_ts', String(Date.now()));
+                        if (typeof BroadcastChannel !== 'undefined') {
+                            const ch = new BroadcastChannel('mes_auth_channel');
+                            ch.postMessage({ type: 'LOGIN', ts: Date.now() });
+                            ch.close();
+                        }
+                    } catch (_) {}
                     // ✅ SUCCESS: เปลี่ยนหน้าไปตามตัวแปร PHP $redirectTarget
                     window.location.href = <?php echo json_encode($redirectTarget); ?>;
                 } else {
