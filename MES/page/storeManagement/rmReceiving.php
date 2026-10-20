@@ -216,18 +216,6 @@ $pageHelpId = "";
                                 </ul>
                             </div>
 
-                            <!-- Thermal Quick Print Config Button -->
-                            <button type="button" 
-                                    class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center flex-shrink-0 shadow-sm" 
-                                    id="btnThermalConfig" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#thermalPrinterModal" 
-                                    onclick="if(window.openThermalPrinterModal) openThermalPrinterModal();" 
-                                    style="height: 32px;"
-                                    title="ตั้งค่าและทดสอบโหมดพิมพ์ด่วน (ZPL/Kiosk)">
-                                <i class="fas fa-bolt"></i><span class="d-none d-sm-inline ms-1">พิมพ์ด่วน</span>
-                                <span id="thermalUsbActiveDot" class="badge bg-success rounded-pill ms-1 d-none" style="font-size: 0.65rem;">USB</span>
-                            </button>
 
                             <!-- Pinned Action Menu (3 Dots / Kebab Menu) Outside Scroll Container to Prevent Overflow Clipping -->
                             <div class="dropdown flex-shrink-0">
@@ -603,46 +591,135 @@ $pageHelpId = "";
 
                         <!-- TAB 3: LIVE PREVIEW -->
                         <div class="tab-pane fade" id="preview-content" role="tabpanel">
+                            <style>
+                                /* 🖨️ Thermal Modal - 1:1 Live Preview of Store RM Tag (Screen rendering) */
+                                .store-tag-preview-card {
+                                    width: 4in;
+                                    height: 2in;
+                                    max-width: 100%;
+                                    box-sizing: border-box;
+                                    padding: 2mm 2mm 2mm 6mm;
+                                    font-family: 'Arial', sans-serif;
+                                    color: #000;
+                                    background-color: #fff;
+                                    display: flex;
+                                    flex-direction: row;
+                                    align-items: center;
+                                    position: relative;
+                                    border: 1px dashed #777;
+                                    border-radius: 4px;
+                                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                                    margin: 0 auto;
+                                    text-align: left;
+                                }
+                                .store-tag-preview-card .micro-text {
+                                    position: absolute;
+                                    font-size: 7px;
+                                    color: #888;
+                                    letter-spacing: 0.5px;
+                                    white-space: nowrap;
+                                    user-select: none;
+                                }
+                                .store-tag-preview-card .micro-top { top: 2px; left: 50%; transform: translateX(-50%); }
+                                .store-tag-preview-card .micro-bottom { bottom: 2px; left: 50%; transform: translateX(-50%); }
+                                .store-tag-preview-card .micro-left { left: 8px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center; }
+                                .store-tag-preview-card .micro-right { right: -2px; top: 50%; transform: translate(50%, -50%) rotate(90deg); transform-origin: center; }
+
+                                .store-tag-preview-card .tag-details {
+                                    width: 74%;
+                                    padding-right: 6px;
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: center;
+                                    height: 100%;
+                                    box-sizing: border-box;
+                                }
+                                .store-tag-preview-card .t-title { font-size: 17px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; color: #000; }
+                                .store-tag-preview-card .t-sub { font-size: 11px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; color: #333; }
+                                .store-tag-preview-card .t-desc {
+                                    font-size: 10px;
+                                    line-height: 1.2;
+                                    margin-bottom: 4px;
+                                    border-bottom: 1px solid #000;
+                                    padding-bottom: 3px;
+                                    display: -webkit-box;
+                                    -webkit-line-clamp: 2;
+                                    line-clamp: 2;
+                                    -webkit-box-orient: vertical;
+                                    overflow: hidden;
+                                    white-space: normal;
+                                }
+                                .store-tag-preview-card .t-table { width: 100%; font-size: 10px; line-height: 1.2; }
+                                .store-tag-preview-card .t-table td { padding: 1.5px 0; vertical-align: middle; }
+                                .store-tag-preview-card .t-hl { font-size: 15px; font-weight: bold; line-height: 1; display: inline-block; color: #000; }
+
+                                .store-tag-preview-card .tag-qr {
+                                    width: 26%;
+                                    display: flex;
+                                    flex-direction: column;
+                                    align-items: center;
+                                    justify-content: center;
+                                }
+                                .store-tag-preview-card .tag-qr canvas, 
+                                .store-tag-preview-card .tag-qr img {
+                                    width: 80px !important;
+                                    height: 80px !important;
+                                }
+                                .store-tag-preview-card .t-serial {
+                                    font-size: 10px;
+                                    font-weight: bold;
+                                    margin-top: 4px;
+                                    text-align: center;
+                                    word-break: break-all;
+                                    font-family: Arial, sans-serif;
+                                }
+                            </style>
+
                             <div class="card border-0 shadow-sm text-center p-3">
-                                <h6 class="fw-bold text-secondary mb-2">พิกัดและขนาดฉลากจริง (4.00" x 2.00" / 812 x 406 Dots)</h6>
-                                <div class="p-3 border rounded bg-white d-inline-block mx-auto shadow-sm text-start" style="width: 100%; max-width: 480px; font-family: 'Arial', sans-serif; border: 1px dashed #999 !important;">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div style="width: 72%;">
-                                            <div class="fw-bold text-dark" style="font-size: 1.15rem; line-height: 1.1;">RAW-ALUM-001</div>
-                                            <div class="fw-bold text-muted" style="font-size: 0.8rem; line-height: 1.2;">ALUMINUM RAW MATERIAL</div>
-                                            <div class="text-dark small border-bottom border-dark pb-1 mb-1 text-truncate" style="font-size: 0.72rem;">Aluminum Sheet Alloy 6061-T6 2.0mm x 1200mm</div>
-                                            <table class="w-100" style="font-size: 0.72rem; line-height: 1.2;">
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                                    <h6 class="fw-bold text-secondary mb-0">พิกัดและขนาดฉลากจริง (4.00" x 2.00" / 812 x 406 Dots)</h6>
+                                    <span class="badge bg-light text-dark border"><i class="fas fa-tag me-1 text-primary"></i>Store RM Tag Standard</span>
+                                </div>
+
+                                <div class="d-flex justify-content-center my-2 overflow-auto py-1">
+                                    <div class="store-tag-preview-card" id="rmPreviewTagCard">
+                                        <div class="micro-text micro-top">RM-261020-0001</div>
+                                        <div class="micro-text micro-bottom">RM-261020-0001</div>
+                                        <div class="micro-text micro-left">RM-261020-0001</div>
+                                        <div class="micro-text micro-right">RM-261020-0001</div>
+                                        <div class="tag-details">
+                                            <div class="t-title">RAW-ALUM-001</div>
+                                            <div class="t-sub">ALUMINUM RAW MATERIAL</div>
+                                            <div class="t-desc" title="Aluminum Sheet Alloy 6061-T6 2.0mm x 1200mm">Aluminum Sheet Alloy 6061-T6 2.0mm x 1200mm</div>
+                                            
+                                            <table class="t-table">
                                                 <tr>
-                                                    <td style="width: 55%;"><b>QTY:</b> <span class="fw-bold text-primary" style="font-size: 0.95rem;">1,500</span></td>
-                                                    <td style="width: 45%;"><b>Inv:</b> WH-RM01</td>
+                                                    <td style="width: 55%;"><b>QTY:</b> <span class="t-hl">1,500</span></td>
+                                                    <td style="width: 45%;"><b>Inv:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">WH-RM01</span></td>
                                                 </tr>
                                                 <tr>
-                                                    <td><b>PO:</b> PO2610-0988</td>
-                                                    <td><b>Pallet:</b> PL-01</td>
+                                                    <td style="padding-right: 5px;"><b>PO:</b> <span style="display:inline-block; max-width:105px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">PO2610-0988</span></td>
+                                                    <td><b>Pallet:</b> <span style="display:inline-block; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">PL-01</span></td>
                                                 </tr>
                                                 <tr>
-                                                    <td><b>CTN:</b> 1/10</td>
-                                                    <td><b>Week:</b> W42</td>
+                                                    <td style="padding-right: 5px;"><b>CTN:</b> <span style="display:inline-block; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">1/10</span></td>
+                                                    <td><b>Week:</b> <span style="display:inline-block; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">W42</span></td>
                                                 </tr>
                                                 <tr>
-                                                    <td><b>Date:</b> <?php echo date('Y-m-d'); ?></td>
-                                                    <td><b>Remark:</b> PASS</td>
+                                                    <td style="padding-right: 5px;"><b>Date:</b> <?php echo date('Y-m-d'); ?></td>
+                                                    <td><b>Remark:</b> <span style="display:inline-block; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">PASS</span></td>
                                                 </tr>
                                             </table>
                                         </div>
-                                        <div class="text-center" style="width: 28%;">
-                                            <div class="bg-dark text-white d-flex align-items-center justify-content-center mx-auto rounded" style="width: 80px; height: 80px; font-size: 0.65rem;">
-                                                [ QR Code ]
-                                            </div>
-                                            <div class="font-monospace small fw-bold text-dark mt-1" style="font-size: 0.65rem;">RM-261020-0001</div>
+                                        <div class="tag-qr">
+                                            <div id="modalPreviewQr"></div>
+                                            <div class="t-serial">RM-261020-0001</div>
                                         </div>
                                     </div>
-                                    <div class="mt-2 text-center border-top pt-1">
-                                        <span class="font-monospace small text-muted" style="letter-spacing: 2px;">||||| | |||| ||| |||||| |||| |||||</span>
-                                    </div>
                                 </div>
-                                <div class="mt-3 small text-muted">
-                                    <i class="fas fa-check text-success me-1"></i> พิกัดคมชัดระดับหัวพิมพ์ความร้อน 203 DPI พร้อม QR Code และ Code128 Barcode
+
+                                <div class="mt-2 small text-muted">
+                                    <i class="fas fa-check-circle text-success me-1"></i> โครงสร้างการ์ดและฟอนต์ 1:1 กับสติ๊กเกอร์สโตร์จริง พร้อม Micro-Text 4 ด้าน และ QR Code สำหรับเครื่องยิงสแกนเนอร์
                                 </div>
                             </div>
                         </div>

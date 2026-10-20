@@ -1141,6 +1141,25 @@ window.openThermalPrinterModal = function() {
     if (modalEl) {
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
+
+        // 1:1 Live QR Code rendering in Tab 3 Preview
+        const qrBox = document.getElementById('modalPreviewQr');
+        if (qrBox && typeof QRCode !== 'undefined') {
+            qrBox.innerHTML = '';
+            try {
+                new QRCode(qrBox, {
+                    text: 'RM-261020-0001',
+                    width: 80,
+                    height: 80,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } catch (err) {
+                console.warn('QR Code rendering warning:', err);
+            }
+        }
+
         if (window.ThermalPrinter) {
             const sampleZpl = window.ThermalPrinter.generateRmZpl({
                 item_no: 'RAW-ALUM-001',

@@ -180,28 +180,32 @@
             const remark = (tag.remark || '-').substring(0, 25).replace(/[\^~]/g, '');
             const serialNo = (tag.serial_no || '-').substring(0, 30);
 
-            // Calibrated 1:1 against physical 4"x2" Honeywell tag (203 DPI / 8 dpmm)
+            // Calibrated 1:1 against physical 4"x2" Honeywell Store RM tag (203 DPI / 8 dpmm)
+            // Includes 4 micro-texts around borders and QR code (NO bottom barcode, identical to Store HTML tag)
             return `^XA
 ^PW${this.DOTS_WIDTH}
 ^LL${this.DOTS_HEIGHT}
 ^PON
 ^LH0,0
-^FO30,25^A0N,36,34^FD${itemNo}^FS
-^FO30,68^A0N,24,22^FD${category}^FS
-^FO30,95^A0N,20,18^FB490,2,0,L^FD${desc}^FS
-^FO30,138^GB490,2,2^FS
-^FO30,148^A0N,22,20^FDQTY:^FS
-^FO90,144^A0N,28,26^FD${qty}^FS
-^FO280,148^A0N,22,20^FDInv: ${inv}^FS
-^FO30,180^A0N,22,20^FDPO: ${po}^FS
-^FO280,180^A0N,22,20^FDPallet: ${pallet}^FS
-^FO30,212^A0N,22,20^FDCTN: ${ctn}^FS
-^FO280,212^A0N,22,20^FDWeek: ${week}^FS
-^FO30,244^A0N,22,20^FDDate: ${date}^FS
-^FO280,244^A0N,22,20^FDRemark: ${remark}^FS
-^FO30,275^BY2,2,52^BCN,52,N,N,N^FD${serialNo}^FS
-^FO550,36^BQN,2,9^FDQA,${serialNo}^FS
-^FO530,270^A0N,22,20^FB250,1,0,C^FD${serialNo}^FS
+^FO250,8^A0N,16,14^FD${serialNo}^FS
+^FO250,388^A0N,16,14^FD${serialNo}^FS
+^FO10,250^A0B,16,14^FD${serialNo}^FS
+^FO790,160^A0B,16,14^FD${serialNo}^FS
+^FO35,28^A0N,38,36^FD${itemNo}^FS
+^FO35,70^A0N,22,20^FD${category}^FS
+^FO35,96^A0N,20,18^FB490,2,0,L^FD${desc}^FS
+^FO35,140^GB490,2,2^FS
+^FO35,155^A0N,24,22^FDQTY:^FS
+^FO100,150^A0N,32,30^FD${qty}^FS
+^FO280,155^A0N,22,20^FDInv: ${inv}^FS
+^FO35,195^A0N,22,20^FDPO: ${po}^FS
+^FO280,195^A0N,22,20^FDPallet: ${pallet}^FS
+^FO35,235^A0N,22,20^FDCTN: ${ctn}^FS
+^FO280,235^A0N,22,20^FDWeek: ${week}^FS
+^FO35,275^A0N,22,20^FDDate: ${date}^FS
+^FO280,275^A0N,22,20^FDRemark: ${remark}^FS
+^FO540,55^BQN,2,8^FDQA,${serialNo}^FS
+^FO520,290^A0N,24,22^FB260,1,0,C^FD${serialNo}^FS
 ^XZ`;
         },
 
