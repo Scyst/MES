@@ -651,6 +651,18 @@ window.reprintMasterPallet = async function(masterPalletNo) {
     try {
         const result = await fetchAPI(`get_master_pallet_details&master_pallet_no=${encodeURIComponent(masterPalletNo)}`, 'GET');
         if (result.success && result.data) {
+            if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected() && typeof window.ThermalPrinter.generateMasterPalletZpl === 'function') {
+                try {
+                    const zpl = window.ThermalPrinter.generateMasterPalletZpl(result.data);
+                    await window.ThermalPrinter.printZplUsb(zpl);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ title: 'สำเร็จ!', text: 'ส่งคำสั่ง ZPL พิมพ์ Master Pallet เรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
+                    }
+                    return;
+                } catch (e) {
+                    console.error("Master pallet USB print failed:", e);
+                }
+            }
             if (typeof renderMasterPalletTag === 'function') {
                 renderMasterPalletTag(result.data); 
             } else {

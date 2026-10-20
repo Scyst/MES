@@ -206,9 +206,77 @@
         },
 
         /**
+         * Generate ZPL for Store Master Pallet Tag (4.00" x 2.00" @ 203 DPI)
+         */
+        generateMasterPalletZpl(m) {
+            const isMixed = (m.distinct_items > 1);
+            const itemNo = (isMixed ? 'MIXED PARTS' : (m.item_no || m.part_no || 'MIXED')).substring(0, 30);
+            const desc = (isMixed ? 'พาเลทรวมสินค้าหลายชนิด' : (m.part_description || m.description_ref || '')).replace(/[\^~]/g, '');
+            const totalQty = parseFloat(m.total_qty || 0).toLocaleString();
+            const totalTags = String(m.total_tags || 1);
+            const po = (m.po_number || '-').substring(0, 20);
+            const inv = (m.warehouse_no || '-').substring(0, 20);
+            const week = (m.week_no || '-').substring(0, 20);
+            const date = (m.received_date || '-').substring(0, 20);
+            const remark = (m.remark || '-').substring(0, 25).replace(/[\^~]/g, '');
+            const masterPalletNo = (m.master_pallet_no || '-').substring(0, 30);
+
+            return `^XA
+^PW${this.DOTS_WIDTH}
+^LL${this.DOTS_HEIGHT}
+^PON
+^LH0,0
+^FO30,22^A0N,28,26^FDPALLET TAG^FS
+^FO30,55^A0N,34,32^FD${itemNo}^FS
+^FO30,95^A0N,20,18^FB490,2,0,L^FD${desc}^FS
+^FO30,138^GB490,2,2^FS
+^FO30,148^A0N,22,20^FDTotal QTY:^FS
+^FO150,144^A0N,28,26^FD${totalQty}^FS
+^FO320,148^A0N,22,20^FDTags: ${totalTags}^FS
+^FO30,180^A0N,22,20^FDPO: ${po}^FS
+^FO30,212^A0N,22,20^FDInv: ${inv}^FS
+^FO280,212^A0N,22,20^FDWeek: ${week}^FS
+^FO30,244^A0N,22,20^FDDate: ${date}^FS
+^FO280,244^A0N,22,20^FDRemark: ${remark}^FS
+^FO30,275^BY2,2,52^BCN,52,N,N,N^FD${masterPalletNo}^FS
+^FO550,36^BQN,2,9^FDQA,${masterPalletNo}^FS
+^FO530,270^A0N,22,20^FB250,1,0,C^FD${masterPalletNo}^FS
+^XZ`;
+        },
+
+        /**
          * Test sample label print (Either via Web Serial or Chrome Kiosk Silent Print)
          */
         async testPrintSample(type = 'production') {
+            if (type === 'rm') {
+                const sampleRm = {
+                    item_no: 'RAW-ALUM-001',
+                    category: 'ALUMINUM RAW MATERIAL',
+                    part_description: 'Aluminum Sheet Alloy 6061-T6 2.0mm x 1200mm',
+                    qty_per_pallet: 1500,
+                    qty: 1500,
+                    warehouse_no: 'WH-RM01',
+                    po_number: 'PO2610-0988',
+                    pallet_no: 'PL-01',
+                    ctn_number: '1/10',
+                    week_no: 'W' + Math.ceil(new Date().getDate() / 7),
+                    received_date: new Date().toISOString().split('T')[0],
+                    remark: 'INSPECTION PASS',
+                    serial_no: 'RM-261020-0001'
+                };
+
+                if (this.isSerialConnected()) {
+                    const zpl = this.generateRmZpl(sampleRm);
+                    return await this.printZplUsb(zpl);
+                } else if (typeof renderPrintTags === 'function') {
+                    renderPrintTags([sampleRm]);
+                    return { success: true, message: 'ส่งคำสั่งพิมพ์ไปยังเบราว์เซอร์แล้ว' };
+                } else {
+                    window.print();
+                    return { success: true, message: 'ส่งคำสั่งพิมพ์ไปยังเบราว์เซอร์แล้ว' };
+                }
+            }
+
             const sampleData = {
                 part_no: 'PART-XYZ-9999',
                 sap_no: '10029384',
@@ -223,7 +291,7 @@
             };
 
             if (this.isSerialConnected()) {
-                const zpl = (type === 'rm') ? this.generateRmZpl(sampleData) : this.generateProductionZpl(sampleData);
+                const zpl = this.generateProductionZpl(sampleData);
                 return await this.printZplUsb(zpl);
             } else {
                 // Fallback to standard window.print()

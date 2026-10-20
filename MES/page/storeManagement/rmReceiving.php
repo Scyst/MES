@@ -216,6 +216,19 @@ $pageHelpId = "";
                                 </ul>
                             </div>
 
+                            <!-- Thermal Quick Print Config Button -->
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center flex-shrink-0 shadow-sm" 
+                                    id="btnThermalConfig" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#thermalPrinterModal" 
+                                    onclick="if(window.openThermalPrinterModal) openThermalPrinterModal();" 
+                                    style="height: 32px;"
+                                    title="ตั้งค่าและทดสอบโหมดพิมพ์ด่วน (ZPL/Kiosk)">
+                                <i class="fas fa-bolt"></i><span class="d-none d-sm-inline ms-1">พิมพ์ด่วน</span>
+                                <span id="thermalUsbActiveDot" class="badge bg-success rounded-pill ms-1 d-none" style="font-size: 0.65rem;">USB</span>
+                            </button>
+
                             <!-- Pinned Action Menu (3 Dots / Kebab Menu) Outside Scroll Container to Prevent Overflow Clipping -->
                             <div class="dropdown flex-shrink-0">
                                 <button class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded shadow-sm position-relative d-flex align-items-center justify-content-center" 
@@ -234,6 +247,7 @@ $pageHelpId = "";
                                     <li><a class="dropdown-item py-2 fw-bold text-secondary" href="#" onclick="toggleSelectAllOption(false); return false;"><i class="fas fa-times fa-fw me-2"></i> ยกเลิกการเลือกทั้งหมด</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><h6 class="dropdown-header text-success fw-bold"><i class="fas fa-database me-1"></i> จัดการข้อมูล (Data)</h6></li>
+                                    <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="openThermalPrinterModal(); return false;"><i class="fas fa-bolt fa-fw me-2"></i> โหมดพิมพ์ด่วน (ZPL / Kiosk)</a></li>
                                     <li><a class="dropdown-item py-2 fw-bold text-success" href="#" onclick="exportToExcel(); return false;"><i class="fas fa-file-export fa-fw me-2 text-success"></i> Export to Excel</a></li>
                                     <?php if($canManageRM): ?>
                                     <li><a class="dropdown-item py-2 fw-bold text-primary" href="#" onclick="openImportModal(); return false;"><i class="fas fa-file-import fa-fw me-2 text-primary"></i> Import Excel (สร้าง Tag)</a></li>
@@ -488,6 +502,159 @@ $pageHelpId = "";
         </div>
     </div>
     
+    <!-- 🖨️ MODAL: โหมดพิมพ์ด่วน ZPL / Chrome Kiosk -->
+    <div class="modal fade" id="thermalPrinterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0 rounded-3">
+                <div class="modal-header bg-dark text-white py-2 px-3">
+                    <h5 class="modal-title fw-bold" style="font-size: 1rem;">
+                        <i class="fas fa-bolt text-warning me-2"></i> โหมดพิมพ์ด่วน (ZPL / Kiosk) - คลังสินค้า RM
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light p-3">
+                    <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded border shadow-sm" id="printerTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold py-2" id="kiosk-tab" data-bs-toggle="pill" data-bs-target="#kiosk-content" type="button" role="tab">
+                                <i class="fab fa-chrome me-1 text-primary"></i> Chrome Kiosk
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-2" id="zpl-tab" data-bs-toggle="pill" data-bs-target="#zpl-content" type="button" role="tab">
+                                <i class="fas fa-usb me-1 text-success"></i> Direct ZPL
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-2" id="preview-tab" data-bs-toggle="pill" data-bs-target="#preview-content" type="button" role="tab">
+                                <i class="fas fa-eye me-1 text-info"></i> ตัวอย่างฉลาก
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="printerTabContent">
+                        <!-- TAB 1: KIOSK SILENT PRINT -->
+                        <div class="tab-pane fade show active" id="kiosk-content" role="tabpanel">
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-success me-2 px-2 py-1"><i class="fas fa-check-circle me-1"></i>พร้อมใช้ 100%</span>
+                                        <h6 class="fw-bold mb-0 text-dark">พิมพ์เงียบอัตโนมัติ ไม่ต้องคลิกหน้าต่าง Print (&lt; 0.5 วินาที)</h6>
+                                    </div>
+                                    <p class="text-secondary small mb-3">
+                                        วิธีนี้ใช้กับสาย USB และไดรเวอร์ Windows ปัจจุบันได้ทันที <b>ไม่ต้องให้ IT มาตั้งค่า IP หรือลงโปรแกรม PrintSet ใดๆ</b> เพียงแค่เปิด Chrome ด้วยโหมด Kiosk
+                                    </p>
+
+                                    <div class="bg-light p-3 rounded border mb-3">
+                                        <h6 class="fw-bold text-primary small text-uppercase mb-2"><i class="fas fa-list-ol me-1"></i> ขั้นตอนเปิดใช้งานใน 3 สเต็ป:</h6>
+                                        <ol class="small text-secondary mb-0 ps-3">
+                                            <li class="mb-1">ตั้งค่าเครื่องพิมพ์ <b>Honeywell PC42E-T</b> ให้เป็น <b>Default Printer</b> ใน Windows</li>
+                                            <li class="mb-1">คลิกขวาที่ไอคอน <b>Google Chrome บนหน้าจอ Desktop</b> -&gt; เลือก <b>Properties</b></li>
+                                            <li class="mb-1">ในช่อง <b>Target</b> ให้เคาะวรรค 1 ครั้งที่ท้ายสุด แล้วเติม:
+                                                <div class="input-group input-group-sm mt-1 mb-1" style="max-width: 380px;">
+                                                    <input type="text" class="form-control font-monospace bg-white text-danger fw-bold" value=" --kiosk-printing" id="kioskParamInput" readonly>
+                                                    <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(' --kiosk-printing'); Swal.fire('คัดลอกแล้ว', 'นำไปวางต่อท้ายในช่อง Target ได้เลย', 'success');">
+                                                        <i class="fas fa-copy me-1"></i> คัดลอก
+                                                    </button>
+                                                </div>
+                                            </li>
+                                            <li>กด <b>OK</b> แล้วเปิดเบราว์เซอร์จากไอคอนนั้นเข้าใช้งาน MES</li>
+                                        </ol>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="small text-muted"><i class="fas fa-info-circle me-1"></i> ฉลากจะพ่นออกทันทีหลังจากกดปุ่มพิมพ์</span>
+                                        <button type="button" class="btn btn-primary fw-bold px-3 shadow-sm" onclick="testSilentPrintAction('rm')">
+                                            <i class="fas fa-print me-1"></i> ทดสอบพิมพ์ฉลากตัวอย่าง (4" × 2")
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: DIRECT USB ZPL -->
+                        <div class="tab-pane fade" id="zpl-content" role="tabpanel">
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-usb text-success me-1"></i> Web Serial API (Direct ZPL over USB)</h6>
+                                        <span id="usbConnectionBadge" class="badge bg-secondary">ยังไม่ได้เชื่อมต่อ USB</span>
+                                    </div>
+                                    <p class="text-secondary small mb-3">
+                                        ส่งคำสั่ง ZPL-II ดิบตรงเข้าหัวพิมพ์ Honeywell PC42E-T ผ่านพอร์ต USB โดยไม่ผ่านระบบพิมพ์ของ Windows
+                                    </p>
+
+                                    <div class="d-flex gap-2 mb-3">
+                                        <button type="button" class="btn btn-success fw-bold btn-sm" id="btnConnectUsb" onclick="connectUsbPrinterAction()">
+                                            <i class="fas fa-plug me-1"></i> เชื่อมต่อเครื่องพิมพ์ USB
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger fw-bold btn-sm d-none" id="btnDisconnectUsb" onclick="disconnectUsbPrinterAction()">
+                                            <i class="fas fa-unlink me-1"></i> ตัดการเชื่อมต่อ
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary fw-bold btn-sm" onclick="sendTestZplAction()">
+                                            <i class="fas fa-paper-plane me-1"></i> ส่งคำสั่ง ZPL ทดสอบ
+                                        </button>
+                                    </div>
+
+                                    <label class="form-label small fw-bold text-secondary mb-1">รหัสคำสั่ง ZPL ที่สร้างขึ้น (4.00" x 2.00" @ 203 DPI):</label>
+                                    <textarea id="zplPreviewBox" class="form-control font-monospace text-dark bg-white small" rows="8" readonly style="font-size: 0.75rem;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: LIVE PREVIEW -->
+                        <div class="tab-pane fade" id="preview-content" role="tabpanel">
+                            <div class="card border-0 shadow-sm text-center p-3">
+                                <h6 class="fw-bold text-secondary mb-2">พิกัดและขนาดฉลากจริง (4.00" x 2.00" / 812 x 406 Dots)</h6>
+                                <div class="p-3 border rounded bg-white d-inline-block mx-auto shadow-sm text-start" style="width: 100%; max-width: 480px; font-family: 'Arial', sans-serif; border: 1px dashed #999 !important;">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div style="width: 72%;">
+                                            <div class="fw-bold text-dark" style="font-size: 1.15rem; line-height: 1.1;">RAW-ALUM-001</div>
+                                            <div class="fw-bold text-muted" style="font-size: 0.8rem; line-height: 1.2;">ALUMINUM RAW MATERIAL</div>
+                                            <div class="text-dark small border-bottom border-dark pb-1 mb-1 text-truncate" style="font-size: 0.72rem;">Aluminum Sheet Alloy 6061-T6 2.0mm x 1200mm</div>
+                                            <table class="w-100" style="font-size: 0.72rem; line-height: 1.2;">
+                                                <tr>
+                                                    <td style="width: 55%;"><b>QTY:</b> <span class="fw-bold text-primary" style="font-size: 0.95rem;">1,500</span></td>
+                                                    <td style="width: 45%;"><b>Inv:</b> WH-RM01</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><b>PO:</b> PO2610-0988</td>
+                                                    <td><b>Pallet:</b> PL-01</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><b>CTN:</b> 1/10</td>
+                                                    <td><b>Week:</b> W42</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><b>Date:</b> <?php echo date('Y-m-d'); ?></td>
+                                                    <td><b>Remark:</b> PASS</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="text-center" style="width: 28%;">
+                                            <div class="bg-dark text-white d-flex align-items-center justify-content-center mx-auto rounded" style="width: 80px; height: 80px; font-size: 0.65rem;">
+                                                [ QR Code ]
+                                            </div>
+                                            <div class="font-monospace small fw-bold text-dark mt-1" style="font-size: 0.65rem;">RM-261020-0001</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 text-center border-top pt-1">
+                                        <span class="font-monospace small text-muted" style="letter-spacing: 2px;">||||| | |||| ||| |||||| |||| |||||</span>
+                                    </div>
+                                </div>
+                                <div class="mt-3 small text-muted">
+                                    <i class="fas fa-check text-success me-1"></i> พิกัดคมชัดระดับหัวพิมพ์ความร้อน 203 DPI พร้อม QR Code และ Code128 Barcode
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white py-2">
+                    <button type="button" class="btn btn-secondary px-4 btn-sm" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <?php include_once __DIR__ . '/components/storeScanner.php'; ?>
     
     <script>
@@ -497,6 +664,7 @@ $pageHelpId = "";
     </script>
 
     <script src="../../utils/libs/xlsx.full.min.js"></script>
+    <script src="../production/script/thermalPrinter.js?v=<?php echo filemtime(__DIR__ . '/../production/script/thermalPrinter.js'); ?>"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>" defer></script>
     <script src="script/storeOffline.js?v=<?php echo filemtime(__DIR__ . '/script/storeOffline.js'); ?>" defer></script>
     <script src="script/rmReceiving.js?v=<?php echo filemtime(__DIR__ . '/script/rmReceiving.js'); ?>" defer></script>

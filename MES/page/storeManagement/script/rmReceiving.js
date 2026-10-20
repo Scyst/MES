@@ -59,6 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('man_date').value = new Date().toISOString().split('T')[0];
         });
     }
+
+    // Check if Thermal Printer was previously connected via USB
+    if (window.ThermalPrinter && typeof window.ThermalPrinter.tryAutoReconnectUsb === 'function') {
+        window.ThermalPrinter.tryAutoReconnectUsb().then(connected => {
+            updateUsbUiState(connected);
+        });
+    }
 });
 
 function openManualAddModal() {
@@ -122,14 +129,13 @@ async function submitManualAdd(e) {
             
             Swal.fire({ 
                 title: 'สำเร็จ', 
-                text: `เพิ่มข้อมูล ${packQty} ป้ายเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...`, 
+                text: `เพิ่มข้อมูล ${packQty} ป้ายเรียบร้อย กำลังเตรียมพิมพ์ฉลาก...`, 
                 icon: 'success', 
                 timer: 1500, 
                 showConfirmButton: false 
             }).then(() => {
                 if (res.data && res.data.length > 0) {
-                    if(typeof renderPrintTags === 'function') renderPrintTags(res.data);
-                    setTimeout(() => { window.print(); }, 300);
+                    executePrintTags(res.data, res.data.map(t => t.serial_no));
                 }
             });
         } else if (window.StoreOffline && !navigator.onLine) {
@@ -612,12 +618,11 @@ async function submitToDatabase() {
         loadHistory();
         
         Swal.fire({ 
-            title: 'สำเร็จ', text: 'นำเข้าข้อมูลเรียบร้อย กำลังเปิดหน้าต่างพิมพ์...', icon: 'success', 
+            title: 'สำเร็จ', text: 'นำเข้าข้อมูลเรียบร้อย กำลังเตรียมพิมพ์ฉลาก...', icon: 'success', 
             timer: 1500, showConfirmButton: false 
         }).then(() => {
             if (result.data && result.data.length > 0) {
-                renderPrintTags(result.data);
-                setTimeout(() => { window.print(); }, 300);
+                executePrintTags(result.data, result.data.map(t => t.serial_no));
             }
         });
     }
@@ -903,21 +908,71 @@ window.groupToMasterPallet = async function() {
             }
         },
         allowOutsideClick: () => !Swal.isLoading()
-    }).then((result) => {
+    }).then(async (result) => {
         if (result.isConfirmed && result.value) {
-            if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(result.value.data);
+            const masterData = result.value.data;
+            if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected() && typeof window.ThermalPrinter.generateMasterPalletZpl === 'function') {
+                try {
+                    const zpl = window.ThermalPrinter.generateMasterPalletZpl(masterData);
+                    await window.ThermalPrinter.printZplUsb(zpl);
+                    Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทและพิมพ์ฉลาก Master Pallet ทาง USB สำเร็จ', icon: 'success', timer: 1500, showConfirmButton: false });
+                } catch (err) {
+                    console.error('Master pallet USB print failed, falling back:', err);
+                    if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(masterData);
+                    Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+            } else {
+                if(typeof renderMasterPalletTag === 'function') renderMasterPalletTag(masterData);
+                Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
+            }
             loadHistory();
-            Swal.fire({ title: 'สำเร็จ!', text: 'จัดกลุ่มพาเลทเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
         }
     });
 };
 
+async function executePrintTags(tagsToPrint, serialsToLog) {
+    if (!tagsToPrint || tagsToPrint.length === 0) return;
+
+    // 1. Direct USB ZPL Mode
+    if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected()) {
+        try {
+            let combinedZpl = '';
+            for (const tag of tagsToPrint) {
+                combinedZpl += window.ThermalPrinter.generateRmZpl(tag) + '\n';
+            }
+            await window.ThermalPrinter.printZplUsb(combinedZpl);
+            if (serialsToLog && serialsToLog.length > 0) {
+                await logPrintStatus(serialsToLog);
+            }
+            loadHistory();
+            Swal.fire({
+                title: 'พิมพ์ฉลากสำเร็จ',
+                text: `ส่งคำสั่ง ZPL ตรงเข้าเครื่องพิมพ์ USB สำเร็จ (${tagsToPrint.length} ป้าย)`,
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            return;
+        } catch (err) {
+            console.error('USB ZPL Print failed, falling back to browser print:', err);
+            // Fallback to standard renderPrintTags below
+        }
+    }
+
+    // 2. Standard Browser Print / Chrome Kiosk Silent Print
+    if (typeof renderPrintTags === 'function') {
+        renderPrintTags(tagsToPrint);
+    }
+    if (serialsToLog && serialsToLog.length > 0) {
+        await logPrintStatus(serialsToLog);
+    }
+    loadHistory();
+}
+
 window.printSingleTag = async function(encodedRow) {
     const tag = JSON.parse(decodeURIComponent(encodedRow));
-    if(typeof renderPrintTags === 'function') renderPrintTags([tag]);
-    await logPrintStatus([tag.serial_no]);
-    loadHistory(); 
-}
+    await executePrintTags([tag], [tag.serial_no]);
+};
 
 window.printSelectedTags = async function() {
     const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
@@ -932,10 +987,8 @@ window.printSelectedTags = async function() {
     let tagsToPrint = Array.from(tagsMap.values());
     let serialsToLog = Array.from(tagsMap.keys());
     
-    if(typeof renderPrintTags === 'function') renderPrintTags(tagsToPrint);
-    await logPrintStatus(serialsToLog);
-    loadHistory();
-}
+    await executePrintTags(tagsToPrint, serialsToLog);
+};
 
 async function logPrintStatus(serials) {
     if(!serials || serials.length === 0) return;
@@ -1080,4 +1133,121 @@ function toggleMobileCards() {
         btn.classList.add('btn-primary', 'text-white');
         icon.className = 'fas fa-eye';
     }
+}
+
+// 🖨️ Thermal Printer (ZPL / Kiosk) Helper Functions
+window.openThermalPrinterModal = function() {
+    const modalEl = document.getElementById('thermalPrinterModal');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+        if (window.ThermalPrinter) {
+            const sampleZpl = window.ThermalPrinter.generateRmZpl({
+                item_no: 'RAW-ALUM-001',
+                category: 'ALUMINUM RAW MATERIAL',
+                part_description: 'Aluminum Sheet Alloy 6061-T6 2.0mm x 1200mm',
+                qty_per_pallet: 1500,
+                warehouse_no: 'WH-RM01',
+                po_number: 'PO2610-0988',
+                pallet_no: 'PL-01',
+                ctn_number: '1/10',
+                week_no: 'W42',
+                received_date: new Date().toISOString().split('T')[0],
+                remark: 'INSPECTION PASS',
+                serial_no: 'RM-261020-0001'
+            });
+            const zplBox = document.getElementById('zplPreviewBox');
+            if (zplBox) zplBox.value = sampleZpl;
+
+            updateUsbUiState(window.ThermalPrinter.isSerialConnected());
+        }
+    }
+};
+
+window.testSilentPrintAction = async function(type = 'rm') {
+    if (window.ThermalPrinter) {
+        try {
+            await window.ThermalPrinter.testPrintSample(type);
+        } catch (e) {
+            Swal.fire('ข้อผิดพลาด', e.message, 'error');
+        }
+    }
+};
+
+window.connectUsbPrinterAction = async function() {
+    if (window.ThermalPrinter) {
+        try {
+            const res = await window.ThermalPrinter.connectUsb();
+            updateUsbUiState(true);
+            Swal.fire({
+                title: 'เชื่อมต่อสำเร็จ',
+                text: res.message,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (e) {
+            Swal.fire('ไม่สามารถเชื่อมต่อได้', e.message, 'warning');
+        }
+    }
+};
+
+window.disconnectUsbPrinterAction = async function() {
+    if (window.ThermalPrinter) {
+        await window.ThermalPrinter.disconnectUsb();
+        updateUsbUiState(false);
+        Swal.fire({
+            title: 'ตัดการเชื่อมต่อแล้ว',
+            text: 'ระบบจะกลับไปใช้โหมดการพิมพ์ผ่านไดรเวอร์ Windows ปกติ',
+            icon: 'info',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+};
+
+window.sendTestZplAction = async function() {
+    const zplBox = document.getElementById('zplPreviewBox');
+    const zpl = zplBox ? zplBox.value : '';
+    if (!zpl) return;
+
+    if (window.ThermalPrinter && window.ThermalPrinter.isSerialConnected()) {
+        try {
+            await window.ThermalPrinter.printZplUsb(zpl);
+            Swal.fire({
+                title: 'สำเร็จ!',
+                text: 'ส่งคำสั่ง ZPL ตรงเข้าหัวพิมพ์เรียบร้อย',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (e) {
+            Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+        }
+    } else {
+        Swal.fire({
+            title: 'ยังไม่ได้เชื่อมต่อ USB',
+            text: 'กรุณากดปุ่ม "เชื่อมต่อเครื่องพิมพ์ USB" ก่อน หรือใช้แท็บที่ 1 (Chrome Kiosk Silent Print)',
+            icon: 'info'
+        });
+    }
+};
+
+function updateUsbUiState(connected) {
+    const badge = document.getElementById('usbConnectionBadge');
+    const btnConnect = document.getElementById('btnConnectUsb');
+    const btnDisconnect = document.getElementById('btnDisconnectUsb');
+    const activeDot = document.getElementById('thermalUsbActiveDot');
+    if (badge) {
+        if (connected) {
+            badge.className = 'badge bg-success';
+            badge.innerText = 'เชื่อมต่อ USB เรียบร้อย (ZPL พร้อมใช้งาน)';
+        } else {
+            badge.className = 'badge bg-secondary';
+            badge.innerText = 'ยังไม่ได้เชื่อมต่อ USB';
+        }
+    }
+    if (btnConnect) btnConnect.classList.toggle('d-none', connected);
+    if (btnDisconnect) btnDisconnect.classList.toggle('d-none', !connected);
+    if (activeDot) activeDot.classList.toggle('d-none', !connected);
 }

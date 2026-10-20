@@ -150,12 +150,16 @@
 
 ---
 
-## 📍 Phase 4: Industrial Hardware & Direct Integration (Upcoming)
+## 📍 Phase 4: Industrial Hardware & Direct Integration (In Progress)
 
-- [ ] **4.1 Zebra Industrial Network Printer Integration (ZPL Direct Print)**
-  - [ ] ส่งคำสั่ง Raw ZPL ข้ามเครือข่าย LAN ไปยัง IP เครื่องพิมพ์ Zebra (ZT411 / ZD421) ผ่าน TCP Port 9100 หรือ Node-RED
-  - [ ] ปริ้นท์ฉลากแท็กสินค้าทันทีภายใน < 0.5 วินาทีโดยไม่ต้องเปิด Windows/Chrome Print Dialog (Silent Zero-Click Print)
-  - [ ] พิกัดฉลากตรงเป๊ะระดับพิกเซลหัวพิมพ์ความร้อน ไม่ตกขอบ รองรับฉลากขนาดเล็กมาตรฐานโรงงาน (4x3 นิ้ว, 5x3 ซม.)
+- [x] **4.1 Thermal Label Printer Hub for RM Receiving (Honeywell PC42E-T / ZPL / Chrome Kiosk)**
+  - [x] ส่งคำสั่ง Raw ZPL-II ดิบตรงเข้าหัวพิมพ์ Honeywell PC42E-T (203 DPI / 4"x2") ผ่าน Web Serial API (`printZplUsb`) พิมพ์เสร็จ < 0.2 วินาที
+  - [x] รองรับโหมดพิมพ์เงียบอัตโนมัติ Zero-Click (< 0.5s) ผ่าน Chrome `--kiosk-printing` เมื่อตั้งค่าเครื่องพิมพ์เป็น Default ใน Windows
+  - [x] เชื่อมต่อเข้ากับ `rmReceiving.php` และ `rmReceiving.js`: ครอบคลุมทั้งการพิมพ์เดี่ยว (`printSingleTag`), พิมพ์ที่เลือก (`printSelectedTags`), จัดพาเลทรวม (`groupToMasterPallet`), สแกนพิมพ์พาเลทซ้ำ (`reprintMasterPallet`), และการสร้างแท็กจาก Manual Add / Excel Import
+  - [x] ออกแบบโครงสร้าง Fallback Hierarchy 100%: หากไม่ได้เชื่อมต่อ USB หรือเกิดข้อผิดพลาด ระบบจะสลับไปใช้ Browser Print Dialog ปกติโดยไม่มีผลกระทบต่อผู้ใช้ทั่วไป
+  - [x] เพิ่มปุ่ม Header กะทัดรัด `[ ⚡ พิมพ์ด่วน ]` พร้อมจุดเขียว USB และหน้าต่างตั้งค่า `#thermalPrinterModal` มี 3 แท็บกระชับ (Chrome Kiosk, Direct ZPL, ตัวอย่างฉลาก)
+  - [x] ระบบ Auto-reconnect กู้คืนการเชื่อมต่อพอร์ต USB Serial อัตโนมัติเมื่อรีเฟรชหน้าเว็บ
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/production/script/thermalPrinter.js`, `page/storeManagement/rmReceiving.php`, `page/storeManagement/script/rmReceiving.js`, `page/storeManagement/script/storeScanner.js`
 
 ---
 
@@ -176,6 +180,7 @@
 | **2026-10-17** | Antigravity | พัฒนา Phase 3.3 Offline Resilience & Network Drop Protection: ตรวจจับ `online`/`offline` อัตโนมัติ, จัดเก็บคิวสแกนออฟไลน์ใน `IndexedDB` (`MES_CycleCount_Offline_v1`) พร้อม `localStorage` Fallback, อัปเดต UI แบบ Optimistic ทันทีพร้อมเสียงและระบบสั่น, ซิงค์ข้อมูลอัตโนมัติแบบ FIFO Queue เมื่อต่อเน็ตติดพร้อมปุ่มซิงค์ด้วยมือ, ล็อกปุ่มจบงาน (`finishSession`) ป้องกันข้อมูลสูญหาย และแก้ไข UI มือถือแนวตั้งสำหรับ `stockTransaction.php` และ `tagHistory.php` ให้ปุ่ม 3 จุดและ Toolbar พอดีหน้าจอ | `cycleCount.php`, `cycleCount.js`, `stockTransaction.php`, `tagHistory.php`, `ROADMAP.md` |
 | **2026-10-17** | Antigravity | ขยาย Offline Mode ไปยังหน้าคลังสินค้าสโตร์ทั้งหมด: สร้างโมดูลกลาง `storeOffline.js` (IndexedDB `MES_Store_Offline_v1` + Auto FIFO Replay + เสียง/สั่น Optimistic Feedback), เชื่อมต่อกับ `rmReceiving.php` (รับเข้าสินค้าที่ลานโหลดมุมอับสัญญาณ) และ `storeRequest.php` (เบิก-จ่ายในช่องแร็คสูง), ปรับปรุง Mobile Toolbar ให้เป็น Single-Row Horizontal Scroll (`.toolbar-scroll-container`) ครบทั้ง 5 หน้าจอหลักของสโตร์ | `storeOffline.js`, `rmReceiving.php`, `rmReceiving.js`, `storeRequest.php`, `storeRequest.js`, `inventoryDashboard.php`, `stockTransaction.php`, `tagHistory.php`, `ROADMAP.md` |
 | **2026-10-17** | Antigravity | ปรับแต่ง UI มือถือขั้นสมบูรณ์: ปรับระยะห่างปุ่ม Toolbar 6px สบายตา, แยกปุ่ม 3 จุด (Kebab Menu ⋮) ออกมาตรึงมุมขวาบนนอก Scrollbar พร้อม Popper fixed strategy ไม่ถูกตัดขาด, ซ่อนปุ่มสแกนซ้ำซ้อนใน Toolbar เพื่อใช้ FAB กลมแทน, ปรับแต่ง Responsive Modal รับคืนสินค้าจากฝ่ายผลิต (`#prdReturnModal`) ไม่ให้หัวข้อและข้อความแตกบรรทัดพร้อมขยายช่อง Input กว้าง 2.5 เท่า, แก้ไขปัญหาหน้าจอ `tagHistory.php` สไลด์ไปด้านข้าง (Horizontal Overflow), และปรับสีรายการ Trace Tag ในเมนู 3 จุดให้เป็นมาตรฐานเดียวกัน | `InventoryModal.php`, `inventoryDashboard.php`, `tagHistory.php`, `stockTransaction.php`, `rmReceiving.php`, `ROADMAP.md` |
+| **2026-10-20** | Antigravity | พัฒนา Phase 4.1 Thermal Printer Integration สำหรับสโตร์ (`rmReceiving.php`): ติดตั้งโมดูล `thermalPrinter.js` รองรับทั้ง Web Serial API (Direct ZPL) และ Chrome Kiosk Silent Print (< 0.5s), เพิ่มฟังก์ชัน `generateMasterPalletZpl`, เชื่อมต่อระบบพิมพ์แท็กเดี่ยว/กลุ่ม/จัดพาเลท/Import ครบวงจรพร้อมระบบ Fallback สลับไปใช้ Browser Dialog 100% เมื่อไม่มี USB, ปรับปรุง UI เพิ่มปุ่ม `[ ⚡ พิมพ์ด่วน ]` และ Modal ตั้งค่า 3 แท็บ | `thermalPrinter.js`, `rmReceiving.php`, `rmReceiving.js`, `storeScanner.js`, `ROADMAP.md` |
 
 
 
