@@ -68,7 +68,8 @@ try {
                 ISNULL(TS.weight_learning, 25) AS weight_learning,
                 AUDIT5S.grade AS system_grade_5s,
                 AUDIT5S.total_score AS score_5s,
-                ISNULL(SKL.skill_count, 0) AS skill_count
+                ISNULL(SKL.skill_count, 0) AS skill_count,
+                ISNULL(LRN.passed_courses, 0) AS passed_courses
             FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
             LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
             INNER JOIN (
@@ -159,6 +160,13 @@ try {
                 WHERE es.level >= 2
                 GROUP BY es.emp_id
             ) SKL ON SKL.emp_id = E.emp_id COLLATE Thai_CI_AS
+            LEFT JOIN (
+                -- Count passed courses in MES Learning Hub per employee
+                SELECT lr.emp_id, COUNT(*) AS passed_courses
+                FROM dbo.LEARNING_RECORDS lr WITH (NOLOCK)
+                WHERE lr.passed = 1
+                GROUP BY lr.emp_id
+            ) LRN ON LRN.emp_id = E.emp_id COLLATE Thai_CI_AS
             WHERE E.is_active = 1
         ";
         
@@ -244,14 +252,16 @@ try {
                 }
             }
             
-            // Calculate System Learning Grade from skill count
+            // Calculate System Learning Grade from skill count and passed courses
             $skillCount = (int)($emp['skill_count'] ?? 0);
+            $passedCourses = (int)($emp['passed_courses'] ?? 0);
+            $effectiveLearningCount = max($skillCount, $passedCourses);
             $learningGrade = 'N/A';
-            if ($skillCount >= 5) {
+            if ($effectiveLearningCount >= 5) {
                 $learningGrade = 'A';
-            } elseif ($skillCount >= 3) {
+            } elseif ($effectiveLearningCount >= 3) {
                 $learningGrade = 'B';
-            } elseif ($skillCount >= 1) {
+            } elseif ($effectiveLearningCount >= 1) {
                 $learningGrade = 'C';
             } else {
                 $learningGrade = 'D';
@@ -275,7 +285,8 @@ try {
                 'system_grade_attendance'  => $attGrade,
                 'system_grade_5s'          => $emp['system_grade_5s'] ?? null,
                 'score_5s'                 => (int)($emp['score_5s'] ?? 0),
-                'skill_count'              => $skillCount,
+                'skill_count'              => $effectiveLearningCount,
+                'passed_courses'           => $passedCourses,
                 'system_grade_learning'    => $learningGrade,
                 'grade'                    => $emp['grade'] ?? '',
                 'grade_iph'                => $emp['grade_iph'] ?? '',

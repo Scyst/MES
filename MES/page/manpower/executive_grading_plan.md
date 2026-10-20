@@ -1,4 +1,4 @@
-﻿# ร่างแผนการพัฒนาศักยภาพพนักงาน 4 มิติ (Draft for Executives)
+# ร่างแผนการพัฒนาศักยภาพพนักงาน 4 มิติ (Draft for Executives)
 
 **โมดูลที่เกี่ยวข้อง (Technical Context for Agent):**
 *   **Module:** Manpower - Employee Grading System
@@ -44,3 +44,15 @@
 ---
 **ข้อเสนอแนะเพิ่มเติม:**
 การนำเกณฑ์ทั้ง 4 มิติมาใช้ ไม่ใช่เพียงเพื่อจับผิด แต่เพื่อสร้างกรอบการพัฒนาที่ชัดเจน (Clear Expectation) ระบบการให้น้ำหนัก (Weightage) ที่แยกตามแผนก จะช่วยให้เราสามารถมุ่งเน้นแก้ปัญหาเฉพาะจุดของแต่ละพื้นที่ได้อย่างยืดหยุ่น และสอดคล้องกับกลยุทธ์รวมขององค์กรในแต่ละช่วงเวลา
+
+---
+
+## 5. สถาปัตยกรรมการเชื่อมโยงระบบ MES Learning Hub & 4D Employee Grading (Live Integration)
+*   **End-to-End Real-Time Sync (`page/manpower/api/api_learning.php` -> `save_course_progress`):**
+    1. เมื่อพนักงานสอบผ่านแบบประเมินหลังเรียน (Post-Test $\ge 80\%$) ระบบจะบันทึกลง `dbo.LEARNING_RECORDS` พร้อมออกรหัสใบรับรอง `SNC-CERT-2026-XXXX`
+    2. ระบบตรวจสอบรหัสทักษะจาก `$COURSE_SKILL_MAP` (และลงทะเบียนทักษะใหม่อัตโนมัติใน `dbo.SKILL_DEFINITIONS` สำหรับหลักสูตรที่สร้างใหม่/หน้างาน) แล้วอัปเดต `dbo.EMP_SKILLS` ของพนักงานเป็น **Level 3 (Certified / สามารถสอนงานได้)**
+    3. คำนวณเกรดมิติการเรียนรู้ (`grade_learning`) จากจำนวนทักษะและหลักสูตรที่ผ่านเกณฑ์ ($\ge 5 \rightarrow \text{A}$, $\ge 3 \rightarrow \text{B}$, $\ge 1 \rightarrow \text{C}$, $0 \rightarrow \text{D}$)
+    4. คำนวณเกรดรวม 4 มิติ (`grade_overall`) โดยใช้น้ำหนักจริงของทีมจาก `dbo.MANPOWER_TEAM_SETTINGS` (`weight_iph`, `weight_5s`, `weight_attendance`, `weight_learning`) และทำการ **Upsert ลงตาราง `dbo.EMPLOYEE_GRADES` ทันที** พร้อมบันทึก Audit Trail ผ่าน `writeLog()`
+*   **Main MES Grading Dashboard (`page/manpower/employeeGrading.php` & `script/employeeGrading.js`):**
+    *   แสดงป้ายจำนวนทักษะที่รับรอง (`🎓 X ทักษะ`) ใต้ช่องเกรด Learning ของพนักงานแต่ละคน ซึ่งคลิกเพื่อเปิดดูสมุดพาสปอร์ตสมรรถนะ (Competency Passport) ใน MES Learning Hub ได้โดยตรง
+    *   ปุ่ม **Auto Grade (4 มิติ)** ดึงค่าเกรดแนะนำครบทั้ง 4 มิติ (`system_grade_iph`, `system_grade_5s`, `system_grade_attendance`, `system_grade_learning`) มาคำนวณ `grade_overall` ให้อัตโนมัติ

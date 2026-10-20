@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCourseById, addExp } from '../data/communityStore';
+import { getCourseById, addExp, getUserGrading } from '../data/communityStore';
 import { 
   getUserModuleProgress, 
   markModuleCompleted, 
@@ -56,6 +56,19 @@ export default function CourseViewer() {
   const [earnedCertId, setEarnedCertId] = useState(() => courseStatus?.certificateId || '');
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [latestExamScore, setLatestExamScore] = useState(null);
+  const [userGrading, setUserGrading] = useState(() => getUserGrading());
+
+  useEffect(() => {
+    const handleUserUpdated = (e) => {
+      if (e?.detail?.grading) {
+        setUserGrading(e.detail.grading);
+      } else {
+        setUserGrading(getUserGrading());
+      }
+    };
+    window.addEventListener('mes-user-updated', handleUserUpdated);
+    return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
+  }, []);
 
   // Assessment Modal States
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
@@ -239,6 +252,7 @@ export default function CourseViewer() {
       setIsCompleted(true);
       setEarnedCertId(rec.certificateId);
       setCourseStatus(getUserCourseStatus(course.id));
+      setUserGrading(getUserGrading());
       setShowAssessmentModal(false);
       setAssessmentReview(null);
       setShowCelebrationModal(true);
@@ -343,6 +357,18 @@ export default function CourseViewer() {
               }`}>
                 🎉 ได้รับโบนัสเกียรติยศ +50 EXP
               </div>
+              {userGrading && (
+                <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[11px] font-bold ${
+                  isDark ? 'border-slate-750 text-slate-300' : 'border-slate-200 text-slate-700'
+                }`}>
+                  <span>เกรดการเรียนรู้ (MES 4D Grading):</span>
+                  <span className={`px-2 py-0.5 rounded-md font-black ${
+                    isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}>
+                    Learning {userGrading.grade_learning || 'C'} · Overall {userGrading.grade_overall || 'B'} ({userGrading.skill_count || 1} ทักษะ)
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">

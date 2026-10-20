@@ -13,7 +13,19 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-if (empty($_SESSION['user']['emp_id'])) {
+$emp_id = trim($_SESSION['user']['emp_id'] ?? '');
+if (empty($emp_id)) {
+    $fullName = trim($_SESSION['user']['fullname'] ?? '');
+    if (!empty($fullName)) {
+        try {
+            $stmtMatch = $pdo->prepare("SELECT TOP 1 emp_id FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK) WHERE name_th = ? ORDER BY is_active DESC, emp_id DESC");
+            $stmtMatch->execute([$fullName]);
+            $emp_id = (string)($stmtMatch->fetchColumn() ?: '');
+        } catch (Exception $ignore) {}
+    }
+}
+
+if (empty($emp_id)) {
     echo json_encode([
         'success' => true,
         'data' => [
@@ -28,13 +40,13 @@ if (empty($_SESSION['user']['emp_id'])) {
             'total_wage'      => 0,
             'income_ratio'    => 0,
             'skill_count'     => 0,
+            'passed_courses'  => 0,
             'trend'           => [],
         ]
     ]);
     exit;
 }
 
-$emp_id        = $_SESSION['user']['emp_id'];
 $currentPeriod = date('Y-m');
 
 try {
@@ -102,8 +114,12 @@ try {
               AND ml.status IN ('PRESENT', 'LATE')
             GROUP BY ml.emp_id
         ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
-        LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK)
-            ON E.emp_id = G.emp_id AND G.evaluation_period = :period3
+        OUTER APPLY (
+            SELECT TOP 1 grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, evaluation_period
+            FROM dbo.EMPLOYEE_GRADES WITH (NOLOCK)
+            WHERE emp_id = E.emp_id
+            ORDER BY CASE WHEN evaluation_period = :period3 THEN 0 ELSE 1 END, evaluation_period DESC
+        ) G
         LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
         WHERE E.emp_id = :empId
     ";
@@ -112,10 +128,21 @@ try {
     $stmt->execute([':period1' => $currentPeriod, ':period2' => $currentPeriod, ':period3' => $currentPeriod, ':empId' => $emp_id]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // ── Skill count ───────────────────────────────────────────────────────
-    $stmtSkill = $pdo->prepare("SELECT COUNT(*) FROM dbo.EMP_SKILLS WHERE emp_id = ? AND level >= 2");
+    // ── Skill count & Passed Courses count ─────────────────────────────────
+    $stmtSkill = $pdo->prepare("SELECT COUNT(*) FROM dbo.EMP_SKILLS WITH (NOLOCK) WHERE emp_id = ? AND level >= 2");
     $stmtSkill->execute([$emp_id]);
-    $skillCount = (int)$stmtSkill->fetchColumn();
+    $rawSkillCount = (int)$stmtSkill->fetchColumn();
+
+    $stmtLearn = $pdo->prepare("SELECT COUNT(*) FROM dbo.LEARNING_RECORDS WITH (NOLOCK) WHERE emp_id = ? AND passed = 1");
+    $stmtLearn->execute([$emp_id]);
+    $passedCourses = (int)$stmtLearn->fetchColumn();
+
+    $skillCount = max($rawSkillCount, $passedCourses);
+
+    $systemLearningGrade = 'D';
+    if ($skillCount >= 5)      $systemLearningGrade = 'A';
+    elseif ($skillCount >= 3)  $systemLearningGrade = 'B';
+    elseif ($skillCount >= 1)  $systemLearningGrade = 'C';
 
     // ── 3-month trend ──────────────────────────────────────────────────
     $stmtTrend = $pdo->prepare("
@@ -149,37 +176,41 @@ try {
         echo json_encode([
             'success' => true,
             'data' => [
-                'has_data'         => true,
-                'grade'            => !empty($data['grade'])            ? $data['grade']            : '-',
-                'grade_iph'        => !empty($data['grade_iph'])        ? $data['grade_iph']        : '-',
-                'grade_5s'         => !empty($data['grade_5s'])         ? $data['grade_5s']         : '-',
-                'grade_attendance' => !empty($data['grade_attendance']) ? $data['grade_attendance'] : '-',
-                'grade_learning'   => !empty($data['grade_learning'])   ? $data['grade_learning']   : '-',
-                'grade_overall'    => !empty($data['grade_overall'])    ? $data['grade_overall']    : '-',
-                'system_grade'     => $systemGrade,
-                'income_per_head'  => $income,
-                'total_wage'       => $wage,
-                'income_ratio'     => round($ratio, 2),
-                'late_days'        => (int)($data['late_days']   ?? 0),
-                'absent_days'      => (int)($data['absent_days'] ?? 0),
-                'skill_count'      => $skillCount,
-                'trend'            => $trend,
+                'has_data'              => true,
+                'grade'                 => !empty($data['grade'])            ? $data['grade']            : (!empty($data['grade_overall']) ? $data['grade_overall'] : '-'),
+                'grade_iph'             => !empty($data['grade_iph'])        ? $data['grade_iph']        : '-',
+                'grade_5s'              => !empty($data['grade_5s'])         ? $data['grade_5s']         : '-',
+                'grade_attendance'      => !empty($data['grade_attendance']) ? $data['grade_attendance'] : '-',
+                'grade_learning'        => !empty($data['grade_learning'])   ? $data['grade_learning']   : $systemLearningGrade,
+                'grade_overall'         => !empty($data['grade_overall'])    ? $data['grade_overall']    : (!empty($data['grade']) ? $data['grade'] : '-'),
+                'system_grade'          => $systemGrade,
+                'system_grade_learning' => $systemLearningGrade,
+                'income_per_head'       => $income,
+                'total_wage'            => $wage,
+                'income_ratio'          => round($ratio, 2),
+                'late_days'             => (int)($data['late_days']   ?? 0),
+                'absent_days'           => (int)($data['absent_days'] ?? 0),
+                'skill_count'           => $skillCount,
+                'passed_courses'        => $passedCourses,
+                'trend'                 => $trend,
             ]
         ]);
     } else {
         echo json_encode([
             'success' => true,
             'data' => [
-                'has_data'         => false,
-                'grade'            => '-', 'grade_iph' => '-', 'grade_5s' => '-',
-                'grade_attendance' => '-', 'grade_learning' => '-', 'grade_overall' => '-',
-                'income_per_head'  => 0,
-                'total_wage'       => 0,
-                'income_ratio'     => 0,
-                'late_days'        => 0,
-                'absent_days'      => 0,
-                'skill_count'      => $skillCount,
-                'trend'            => $trend,
+                'has_data'              => false,
+                'grade'                 => '-', 'grade_iph' => '-', 'grade_5s' => '-',
+                'grade_attendance'      => '-', 'grade_learning' => $systemLearningGrade, 'grade_overall' => '-',
+                'system_grade_learning' => $systemLearningGrade,
+                'income_per_head'       => 0,
+                'total_wage'            => 0,
+                'income_ratio'          => 0,
+                'late_days'             => 0,
+                'absent_days'           => 0,
+                'skill_count'           => $skillCount,
+                'passed_courses'        => $passedCourses,
+                'trend'                 => $trend,
             ]
         ]);
     }

@@ -199,6 +199,21 @@ export function getUserGrading() {
 export function saveUserGrading(grading) {
   if (grading) {
     localStorage.setItem('mes_learning_user_grading', JSON.stringify(grading));
+    try {
+      const rawUser = localStorage.getItem('mes_learning_current_user');
+      if (rawUser) {
+        const parsedUser = JSON.parse(rawUser);
+        if (parsedUser && parsedUser.isLoggedInReal) {
+          parsedUser.grading = grading;
+          localStorage.setItem('mes_learning_current_user', JSON.stringify(parsedUser));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('mes-user-updated', { detail: parsedUser }));
+          }
+        }
+      }
+    } catch {
+      // Ignore localStorage parse errors
+    }
   }
 }
 
@@ -259,6 +274,75 @@ function buildSyncedUserFromApi(u, grading = null) {
   };
 }
 
+async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
+  if (!synchedUser || !synchedUser.isLoggedInReal || !synchedUser.emp_id) return;
+  try {
+    const raw = localStorage.getItem('mes_learning_audit_records_v1');
+    if (!raw) return;
+    const records = JSON.parse(raw);
+    if (!Array.isArray(records)) return;
+
+    let updatedLocal = false;
+    const livePassed = [];
+
+    records.forEach(r => {
+      if (r && String(r.recordId || '').startsWith('rec-live-')) {
+        if (r.empId !== synchedUser.emp_id) {
+          r.empId = synchedUser.emp_id;
+          updatedLocal = true;
+        }
+        if (r.passed && r.courseId) {
+          livePassed.push(r);
+        }
+      }
+    });
+
+    if (updatedLocal) {
+      localStorage.setItem('mes_learning_audit_records_v1', JSON.stringify(records));
+    }
+
+    const backendPassedCount = Number(synchedUser.grading?.passed_courses || 0);
+    if (livePassed.length > backendPassedCount) {
+      for (const rec of livePassed) {
+        const crs = courses.find(c => c.id === rec.courseId);
+        const res = await fetch(`${API_LEARNING_URL}?action=save_course_progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            emp_id: synchedUser.emp_id,
+            course_id: rec.courseId,
+            course_title: crs ? crs.title : rec.courseId,
+            category: crs ? crs.category : 'มาตรฐานโรงงาน',
+            status: 'completed',
+            quiz_score: rec.quizScore || 4,
+            quiz_total: rec.quizTotal || 4,
+            quiz_percentage: rec.quizPercentage || 100,
+            passed: 1,
+            certificate_id: rec.certificateId || null
+          })
+        });
+        if (res.ok) {
+          const sJson = await res.json();
+          if (sJson?.success && sJson.data?.learning_grade) {
+            const nextGrading = {
+              ...(getUserGrading() || {}),
+              grade_learning: sJson.data.learning_grade,
+              system_grade_learning: sJson.data.learning_grade,
+              grade_overall: sJson.data.grade_overall || synchedUser.grading?.grade_overall || 'B',
+              skill_count: sJson.data.new_skill_count ?? livePassed.length,
+              passed_courses: sJson.data.passed_courses ?? livePassed.length
+            };
+            saveUserGrading(nextGrading);
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore background reconciliation errors
+  }
+}
+
 export async function fetchRealUserSession() {
   // Purge legacy active_emp_id override so logged-in user session is never hijacked
   localStorage.removeItem('mes_learning_active_emp_id');
@@ -279,6 +363,7 @@ export async function fetchRealUserSession() {
         saveUserGrading(grading);
         const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
         saveCurrentUser(synchedUser);
+        reconcileLocalLiveRecordsWithBackend(synchedUser);
         return synchedUser;
       }
 

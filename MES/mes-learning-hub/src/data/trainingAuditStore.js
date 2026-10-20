@@ -850,8 +850,14 @@ export async function syncCourseProgressToBackend({
           const currentGrading = getUserGrading() || {};
           currentGrading.grade_learning = json.data.learning_grade;
           currentGrading.system_grade_learning = json.data.learning_grade;
+          if (json.data.grade_overall) {
+            currentGrading.grade_overall = json.data.grade_overall;
+          }
           if (typeof json.data.new_skill_count === 'number') {
             currentGrading.skill_count = json.data.new_skill_count;
+          }
+          if (typeof json.data.passed_courses === 'number') {
+            currentGrading.passed_courses = json.data.passed_courses;
           }
           saveUserGrading(currentGrading);
         }
@@ -862,6 +868,51 @@ export async function syncCourseProgressToBackend({
     // Ignore network error in offline mode
   }
   return null;
+}
+
+function applyOptimisticLearningGradeUpdate(empId) {
+  try {
+    const records = getTrainingRecords();
+    const passedCount = records.filter(r => r.empId === empId && r.passed).length;
+    const currentGrading = getUserGrading() || {
+      evaluation_period: new Date().toISOString().slice(0, 7),
+      grade_iph: 'B',
+      grade_5s: 'A',
+      grade_attendance: 'A',
+      grade_learning: 'D',
+      grade_overall: 'B',
+      skill_count: 0,
+      passed_courses: 0
+    };
+
+    const nextSkillCount = Math.max(Number(currentGrading.skill_count || 0), passedCount);
+    let nextLearningGrade = 'D';
+    if (nextSkillCount >= 5) nextLearningGrade = 'A';
+    else if (nextSkillCount >= 3) nextLearningGrade = 'B';
+    else if (nextSkillCount >= 1) nextLearningGrade = 'C';
+
+    const mapScore = g => (g === 'A' ? 4 : g === 'B' ? 3 : g === 'C' ? 2 : g === 'D' ? 1 : 3);
+    const avgScore = (
+      mapScore(currentGrading.grade_iph || 'B') +
+      mapScore(currentGrading.grade_5s || 'A') +
+      mapScore(currentGrading.grade_attendance || 'A') +
+      mapScore(nextLearningGrade)
+    ) / 4;
+    const nextOverall = avgScore >= 3.5 ? 'A' : avgScore >= 2.5 ? 'B' : avgScore >= 1.5 ? 'C' : 'D';
+
+    const updatedGrading = {
+      ...currentGrading,
+      skill_count: nextSkillCount,
+      passed_courses: passedCount,
+      grade_learning: nextLearningGrade,
+      system_grade_learning: nextLearningGrade,
+      grade_overall: nextOverall
+    };
+    saveUserGrading(updatedGrading);
+    return updatedGrading;
+  } catch {
+    return null;
+  }
 }
 
 // Record a quiz completion in real-time from DynamicCourseRenderer or CourseViewer
@@ -889,7 +940,7 @@ export function recordLiveUserQuizAttempt({ courseId, score, totalQuestions }) {
     passed: passed,
     completedAt: now.toISOString(),
     expiresAt: passed ? nextYear.toISOString() : null,
-    certificateId: passed ? `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}` : null,
+    certificateId: passed ? ((existingIdx !== -1 && records[existingIdx].certificateId) ? records[existingIdx].certificateId : `SNC-CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`) : null,
     evaluatedBy: 'ระบบประเมินผลอัตโนมัติ (MES Learning Hub Exam System)'
   };
 
@@ -900,6 +951,31 @@ export function recordLiveUserQuizAttempt({ courseId, score, totalQuestions }) {
   }
 
   saveTrainingRecords(records);
+
+  if (passed) {
+    addExp(50, `สอบผ่านแบบทดสอบวัดผลหลักสูตร (${quizPct}%) และได้รับใบรับรองสมรรถนะ`);
+    applyOptimisticLearningGradeUpdate(empId);
+  }
+
+  try {
+    const allMerged = [...courses, ...getCustomCourses()];
+    const crs = allMerged.find(c => c.id === courseId);
+    syncCourseProgressToBackend({
+      empId: empId,
+      courseId: courseId,
+      courseTitle: crs ? crs.title : courseId,
+      category: crs ? crs.category : 'มาตรฐานโรงงาน',
+      status: passed ? 'completed' : 'failed',
+      quizScore: score,
+      quizTotal: totalQuestions,
+      quizPercentage: quizPct,
+      passed: passed,
+      certificateId: newRecord.certificateId
+    }).catch(() => {});
+  } catch {
+    // Ignore async error
+  }
+
   return newRecord;
 }
 
@@ -1044,6 +1120,7 @@ export function recordCourseCompletion({
   saveTrainingRecords(records);
   if (isPassed) {
     addExp(50, `สอบผ่านแบบทดสอบวัดผลหลักสูตร (${quizPct}%) และได้รับใบรับรองสมรรถนะ`);
+    applyOptimisticLearningGradeUpdate(empId);
   }
 
   // Real-time synchronization to MES SQL Server (dbo.LEARNING_RECORDS & dbo.EMP_SKILLS)

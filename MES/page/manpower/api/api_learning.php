@@ -34,20 +34,77 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 // Course ID to Skill Code Mapping
 $COURSE_SKILL_MAP = [
     'c-ppap'            => 'SKILL_PPAP',
+    'c-spc-control'     => 'SKILL_PPAP',
     'c-iso-9001'        => 'SKILL_ISO9001',
     'c-iso-14001'       => 'SKILL_ISO14001',
     'c-iso-45001'       => 'SKILL_ISO45001',
     'c-iso-17025'       => 'SKILL_ISO17025',
     'c-customer-audits' => 'SKILL_CSR_AUDIT',
+    'c-customer-audit'  => 'SKILL_CSR_AUDIT',
     'c-live-qa'         => 'SKILL_8D_PROBLEM',
-    'c3'                => 'SKILL_LEAN_5S',
-    'c4'                => 'SKILL_LEADERSHIP',
-    'c1'                => 'SKILL_MES_FRONTEND',
-    'c2'                => 'SKILL_MES_BACKEND',
+    'c-5s-safety'       => 'SKILL_LEAN_5S',
+    'c-tpm-maintenance' => 'SKILL_PREOP_MAINT',
+    'c-mes-operation'   => 'SKILL_MES_FRONTEND',
+    'c-esd-control'     => 'SKILL_ESD_CTRL',
+    'c1'                => 'SKILL_LEAN_5S',
+    'c2'                => 'SKILL_LEADERSHIP',
+    'c3'                => 'SKILL_MES_FRONTEND',
+    'c4'                => 'SKILL_MES_BACKEND',
     'post-101'          => 'SKILL_STAMPING',
     'post-102'          => 'SKILL_STORE_MES',
     'post-103'          => 'SKILL_PREOP_MAINT'
 ];
+
+// Helper: Calculate 4D Weighted Overall Grade
+$calculateWeightedOverallGrade = function (
+    ?string $gIph,
+    ?string $g5s,
+    ?string $gAtt,
+    ?string $gLrn,
+    int $wIph = 25,
+    int $w5s = 25,
+    int $wAtt = 25,
+    int $wLrn = 25
+): string {
+    if (($wIph + $w5s + $wAtt + $wLrn) <= 0) {
+        $wIph = 25;
+        $w5s  = 25;
+        $wAtt = 25;
+        $wLrn = 25;
+    }
+
+    $mapScore = function (?string $g): int {
+        $g = strtoupper(trim($g ?? ''));
+        if ($g === 'A') return 4;
+        if ($g === 'B') return 3;
+        if ($g === 'C') return 2;
+        if ($g === 'D') return 1;
+        return 0;
+    };
+
+    $sIph = $mapScore($gIph);
+    $s5s  = $mapScore($g5s);
+    $sAtt = $mapScore($gAtt);
+    $sLrn = $mapScore($gLrn);
+
+    $activeWeight = 0;
+    $weightedSum  = 0;
+
+    if ($sIph > 0) { $weightedSum += $sIph * $wIph; $activeWeight += $wIph; }
+    if ($s5s  > 0) { $weightedSum += $s5s  * $w5s;  $activeWeight += $w5s;  }
+    if ($sAtt > 0) { $weightedSum += $sAtt * $wAtt; $activeWeight += $wAtt; }
+    if ($sLrn > 0) { $weightedSum += $sLrn * $wLrn; $activeWeight += $wLrn; }
+
+    if ($activeWeight <= 0) {
+        return 'C';
+    }
+
+    $totalScore = $weightedSum / $activeWeight;
+    if ($totalScore >= 3.5) return 'A';
+    if ($totalScore >= 2.5) return 'B';
+    if ($totalScore >= 1.5) return 'C';
+    return 'D';
+};
 
 try {
     // ─────────────────────────────────────────────────────────────────────────
@@ -181,16 +238,6 @@ try {
         $stmtSkills->execute([$empId]);
         $skillCount = (int)$stmtSkills->fetchColumn();
 
-        // คำนวณ Learning Grade ตามเกณฑ์ของฝ่ายบริหาร (A >= 5, B >= 3, C >= 1, D = 0)
-        $systemLearningGrade = 'D';
-        if ($skillCount >= 5) {
-            $systemLearningGrade = 'A';
-        } elseif ($skillCount >= 3) {
-            $systemLearningGrade = 'B';
-        } elseif ($skillCount >= 1) {
-            $systemLearningGrade = 'C';
-        }
-
         // ดึงสถิติการอบรมจาก LEARNING_RECORDS
         $stmtLearn = $pdo->prepare("
             SELECT COUNT(*) AS total_enrolled,
@@ -202,8 +249,20 @@ try {
         $stmtLearn->execute([$empId]);
         $learnStat = $stmtLearn->fetch(PDO::FETCH_ASSOC);
 
-        // คำนวณ EXP สะสม
+        // คำนวณ EXP สะสม และทักษะที่มีผลต่อการประเมินเกรด (รวมทั้ง EMP_SKILLS และ LEARNING_RECORDS)
         $passedCoursesCount = (int)($learnStat['passed_count'] ?? 0);
+        $effectiveSkillCount = max($skillCount, $passedCoursesCount);
+
+        // คำนวณ Learning Grade ตามเกณฑ์ของฝ่ายบริหาร (A >= 5, B >= 3, C >= 1, D = 0)
+        $systemLearningGrade = 'D';
+        if ($effectiveSkillCount >= 5) {
+            $systemLearningGrade = 'A';
+        } elseif ($effectiveSkillCount >= 3) {
+            $systemLearningGrade = 'B';
+        } elseif ($effectiveSkillCount >= 1) {
+            $systemLearningGrade = 'C';
+        }
+
         $baseExp = $isAdmin ? 450 : 150;
         $computedExp = $baseExp + ($passedCoursesCount * 50) + ($skillCount * 30);
 
@@ -234,7 +293,7 @@ try {
                     'grade_attendance'      => $gradeRow['grade_attendance'] ?? 'A',
                     'grade_learning'        => !empty($gradeRow['grade_learning']) ? $gradeRow['grade_learning'] : $systemLearningGrade,
                     'system_grade_learning' => $systemLearningGrade,
-                    'skill_count'           => $skillCount,
+                    'skill_count'           => $effectiveSkillCount,
                     'passed_courses'        => $passedCoursesCount,
                     'avg_score'             => round((float)($learnStat['avg_score'] ?? 0), 1),
                 ]
@@ -423,20 +482,21 @@ try {
             }
         }
 
-        $systemLearningGrade = 'D';
-        if ($skillCount >= 5) {
-            $systemLearningGrade = 'A';
-        } elseif ($skillCount >= 3) {
-            $systemLearningGrade = 'B';
-        } elseif ($skillCount >= 1) {
-            $systemLearningGrade = 'C';
-        }
-
         $passedCoursesCount = 0;
         foreach ($learningRecords as $lr) {
             if (!empty($lr['passed'])) {
                 $passedCoursesCount++;
             }
+        }
+
+        $effectiveSkillCount = max($skillCount, $passedCoursesCount);
+        $systemLearningGrade = 'D';
+        if ($effectiveSkillCount >= 5) {
+            $systemLearningGrade = 'A';
+        } elseif ($effectiveSkillCount >= 3) {
+            $systemLearningGrade = 'B';
+        } elseif ($effectiveSkillCount >= 1) {
+            $systemLearningGrade = 'C';
         }
 
         // ผลการประเมินเกรดล่าสุด
@@ -457,7 +517,7 @@ try {
             'grade_attendance'      => $gradeRow['grade_attendance'] ?? 'A',
             'grade_learning'        => !empty($gradeRow['grade_learning']) ? $gradeRow['grade_learning'] : $systemLearningGrade,
             'system_grade_learning' => $systemLearningGrade,
-            'skill_count'           => $skillCount,
+            'skill_count'           => $effectiveSkillCount,
             'passed_courses'        => $passedCoursesCount,
             'notes'                 => $gradeRow['notes'] ?? null
         ];
@@ -476,7 +536,7 @@ try {
 
     // ─────────────────────────────────────────────────────────────────────────
     // ACTION: save_course_progress
-    // บันทึกความคืบหน้า / การสอบผ่าน Post-Test และเชื่อมโยงเข้า EMP_SKILLS ทันที
+    // บันทึกความคืบหน้า / การสอบผ่าน Post-Test และเชื่อมโยงเข้า EMP_SKILLS & EMPLOYEE_GRADES ทันที
     // ─────────────────────────────────────────────────────────────────────────
     if ($action === 'save_course_progress') {
         $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
@@ -534,14 +594,38 @@ try {
         // 2. ถ้าสอบผ่านเกณฑ์ (passed = 1) ให้อัปเดตเข้า dbo.EMP_SKILLS เป็น Level 3 Certified
         $skillUpdated = false;
         $skillCode = $COURSE_SKILL_MAP[$courseId] ?? null;
+        if ($passed && empty($skillCode)) {
+            $sanitizedCourseCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '_', $courseId));
+            $skillCode = 'SKILL_' . substr($sanitizedCourseCode, 0, 38);
+        }
 
         if ($passed && !empty($skillCode)) {
             // ค้นหา skill_id จาก SKILL_DEFINITIONS
-            $stmtFindSkill = $pdo->prepare("SELECT skill_id, skill_name FROM dbo.SKILL_DEFINITIONS WHERE skill_code = ? AND is_active = 1");
+            $stmtFindSkill = $pdo->prepare("SELECT skill_id, skill_name FROM dbo.SKILL_DEFINITIONS WHERE skill_code = ?");
             $stmtFindSkill->execute([$skillCode]);
             $skill = $stmtFindSkill->fetch(PDO::FETCH_ASSOC);
 
-            if ($skill) {
+            // หากยังไม่มีใน SKILL_DEFINITIONS (เช่นคอร์สที่สร้างใหม่หรือแปลงจากหน้างาน) ให้ลงทะเบียนอัตโนมัติ
+            if (!$skill) {
+                $newSkillName = !empty($courseTitle) ? mb_substr($courseTitle, 0, 120, 'UTF-8') : $courseId;
+                $newSkillCat  = !empty($category) ? mb_substr($category, 0, 60, 'UTF-8') : 'MES Learning Hub';
+                $stmtCreateSkill = $pdo->prepare("
+                    INSERT INTO dbo.SKILL_DEFINITIONS (skill_code, skill_name, category, description, is_active, display_order, created_at)
+                    VALUES (?, ?, ?, ?, 1, 90, GETDATE())
+                ");
+                $stmtCreateSkill->execute([
+                    $skillCode,
+                    $newSkillName,
+                    $newSkillCat,
+                    "ทักษะที่รับรองผ่านหลักสูตร MES Learning Hub ($courseId)"
+                ]);
+                $skill = [
+                    'skill_id'   => (int)$pdo->lastInsertId(),
+                    'skill_name' => $newSkillName
+                ];
+            }
+
+            if ($skill && !empty($skill['skill_id'])) {
                 $skillId = (int)$skill['skill_id'];
                 $skillNotes = "รับรองสมรรถนะผ่าน MES Learning Hub: เลขที่ $certificateId (คะแนน $quizPercentage%)";
 
@@ -572,20 +656,148 @@ try {
         $stmtNewSkills->execute([$empId]);
         $newSkillCount = (int)$stmtNewSkills->fetchColumn();
 
+        $stmtPassedCnt = $pdo->prepare("SELECT COUNT(*) FROM dbo.LEARNING_RECORDS WHERE emp_id = ? AND passed = 1");
+        $stmtPassedCnt->execute([$empId]);
+        $passedCoursesCnt = (int)$stmtPassedCnt->fetchColumn();
+
+        $effectiveSkillCount = max($newSkillCount, $passedCoursesCnt);
+
         $newLearningGrade = 'D';
-        if ($newSkillCount >= 5) {
+        if ($effectiveSkillCount >= 5) {
             $newLearningGrade = 'A';
-        } elseif ($newSkillCount >= 3) {
+        } elseif ($effectiveSkillCount >= 3) {
             $newLearningGrade = 'B';
-        } elseif ($newSkillCount >= 1) {
+        } elseif ($effectiveSkillCount >= 1) {
             $newLearningGrade = 'C';
+        }
+
+        // 4. เชื่อมต่อและบันทึกลงตารางเกรดหลัก dbo.EMPLOYEE_GRADES อัตโนมัติ (4-Dimension Grading Live Sync)
+        $stmtWeights = $pdo->prepare("
+            SELECT TOP 1
+                ISNULL(TS.weight_iph, 25) AS weight_iph,
+                ISNULL(TS.weight_5s, 25) AS weight_5s,
+                ISNULL(TS.weight_attendance, 25) AS weight_attendance,
+                ISNULL(TS.weight_learning, 25) AS weight_learning
+            FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+            LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+            WHERE E.emp_id = ?
+        ");
+        $stmtWeights->execute([$empId]);
+        $weights = $stmtWeights->fetch(PDO::FETCH_ASSOC) ?: [
+            'weight_iph' => 25, 'weight_5s' => 25, 'weight_attendance' => 25, 'weight_learning' => 25
+        ];
+
+        $wIph = (int)($weights['weight_iph'] ?? 25);
+        $w5s  = (int)($weights['weight_5s'] ?? 25);
+        $wAtt = (int)($weights['weight_attendance'] ?? 25);
+        $wLrn = (int)($weights['weight_learning'] ?? 25);
+
+        // ดึงข้อมูลเกรดล่าสุดของพนักงาน
+        $stmtLatestGrade = $pdo->prepare("
+            SELECT TOP 1 id, evaluation_period, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, notes
+            FROM dbo.EMPLOYEE_GRADES
+            WHERE emp_id = ?
+            ORDER BY evaluation_period DESC
+        ");
+        $stmtLatestGrade->execute([$empId]);
+        $latestGradeRow = $stmtLatestGrade->fetch(PDO::FETCH_ASSOC);
+
+        $currentPeriod = date('Y-m');
+        $evaluatorId   = (int)($_SESSION['user']['id'] ?? 0) ?: null;
+
+        $baseIph   = $latestGradeRow['grade_iph'] ?? 'B';
+        $base5s    = $latestGradeRow['grade_5s'] ?? 'A';
+        $baseAtt   = $latestGradeRow['grade_attendance'] ?? 'A';
+        $baseNotes = $latestGradeRow['notes'] ?? '';
+
+        $newOverallGrade = $calculateWeightedOverallGrade(
+            $baseIph, $base5s, $baseAtt, $newLearningGrade,
+            $wIph, $w5s, $wAtt, $wLrn
+        );
+
+        if ($passed) {
+            // 4.1 อัปเดตแถวเกรดล่าสุดของพนักงาน (ถ้ามีและไม่ใช่เดือนปัจจุบัน) เพื่อให้หน้า Dashboard แสดงเกรดล่าสุดตรงกันทันที
+            if ($latestGradeRow && $latestGradeRow['evaluation_period'] !== $currentPeriod) {
+                $latestOverall = $calculateWeightedOverallGrade(
+                    $latestGradeRow['grade_iph'],
+                    $latestGradeRow['grade_5s'],
+                    $latestGradeRow['grade_attendance'],
+                    $newLearningGrade,
+                    $wIph, $w5s, $wAtt, $wLrn
+                );
+                $stmtUpdLatest = $pdo->prepare("
+                    UPDATE dbo.EMPLOYEE_GRADES
+                    SET grade_learning = ?, grade_overall = ?, grade = ?, updated_at = GETDATE()
+                    WHERE id = ?
+                ");
+                $stmtUpdLatest->execute([$newLearningGrade, $latestOverall, $latestOverall, $latestGradeRow['id']]);
+            }
+
+            // 4.2 Upsert สำหรับงวดเดือนปัจจุบัน ($currentPeriod)
+            $stmtCurrGrade = $pdo->prepare("
+                SELECT id, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, notes
+                FROM dbo.EMPLOYEE_GRADES
+                WHERE emp_id = ? AND evaluation_period = ?
+            ");
+            $stmtCurrGrade->execute([$empId, $currentPeriod]);
+            $currGradeRow = $stmtCurrGrade->fetch(PDO::FETCH_ASSOC);
+
+            if ($currGradeRow) {
+                $currOverall = $calculateWeightedOverallGrade(
+                    $currGradeRow['grade_iph'] ?: $baseIph,
+                    $currGradeRow['grade_5s'] ?: $base5s,
+                    $currGradeRow['grade_attendance'] ?: $baseAtt,
+                    $newLearningGrade,
+                    $wIph, $w5s, $wAtt, $wLrn
+                );
+                $newOverallGrade = $currOverall;
+                $stmtUpdCurr = $pdo->prepare("
+                    UPDATE dbo.EMPLOYEE_GRADES
+                    SET grade_learning = ?, grade_overall = ?, grade = ?, updated_at = GETDATE()
+                    WHERE id = ?
+                ");
+                $stmtUpdCurr->execute([$newLearningGrade, $currOverall, $currOverall, $currGradeRow['id']]);
+
+                if (function_exists('writeLog')) {
+                    $newData = array_merge($currGradeRow, [
+                        'grade_learning' => $newLearningGrade,
+                        'grade_overall'  => $currOverall,
+                        'grade'          => $currOverall
+                    ]);
+                    writeLog($pdo, 'UPDATE', 'EmployeeGrading', $empId, json_encode($currGradeRow), json_encode($newData), "Auto-synced Learning Grade ($newLearningGrade) from MES Learning Hub ($courseId)");
+                }
+            } else {
+                $autoNote = "อัปเดตเกรดการเรียนรู้อัตโนมัติจาก MES Learning Hub ($certificateId)";
+                $stmtInsCurr = $pdo->prepare("
+                    INSERT INTO dbo.EMPLOYEE_GRADES
+                        (emp_id, evaluation_period, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, evaluated_by, notes, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+                ");
+                $stmtInsCurr->execute([
+                    $empId, $currentPeriod, $newOverallGrade,
+                    $baseIph, $base5s, $baseAtt, $newLearningGrade, $newOverallGrade,
+                    $evaluatorId, $baseNotes ?: $autoNote
+                ]);
+
+                if (function_exists('writeLog')) {
+                    $newData = [
+                        'evaluation_period' => $currentPeriod,
+                        'grade_iph'         => $baseIph,
+                        'grade_5s'          => $base5s,
+                        'grade_attendance'  => $baseAtt,
+                        'grade_learning'    => $newLearningGrade,
+                        'grade_overall'     => $newOverallGrade
+                    ];
+                    writeLog($pdo, 'INSERT', 'EmployeeGrading', $empId, null, json_encode($newData), "Created period $currentPeriod grades via MES Learning Hub ($courseId)");
+                }
+            }
         }
 
         $pdo->commit();
 
         echo json_encode([
             'success' => true,
-            'message' => $passed ? "บันทึกผลการอบรมและออกใบรับรอง $certificateId สำเร็จ" : "บันทึกความคืบหน้าสำเร็จ",
+            'message' => $passed ? "บันทึกผลการอบรม ออกใบรับรอง $certificateId และอัปเดตเกรดการเรียนรู้ ($newLearningGrade) สำเร็จ" : "บันทึกความคืบหน้าสำเร็จ",
             'data' => [
                 'emp_id'           => $empId,
                 'course_id'        => $courseId,
@@ -593,8 +805,10 @@ try {
                 'passed'           => $passed,
                 'skill_updated'    => $skillUpdated,
                 'skill_code'       => $skillCode,
-                'new_skill_count'  => $newSkillCount,
+                'new_skill_count'  => $effectiveSkillCount,
+                'passed_courses'   => $passedCoursesCnt,
                 'learning_grade'   => $newLearningGrade,
+                'grade_overall'    => $newOverallGrade,
                 'exp_bonus'        => $passed ? 50 : 5
             ]
         ], JSON_UNESCAPED_UNICODE);
