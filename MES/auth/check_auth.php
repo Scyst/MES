@@ -4,6 +4,30 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!defined('BASE_URL')) {
+    $configFile = __DIR__ . '/../config/config.php';
+    if (file_exists($configFile)) {
+        require_once $configFile;
+    }
+}
+
+if (!function_exists('getMesBaseUrl')) {
+    function getMesBaseUrl(): string {
+        if (defined('BASE_URL') && !empty(BASE_URL)) {
+            return rtrim(BASE_URL, '/');
+        }
+        if (isset($_SERVER['SCRIPT_NAME'])) {
+            if (strpos($_SERVER['SCRIPT_NAME'], '/page/') !== false) {
+                return explode('/page/', $_SERVER['SCRIPT_NAME'])[0];
+            }
+            if (strpos($_SERVER['SCRIPT_NAME'], '/auth/') !== false) {
+                return explode('/auth/', $_SERVER['SCRIPT_NAME'])[0];
+            }
+        }
+        return '/iot-toolbox/sandbox-b9/MES/MES';
+    }
+}
+
 function isApiRequest() {
     return (stripos($_SERVER['REQUEST_URI'], '/api/') !== false) || 
            (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
@@ -17,7 +41,7 @@ if (!defined('ALLOW_GUEST_ACCESS') && !isset($_SESSION['user'])) {
         exit;
     } else {
         $current_url = $_SERVER['REQUEST_URI'];
-        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
+        $loginUrl = getMesBaseUrl() . '/auth/login_form.php'; 
         header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
         exit;
     }
@@ -80,7 +104,7 @@ function requirePermission($permissions) {
             exit;
         } else {
             $current_url = $_SERVER['REQUEST_URI'];
-            $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
+            $loginUrl = getMesBaseUrl() . '/auth/login_form.php'; 
             header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
             exit;
         }
@@ -105,7 +129,7 @@ function requirePermission($permissions) {
             echo json_encode(['success' => false, 'message' => 'Access Denied: You lack the required permissions.']);
             exit;
         } else {
-            $homeUrl = defined('BASE_URL') ? BASE_URL . '/page/dailyLog/dailyLogUI.php' : '/MES/page/dailyLog/dailyLogUI.php';
+            $homeUrl = getMesBaseUrl() . '/page/dailyLog/dailyLogUI.php';
             die('
                 <!DOCTYPE html>
                 <html lang="th">

@@ -35,6 +35,18 @@ if (ini_get("session.use_cookies")) {
 session_destroy();
 
 // 5. [ADJUSTED] ส่งกลับไปหน้า Login Form พร้อมกับพารามิเตอร์ redirect (ถ้ามี)
-header("Location: login_form.php" . $redirectParam);
+if (!defined('BASE_URL')) {
+    $configFile = __DIR__ . '/../config/config.php';
+    if (file_exists($configFile)) {
+        require_once $configFile;
+    }
+}
+$targetLogin = "login_form.php";
+if (defined('BASE_URL') && !empty(BASE_URL)) {
+    $targetLogin = rtrim(BASE_URL, '/') . '/auth/login_form.php';
+} elseif (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/auth/') !== false) {
+    $targetLogin = explode('/auth/', $_SERVER['SCRIPT_NAME'])[0] . '/auth/login_form.php';
+}
+header("Location: " . $targetLogin . $redirectParam);
 exit;
 ?>

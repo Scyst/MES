@@ -4,6 +4,30 @@
         session_start();
     }
     require_once __DIR__ . '/php/i18n.php';
+
+    if (!defined('BASE_URL')) {
+        $configFile = __DIR__ . '/../../config/config.php';
+        if (file_exists($configFile)) {
+            require_once $configFile;
+        }
+    }
+
+    if (!function_exists('getMesBaseUrl')) {
+        function getMesBaseUrl(): string {
+            if (defined('BASE_URL') && !empty(BASE_URL)) {
+                return rtrim(BASE_URL, '/');
+            }
+            if (isset($_SERVER['SCRIPT_NAME'])) {
+                if (strpos($_SERVER['SCRIPT_NAME'], '/page/') !== false) {
+                    return explode('/page/', $_SERVER['SCRIPT_NAME'])[0];
+                }
+                if (strpos($_SERVER['SCRIPT_NAME'], '/auth/') !== false) {
+                    return explode('/auth/', $_SERVER['SCRIPT_NAME'])[0];
+                }
+            }
+            return '/iot-toolbox/sandbox-b9/MES/MES';
+        }
+    }
 ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -24,7 +48,7 @@
         isAuthenticated: <?php echo !empty($_SESSION['user']) ? 'true' : 'false'; ?>,
         allowGuest: <?php echo (defined('ALLOW_GUEST_ACCESS') && ALLOW_GUEST_ACCESS) ? 'true' : 'false'; ?>,
         userId: <?php echo json_encode($_SESSION['user']['id'] ?? null); ?>,
-        baseUrl: <?php echo json_encode(defined('BASE_URL') ? BASE_URL : '/MES/MES'); ?>
+        baseUrl: <?php echo json_encode(getMesBaseUrl()); ?>
     };
 
     // i18n Translation Engine
@@ -92,6 +116,9 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
         if (response.status === 401 || result.is_expired === true || (response.redirected && response.url && response.url.includes('login_form.php'))) {
             if (typeof window.__mesTriggerSessionLogout === 'function') {
                 window.__mesTriggerSessionLogout();
+            } else {
+                const base = (window.MES_AUTH_CONFIG && window.MES_AUTH_CONFIG.baseUrl) ? window.MES_AUTH_CONFIG.baseUrl : (window.location.pathname.includes('/page/') ? window.location.pathname.split('/page/')[0] : '/iot-toolbox/sandbox-b9/MES/MES');
+                window.location.replace(`${base}/auth/login_form.php?redirect=${encodeURIComponent(window.location.href)}`);
             }
             const authErr = new Error(result.message || 'Session expired');
             authErr.isSessionExpired = true;

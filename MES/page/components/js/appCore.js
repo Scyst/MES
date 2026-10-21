@@ -104,7 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     ch.close();
                 }
             } catch (_) {}
-            window.location.href = btn.getAttribute('href');
+            const baseUrl = (typeof window.__mesResolveBaseUrl === 'function')
+                ? window.__mesResolveBaseUrl()
+                : (window.location.pathname.includes('/page/') ? window.location.pathname.split('/page/')[0] : '/iot-toolbox/sandbox-b9/MES/MES');
+            window.location.href = `${baseUrl}/auth/logout.php`;
         });
     });
 
@@ -152,14 +155,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let isCheckingSession = false;
 
     function resolveMesBaseUrl() {
+        const path = window.location.pathname;
+        if (path.includes('/page/')) {
+            return path.split('/page/')[0];
+        }
+        if (path.includes('/auth/')) {
+            return path.split('/auth/')[0];
+        }
         if (window.MES_AUTH_CONFIG && window.MES_AUTH_CONFIG.baseUrl) {
-            return window.MES_AUTH_CONFIG.baseUrl.replace(/\/+$/, '');
+            const rawBase = window.MES_AUTH_CONFIG.baseUrl.replace(/\/+$/, '');
+            if (rawBase === '/MES/MES' && path.includes('/MES/MES')) {
+                return path.split('/MES/MES')[0] + '/MES/MES';
+            }
+            return rawBase;
         }
-        if (window.location.pathname.includes('/page/')) {
-            return window.location.pathname.split('/page/')[0];
+        if (path.includes('/MES/MES')) {
+            return path.split('/MES/MES')[0] + '/MES/MES';
         }
-        return '/MES/MES';
+        return '/iot-toolbox/sandbox-b9/MES/MES';
     }
+    window.__mesResolveBaseUrl = resolveMesBaseUrl;
 
     function clearClientAuthStorage() {
         [

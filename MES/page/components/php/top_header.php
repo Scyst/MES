@@ -23,6 +23,7 @@ $userRole    = $_SESSION['user']['role'] ?? 'guest';
 $fullName    = $_SESSION['user']['fullname'] ?? $_SESSION['user']['username'] ?? 'Guest User';
 $profilePic  = $_SESSION['user']['profile_picture'] ?? null;
 $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
+$headerBaseUrl = function_exists('getMesBaseUrl') ? getMesBaseUrl() : (defined('BASE_URL') ? BASE_URL : '/iot-toolbox/sandbox-b9/MES/MES');
 ?>
 
 <header class="portal-top-header border-bottom shadow-sm">
@@ -111,7 +112,7 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
                     </div>
                 </li>
                 <li>
-                    <a class="dropdown-item rounded py-2 d-flex align-items-center" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/profile/profileUI.php">
+                    <a class="dropdown-item rounded py-2 d-flex align-items-center" href="<?php echo $headerBaseUrl; ?>/page/profile/profileUI.php">
                         <i class="fas fa-user-edit fa-fw me-3 text-muted"></i> <?php _e('header.my_profile'); ?>
                     </a>
                 </li>
@@ -121,14 +122,14 @@ $userTheme   = $_SESSION['user']['theme_preference'] ?? 'light';
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item text-danger fw-bold logout-action rounded py-2 mt-1 d-flex align-items-center" href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/logout.php">
+                    <a class="dropdown-item text-danger fw-bold logout-action rounded py-2 mt-1 d-flex align-items-center" href="<?php echo $headerBaseUrl; ?>/auth/logout.php">
                         <i class="fas fa-sign-out-alt fa-fw me-3"></i> <?php _e('header.logout'); ?>
                     </a>
                 </li>
             </ul>
         </div>
         <?php else: ?>
-        <a href="<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/auth/login.php" class="btn btn-primary btn-sm rounded-pill px-3">เข้าสู่ระบบ</a>
+        <a href="<?php echo $headerBaseUrl; ?>/auth/login.php" class="btn btn-primary btn-sm rounded-pill px-3">เข้าสู่ระบบ</a>
         <?php endif; ?>
     </div>
 </header>
@@ -148,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fetch Performance Data (Strictly Admin / Manager / Creator only)
     <?php if (isset($_SESSION['user']['emp_id']) && in_array(strtolower($_SESSION['user']['role'] ?? ''), ['creator', 'admin', 'manager'], true)): ?>
     setTimeout(() => {
-        fetch('<?php echo defined('BASE_URL') ? BASE_URL : '/MES/MES'; ?>/page/manpower/api/api_my_performance.php')
+        fetch('<?php echo $headerBaseUrl; ?>/page/manpower/api/api_my_performance.php')
             .then(res => res.json())
             .then(json => {
                 if (json.success && json.data) {

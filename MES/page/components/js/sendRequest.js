@@ -61,6 +61,9 @@ window.sendRequest = async function sendRequest(endpoint, action, method, body =
         if (response.status === 401 || result.is_expired === true || (response.redirected && response.url && response.url.includes('login_form.php'))) {
             if (typeof window.__mesTriggerSessionLogout === 'function') {
                 window.__mesTriggerSessionLogout();
+            } else {
+                const base = (window.MES_AUTH_CONFIG && window.MES_AUTH_CONFIG.baseUrl) ? window.MES_AUTH_CONFIG.baseUrl : (window.location.pathname.includes('/page/') ? window.location.pathname.split('/page/')[0] : '/iot-toolbox/sandbox-b9/MES/MES');
+                window.location.replace(`${base}/auth/login_form.php?redirect=${encodeURIComponent(window.location.href)}`);
             }
             const authErr = new Error(result.message || 'Session expired');
             authErr.isSessionExpired = true;
