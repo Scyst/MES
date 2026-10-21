@@ -382,5 +382,290 @@ export const courses = [
         content: 'enterprise-ai'
       }
     ]
+  },
+
+  // =========================================================================
+  // --- 7 Official Industry 4.0 Curriculums (99 Industrial Solutions / SNC Former) ---
+  // =========================================================================
+
+  // 1. Enterprise Application Design, Development & Integration
+  {
+    id: 'c-enterprise-app',
+    title: 'Enterprise Application Design, Development & Integration',
+    description: 'หลักสูตรการออกแบบ พัฒนา และบูรณาการแอปพลิเคชันระดับองค์กร: สถาปัตยกรรมระบบองค์กร IT/OT, การออกแบบ Industrial UX/UI สำหรับพนักงานและแดชบอร์ดผู้บริหาร, การพัฒนา Web Application (HTML5, CSS Grid, ES6+ Async/Await), การเชื่อมต่อ IoT & Webhook (Telegram/Teams Alert), การทดสอบระบบ UAT, และความปลอดภัยไซเบอร์ระดับ Enterprise',
+    instructor: 'อาจารย์ผู้เชี่ยวชาญและทีมวิศวกรรมดิจิทัล (99 Industrial Solutions / SNC Former)',
+    duration: '24 hours (4 days)',
+    category: 'โปรแกรมและระบบดิจิทัล',
+    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. Enterprise System & Digital Industry Landscape (สถาปัตยกรรมและ IT-OT Convergence)',
+        content: 'enterprise-app-landscape'
+      },
+      {
+        id: 'm2',
+        title: '2. Industrial UX/UI & Software Design (การออกแบบ UI สำหรับพนักงานหน้างานและแดชบอร์ด)',
+        content: 'enterprise-app-uxui'
+      },
+      {
+        id: 'm3',
+        title: '3. Web & Application Development (HTML5, CSS Grid, ES6+ Async/Await & REST APIs)',
+        content: 'enterprise-app-webdev'
+      },
+      {
+        id: 'm4',
+        title: '4. Application Integration & IoT Connectivity (RESTful APIs, Webhook & Telegram Alerts)',
+        content: 'enterprise-app-integration'
+      },
+      {
+        id: 'm5',
+        title: '5. Software Testing, QA Standards & Deployment (Test Case, UAT, Documentation & Cybersecurity)',
+        content: 'enterprise-app-qa-security'
+      }
+    ]
+  },
+
+  // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories
+  {
+    id: 'c-machine-vision',
+    title: 'Basic Machine Vision and Sensor Inspection Course for Smart Factories',
+    description: 'หลักสูตรพื้นฐานแมชชีนวิชันและการตรวจสอบด้วยเซนเซอร์สำหรับโรงงานอัจฉริยะ: โครงสร้างกล้องอุตสาหกรรม, เลนส์, แสงสว่าง, การตั้งค่า Hardware (Global Shutter / Optical Setup), Logic ตรวจสอบภาพ Classical & AI Vision, และการปรับจูนเสถียรภาพลดของเสีย (Underkill / Overkill)',
+    instructor: 'ทีมวิศวกรรมแมชชีนวิชัน (99 Industrial Solutions / SNC Former)',
+    duration: '30 hours (5 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. พื้นฐานระบบ Machine Vision และโครงสร้างระบบตรวจสอบ',
+        content: 'vision-basics-structure'
+      },
+      {
+        id: 'm2',
+        title: '2. การเตรียมชิ้นงาน อุปกรณ์ภาพ และการตั้งค่า Hardware (Global Shutter & Optical)',
+        content: 'vision-hardware-optical'
+      },
+      {
+        id: 'm3',
+        title: '3. การเขียน Logic ตรวจสอบภาพด้วย Classical Vision และ AI Vision',
+        content: 'vision-logic-ai'
+      },
+      {
+        id: 'm4',
+        title: '4. การกำหนดค่ากระบวนการตรวจสอบและทดสอบระบบจริง (Threshold & Overkill Prevention)',
+        content: 'vision-conditions-testing'
+      }
+    ]
+  },
+
+  // 3. CAD-CAM for Mold and Die Design and Manufacturing
+  {
+    id: 'c-cad-cam',
+    title: 'CAD-CAM for Mold and Die Design and Manufacturing',
+    description: 'หลักสูตร CAD-CAM สำหรับการออกแบบและผลิตแม่พิมพ์ Mold & Die: การออกแบบ CAD 2D/3D (Core/Cavity/Draft Angle), กลยุทธ์การสร้าง Toolpath (Roughing, Semi-finishing, Finishing), การตรวจสอบ Solid Simulation ป้องกันการชน, การจัดการ G-code และการแก้ปัญหาหน้างาน CAD-CAM-CNC',
+    instructor: 'ทีมวิศวกรรมแม่พิมพ์ (99 Industrial Solutions / SNC Former)',
+    duration: '36 hours (6 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. พื้นฐานกระบวนการ CAD-CAM ในงานแม่พิมพ์ Mold & Die',
+        content: 'cadcam-mold-process'
+      },
+      {
+        id: 'm2',
+        title: '2. การออกแบบ CAD 2D/3D สำหรับงานแม่พิมพ์ Mold & Die',
+        content: 'cadcam-mold-design'
+      },
+      {
+        id: 'm3',
+        title: '3. กลยุทธ์การสร้าง Toolpath สำหรับงานกัดแม่พิมพ์',
+        content: 'cadcam-toolpath-strategy'
+      },
+      {
+        id: 'm4',
+        title: '4. การตรวจสอบ Simulation และการประเมินความพร้อมก่อนกัดจริง',
+        content: 'cadcam-simulation-collision'
+      },
+      {
+        id: 'm5',
+        title: '5. การจัดการ G-code และการเชื่อมต่อกับเครื่อง CNC',
+        content: 'cadcam-gcode-cnc'
+      },
+      {
+        id: 'm6',
+        title: '6. การแก้ปัญหาหน้างาน CAD-CAM-CNC (Chatter & Tool Wear)',
+        content: 'cadcam-troubleshooting'
+      }
+    ]
+  },
+
+  // 4. CNC Training for Engineers and Technicians in the Industry 4.0
+  {
+    id: 'c-cnc-4-0',
+    title: 'CNC Training for Engineers and Technicians in the Industry 4.0',
+    description: 'หลักสูตร CNC สำหรับวิศวกรและช่างเทคนิคยุคอุตสาหกรรม 4.0: โครงสร้างเครื่องจักร Machining Center, การอ่านแบบ Drawing และระบบพิกัด Workpiece Zero (G54-G59), การตั้ง Tool Length Offset, การเขียนโปรแกรม NC (G-Code/M-Code), Cutting Conditions และความปลอดภัยสูงสุด',
+    instructor: 'ทีมวิศวกรรมเครื่องจักรกล CNC (99 Industrial Solutions / SNC Former)',
+    duration: '30 hours (5 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. ระบบ CNC และโครงสร้างเครื่องจักร Machining Center',
+        content: 'cnc-systems-structure'
+      },
+      {
+        id: 'm2',
+        title: '2. การอ่านแบบงานและระบบพิกัด Workpiece Zero (G54-G59)',
+        content: 'cnc-drawings-coordinates'
+      },
+      {
+        id: 'm3',
+        title: '3. การเตรียมชิ้นงาน เครื่องมือ และการตั้งค่า Setup & Tooling',
+        content: 'cnc-setup-tooling'
+      },
+      {
+        id: 'm4',
+        title: '4. การเขียนและแก้ไขโปรแกรม NC (G-Code/M-Code)',
+        content: 'cnc-programming-codes'
+      },
+      {
+        id: 'm5',
+        title: '5. การกำหนด Cutting Conditions และทดลองตัดชิ้นงานจริง',
+        content: 'cnc-cutting-conditions'
+      },
+      {
+        id: 'm6',
+        title: '6. การวางแผนด้านความปลอดภัยในการใช้เครื่อง CNC (Single Block & Dry Run)',
+        content: 'cnc-safety-operations'
+      }
+    ]
+  },
+
+  // 5. EV Conversion Architecture and Battery System Design
+  {
+    id: 'c-ev-conversion',
+    title: 'EV Conversion Architecture and Battery System Design',
+    description: 'หลักสูตรสถาปัตยกรรมยานยนต์ไฟฟ้าดัดแปลงและการออกแบบระบบแบตเตอรี่: พื้นฐานระบบไฟฟ้ากำลัง DC/AC, ความปลอดภัยไฟฟ้าแรงสูง (High Voltage Safety & MSD), โครงสร้าง Traction Motor/Inverter/OBC, เคมีภัณฑ์แบตเตอรี่ (LFP vs NMC), ระบบ BMS และ Workshop ประกอบแพ็ค 12V 4S2P',
+    instructor: 'ทีมวิศวกรรมยานยนต์ไฟฟ้า (99 Industrial Solutions / SNC Former)',
+    duration: '30 hours (5 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. พื้นฐานไฟฟ้าและเครื่องมือวัดทางไฟฟ้าเบื้องต้นในรถ EV',
+        content: 'ev-electricity-instruments'
+      },
+      {
+        id: 'm2',
+        title: '2. อันตรายจากไฟฟ้าแรงสูง การตอบสนองฉุกเฉิน และ PPE',
+        content: 'ev-hv-safety-emergency'
+      },
+      {
+        id: 'm3',
+        title: '3. สถาปัตยกรรมยานยนต์ไฟฟ้าดัดแปลง (EV Conversion Architecture)',
+        content: 'ev-architecture-powertrain'
+      },
+      {
+        id: 'm4',
+        title: '4. ทฤษฎีเคมีภัณฑ์แบตเตอรี่และการคำนวณระยะทาง (LFP vs NMC)',
+        content: 'ev-battery-chemistry'
+      },
+      {
+        id: 'm5',
+        title: '5. BMS และการออกแบบประกอบแบตเตอรี่แพ็ค (Battery Pack Design 12V 4S2P)',
+        content: 'ev-bms-pack-design'
+      }
+    ]
+  },
+
+  // 6. PLC Programming for Industrial Automation
+  {
+    id: 'c-plc-automation',
+    title: 'PLC Programming for Industrial Automation',
+    description: 'หลักสูตรการเขียนโปรแกรม PLC สำหรับระบบอัตโนมัติในงานอุตสาหกรรม: สัญญาณ I/O (NPN/PNP), รอบการประมวลผล Scan Cycle, คำสั่ง Ladder Diagram (Timer, Counter, MOV), การควบคุมกระบอกสูบนิวแมติกส์และเซนเซอร์, การออกแบบระบบคัดแยกอัตโนมัติ และการแก้ปัญหา Troubleshooting',
+    instructor: 'ทีมวิศวกรรมระบบอัตโนมัติและเมคคาทรอนิกส์ (99 Industrial Solutions / SNC Former)',
+    duration: '24 hours (4 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. ระบบควบคุมไฟฟ้าและสัญญาณ I/O อุตสาหกรรม (NPN vs PNP)',
+        content: 'plc-electrical-io'
+      },
+      {
+        id: 'm2',
+        title: '2. โครงสร้างฮาร์ดแวร์ PLC และรอบการประมวลผล Scan Cycle',
+        content: 'plc-scan-cycle'
+      },
+      {
+        id: 'm3',
+        title: '3. คำสั่งพื้นฐานและคำสั่งประยุกต์ใน Ladder Diagram (Timer, Counter, MOV)',
+        content: 'plc-ladder-instructions'
+      },
+      {
+        id: 'm4',
+        title: '4. การเชื่อมต่ออุปกรณ์ภาคสนามและการควบคุมอุปกรณ์จริง (Pneumatics & Solenoid)',
+        content: 'plc-field-devices'
+      },
+      {
+        id: 'm5',
+        title: '5. การออกแบบระบบควบคุมอัตโนมัติและระบบคัดแยกชิ้นงาน (Sorting Station)',
+        content: 'plc-sorting-system'
+      },
+      {
+        id: 'm6',
+        title: '6. การวิเคราะห์และแก้ไขปัญหาในระบบ PLC (Troubleshooting & I/O Force)',
+        content: 'plc-troubleshooting'
+      }
+    ]
+  },
+
+  // 7. Integrated Robotics Programming, Troubleshooting & Intelligent Sensing
+  {
+    id: 'c-robot-automation',
+    title: 'Integrated Robotics Programming, Troubleshooting & Intelligent Sensing',
+    description: 'หลักสูตรการเขียนโปรแกรมหุ่นยนต์อุตสาหกรรม การแก้ปัญหา และเทคโนโลยีเซนเซอร์อัจฉริยะ: หุ่นยนต์ 6 แกนและ SCARA, ระบบพิกัด Joint/World/Tool, การเชื่อมต่อสัญญาณ I/O และ Handshaking กับ PLC, มาตรฐานความปลอดภัย ISO 10218, การใช้ Teach Pendant และ Workshop Pick & Place',
+    instructor: 'ทีมวิศวกรรมหุ่นยนต์อุตสาหกรรม (99 Industrial Solutions / SNC Former)',
+    duration: '18 hours (3 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    modules: [
+      {
+        id: 'm1',
+        title: '1. พื้นฐานหุ่นยนต์อุตสาหกรรมและแนวคิด Industry 4.0 (6-Axis, SCARA, Cobot)',
+        content: 'robot-basics-industry4'
+      },
+      {
+        id: 'm2',
+        title: '2. โครงสร้างหุ่นยนต์ ระบบพิกัด และโหมดการเคลื่อนที่ (Joint, World, Tool TCP)',
+        content: 'robot-kinematics-coordinates'
+      },
+      {
+        id: 'm3',
+        title: '3. ระบบไฟฟ้าและสัญญาณ I/O ระหว่างหุ่นยนต์กับสายการผลิต (Handshaking)',
+        content: 'robot-io-signals'
+      },
+      {
+        id: 'm4',
+        title: '4. มาตรฐานความปลอดภัยในการทำงานร่วมกับหุ่นยนต์ (Safety Light Curtain & Deadman)',
+        content: 'robot-safety-standards'
+      },
+      {
+        id: 'm5',
+        title: '5. การใช้ Teach Pendant และการเขียนโปรแกรมหุ่นยนต์เบื้องต้น (MOVEJ vs MOVEL)',
+        content: 'robot-teach-pendant'
+      },
+      {
+        id: 'm6',
+        title: '6. การประยุกต์ใช้งานจริงในโรงงานและ Workshop (Pick & Place & Palletizing)',
+        content: 'robot-workshop-applications'
+      }
+    ]
   }
 ];

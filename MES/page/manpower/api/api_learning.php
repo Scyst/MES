@@ -52,7 +52,15 @@ $COURSE_SKILL_MAP = [
     'c4'                => 'SKILL_MES_BACKEND',
     'post-101'          => 'SKILL_STAMPING',
     'post-102'          => 'SKILL_STORE_MES',
-    'post-103'          => 'SKILL_PREOP_MAINT'
+    'post-103'          => 'SKILL_PREOP_MAINT',
+    // 7 Official Industry 4.0 Courses (99 Industrial Solutions / SNC Former)
+    'c-enterprise-app'  => 'SKILL_ENTERPRISE_APP',
+    'c-machine-vision'  => 'SKILL_MACHINE_VISION',
+    'c-cad-cam'         => 'SKILL_CAD_CAM',
+    'c-cnc-4-0'         => 'SKILL_CNC_MACHINING',
+    'c-ev-conversion'   => 'SKILL_EV_BATTERY',
+    'c-plc-automation'  => 'SKILL_PLC_AUTOMATION',
+    'c-robot-automation'=> 'SKILL_ROBOTICS'
 ];
 
 // Helper: Calculate 4D Weighted Overall Grade

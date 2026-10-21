@@ -63,6 +63,66 @@ import {
   Iso17025TraceabilityQaLesson
 } from '../data/content/IsoMasteryLessons';
 
+// Import 7 Official Industry 4.0 Curriculum Lessons (99 Industrial Solutions / SNC Former)
+import {
+  EnterpriseAppMod1,
+  EnterpriseAppMod2,
+  EnterpriseAppMod3,
+  EnterpriseAppMod4,
+  EnterpriseAppMod5
+} from '../data/content/EnterpriseAppLessons';
+
+import {
+  MachineVisionMod1,
+  MachineVisionMod2,
+  MachineVisionMod3,
+  MachineVisionMod4
+} from '../data/content/MachineVisionLessons';
+
+import {
+  CadCamMod1,
+  CadCamMod2,
+  CadCamMod3,
+  CadCamMod4,
+  CadCamMod5,
+  CadCamMod6
+} from '../data/content/CadCamLessons';
+
+import {
+  CncMod1,
+  CncMod2,
+  CncMod3,
+  CncMod4,
+  CncMod5,
+  CncMod6
+} from '../data/content/CncLessons';
+
+import {
+  EvConversionMod1,
+  EvConversionMod2,
+  EvConversionMod3,
+  EvConversionMod4,
+  EvConversionMod5
+} from '../data/content/EvConversionLessons';
+
+import {
+  PlcMod1,
+  PlcMod2,
+  PlcMod3,
+  PlcMod4,
+  PlcMod5,
+  PlcMod6
+} from '../data/content/PlcLessons';
+
+import {
+  RobotMod1,
+  RobotMod2,
+  RobotMod3,
+  RobotMod4,
+  RobotMod5,
+  RobotMod6
+} from '../data/content/RobotLessons';
+
 export default function CourseContent({ courseId, moduleContent }) {
   // Mapping content IDs to actual React components containing the text/layout
   const contentMap = {
@@ -136,7 +196,59 @@ export default function CourseContent({ courseId, moduleContent }) {
     'live-walmart-fcca': <LiveWalmartFccaLesson />,
     'live-conflict-minerals': <LiveConflictMineralsLesson />,
     'live-eco-factory': <LiveEcoFactoryLesson />,
-    'live-defect-pareto': <LiveDefectParetoLesson />
+    'live-defect-pareto': <LiveDefectParetoLesson />,
+
+    // 1. Enterprise Application Design, Development & Integration
+    'enterprise-app-landscape': <EnterpriseAppMod1 />,
+    'enterprise-app-uxui': <EnterpriseAppMod2 />,
+    'enterprise-app-webdev': <EnterpriseAppMod3 />,
+    'enterprise-app-integration': <EnterpriseAppMod4 />,
+    'enterprise-app-qa-security': <EnterpriseAppMod5 />,
+
+    // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories
+    'vision-basics-structure': <MachineVisionMod1 />,
+    'vision-hardware-optical': <MachineVisionMod2 />,
+    'vision-logic-ai': <MachineVisionMod3 />,
+    'vision-conditions-testing': <MachineVisionMod4 />,
+
+    // 3. CAD-CAM for Mold and Die Design and Manufacturing
+    'cadcam-mold-process': <CadCamMod1 />,
+    'cadcam-mold-design': <CadCamMod2 />,
+    'cadcam-toolpath-strategy': <CadCamMod3 />,
+    'cadcam-simulation-collision': <CadCamMod4 />,
+    'cadcam-gcode-cnc': <CadCamMod5 />,
+    'cadcam-troubleshooting': <CadCamMod6 />,
+
+    // 4. CNC Training for Engineers and Technicians in the Industry 4.0
+    'cnc-systems-structure': <CncMod1 />,
+    'cnc-drawings-coordinates': <CncMod2 />,
+    'cnc-setup-tooling': <CncMod3 />,
+    'cnc-programming-codes': <CncMod4 />,
+    'cnc-cutting-conditions': <CncMod5 />,
+    'cnc-safety-operations': <CncMod6 />,
+
+    // 5. EV Conversion Architecture and Battery System Design
+    'ev-electricity-instruments': <EvConversionMod1 />,
+    'ev-hv-safety-emergency': <EvConversionMod2 />,
+    'ev-architecture-powertrain': <EvConversionMod3 />,
+    'ev-battery-chemistry': <EvConversionMod4 />,
+    'ev-bms-pack-design': <EvConversionMod5 />,
+
+    // 6. PLC Programming for Industrial Automation
+    'plc-electrical-io': <PlcMod1 />,
+    'plc-scan-cycle': <PlcMod2 />,
+    'plc-ladder-instructions': <PlcMod3 />,
+    'plc-field-devices': <PlcMod4 />,
+    'plc-sorting-system': <PlcMod5 />,
+    'plc-troubleshooting': <PlcMod6 />,
+
+    // 7. Integrated Robotics Programming, Troubleshooting & Intelligent Sensing
+    'robot-basics-industry4': <RobotMod1 />,
+    'robot-kinematics-coordinates': <RobotMod2 />,
+    'robot-io-signals': <RobotMod3 />,
+    'robot-safety-standards': <RobotMod4 />,
+    'robot-teach-pendant': <RobotMod5 />,
+    'robot-workshop-applications': <RobotMod6 />
   };
 
   const ContentComponent = contentMap[moduleContent];
