@@ -282,10 +282,91 @@ function buildSyncedUserFromApi(u, grading = null) {
   };
 }
 
+function syncBackendCoursesToLocal(synchedUser, backendCourses) {
+  if (!synchedUser || !synchedUser.emp_id || !Array.isArray(backendCourses)) return;
+  const empId = synchedUser.emp_id;
+
+  try {
+    let records = [];
+    const raw = localStorage.getItem('mes_learning_audit_records') || localStorage.getItem('mes_learning_audit_records_v1');
+    if (raw) {
+      try {
+        records = JSON.parse(raw);
+        if (!Array.isArray(records)) records = [];
+      } catch {
+        records = [];
+      }
+    }
+
+    const allCoursesList = [...courses, ...getCustomCourses()];
+
+    // Process each course returned from backend LEARNING_RECORDS
+    backendCourses.forEach(c => {
+      if (!c || !c.course_id) return;
+      const courseId = c.course_id;
+      const isPassed = Boolean(c.passed);
+      const isDone = isPassed || c.status === 'completed';
+
+      let recIdx = records.findIndex(r => (r.empId === empId || r.empId === 'GUEST') && r.courseId === courseId);
+
+      const updatedRec = {
+        recordId: recIdx !== -1 ? records[recIdx].recordId : `rec-db-${courseId}-${Date.now()}`,
+        empId: empId,
+        courseId: courseId,
+        status: c.status || (isPassed ? 'completed' : 'in_progress'),
+        progressPercent: isDone ? 100 : (recIdx !== -1 ? records[recIdx].progressPercent : 0),
+        quizScore: c.quiz_score !== null && c.quiz_score !== undefined ? Number(c.quiz_score) : (recIdx !== -1 ? records[recIdx].quizScore : null),
+        quizTotal: c.quiz_total !== null && c.quiz_total !== undefined ? Number(c.quiz_total) : (recIdx !== -1 ? records[recIdx].quizTotal : null),
+        quizPercentage: c.quiz_percentage !== null && c.quiz_percentage !== undefined ? Number(c.quiz_percentage) : (recIdx !== -1 ? records[recIdx].quizPercentage : null),
+        passed: isPassed,
+        completedAt: c.completed_at || (recIdx !== -1 ? records[recIdx].completedAt : null),
+        expiresAt: null,
+        certificateId: c.certificate_id || (recIdx !== -1 ? records[recIdx].certificateId : null),
+        evaluatedBy: 'ระบบประเมินผลออนไลน์ (MES Learning Hub LMS)'
+      };
+
+      if (recIdx !== -1) {
+        records[recIdx] = { ...records[recIdx], ...updatedRec };
+      } else {
+        records.unshift(updatedRec);
+      }
+
+      // If course is completed, make sure module progress in localStorage reflects 100% completed
+      if (isDone) {
+        const targetCourse = allCoursesList.find(item => item.id === courseId);
+        if (targetCourse && targetCourse.modules && targetCourse.modules.length > 0) {
+          const allModuleIds = targetCourse.modules.map(m => m.id);
+          const modKey = `mes_learning_module_progress_${empId}_${courseId}`;
+          localStorage.setItem(modKey, JSON.stringify(allModuleIds));
+        }
+      }
+    });
+
+    // Adopt any guest module progress to current user
+    if (empId !== 'GUEST' && typeof localStorage !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('mes_learning_module_progress_GUEST_')) {
+          const courseIdPart = k.replace('mes_learning_module_progress_GUEST_', '');
+          const targetKey = `mes_learning_module_progress_${empId}_${courseIdPart}`;
+          const guestProgress = localStorage.getItem(k);
+          if (guestProgress && !localStorage.getItem(targetKey)) {
+            localStorage.setItem(targetKey, guestProgress);
+          }
+        }
+      }
+    }
+
+    localStorage.setItem('mes_learning_audit_records', JSON.stringify(records));
+  } catch (err) {
+    console.warn('syncBackendCoursesToLocal error:', err);
+  }
+}
+
 async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
   if (!synchedUser || !synchedUser.isLoggedInReal || !synchedUser.emp_id) return;
   try {
-    const raw = localStorage.getItem('mes_learning_audit_records_v1');
+    const raw = localStorage.getItem('mes_learning_audit_records') || localStorage.getItem('mes_learning_audit_records_v1');
     if (!raw) return;
     const records = JSON.parse(raw);
     if (!Array.isArray(records)) return;
@@ -294,7 +375,7 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
     const livePassed = [];
 
     records.forEach(r => {
-      if (r && String(r.recordId || '').startsWith('rec-live-')) {
+      if (r && (String(r.recordId || '').startsWith('rec-live-') || r.empId === 'GUEST')) {
         if (r.empId !== synchedUser.emp_id) {
           r.empId = synchedUser.emp_id;
           updatedLocal = true;
@@ -306,13 +387,14 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
     });
 
     if (updatedLocal) {
-      localStorage.setItem('mes_learning_audit_records_v1', JSON.stringify(records));
+      localStorage.setItem('mes_learning_audit_records', JSON.stringify(records));
     }
 
     const backendPassedCount = Number(synchedUser.grading?.passed_courses || 0);
     if (livePassed.length > backendPassedCount) {
+      const allCoursesList = [...courses, ...getCustomCourses()];
       for (const rec of livePassed) {
-        const crs = courses.find(c => c.id === rec.courseId);
+        const crs = allCoursesList.find(c => c.id === rec.courseId);
         const res = await fetch(`${API_LEARNING_URL}?action=save_course_progress`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -371,6 +453,7 @@ export async function fetchRealUserSession() {
         const grading = canView ? (json.data.grading || null) : null;
         saveUserGrading(grading);
         const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
+        syncBackendCoursesToLocal(synchedUser, json.data.courses || []);
         saveCurrentUser(synchedUser);
         reconcileLocalLiveRecordsWithBackend(synchedUser);
         return synchedUser;

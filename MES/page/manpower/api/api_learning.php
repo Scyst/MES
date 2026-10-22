@@ -330,6 +330,16 @@ try {
         $stmtLearn->execute([$empId]);
         $learnStat = $stmtLearn->fetch(PDO::FETCH_ASSOC);
 
+        // ดึงรายการคอร์สทั้งหมดของผู้ใช้นี้จาก LEARNING_RECORDS
+        $stmtCourses = $pdo->prepare("
+            SELECT course_id, course_title, category, status, quiz_score, quiz_total, quiz_percentage, passed, certificate_id, completed_at
+            FROM dbo.LEARNING_RECORDS WITH (NOLOCK)
+            WHERE emp_id = ?
+            ORDER BY completed_at DESC, updated_at DESC
+        ");
+        $stmtCourses->execute([$empId]);
+        $enrolledCourses = $stmtCourses->fetchAll(PDO::FETCH_ASSOC);
+
         // คำนวณ EXP สะสม และทักษะที่มีผลต่อการประเมินเกรด (รวมทั้ง EMP_SKILLS และ LEARNING_RECORDS)
         $passedCoursesCount = (int)($learnStat['passed_count'] ?? 0);
         $effectiveSkillCount = max($skillCount, $passedCoursesCount);
@@ -381,7 +391,21 @@ try {
                     'skill_count'           => $effectiveSkillCount,
                     'passed_courses'        => $passedCoursesCount,
                     'avg_score'             => round((float)($learnStat['avg_score'] ?? 0), 1),
-                ] : null
+                ] : null,
+                'courses' => array_map(function($c) {
+                    return [
+                        'course_id'       => $c['course_id'],
+                        'course_title'    => $c['course_title'],
+                        'category'        => $c['category'],
+                        'status'          => $c['status'],
+                        'quiz_score'      => (int)($c['quiz_score'] ?? 0),
+                        'quiz_total'      => (int)($c['quiz_total'] ?? 0),
+                        'quiz_percentage' => (int)($c['quiz_percentage'] ?? 0),
+                        'passed'          => (bool)($c['passed'] ?? false),
+                        'certificate_id'  => $c['certificate_id'],
+                        'completed_at'    => $c['completed_at']
+                    ];
+                }, $enrolledCourses)
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;

@@ -66,11 +66,8 @@ export default function CourseViewer() {
       } else {
         setUserGrading(getUserGrading());
       }
-      if (e?.detail?.user) {
-        setCurrentUser(e.detail.user);
-      } else {
-        setCurrentUser(getCurrentUser());
-      }
+      const u = e?.detail?.user || e?.detail || getCurrentUser();
+      setCurrentUser(u);
     };
     window.addEventListener('mes-user-updated', handleUserUpdated);
     return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
@@ -87,7 +84,7 @@ export default function CourseViewer() {
     return course ? getCourseAssessment(course) : [];
   }, [course]);
 
-  // Synchronize all course states when courseId / course changes
+  // Synchronize all course states when courseId / course changes OR when user session updates
   useEffect(() => {
     if (!course) return;
     const status = getUserCourseStatus(course.id);
@@ -105,7 +102,7 @@ export default function CourseViewer() {
         setActiveModuleId(course.modules[0].id);
       }
     }
-  }, [courseId, course]);
+  }, [courseId, course, currentUser]);
 
   // Resolve active module safely, fallback to first module if not found
   const activeModule = course?.modules?.find(m => m.id === activeModuleId) || course?.modules?.[0];
