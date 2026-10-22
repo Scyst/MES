@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCourseById, addExp, getUserGrading } from '../data/communityStore';
+import { getCourseById, addExp, getUserGrading, getCurrentUser } from '../data/communityStore';
 import { 
   getUserModuleProgress, 
   markModuleCompleted, 
@@ -57,6 +57,7 @@ export default function CourseViewer() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [latestExamScore, setLatestExamScore] = useState(null);
   const [userGrading, setUserGrading] = useState(() => getUserGrading());
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
 
   useEffect(() => {
     const handleUserUpdated = (e) => {
@@ -64,6 +65,11 @@ export default function CourseViewer() {
         setUserGrading(e.detail.grading);
       } else {
         setUserGrading(getUserGrading());
+      }
+      if (e?.detail?.user) {
+        setCurrentUser(e.detail.user);
+      } else {
+        setCurrentUser(getCurrentUser());
       }
     };
     window.addEventListener('mes-user-updated', handleUserUpdated);
@@ -253,6 +259,7 @@ export default function CourseViewer() {
       setEarnedCertId(rec.certificateId);
       setCourseStatus(getUserCourseStatus(course.id));
       setUserGrading(getUserGrading());
+      setCurrentUser(getCurrentUser());
       setShowAssessmentModal(false);
       setAssessmentReview(null);
       setShowCelebrationModal(true);
