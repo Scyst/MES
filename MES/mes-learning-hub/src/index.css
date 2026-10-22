@@ -612,79 +612,267 @@ body.theme-light {
   background-image: none !important;
 }
 
-/* Fallback for any other lesson hero gradient banner */
+/* Hero Gradient Banners across all courses & modules in Light Mode */
 .theme-light .prose [class*="bg-gradient-to-r"][class*="rounded-2xl"],
-.theme-light .course-content-wrapper [class*="bg-gradient-to-r"][class*="rounded-2xl"] {
-  background-image: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%) !important;
-  border: 1px solid #bfdbfe !important;
+.theme-light .course-content-wrapper [class*="bg-gradient-to-r"][class*="rounded-2xl"],
+.theme-light .viewer-content [class*="bg-gradient-to-r"][class*="rounded-2xl"],
+.theme-light .viewer-content [class*="bg-gradient-to-br"][class*="rounded-2xl"] {
+  background-image: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%) !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
+.theme-light .prose [class*="bg-gradient-to-r"][class*="rounded-2xl"] h1,
 .theme-light .prose [class*="bg-gradient-to-r"][class*="rounded-2xl"] h2,
-.theme-light .course-content-wrapper [class*="bg-gradient-to-r"][class*="rounded-2xl"] h2 {
-  color: #1e3a8a !important;
-  -webkit-text-fill-color: #1e3a8a !important;
+.theme-light .course-content-wrapper [class*="bg-gradient-to-r"][class*="rounded-2xl"] h1,
+.theme-light .course-content-wrapper [class*="bg-gradient-to-r"][class*="rounded-2xl"] h2,
+.theme-light .viewer-content [class*="bg-gradient-to-r"][class*="rounded-2xl"] h1,
+.theme-light .viewer-content [class*="bg-gradient-to-r"][class*="rounded-2xl"] h2 {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
   background-image: none !important;
   font-weight: 900 !important;
+}
+.theme-light .prose [class*="bg-gradient-to-r"][class*="rounded-2xl"] p,
+.theme-light .course-content-wrapper [class*="bg-gradient-to-r"][class*="rounded-2xl"] p,
+.theme-light .viewer-content [class*="bg-gradient-to-r"][class*="rounded-2xl"] p {
+  color: #334155 !important;
 }
 
 /* ============================================================
    HIGH-CONTRAST ACCESSIBLE COLORS FOR LIGHT MODE
+   Covers all 7 Industry 4.0 courses, ISA-95 layers & badges
    ============================================================ */
-.theme-light .text-blue-400 { color: #1d4ed8 !important; }
-.theme-light .bg-blue-500\/20,
-.theme-light .bg-blue-500\/10 {
-  background-color: #dbeafe !important;
-  border-color: #bfdbfe !important;
+
+/* Violet (Module 1, Enterprise Architecture) */
+.theme-light .text-violet-400,
+.theme-light .text-violet-300 { color: #5b21b6 !important; font-weight: 600; }
+.theme-light .bg-violet-500\/20,
+.theme-light .bg-violet-500\/30,
+.theme-light .bg-violet-600\/30,
+.theme-light .bg-violet-500\/10 {
+  background-color: #ede9fe !important;
+  border-color: #c4b5fd !important;
+}
+.theme-light .bg-violet-950\/30,
+.theme-light .bg-violet-950\/50,
+.theme-light .bg-violet-950\/70,
+.theme-light .bg-violet-900\/40 {
+  background-color: #f5f3ff !important;
+  border-color: #ddd6fe !important;
+  color: #1e1b4b !important;
 }
 
-.theme-light .text-emerald-400,
-.theme-light .text-emerald-300 { color: #047857 !important; }
-.theme-light .bg-emerald-500\/20,
-.theme-light .bg-emerald-500\/15,
-.theme-light .bg-emerald-500\/10 {
-  background-color: #d1fae5 !important;
-  border-color: #a7f3d0 !important;
+/* Indigo (ISA-95 Level 3, Operations) */
+.theme-light .text-indigo-400,
+.theme-light .text-indigo-300 { color: #3730a3 !important; font-weight: 600; }
+.theme-light .bg-indigo-500\/20,
+.theme-light .bg-indigo-500\/30,
+.theme-light .bg-indigo-600\/30,
+.theme-light .bg-indigo-500\/10 {
+  background-color: #e0e7ff !important;
+  border-color: #a5b4fc !important;
+}
+.theme-light .bg-indigo-900\/40,
+.theme-light .bg-indigo-950\/80,
+.theme-light .bg-indigo-950\/50 {
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #1e1b4b !important;
 }
 
-.theme-light .text-amber-400,
-.theme-light .text-amber-300 { color: #b45309 !important; }
-.theme-light .bg-amber-500\/20,
-.theme-light .bg-amber-500\/10 {
-  background-color: #fef3c7 !important;
-  border-color: #fde68a !important;
+/* Purple (ISA-95 Level 4, Enterprise ERP) */
+.theme-light .text-purple-400,
+.theme-light .text-purple-300 { color: #6b21a8 !important; font-weight: 600; }
+.theme-light .bg-purple-500\/20,
+.theme-light .bg-purple-500\/30,
+.theme-light .bg-purple-600\/30,
+.theme-light .bg-purple-500\/10 {
+  background-color: #f3e8ff !important;
+  border-color: #d8b4fe !important;
+}
+.theme-light .bg-purple-900\/40,
+.theme-light .bg-purple-950\/80,
+.theme-light .bg-purple-950\/50 {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+  color: #3b0764 !important;
 }
 
+/* Fuchsia (Monolithic & Architecture) */
+.theme-light .text-fuchsia-400,
+.theme-light .text-fuchsia-300 { color: #86198f !important; font-weight: 600; }
+.theme-light .bg-fuchsia-500\/20,
+.theme-light .bg-fuchsia-500\/30,
+.theme-light .bg-fuchsia-600\/30,
+.theme-light .bg-fuchsia-500\/10 {
+  background-color: #fae8ff !important;
+  border-color: #f0abfc !important;
+}
+.theme-light .bg-fuchsia-900\/40,
+.theme-light .bg-fuchsia-950\/80,
+.theme-light .bg-fuchsia-950\/50 {
+  background-color: #fdf4ff !important;
+  border-color: #f5d0fe !important;
+}
+
+/* Pink (Module 2, Industrial UX/UI) */
+.theme-light .text-pink-400,
+.theme-light .text-pink-300 { color: #9d174d !important; font-weight: 600; }
+.theme-light .bg-pink-500\/20,
+.theme-light .bg-pink-500\/30,
+.theme-light .bg-pink-600\/30,
+.theme-light .bg-pink-500\/10 {
+  background-color: #fce7f3 !important;
+  border-color: #f472b6 !important;
+}
+.theme-light .bg-pink-900\/40,
+.theme-light .bg-pink-950\/70,
+.theme-light .bg-pink-950\/50 {
+  background-color: #fdf2f8 !important;
+  border-color: #fbcfe8 !important;
+}
+
+/* Rose (Legacy Shop Floor / Defect Warnings) */
 .theme-light .text-rose-400,
-.theme-light .text-rose-300 { color: #be123c !important; }
+.theme-light .text-rose-300 { color: #9f1239 !important; font-weight: 600; }
 .theme-light .bg-rose-500\/20,
+.theme-light .bg-rose-500\/30,
+.theme-light .bg-rose-600\/30,
 .theme-light .bg-rose-500\/15,
 .theme-light .bg-rose-500\/10 {
   background-color: #ffe4e6 !important;
   border-color: #fecdd3 !important;
 }
+.theme-light .bg-rose-950\/30,
+.theme-light .bg-rose-950\/50,
+.theme-light .bg-rose-950\/80,
+.theme-light .bg-rose-900\/40 {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+  color: #881337 !important;
+}
 
+/* Cyan (ISA-95 Level 2, SCADA / Edge IPC) */
 .theme-light .text-cyan-400,
-.theme-light .text-cyan-300 { color: #0369a1 !important; }
+.theme-light .text-cyan-300 { color: #0e7490 !important; font-weight: 600; }
 .theme-light .bg-cyan-500\/20,
+.theme-light .bg-cyan-500\/30,
+.theme-light .bg-cyan-600\/30,
 .theme-light .bg-cyan-500\/10 {
+  background-color: #cffafe !important;
+  border-color: #a5f3fc !important;
+}
+.theme-light .bg-cyan-900\/40,
+.theme-light .bg-cyan-950\/80,
+.theme-light .bg-cyan-950\/70,
+.theme-light .bg-cyan-950\/50 {
+  background-color: #ecfeff !important;
+  border-color: #bae6fd !important;
+  color: #164e63 !important;
+}
+
+/* Teal (ISA-95 Level 1, PLC Sensing) */
+.theme-light .text-teal-400,
+.theme-light .text-teal-300 { color: #0f766e !important; font-weight: 600; }
+.theme-light .bg-teal-500\/20,
+.theme-light .bg-teal-500\/30,
+.theme-light .bg-teal-600\/30,
+.theme-light .bg-teal-500\/10 {
+  background-color: #ccfbf1 !important;
+  border-color: #99f6e4 !important;
+}
+.theme-light .bg-teal-900\/40,
+.theme-light .bg-teal-950\/80,
+.theme-light .bg-teal-950\/70,
+.theme-light .bg-teal-950\/50 {
+  background-color: #f0fdfa !important;
+  border-color: #99f6e4 !important;
+  color: #134e4a !important;
+}
+
+/* Emerald (Smart Factory, Success, Pass Criteria) */
+.theme-light .text-emerald-400,
+.theme-light .text-emerald-300 { color: #065f46 !important; font-weight: 600; }
+.theme-light .bg-emerald-500\/20,
+.theme-light .bg-emerald-500\/30,
+.theme-light .bg-emerald-600\/30,
+.theme-light .bg-emerald-500\/15,
+.theme-light .bg-emerald-500\/10 {
+  background-color: #d1fae5 !important;
+  border-color: #a7f3d0 !important;
+}
+.theme-light .bg-emerald-950\/30,
+.theme-light .bg-emerald-950\/50,
+.theme-light .bg-emerald-950\/80,
+.theme-light .bg-emerald-900\/40 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #064e3b !important;
+}
+
+/* Sky & Blue (Client-Server, Network Protocols) */
+.theme-light .text-sky-400,
+.theme-light .text-sky-300 { color: #0369a1 !important; font-weight: 600; }
+.theme-light .text-blue-400,
+.theme-light .text-blue-300 { color: #1d4ed8 !important; font-weight: 600; }
+.theme-light .bg-sky-500\/20,
+.theme-light .bg-sky-500\/30,
+.theme-light .bg-sky-600\/30,
+.theme-light .bg-sky-500\/10,
+.theme-light .bg-blue-500\/20,
+.theme-light .bg-blue-500\/10 {
   background-color: #e0f2fe !important;
   border-color: #bae6fd !important;
 }
-
-.theme-light .text-purple-400,
-.theme-light .text-purple-300 { color: #7e22ce !important; }
-.theme-light .bg-purple-500\/20,
-.theme-light .bg-purple-500\/10 {
-  background-color: #f3e8ff !important;
-  border-color: #e9d5ff !important;
+.theme-light .bg-sky-900\/40,
+.theme-light .bg-blue-900\/40,
+.theme-light .bg-sky-950\/80 {
+  background-color: #f0f9ff !important;
+  border-color: #bfdbfe !important;
 }
 
-.theme-light .text-fuchsia-400,
-.theme-light .text-fuchsia-300 { color: #a21caf !important; }
-.theme-light .bg-fuchsia-500\/20,
-.theme-light .bg-fuchsia-500\/10 {
-  background-color: #fae8ff !important;
-  border-color: #f5d0fe !important;
+/* Amber & Orange (Module 5, Quality & UAT Testing) */
+.theme-light .text-amber-400,
+.theme-light .text-amber-300 { color: #b45309 !important; font-weight: 600; }
+.theme-light .text-orange-400,
+.theme-light .text-orange-300 { color: #c2410c !important; font-weight: 600; }
+.theme-light .bg-amber-500\/20,
+.theme-light .bg-amber-500\/30,
+.theme-light .bg-amber-600\/30,
+.theme-light .bg-amber-500\/10,
+.theme-light .bg-orange-500\/20,
+.theme-light .bg-orange-600\/30 {
+  background-color: #fef3c7 !important;
+  border-color: #fde68a !important;
 }
+.theme-light .bg-amber-950\/30,
+.theme-light .bg-amber-950\/70,
+.theme-light .bg-orange-950\/50,
+.theme-light .bg-amber-900\/40 {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #78350f !important;
+}
+
+/* Border overrides for colored cards in light mode */
+.theme-light .border-violet-500\/30,
+.theme-light .border-violet-500\/40 { border-color: #c4b5fd !important; }
+.theme-light .border-indigo-500\/30,
+.theme-light .border-indigo-500\/40 { border-color: #a5b4fc !important; }
+.theme-light .border-purple-500\/30,
+.theme-light .border-purple-500\/40 { border-color: #d8b4fe !important; }
+.theme-light .border-pink-500\/30,
+.theme-light .border-pink-500\/40 { border-color: #f472b6 !important; }
+.theme-light .border-rose-500\/30,
+.theme-light .border-rose-500\/40 { border-color: #fecdd3 !important; }
+.theme-light .border-cyan-500\/30,
+.theme-light .border-cyan-500\/40 { border-color: #a5f3fc !important; }
+.theme-light .border-teal-500\/30,
+.theme-light .border-teal-500\/40 { border-color: #99f6e4 !important; }
+.theme-light .border-emerald-500\/30,
+.theme-light .border-emerald-500\/40 { border-color: #a7f3d0 !important; }
+.theme-light .border-amber-500\/30,
+.theme-light .border-amber-500\/40 { border-color: #fde68a !important; }
 
 /* Formula and code callout boxes (e.g. RPN Box) in Light Mode */
 .theme-light .prose .bg-slate-900,
@@ -851,11 +1039,27 @@ body.theme-light {
   border-color: #f1f5f9 !important;
 }
 
-/* Headings in Light Mode: Eliminate White-on-White */
+/* Headings in Light Mode: Eliminate White-on-White across both Learning Container and Course Viewer */
+.theme-light h1:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light h2:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light h3:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light h4:not(.bg-clip-text):not([class*="bg-clip-text"]),
 .theme-light .learning-container h1:not(.bg-clip-text):not([class*="bg-clip-text"]),
 .theme-light .learning-container h2:not(.bg-clip-text):not([class*="bg-clip-text"]),
 .theme-light .learning-container h3:not(.bg-clip-text):not([class*="bg-clip-text"]),
-.theme-light .learning-container h4:not(.bg-clip-text):not([class*="bg-clip-text"]) {
+.theme-light .learning-container h4:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-viewer h1:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-viewer h2:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-viewer h3:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-viewer h4:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .viewer-content h1:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .viewer-content h2:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .viewer-content h3:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .viewer-content h4:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-content-wrapper h1:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-content-wrapper h2:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-content-wrapper h3:not(.bg-clip-text):not([class*="bg-clip-text"]),
+.theme-light .course-content-wrapper h4:not(.bg-clip-text):not([class*="bg-clip-text"]) {
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
 }
@@ -863,6 +1067,10 @@ body.theme-light {
 /* Global Text-White Safety Guard:
    Converts accidental text-white on light cards to deep slate,
    while protecting solid gradient/colored buttons and badges */
+.theme-light h1.text-white:not([class*="bg-gradient"]):not([class*="bg-clip-text"]),
+.theme-light h2.text-white:not([class*="bg-gradient"]):not([class*="bg-clip-text"]),
+.theme-light h3.text-white:not([class*="bg-gradient"]):not([class*="bg-clip-text"]),
+.theme-light h4.text-white:not([class*="bg-gradient"]):not([class*="bg-clip-text"]),
 .theme-light p.text-white,
 .theme-light div.text-white:not([class*="bg-gradient"]):not([class*="bg-fuchsia"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-cyan"]):not([class*="bg-amber"]):not([class*="bg-blue"]):not([class*="badge"]),
 .theme-light span.text-white:not([class*="bg-gradient"]):not([class*="bg-fuchsia"]):not([class*="bg-violet"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-cyan"]):not([class*="bg-amber"]):not([class*="bg-blue"]):not([class*="badge"]),
