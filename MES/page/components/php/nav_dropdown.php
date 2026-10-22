@@ -67,6 +67,7 @@
             <div class="collapse" id="collapseQa" data-bs-parent="#desktopAccordionMenu">
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw"></i><span>iQMS (Quality)</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../IQS/iqsUI.php"><i class="fas fa-clipboard-check fa-fw"></i><span>IQS (Pull Test)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw"></i><span>Accessories Inspection</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../PE/peDashboard.php"><i class="fas fa-cogs fa-fw"></i><span>PE Enterprise Dashboard</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../PE/peTechMobile.php"><i class="fas fa-wrench fa-fw"></i><span>PE Tech (Mobile)</span></a></li>

@@ -1,0 +1,255 @@
+/**
+ * iqs.css — In-process Quality System (IQS) Stylesheet
+ * Responsive mobile-first industrial styling for factory floor operators & supervisors.
+ */
+
+:root {
+    --iqs-primary: #0d6efd;
+    --iqs-success: #198754;
+    --iqs-danger: #dc3545;
+    --iqs-warning: #ffc107;
+    --iqs-card-bg: #ffffff;
+    --iqs-border: #e2e8f0;
+    --iqs-bg: #f8fafc;
+}
+
+[data-bs-theme="dark"] {
+    --iqs-card-bg: #1e293b;
+    --iqs-border: #334155;
+    --iqs-bg: #0f172a;
+}
+
+.iqs-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Offline Banner */
+.offline-banner {
+    display: none;
+    background-color: #ef4444;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+}
+
+/* Status Cards & Progress */
+.round-hero-card {
+    background: var(--iqs-card-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.progress-track {
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    transition: width 0.3s ease;
+}
+
+/* Machine Grid & Cards */
+.machine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 576px) {
+    .machine-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.machine-card {
+    background: var(--iqs-card-bg);
+    border: 2px solid var(--iqs-border);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+}
+
+.machine-card:hover {
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.06);
+}
+
+.machine-card.state-ok {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.03);
+}
+
+.machine-card.state-ng {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.04);
+}
+
+.machine-card.state-skip {
+    border-color: #94a3b8;
+    background: rgba(148, 163, 184, 0.05);
+    opacity: 0.85;
+}
+
+.machine-code-badge {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* OK / NG Big Toggle Buttons (Touch Friendly) */
+.result-toggle-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.btn-result-choice {
+    min-height: 52px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 2px solid #cbd5e1;
+    background: var(--iqs-card-bg);
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-result-choice:active {
+    transform: scale(0.97);
+}
+
+.btn-result-choice.choice-ok.active {
+    background-color: #10b981;
+    border-color: #059669;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+}
+
+.btn-result-choice.choice-ng.active {
+    background-color: #ef4444;
+    border-color: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+}
+
+/* Photo Upload Box */
+.photo-upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.photo-box {
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(241, 245, 249, 0.5);
+    transition: all 0.2s;
+    position: relative;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-box:hover {
+    border-color: #3b82f6;
+    background: rgba(239, 246, 255, 0.6);
+}
+
+.photo-box.has-file {
+    border-style: solid;
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.photo-preview-img {
+    max-height: 80px;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.photo-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    margin-top: 4px;
+}
+
+/* Numeric verification inputs */
+.measure-input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.measure-input-row label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.measure-input-row input {
+    height: 44px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Sticky Action Bar for Mobile */
+.bottom-submit-bar {
+    position: sticky;
+    bottom: 16px;
+    z-index: 100;
+    background: var(--iqs-card-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+@media (max-width: 576px) {
+    .bottom-submit-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

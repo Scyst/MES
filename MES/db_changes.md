@@ -227,6 +227,98 @@ ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
   5. Includes safety guard against double-deduction if location A was already previously approved.
 - **Tag Status Revival (`status = 'AVAILABLE'`):** Whenever a tag is approved with `@final_actual > 0` (including PRD returned tags or normal counts), its status is restored to `'AVAILABLE'`, making it immediately visible and eligible for Material Requisition.
 
+---
+
+## 2026-10-22 — In-process Quality System (IQS) Phase 1: Pull Test & Spot Weld Inspection
+
+**Agent:** Antigravity  
+**Feature:** ระบบบันทึกผลการทดสอบแรงดึง (Pull Test), เช็คเคาะ, เช็คระยะ และพารามิเตอร์ตู้คอนโทรลสำหรับไลน์เครื่องจักร Spot Welding แทนการส่งใน Line / ใบกระดาษ เพื่อรองรับการ Audit ตามมาตรฐานสากล
+
+### Tables Created
+
+#### 1. `dbo.IQS_ROUND_TEMPLATES`
+ตารางแม่แบบช่วงเวลาการทดสอบมาตรฐาน (Configurable Standard Time Slots)
+| Column | Type | Notes |
+|---|---|---|
+| `template_id` | INT IDENTITY PRIMARY KEY | รหัสแม่แบบ |
+| `template_code` | VARCHAR(50) NOT NULL | เช่น 'ROUND_0830', 'ROUND_1030', 'ROUND_1300' |
+| `template_name` | NVARCHAR(100) NOT NULL | เช่น N'รอบเช้า (08:30)', N'รอบสาย (10:30)' |
+| `std_time` | TIME(0) NULL | เวลามาตรฐาน เช่น '08:30:00' |
+| `shift` | VARCHAR(20) DEFAULT 'Day' | กะทำงาน ('Day', 'Night', 'OT') |
+| `sort_order` | INT DEFAULT 1 | ลำดับการแสดงผล |
+| `is_active` | BIT DEFAULT 1 | 1 = ใช้งาน, 0 = ปิดใช้งาน |
+| `created_at` | DATETIME DEFAULT GETDATE() | |
+
+#### 2. `dbo.IQS_ROUNDS`
+ตารางบันทึกหัวรอบการทดสอบ (Inspection Round Header)
+| Column | Type | Notes |
+|---|---|---|
+| `round_id` | INT IDENTITY PRIMARY KEY | รหัสรอบ |
+| `round_number` | VARCHAR(50) NOT NULL UNIQUE | รหัสอ้างอิง เช่น 'IQS-20261022-R01' |
+| `plan_date` | DATE NOT NULL DEFAULT CAST(GETDATE() AS DATE) | วันที่ทดสอบ |
+| `template_id` | INT NULL | FK to IQS_ROUND_TEMPLATES (NULL ถ้าเป็นรอบเปิดเองพิเศษ) |
+| `round_name` | NVARCHAR(100) NOT NULL | ชื่อรอบ |
+| `shift` | VARCHAR(20) DEFAULT 'Day' | |
+| `primary_tester_id` | INT NOT NULL | FK to USERS.id (ผู้ล็อกอินหลัก) |
+| `co_tester_id_1` | INT NULL | FK to USERS.id (ผู้ร่วมทดสอบคนที่ 2) |
+| `co_tester_id_2` | INT NULL | FK to USERS.id (ผู้ร่วมทดสอบคนที่ 3) |
+| `status` | VARCHAR(30) NOT NULL DEFAULT 'OPEN' | 'OPEN', 'SUBMITTED', 'COMPLETED_WITH_NG', 'VOID' |
+| `started_at` | DATETIME NOT NULL DEFAULT GETDATE() | เวลาเริ่มรอบ (จาก Server ห้ามย้อนหลัง) |
+| `submitted_at` | DATETIME NULL | เวลาส่ง/ปิดรอบ |
+| `notes` | NVARCHAR(500) NULL | หมายเหตุเพิ่มเติม |
+| `created_at` | DATETIME DEFAULT GETDATE() | |
+
+#### 3. `dbo.IQS_TEST_RECORDS`
+ตารางบันทึกผลการทดสอบแยกตามเครื่องจักร (Per Machine Inspection Record)
+| Column | Type | Notes |
+|---|---|---|
+| `record_id` | INT IDENTITY PRIMARY KEY | รหัสบันทึก |
+| `round_id` | INT NOT NULL | FK to IQS_ROUNDS.round_id |
+| `machine_id` | INT NOT NULL | FK to PE_MACHINES.machine_id |
+| `machine_code` | NVARCHAR(50) NOT NULL | รหัสเครื่องจักร เช่น 'ROB-SPOT-001', 'SPOT-35K-001' |
+| `sku` | NVARCHAR(100) NULL | รุ่นสินค้า / Part SKU (กรอกเอง เช่น '56 TC') |
+| `po_no` | NVARCHAR(100) NULL | เลขที่ PO (กรอกเอง) |
+| `thickness` | DECIMAL(10,3) NULL | ความหนาวัสดุ T (มม.) |
+| `pull_result` | VARCHAR(10) NOT NULL | ผลทดสอบแรงดึง: 'OK', 'NG', 'SKIP' |
+| `knock_check_val` | DECIMAL(10,3) NULL | ผลเช็คเคาะ (กรอกตัวเลขมม./ค่าตรวจวัด) |
+| `distance_check_val` | DECIMAL(10,3) NULL | ผลเช็คระยะ (กรอกตัวเลขมม./ระยะ Pitch) |
+| `recorded_at` | DATETIME NOT NULL DEFAULT GETDATE() | เวลาบันทึกจริงจาก Server (Real-time Audit Timestamp) |
+| `is_skipped` | BIT DEFAULT 0 | 1 = เครื่องหยุดงาน/ไม่มีงานในรอบนี้ |
+| `skip_reason` | NVARCHAR(255) NULL | เหตุผลที่ข้ามเครื่อง |
+| `ng_status` | VARCHAR(30) NULL | 'PENDING_APPROVAL', 'APPROVED', 'RETESTED' |
+| `ng_remark` | NVARCHAR(500) NULL | อาการ NG / รายละเอียด |
+| `approved_by` | INT NULL | FK to USERS.id (หัวหน้างานที่อนุมัติผล NG) |
+| `approved_at` | DATETIME NULL | เวลาที่อนุมัติ |
+| `created_at` | DATETIME DEFAULT GETDATE() | |
+
+#### 4. `dbo.IQS_ATTACHMENTS`
+ตารางจัดเก็บไฟล์รูปถ่ายหลักฐานการทดสอบ (Photos Audit Proof)
+| Column | Type | Notes |
+|---|---|---|
+| `attach_id` | INT IDENTITY PRIMARY KEY | รหัสไฟล์แนบ |
+| `record_id` | INT NOT NULL | FK to IQS_TEST_RECORDS.record_id |
+| `attach_type` | VARCHAR(30) NOT NULL | 'PULL_TEST' (รูปชิ้นงานดึง), 'CONTROL_PANEL' (รูปหน้าตู้คอนโทรล), 'OTHER' |
+| `file_path` | NVARCHAR(500) NOT NULL | ที่อยู่ไฟล์ (uploads/iqs/YYYY-MM/...) |
+| `file_name` | NVARCHAR(255) NOT NULL | ชื่อไฟล์เดิม |
+| `file_size` | INT NOT NULL | ขนาดไฟล์ (bytes) |
+| `sha256_hash` | CHAR(64) NOT NULL | ลายพิมพ์ดิจิทัล SHA-256 ป้องกันการปลอมแปลง |
+| `uploaded_at` | DATETIME DEFAULT GETDATE() | วันเวลาที่อัปโหลด |
+
+#### 5. `dbo.IQS_AUDIT_LOGS`
+ตารางบันทึก Audit Trail ของระบบ IQS
+| Column | Type | Notes |
+|---|---|---|
+| `log_id` | INT IDENTITY PRIMARY KEY | รหัสบันทึก |
+| `record_id` | INT NULL | FK to IQS_TEST_RECORDS |
+| `round_id` | INT NULL | FK to IQS_ROUNDS |
+| `action_type` | VARCHAR(50) NOT NULL | 'CREATE_ROUND', 'SUBMIT_RECORD', 'SUBMIT_ROUND', 'NG_ACTION', 'UPDATE_RECORD' |
+| `user_id` | INT NOT NULL | FK to USERS.id |
+| `user_fullname` | NVARCHAR(200) NULL | |
+| `old_data` | NVARCHAR(MAX) NULL | JSON ข้อมูลเดิมก่อนแก้ไข |
+| `new_data` | NVARCHAR(MAX) NULL | JSON ข้อมูลใหม่ |
+| `ip_address` | VARCHAR(50) NULL | |
+| `logged_at` | DATETIME DEFAULT GETDATE() | |
+
 
 
 
