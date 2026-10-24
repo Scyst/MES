@@ -19,6 +19,26 @@ const IQS = {
         this.bindUIEvents();
     },
 
+    switchTab(tabKey) {
+        const activeBtn = document.getElementById('tab-active-btn');
+        const historyBtn = document.getElementById('tab-history-btn');
+        const activePane = document.getElementById('tab-active');
+        const historyPane = document.getElementById('tab-history');
+
+        if (tabKey === 'active') {
+            if (activeBtn) activeBtn.classList.add('active');
+            if (historyBtn) historyBtn.classList.remove('active');
+            if (activePane) activePane.classList.add('show', 'active');
+            if (historyPane) historyPane.classList.remove('show', 'active');
+        } else if (tabKey === 'history') {
+            if (historyBtn) historyBtn.classList.add('active');
+            if (activeBtn) activeBtn.classList.remove('active');
+            if (historyPane) historyPane.classList.add('show', 'active');
+            if (activePane) activePane.classList.remove('show', 'active');
+            this.loadHistory();
+        }
+    },
+
     bindNetworkEvents() {
         const banner = document.getElementById('offlineBanner');
         const updateOnlineStatus = () => {
@@ -42,12 +62,32 @@ const IQS = {
             this.initialData = data.data;
             this.renderTemplateOptions();
             this.renderCoTesterOptions();
+            this.renderDesktopRoster();
             await this.loadActiveRound();
         } catch (err) {
             Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลเริ่มต้นได้: ' + err.message, 'error');
         } finally {
             this.showLoading(false);
         }
+    },
+
+    renderDesktopRoster() {
+        const rosterContainer = document.getElementById('desktopMachineRoster');
+        if (!rosterContainer || !this.initialData?.machines) return;
+
+        rosterContainer.innerHTML = '';
+        this.initialData.machines.forEach(m => {
+            const isRobot = m.machine_type === 'Robot' || (m.machine_name && m.machine_name.includes('Robot'));
+            const iconClass = isRobot ? 'fa-robot text-primary' : 'fa-bolt text-warning';
+            rosterContainer.innerHTML += `
+            <div class="roster-chip">
+                <i class="fas ${iconClass}"></i>
+                <div class="ms-1">
+                    <strong class="d-block text-body" style="font-size: 0.85rem;">${m.machine_code}</strong>
+                    <span class="text-muted" style="font-size: 0.72rem;">${m.area || 'B9'}</span>
+                </div>
+            </div>`;
+        });
     },
 
     renderTemplateOptions() {

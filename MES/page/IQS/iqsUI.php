@@ -37,13 +37,12 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                 </div>
 
                 <!-- Sleek Segmented Control Navigation -->
+                <!-- Sleek Segmented Control Navigation -->
                 <div class="iqs-segmented-bar mb-3">
-                    <button class="iqs-segment-btn active" id="tab-active-btn" data-bs-toggle="pill" 
-                            data-bs-target="#tab-active" type="button" role="tab">
+                    <button class="iqs-segment-btn active" id="tab-active-btn" type="button" onclick="IQS.switchTab('active')">
                         <i class="fas fa-tasks me-2"></i><span>การทดสอบประจำรอบ</span>
                     </button>
-                    <button class="iqs-segment-btn" id="tab-history-btn" data-bs-toggle="pill" 
-                            data-bs-target="#tab-history" type="button" role="tab" onclick="IQS.loadHistory()">
+                    <button class="iqs-segment-btn" id="tab-history-btn" type="button" onclick="IQS.switchTab('history')">
                         <i class="fas fa-history me-2"></i><span>ประวัติ & รายงานออดิท</span>
                     </button>
                 </div>
@@ -55,41 +54,119 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                     <!-- ========================================== -->
                     <div class="tab-pane fade show active" id="tab-active" role="tabpanel">
 
-                        <!-- Enhanced Empty State / Ready to Start Hero Card -->
+                        <!-- Enhanced Empty State / Ready to Start Dual Column on PC -->
                         <div id="noRoundSection" style="display:none;">
-                            <div class="iqs-empty-hero">
-                                <div class="iqs-pulse-pill">
-                                    <span class="iqs-pulse-dot"></span>
-                                    <span>พร้อมเริ่มรอบการทดสอบ</span>
-                                </div>
-                                <div class="iqs-glow-icon-wrap">
-                                    <i class="fas fa-clipboard-check"></i>
-                                </div>
-                                <h4 class="fw-bold mb-2 text-body">ยังไม่มีรอบการทดสอบที่เปิดอยู่</h4>
-                                <p class="text-muted small mb-3">
-                                    ระบบบันทึกผลการทดสอบแรงดึง พารามิเตอร์ และรูปถ่ายชิ้นงาน<br class="d-none d-sm-inline">
-                                    แบบเรียลไทม์เพื่อรองรับการตรวจ Audit ตามมาตรฐาน
-                                </p>
+                            <div class="row g-4 align-items-stretch">
+                                <!-- Left Column: Start Round Hero & Standard Daily Timeline -->
+                                <div class="col-lg-6 col-xl-5">
+                                    <div class="iqs-empty-hero h-100 mb-0">
+                                        <div class="iqs-pulse-pill">
+                                            <span class="iqs-pulse-dot"></span>
+                                            <span>พร้อมเริ่มรอบการทดสอบ</span>
+                                        </div>
+                                        <div class="iqs-glow-icon-wrap">
+                                            <i class="fas fa-clipboard-check"></i>
+                                        </div>
+                                        <h4 class="fw-bold mb-2 text-body">เปิดรอบการทดสอบแรงดึง</h4>
+                                        <p class="text-muted small mb-3">
+                                            ระบบบันทึกผลการทดสอบแรงดึง พารามิเตอร์ และรูปถ่ายชิ้นงาน<br class="d-none d-sm-inline">
+                                            แบบเรียลไทม์เพื่อรองรับการตรวจ Audit ตามมาตรฐาน
+                                        </p>
 
-                                <div class="mb-3">
-                                    <div class="small fw-bold text-muted mb-2">
-                                        <i class="fas fa-clock me-1 text-primary"></i>รอบเวลามาตรฐาน (Standard Time Slots):
-                                    </div>
-                                    <div class="iqs-slot-chips">
-                                        <span class="iqs-slot-chip">08:30 (เช้า)</span>
-                                        <span class="iqs-slot-chip">10:30 (สาย)</span>
-                                        <span class="iqs-slot-chip">13:00 (บ่าย)</span>
-                                        <span class="iqs-slot-chip">15:30 (บ่ายแก่)</span>
-                                        <span class="iqs-slot-chip">20:30 (OT ค่ำ)</span>
-                                        <span class="iqs-slot-chip">22:30 (OT ดึก)</span>
-                                        <span class="iqs-slot-chip">02:30 (กะดึก)</span>
+                                        <button class="btn-iqs-primary-lg mb-4" data-bs-toggle="modal" data-bs-target="#modalStartRound">
+                                            <i class="fas fa-play-circle fa-lg"></i>
+                                            <span>เปิดรอบการทดสอบใหม่ (Start Round)</span>
+                                        </button>
+
+                                        <!-- Daily Standard Timeline Schedule Card -->
+                                        <div class="schedule-timeline-card text-start">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="small fw-bold text-muted"><i class="fas fa-clock me-1 text-primary"></i>รอบเวลามาตรฐานประจำวัน (7 รอบ)</span>
+                                                <span class="badge bg-primary-subtle text-primary" style="font-size: 0.72rem;">มาตรฐานโรงงาน</span>
+                                            </div>
+                                            <div class="schedule-timeline-grid">
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">08:30</span>
+                                                    <span class="slot-desc">รอบเช้า (Day)</span>
+                                                </div>
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">10:30</span>
+                                                    <span class="slot-desc">รอบสาย (Day)</span>
+                                                </div>
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">13:00</span>
+                                                    <span class="slot-desc">รอบบ่าย (Day)</span>
+                                                </div>
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">15:30</span>
+                                                    <span class="slot-desc">รอบบ่ายแก่ (Day)</span>
+                                                </div>
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">20:30</span>
+                                                    <span class="slot-desc">รอบค่ำ (OT)</span>
+                                                </div>
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">22:30</span>
+                                                    <span class="slot-desc">รอบดึก (OT)</span>
+                                                </div>
+                                                <div class="schedule-slot-item">
+                                                    <span class="slot-time">02:30</span>
+                                                    <span class="slot-desc">กะดึก (Night)</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button class="btn-iqs-primary-lg" data-bs-toggle="modal" data-bs-target="#modalStartRound">
-                                    <i class="fas fa-play-circle fa-lg"></i>
-                                    <span>เปิดรอบการทดสอบใหม่ (Start Round)</span>
-                                </button>
+                                <!-- Right Column: Spot Welding Equipment Roster & Phase 2 Digital Twin Preview -->
+                                <div class="col-lg-6 col-xl-7">
+                                    <div class="card border-0 shadow-sm h-100 p-3 p-md-4" style="border-radius: 20px; background: var(--iqs-card-bg);">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <h5 class="fw-bold mb-0 text-body">
+                                                    <i class="fas fa-microchip me-2 text-primary"></i>เครื่องจักรในสายการผลิต Spot Welding
+                                                </h5>
+                                                <small class="text-muted">ระบบตรวจสอบความพร้อมของเครื่องจักรที่เชื่อมโยงกับ PE_MACHINES</small>
+                                            </div>
+                                            <span class="badge bg-success-subtle text-success px-3 py-2 fw-bold" style="border-radius: 10px;">
+                                                <i class="fas fa-check-circle me-1"></i>พร้อมตรวจ 39 เครื่อง
+                                            </span>
+                                        </div>
+
+                                        <!-- Summary Stat Pills -->
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                                                <i class="fas fa-robot me-1"></i>Robot Spot: <strong>5 เครื่อง</strong>
+                                            </span>
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
+                                                <i class="fas fa-bolt me-1"></i>Manual Spot: <strong>34 เครื่อง</strong>
+                                            </span>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2">
+                                                <i class="fas fa-map-marker-alt me-1"></i>พื้นที่: <strong>Zone B9</strong>
+                                            </span>
+                                        </div>
+
+                                        <!-- Machine Grid Container (Populated by JS) -->
+                                        <div class="desktop-roster-grid mb-3" id="desktopMachineRoster">
+                                            <div class="text-center text-muted py-4 small">กำลังโหลดรายการเครื่องจักร...</div>
+                                        </div>
+
+                                        <!-- Phase 2 Floor Map Teaser Banner -->
+                                        <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 p-3 mb-0 mt-auto">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-map-marked-alt fa-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="text-primary d-block small">Phase 2: Digital Twin & Interactive Floor Map</strong>
+                                                    <span class="text-muted small" style="font-size: 0.78rem;">
+                                                        ระบบจะแสดงพิกัดเครื่องจักรบนผังโรงงานจำลองแบบเรียลไทม์ พร้อมสีแสดงสถานะการตรวจรอบ และระบบสแกน QR Code ประจำเครื่อง
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -255,7 +332,7 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted">รอบเวลามาตรฐาน</label>
-                            <select class="form-select form-select-lg" id="newRoundTemplate">
+                            <select class="form-select" id="newRoundTemplate">
                                 <option value="">กำลังโหลดแม่แบบ...</option>
                             </select>
                             <small class="text-muted">เลือกแม่แบบเพื่อระบุชื่อรอบและกะโดยอัตโนมัติ</small>

@@ -131,6 +131,77 @@ body {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
+/* Modal Input Typography Fix */
+.modal .form-select,
+.modal .form-control {
+    font-size: 0.92rem !important;
+}
+
+.modal .form-label {
+    font-size: 0.85rem !important;
+}
+
+/* Schedule Timeline Grid */
+.schedule-timeline-card {
+    background: var(--iqs-input-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.schedule-timeline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+}
+
+.schedule-slot-item {
+    background: var(--iqs-card-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 10px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.schedule-slot-item .slot-time {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--iqs-primary);
+}
+
+.schedule-slot-item .slot-desc {
+    font-size: 0.72rem;
+    color: var(--iqs-text-muted);
+}
+
+/* Desktop Equipment Roster Grid */
+.desktop-roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    max-height: 290px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.roster-chip {
+    background: var(--iqs-input-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 10px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+
+.roster-chip:hover {
+    border-color: var(--iqs-primary);
+    transform: translateY(-1px);
+    background: rgba(37, 99, 235, 0.04);
+}
+
 /* =======================================================
    EMPTY STATE / READY TO START HERO CARD
    ======================================================= */
@@ -140,8 +211,6 @@ body {
     border-radius: 20px;
     padding: 32px 24px;
     text-align: center;
-    max-width: 580px;
-    margin: 20px auto 40px;
     box-shadow: var(--iqs-glass-shadow);
     position: relative;
     overflow: hidden;
