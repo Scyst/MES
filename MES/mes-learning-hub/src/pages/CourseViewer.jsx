@@ -1166,6 +1166,7 @@ export default function CourseViewer() {
       <TrainerGuideModal
         isOpen={isTrainerGuideOpen}
         onClose={() => setIsTrainerGuideOpen(false)}
+        courseId={course?.id}
       />
     </div>
   );
