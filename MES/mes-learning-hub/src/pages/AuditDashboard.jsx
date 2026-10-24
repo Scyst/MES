@@ -32,8 +32,10 @@ import {
   FiX,
   FiCheck,
   FiExternalLink,
-  FiDatabase
+  FiDatabase,
+  FiDownload
 } from 'react-icons/fi';
+import CertificateModal from '../components/CertificateModal';
 
 export default function AuditDashboard() {
   const { isDark } = useTheme();
@@ -68,8 +70,10 @@ export default function AuditDashboard() {
   const [selectedEmpId, setSelectedEmpId] = useState(() => allEmployees[0]?.empId || 'EMP-3810');
   const [empSearchQuery, setEmpSearchQuery] = useState('');
 
-  // Print Modal State
+  // Print Modal State & Standard Mode ('boi' | 'iso')
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [reportStandard, setReportStandard] = useState('boi');
+  const [selectedCertData, setSelectedCertData] = useState(null);
 
   // Computed Course Summary
   const courseSummary = useMemo(() => {
@@ -118,6 +122,63 @@ export default function AuditDashboard() {
 
   const handleTriggerPrint = () => {
     window.print();
+  };
+
+  const handleExportCsv = () => {
+    const BOM = '\uFEFF';
+    const isBoi = reportStandard === 'boi';
+    const title = isBoi
+      ? 'แบบฟอร์มรายงานผลการฝึกอบรมบุคลากรโครงการ BOI STEMPlus (สอวช.)'
+      : 'แบบบันทึกประวัติการฝึกอบรมและประเมินผลสมรรถนะบุคลากร (ISO 9001:2015 Clause 7.2)';
+
+    const headers = [
+      'ลำดับ',
+      'รหัสพนักงาน',
+      'ชื่อ-นามสกุล',
+      'แผนก',
+      'ตำแหน่ง',
+      'สถานะการอบรม',
+      'คะแนนทดสอบ (%)',
+      'ผลการประเมิน',
+      'วันที่ผ่านการอบรม',
+      'เลขที่ใบรับรอง (Cert ID)',
+      isBoi ? 'สิทธิประโยชน์ภาษี BOI' : 'ข้อกำหนดอ้างอิง'
+    ];
+
+    const rows = courseSummary.participantRoster.map((t, idx) => [
+      idx + 1,
+      `"${t.empId}"`,
+      `"${t.name}"`,
+      `"${t.department}"`,
+      `"${t.role}"`,
+      `"${t.status}"`,
+      t.quizPercentage !== null ? t.quizPercentage : '-',
+      t.passed ? 'ผ่านเกณฑ์ (Pass)' : 'ไม่ผ่าน (Fail)',
+      `"${t.completedDate || '-'}"`,
+      `"${t.certificateId || '-'}"`,
+      isBoi ? 'ลดหย่อนภาษี 250% (STEMPlus)' : 'ISO 9001:2015 Clause 7.2'
+    ]);
+
+    const csvContent = BOM + [
+      `"${title}"`,
+      `"บริษัท เอสเอ็นซี ฟอร์เมอร์ จำกัด (มหาชน) — SNC Former Public Co., Ltd."`,
+      `"หลักสูตร: ${courseSummary.course?.title || selectedCourseId}"`,
+      `"วิทยากร: ${courseSummary.course?.instructor || 'ณภัทร นุ่มทอง'}"`,
+      `"วันที่ออกรายงาน: ${new Date().toLocaleDateString('th-TH')}"`,
+      '',
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Audit_Report_${selectedCourseId}_${reportStandard}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -497,9 +558,30 @@ export default function AuditDashboard() {
                           </td>
                           <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
                             {trainee.certificateId !== '-' ? (
-                              <span className="text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                                {trainee.certificateId}
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCertData({
+                                    recipientName: trainee.name,
+                                    empId: trainee.empId,
+                                    department: trainee.department,
+                                    courseTitle: courseSummary.course?.title || 'MES Digital Manufacturing',
+                                    courseId: selectedCourseId,
+                                    certificateId: trainee.certificateId,
+                                    completedDate: trainee.completedDate && trainee.completedDate !== '-' ? trainee.completedDate : new Date().toLocaleDateString('th-TH'),
+                                    scorePercentage: trainee.quizPercentage || 100,
+                                    hours: courseSummary.course?.duration || '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
+                                    instructorName: courseSummary.course?.instructor || 'ณภัทร นุ่มทอง',
+                                    instructorTitle: 'วิทยากรผู้เชี่ยวชาญและหัวหน้าฝ่ายวิศวกรรม (Lead Enterprise Architect)'
+                                  });
+                                }}
+                                className="text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-all flex items-center gap-1.5 font-bold group/btn shadow-xs"
+                                title="คลิกเพื่อดูและพิมพ์ใบประกาศนียบัตรทางการ (Official Certificate)"
+                              >
+                                <span>{trainee.certificateId}</span>
+                                <FiAward className="w-3.5 h-3.5 text-amber-400 group-hover/btn:scale-125 transition-transform" />
+                              </button>
                             ) : '-'}
                           </td>
                           <td className="py-3 px-4 text-center">
@@ -1045,7 +1127,7 @@ export default function AuditDashboard() {
       )}
 
       {/* ========================================================================= */}
-      {/* PRINT AUDIT REPORT MODAL (OFFICIAL ISO 9001:2015 CLAUSE 7.2 SHEET) */}
+      {/* PRINT AUDIT REPORT MODAL (BOI STEMPlus 250% & ISO 9001:2015 CLAUSE 7.2) */}
       {/* ========================================================================= */}
       {isPrintModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -1054,13 +1136,54 @@ export default function AuditDashboard() {
             <div className="p-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white font-bold text-sm">
                 <FiPrinter className="text-cyan-400" />
-                <span>ตัวอย่างเอกสารบันทึกการฝึกอบรม (Official Audit Evidence Print Sheet)</span>
+                <span>ตัวอย่างเอกสารรายงานการฝึกอบรม (Official Training Audit Evidence)</span>
               </div>
               <button 
                 onClick={() => setIsPrintModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700"
               >
                 <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Standard Mode Selector & CSV Export */}
+            <div className="bg-slate-850 px-4 py-2.5 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-semibold">รูปแบบเอกสาร:</span>
+                <button
+                  type="button"
+                  onClick={() => setReportStandard('boi')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    reportStandard === 'boi'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'bg-slate-750 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <FiAward className="w-3.5 h-3.5" />
+                  <span>BOI STEMPlus (สอวช. / ลดหย่อนภาษี 250%)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportStandard('iso')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    reportStandard === 'iso'
+                      ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                      : 'bg-slate-750 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <FiShield className="w-3.5 h-3.5" />
+                  <span>ISO 9001:2015 Clause 7.2 (IATF 16949)</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all ml-auto"
+                title="ดาวน์โหลดไฟล์ CSV พร้อม UTF-8 BOM สำหรับเปิดใน Excel ไม่เป็นภาษาต่างดาว"
+              >
+                <FiDownload className="w-3.5 h-3.5" />
+                <span>ส่งออก CSV (Excel BOM)</span>
               </button>
             </div>
 
@@ -1072,17 +1195,40 @@ export default function AuditDashboard() {
                   <div className="text-base font-black text-slate-900 tracking-tight">
                     บริษัท เอสเอ็นซี ฟอร์เมอร์ จำกัด (มหาชน) — SNC Former Public Co., Ltd.
                   </div>
-                  <div className="text-xs font-bold text-slate-700 mt-0.5">
-                    แบบบันทึกประวัติการฝึกอบรมและประเมินผลสมรรถนะบุคลากร (Training Record & Competence Evaluation)
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
-                    อ้างอิงข้อกำหนด: ISO 9001:2015 Clause 7.2 (Competence) / IATF 16949 / ลูกค้า Lowes, Walmart, Daikin
-                  </div>
+                  {reportStandard === 'boi' ? (
+                    <>
+                      <div className="text-xs font-black text-amber-800 mt-0.5">
+                        แบบรายงานผลการฝึกอบรมบุคลากรด้านวิทยาศาสตร์ เทคโนโลยี และวิศวกรรมขั้นสูง (BOI STEMPlus Platform)
+                      </div>
+                      <div className="text-[10px] text-slate-600 mt-0.5">
+                        อ้างอิงมาตรการ: สิทธิประโยชน์ยกเว้นภาษีเงินได้นิติบุคคล 250% สำหรับการพัฒนาบุคลากรทักษะสูง (สอวช. / กกท.)
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs font-bold text-slate-700 mt-0.5">
+                        แบบบันทึกประวัติการฝึกอบรมและประเมินผลสมรรถนะบุคลากร (Training Record & Competence Evaluation)
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        อ้างอิงข้อกำหนด: ISO 9001:2015 Clause 7.2 (Competence) / IATF 16949 / ลูกค้า Lowes, Walmart, Daikin
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="text-right text-[10px] text-slate-600 font-mono">
-                  <div>รหัสเอกสาร: FM-HR-072-01</div>
-                  <div>แก้ไขครั้งที่: 04</div>
-                  <div>วันที่พิมพ์: {new Date().toLocaleDateString('th-TH')}</div>
+                  {reportStandard === 'boi' ? (
+                    <>
+                      <div className="font-bold text-amber-900">รหัสรับรอง สอวช.: BOI-STEM-2026-SNC</div>
+                      <div>สถานะหลักสูตร: ได้รับการรับรองตามเกณฑ์ STEM</div>
+                      <div>วันที่ออกเอกสาร: {new Date().toLocaleDateString('th-TH')}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div>รหัสเอกสาร: FM-HR-072-01</div>
+                      <div>แก้ไขครั้งที่: 04</div>
+                      <div>วันที่พิมพ์: {new Date().toLocaleDateString('th-TH')}</div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1091,10 +1237,10 @@ export default function AuditDashboard() {
                 <div>
                   <div><strong>ชื่อหลักสูตร:</strong> {courseSummary.course?.title}</div>
                   <div><strong>หมวดหมู่:</strong> {courseSummary.course?.category}</div>
-                  <div><strong>ระยะเวลาการอบรม:</strong> {courseSummary.course?.duration}</div>
+                  <div><strong>ระยะเวลาการอบรม:</strong> {reportStandard === 'boi' ? '3 วัน (24 ชั่วโมงบรรยายและฝึกปฏิบัติการ)' : courseSummary.course?.duration}</div>
                 </div>
                 <div>
-                  <div><strong>ผู้สอน/ผู้อนุมัติเนื้อหา:</strong> {courseSummary.course?.instructor}</div>
+                  <div><strong>วิทยากรผู้ฝึกสอน:</strong> {courseSummary.course?.instructor || 'ณภัทร นุ่มทอง'}</div>
                   <div><strong>จำนวนผู้เข้ารับการอบรม:</strong> {courseSummary.enrolledCount} คน (ผ่านเกณฑ์ {courseSummary.passedCount} คน)</div>
                   <div><strong>อัตราการสอบผ่านเฉลี่ย:</strong> {courseSummary.passRatePercent}% (คะแนนเฉลี่ย {courseSummary.avgScorePercent}%)</div>
                 </div>
@@ -1102,7 +1248,12 @@ export default function AuditDashboard() {
 
               {/* Trainee Table */}
               <div>
-                <div className="font-bold text-slate-800 mb-2">รายชื่อพนักงานและผลการประเมินสมรรถนะ:</div>
+                <div className="font-bold text-slate-800 mb-2 flex items-center justify-between">
+                  <span>รายชื่อพนักงานและผลการประเมินสมรรถนะ:</span>
+                  {reportStandard === 'boi' && (
+                    <span className="text-[10px] text-amber-700 font-semibold">* เข้าเกณฑ์ลดหย่อนภาษี 250% ตามพระราชกฤษฎีกา (ฉบับที่ 700)</span>
+                  )}
+                </div>
                 <table className="w-full border-collapse border border-slate-400 text-[11px]">
                   <thead>
                     <tr className="bg-slate-200 text-slate-800 text-center font-bold">
@@ -1110,9 +1261,12 @@ export default function AuditDashboard() {
                       <th className="border border-slate-400 p-1.5 w-24">รหัสพนักงาน</th>
                       <th className="border border-slate-400 p-1.5 text-left">ชื่อ-นามสกุล</th>
                       <th className="border border-slate-400 p-1.5 text-left">แผนก / ตำแหน่ง</th>
-                      <th className="border border-slate-400 p-1.5 w-24">คะแนนทดสอบ</th>
+                      <th className="border border-slate-400 p-1.5 w-20">คะแนน</th>
                       <th className="border border-slate-400 p-1.5 w-24">ผลการประเมิน</th>
                       <th className="border border-slate-400 p-1.5 w-32">เลขที่ใบรับรอง</th>
+                      {reportStandard === 'boi' && (
+                        <th className="border border-slate-400 p-1.5 w-24">สิทธิ BOI</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1129,6 +1283,11 @@ export default function AuditDashboard() {
                         <td className="border border-slate-400 p-1.5 text-center font-mono text-[10px]">
                           {t.certificateId}
                         </td>
+                        {reportStandard === 'boi' && (
+                          <td className="border border-slate-400 p-1.5 text-center font-bold text-emerald-700 text-[10px]">
+                            {t.passed ? 'สิทธิ 250%' : '-'}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1136,55 +1295,97 @@ export default function AuditDashboard() {
               </div>
 
               {/* Formal Sign-off Section */}
-              <div className="pt-6 grid grid-cols-3 gap-6 text-center border-t border-slate-300">
-                <div className="space-y-8">
-                  <div className="text-[10px] text-slate-500">ลงชื่อผู้ฝึกสอน / วิทยากร</div>
-                  <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
-                  <div className="text-[11px] font-bold text-slate-800">
-                    (......................................................)
-                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">วิทยากรประจำหลักสูตร</div>
+              {reportStandard === 'boi' ? (
+                <div className="pt-6 grid grid-cols-2 gap-8 text-center border-t border-slate-300">
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อวิทยากรผู้ฝึกสอน (Lead Instructor)</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (นายณภัทร นุ่มทอง)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">วิทยากรผู้เชี่ยวชาญ / Lead Enterprise Architect</div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-8">
-                  <div className="text-[10px] text-slate-500">ลงชื่อหัวหน้างานต้นสังกัด</div>
-                  <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
-                  <div className="text-[11px] font-bold text-slate-800">
-                    (......................................................)
-                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">Supervisor / Line Leader</div>
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อผู้ประสานงาน BOI / ฝ่ายพัฒนาทรัพยากรบุคคล</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (นางสาวอุไรวรรณ์)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">HRD &amp; BOI STEMPlus Coordinator</div>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className="pt-6 grid grid-cols-3 gap-6 text-center border-t border-slate-300">
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อผู้ฝึกสอน / วิทยากร</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (นายณภัทร นุ่มทอง)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">วิทยากรประจำหลักสูตร</div>
+                    </div>
+                  </div>
 
-                <div className="space-y-8">
-                  <div className="text-[10px] text-slate-500">ผู้จัดการฝ่ายควบคุมคุณภาพ / ตัวแทนออดิท</div>
-                  <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
-                  <div className="text-[11px] font-bold text-slate-800">
-                    (......................................................)
-                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">QA Manager / ISO Lead Auditor</div>
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อหัวหน้างานต้นสังกัด</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (......................................................)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">Supervisor / Line Leader</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ผู้จัดการฝ่ายควบคุมคุณภาพ / ตัวแทนออดิท</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (......................................................)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">QA Manager / ISO Lead Auditor</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Modal Actions */}
-            <div className="p-4 bg-slate-800 border-t border-slate-700 flex items-center justify-end gap-3">
+            <div className="p-4 bg-slate-800 border-t border-slate-700 flex items-center justify-between gap-3">
               <button
-                onClick={() => setIsPrintModalOpen(false)}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-semibold"
+                type="button"
+                onClick={handleExportCsv}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20"
               >
-                ปิดหน้าต่าง
+                <FiDownload className="w-4 h-4" />
+                <span>ดาวน์โหลด CSV (Excel)</span>
               </button>
-              <button
-                onClick={handleTriggerPrint}
-                className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-600/30"
-              >
-                <FiPrinter className="w-4 h-4" />
-                <span>สั่งพิมพ์เอกสาร (Print Window)</span>
-              </button>
+              
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  ปิดหน้าต่าง
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTriggerPrint}
+                  className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-600/30"
+                >
+                  <FiPrinter className="w-4 h-4" />
+                  <span>สั่งพิมพ์เอกสาร (Print Window)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Official Certificate of Competency Modal */}
+      <CertificateModal 
+        isOpen={!!selectedCertData} 
+        onClose={() => setSelectedCertData(null)} 
+        data={selectedCertData} 
+      />
     </div>
   );
 }

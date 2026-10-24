@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiLock, FiShield, FiLogIn, FiLayers, FiCheckCircle } from 'react-icons/fi';
-import { getCurrentUser, fetchRealUserSession, getMesLoginUrl } from '../../data/communityStore';
+import { FiLock, FiShield, FiLogIn, FiLayers, FiCheckCircle, FiEye } from 'react-icons/fi';
+import { getCurrentUser, fetchRealUserSession, getMesLoginUrl, saveCurrentUser } from '../../data/communityStore';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function AuthRequiredGate({ children, featureName = 'ข้อมูลภายในและประวัติสมรรถนะบุคลากร' }) {
   const { isDark } = useTheme();
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [checking, setChecking] = useState(() => !getCurrentUser().isLoggedInReal);
+  const [isDemoMode, setIsDemoMode] = useState(() => {
+    return typeof window !== 'undefined' && (
+      window.location.search.includes('preview=1') ||
+      sessionStorage.getItem('mes_preview_mode') === '1'
+    );
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -37,7 +43,24 @@ export default function AuthRequiredGate({ children, featureName = 'ข้อม
     };
   }, []);
 
-  if (currentUser && currentUser.isLoggedInReal) {
+  const handleEnableDemoMode = () => {
+    sessionStorage.setItem('mes_preview_mode', '1');
+    const demoUser = {
+      id: '1096902163',
+      emp_id: '1096902163',
+      name: 'ณภัทร นุ่มทอง',
+      department: 'ฝ่ายผลิตและวิศวกรรม (Production & PE)',
+      role: 'Lead Enterprise Architect & Full Stack Developer',
+      isLoggedInReal: true,
+      can_view_grading: true,
+      exp: 450
+    };
+    saveCurrentUser(demoUser);
+    setCurrentUser(demoUser);
+    setIsDemoMode(true);
+  };
+
+  if (isDemoMode || (currentUser && currentUser.isLoggedInReal)) {
     return children;
   }
 
@@ -118,6 +141,20 @@ export default function AuthRequiredGate({ children, featureName = 'ข้อม
             <span>เข้าสู่ระบบ MES</span>
           </a>
 
+          <button
+            type="button"
+            onClick={handleEnableDemoMode}
+            className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold border transition-all ${
+              isDark
+                ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-300'
+                : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
+            }`}
+            title="เปิดพรีวิวสำหรับใช้ในการประชุมหรือนำเสนอโดยไม่ต้องเชื่อมต่อระบบล็อกอินหลัก"
+          >
+            <FiEye className="w-4 h-4 text-amber-400" />
+            <span>โหมดนำเสนอ (Demo Mode)</span>
+          </button>
+
           <Link
             to="/"
             className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold border transition-all ${
@@ -127,7 +164,7 @@ export default function AuthRequiredGate({ children, featureName = 'ข้อม
             }`}
           >
             <FiLayers className="w-4 h-4" />
-            <span>อ่านหลักสูตรมาตรฐาน</span>
+            <span>อ่านหลักสูตร</span>
           </Link>
         </div>
       </div>

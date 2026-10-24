@@ -31,6 +31,7 @@ import {
   FiFileText,
   FiExternalLink
 } from 'react-icons/fi';
+import CertificateModal from '../components/CertificateModal';
 
 export default function UserProfile() {
   const { empId } = useParams();
@@ -47,6 +48,7 @@ export default function UserProfile() {
   const [employeeDirectory, setEmployeeDirectory] = useState({ employees: [], lines: [] });
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [viewedPassportData, setViewedPassportData] = useState(null);
+  const [selectedCertData, setSelectedCertData] = useState(null);
 
   useEffect(() => {
     fetchRealUserSession().then(u => {
@@ -739,13 +741,31 @@ export default function UserProfile() {
                         </div>
 
                         {courseItem.certificateId !== '-' && (
-                          <div className={`flex items-center gap-1 text-[11px] font-mono ${isDark ? 'text-cyan-400' : 'text-cyan-800'}`}>
+                          <div className={`flex items-center gap-1.5 text-[11px] font-mono ${isDark ? 'text-cyan-400' : 'text-cyan-800'}`}>
                             <span>Cert:</span>
-                            <span className={`px-2 py-0.5 rounded border font-bold ${
-                              isDark ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' : 'bg-cyan-50 text-cyan-800 border-cyan-300'
-                            }`}>
-                              {courseItem.certificateId}
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCertData({
+                                recipientName: employee.name,
+                                empId: employee.empId,
+                                department: employee.department,
+                                courseTitle: courseItem.title,
+                                courseId: courseItem.courseId,
+                                certificateId: courseItem.certificateId,
+                                completedDate: courseItem.completedDate !== '-' ? courseItem.completedDate : new Date().toLocaleDateString('th-TH'),
+                                scorePercentage: courseItem.quizPercentage || 100,
+                                hours: courseItem.duration || '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
+                                instructorName: 'ณภัทร นุ่มทอง',
+                                instructorTitle: 'วิทยากรผู้เชี่ยวชาญและหัวหน้าฝ่ายวิศวกรรม (Lead Enterprise Architect)'
+                              })}
+                              className={`px-2.5 py-1 rounded-lg border font-bold flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 shadow-xs ${
+                                isDark ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
+                              }`}
+                              title="คลิกเพื่อดูและพิมพ์ใบประกาศนียบัตรรับรองสมรรถนะ (Official Certificate)"
+                            >
+                              <span>{courseItem.certificateId}</span>
+                              <FiPrinter className="w-3.5 h-3.5 text-cyan-400" />
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1168,6 +1188,13 @@ export default function UserProfile() {
           </div>
         </div>
       )}
+
+      {/* Official Certificate of Competency Modal */}
+      <CertificateModal 
+        isOpen={!!selectedCertData} 
+        onClose={() => setSelectedCertData(null)} 
+        data={selectedCertData} 
+      />
     </div>
   );
 }

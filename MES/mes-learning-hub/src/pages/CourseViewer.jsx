@@ -30,6 +30,8 @@ import CourseContent from '../components/CourseContent';
 import DynamicCourseRenderer from '../components/DynamicCourseRenderer';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useTheme } from '../context/ThemeContext';
+import CertificateModal from '../components/CertificateModal';
+import TrainerGuideModal from '../components/TrainerGuideModal';
 
 export default function CourseViewer() {
   const { courseId } = useParams();
@@ -55,6 +57,8 @@ export default function CourseViewer() {
 
   const [earnedCertId, setEarnedCertId] = useState(() => courseStatus?.certificateId || '');
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
+  const [isTrainerGuideOpen, setIsTrainerGuideOpen] = useState(false);
   const [latestExamScore, setLatestExamScore] = useState(null);
   const [userGrading, setUserGrading] = useState(() => getUserGrading());
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
@@ -375,23 +379,29 @@ export default function CourseViewer() {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
               <button
-                onClick={() => navigate('/profile')}
-                className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2"
+                onClick={() => {
+                  setShowCelebrationModal(false);
+                  setIsCertificateModalOpen(true);
+                }}
+                className="py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
               >
-                <FiUser className="w-4 h-4" />
-                <span>ดูพาสปอร์ตสมรรถนะ</span>
+                <FiAward className="w-4 h-4" />
+                <span>พิมพ์ใบประกาศนียบัตร</span>
               </button>
               <button
-                onClick={() => navigate('/')}
-                className={`py-3 px-5 rounded-xl text-xs font-semibold border transition-colors ${
-                  isDark 
-                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700' 
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-300 shadow-sm'
-                }`}
+                onClick={() => navigate('/profile')}
+                className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-slate-700"
               >
-                หน้าหลักสูตร
+                <FiUser className="w-4 h-4 text-emerald-400" />
+                <span>พาสปอร์ต</span>
+              </button>
+              <button
+                onClick={() => setShowCelebrationModal(false)}
+                className="py-3 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+              >
+                ปิด
               </button>
             </div>
           </div>
@@ -679,18 +689,31 @@ export default function CourseViewer() {
             <button className="back-btn m-0" onClick={() => navigate('/')}>
               <FiArrowLeft /> Back
             </button>
-            <button
-              onClick={() => navigate(`/admin/course-builder?courseId=${course.id}`)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-sm ${
-                isDark
-                  ? 'bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border-slate-700/80'
-                  : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
-              }`}
-              title="แก้ไขหลักสูตรนี้"
-            >
-              <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
-              <span>แก้ไข</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsTrainerGuideOpen(true)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
+                  isDark
+                    ? 'bg-purple-950/70 hover:bg-purple-900/90 text-purple-200 border-purple-500/40 hover:border-purple-400'
+                    : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-300'
+                }`}
+                title="เปิดคู่มือวิทยากรและแผนการสอน 3 วัน"
+              >
+                <span>📘 แผนการสอน 3 วัน</span>
+              </button>
+              <button
+                onClick={() => navigate(`/admin/course-builder?courseId=${course.id}`)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-sm ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border-slate-700/80'
+                    : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
+                }`}
+                title="แก้ไขหลักสูตรนี้"
+              >
+                <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
+                <span>แก้ไข</span>
+              </button>
+            </div>
           </div>
           <h3>{course.title}</h3>
           <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -806,15 +829,25 @@ export default function CourseViewer() {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => navigate('/profile')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 flex-shrink-0 ${
-                  isDark ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                }`}
-              >
-                <FiShield className="w-3.5 h-3.5" />
-                <span>ดูพาสปอร์ต</span>
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setIsCertificateModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 hover:scale-105 active:scale-95"
+                  title="เปิดดูและพิมพ์ใบประกาศนียบัตรรับรองสมรรถนะ"
+                >
+                  <FiAward className="w-3.5 h-3.5" />
+                  <span>พิมพ์ใบประกาศฯ</span>
+                </button>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 ${
+                    isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-300'
+                  }`}
+                >
+                  <FiShield className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>พาสปอร์ต</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -1107,6 +1140,33 @@ export default function CourseViewer() {
           </div>
         </div>
       </div>
+
+      {/* Official Certificate Modal */}
+      <CertificateModal
+        isOpen={isCertificateModalOpen}
+        onClose={() => setIsCertificateModalOpen(false)}
+        data={{
+          recipientName: currentUser?.name || 'ณภัทร นุ่มทอง',
+          empId: currentUser?.emp_id || '1096902163',
+          department: currentUser?.department || 'แผนกผลิตปั๊มขึ้นรูป (MT/PE)',
+          courseTitle: course?.title,
+          courseId: course?.id,
+          certificateId: earnedCertId || courseStatus?.certificateId || 'SNC-CERT-2026-9901',
+          completedDate: courseStatus?.completedAt 
+            ? new Date(courseStatus.completedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+            : new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
+          scorePercentage: courseStatus?.quizPercentage || latestExamScore?.percentage || 100,
+          hours: course?.duration || '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
+          instructorName: 'ณภัทร นุ่มทอง',
+          instructorTitle: 'วิทยากรผู้เชี่ยวชาญด้านสถาปัตยกรรมดิจิทัลองค์กร (Lead Enterprise Architect)'
+        }}
+      />
+
+      {/* 3-Day Trainer Delivery Guide Modal */}
+      <TrainerGuideModal
+        isOpen={isTrainerGuideOpen}
+        onClose={() => setIsTrainerGuideOpen(false)}
+      />
     </div>
   );
 }
