@@ -1,49 +1,293 @@
 /**
- * iqs.css — In-process Quality System (IQS) Stylesheet
- * Responsive mobile-first industrial styling for factory floor operators & supervisors.
+ * iqs.css — In-process Quality System (IQS) Premium Industrial Stylesheet
+ * High-end mobile-first UI with rich aesthetics, glassmorphism, micro-animations, and industrial tactile feel.
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
 :root {
-    --iqs-primary: #0d6efd;
-    --iqs-success: #198754;
-    --iqs-danger: #dc3545;
-    --iqs-warning: #ffc107;
+    --iqs-font: 'Prompt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --iqs-primary: #2563eb;
+    --iqs-primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    --iqs-primary-glow: rgba(37, 99, 235, 0.28);
+    
+    --iqs-success: #059669;
+    --iqs-success-gradient: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    --iqs-success-glow: rgba(16, 185, 129, 0.28);
+
+    --iqs-danger: #e11d48;
+    --iqs-danger-gradient: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+    --iqs-danger-glow: rgba(225, 29, 72, 0.28);
+
+    --iqs-warning: #d97706;
+    --iqs-warning-gradient: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+
     --iqs-card-bg: #ffffff;
+    --iqs-card-hover-bg: #f8fafc;
     --iqs-border: #e2e8f0;
-    --iqs-bg: #f8fafc;
+    --iqs-border-subtle: #f1f5f9;
+    --iqs-text-primary: #0f172a;
+    --iqs-text-secondary: #475569;
+    --iqs-text-muted: #94a3b8;
+    --iqs-input-bg: #f8fafc;
+
+    --iqs-glass-bg: rgba(255, 255, 255, 0.88);
+    --iqs-glass-border: rgba(226, 232, 240, 0.75);
+    --iqs-glass-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
 }
 
 [data-bs-theme="dark"] {
     --iqs-card-bg: #1e293b;
+    --iqs-card-hover-bg: #243248;
     --iqs-border: #334155;
-    --iqs-bg: #0f172a;
+    --iqs-border-subtle: #1e293b;
+    --iqs-text-primary: #f8fafc;
+    --iqs-text-secondary: #cbd5e1;
+    --iqs-text-muted: #64748b;
+    --iqs-input-bg: #0f172a;
+
+    --iqs-glass-bg: rgba(30, 41, 59, 0.88);
+    --iqs-glass-border: rgba(51, 65, 85, 0.8);
+    --iqs-glass-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.45);
+}
+
+body {
+    font-family: var(--iqs-font) !important;
+    background-color: var(--bs-body-bg);
+    color: var(--iqs-text-primary);
 }
 
 .iqs-container {
     max-width: 1200px;
     margin: 0 auto;
+    padding-bottom: 90px;
 }
 
-/* Offline Banner */
+/* Offline Banner with Pulse Animation */
 .offline-banner {
     display: none;
-    background-color: #ef4444;
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
     color: #fff;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 12px 18px;
+    border-radius: 12px;
     font-weight: 600;
+    font-size: 0.9rem;
     margin-bottom: 16px;
-    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+    box-shadow: 0 8px 16px -2px rgba(239, 68, 68, 0.35);
+    animation: bannerSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Status Cards & Progress */
+@keyframes bannerSlideDown {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Sleek Segmented Control Tab Bar */
+.iqs-segmented-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 14px;
+    gap: 4px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="dark"] .iqs-segmented-bar {
+    background: #0f172a;
+    border: 1px solid #334155;
+}
+
+.iqs-segment-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--iqs-text-secondary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    min-height: 44px;
+    white-space: nowrap;
+}
+
+.iqs-segment-btn:hover {
+    color: var(--iqs-text-primary);
+}
+
+.iqs-segment-btn.active {
+    background: var(--iqs-card-bg);
+    color: var(--iqs-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-bs-theme="dark"] .iqs-segment-btn.active {
+    background: #1e293b;
+    color: #60a5fa;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* =======================================================
+   EMPTY STATE / READY TO START HERO CARD
+   ======================================================= */
+.iqs-empty-hero {
+    background: var(--iqs-card-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+    max-width: 580px;
+    margin: 20px auto 40px;
+    box-shadow: var(--iqs-glass-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.iqs-empty-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--iqs-primary-gradient);
+}
+
+.iqs-glow-icon-wrap {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 18px;
+    border-radius: 24px;
+    background: var(--iqs-primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 2.2rem;
+    box-shadow: 0 12px 28px -4px var(--iqs-primary-glow);
+    animation: iconFloat 3.5s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.iqs-pulse-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    margin-bottom: 12px;
+}
+
+.iqs-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulseBeacon 1.8s infinite;
+}
+
+@keyframes pulseBeacon {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.iqs-slot-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 18px 0 24px;
+}
+
+.iqs-slot-chip {
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: var(--iqs-input-bg);
+    border: 1px solid var(--iqs-border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--iqs-text-secondary);
+}
+
+.btn-iqs-primary-lg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 28px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 14px;
+    background: var(--iqs-primary-gradient);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 8px 20px -2px var(--iqs-primary-glow);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-iqs-primary-lg:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -2px rgba(37, 99, 235, 0.45);
+    color: #ffffff;
+}
+
+.btn-iqs-primary-lg:active {
+    transform: translateY(1px);
+}
+
+/* =======================================================
+   ACTIVE INSPECTION ROUND HERO DASHBOARD
+   ======================================================= */
 .round-hero-card {
     background: var(--iqs-card-bg);
     border: 1px solid var(--iqs-border);
-    border-radius: 12px;
-    padding: 18px 20px;
+    border-radius: 18px;
+    padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--iqs-glass-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.round-hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+}
+
+.hero-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background: var(--iqs-input-bg);
+    border: 1px solid var(--iqs-border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--iqs-text-secondary);
 }
 
 .progress-track {
@@ -51,19 +295,63 @@
     background: #e2e8f0;
     border-radius: 999px;
     overflow: hidden;
-    margin-top: 10px;
+    margin-top: 8px;
+}
+
+[data-bs-theme="dark"] .progress-track {
+    background: #0f172a;
 }
 
 .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #3b82f6, #10b981);
-    transition: width 0.3s ease;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
-/* Machine Grid & Cards */
+/* Quick Filter Chips */
+.iqs-filter-group {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 18px;
+    scrollbar-width: none;
+}
+
+.iqs-filter-group::-webkit-scrollbar {
+    display: none;
+}
+
+.iqs-filter-chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--iqs-border);
+    background: var(--iqs-card-bg);
+    color: var(--iqs-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.iqs-filter-chip.active {
+    background: var(--iqs-primary);
+    color: #ffffff;
+    border-color: var(--iqs-primary);
+    box-shadow: 0 4px 10px var(--iqs-primary-glow);
+}
+
+/* =======================================================
+   MACHINE INSPECTION CARDS
+   ======================================================= */
 .machine-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 16px;
     margin-bottom: 30px;
 }
@@ -76,36 +364,43 @@
 
 .machine-card {
     background: var(--iqs-card-bg);
-    border: 2px solid var(--iqs-border);
-    border-radius: 12px;
+    border: 1.5px solid var(--iqs-border);
+    border-radius: 16px;
     padding: 16px;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     position: relative;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 .machine-card:hover {
-    border-color: #cbd5e1;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.06);
+    border-color: #94a3b8;
+    box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.08);
 }
 
 .machine-card.state-ok {
     border-color: #10b981;
-    background: rgba(16, 185, 129, 0.03);
+    background: rgba(16, 185, 129, 0.02);
 }
 
 .machine-card.state-ng {
     border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.04);
+    background: rgba(239, 68, 68, 0.03);
 }
 
 .machine-card.state-skip {
     border-color: #94a3b8;
-    background: rgba(148, 163, 184, 0.05);
+    background: rgba(148, 163, 184, 0.06);
     opacity: 0.85;
+}
+
+.machine-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
 }
 
 .machine-code-badge {
@@ -115,13 +410,45 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    color: var(--iqs-text-primary);
 }
 
-/* OK / NG Big Toggle Buttons (Touch Friendly) */
+.machine-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #94a3b8;
+}
+
+.machine-card.state-ok .machine-status-dot {
+    background-color: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.machine-card.state-ng .machine-status-dot {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+.machine-card.state-skip .machine-status-dot {
+    background-color: #f59e0b;
+}
+
+.machine-zone-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--iqs-input-bg);
+    color: var(--iqs-text-secondary);
+    border: 1px solid var(--iqs-border);
+}
+
+/* OK / NG Tactile Segmented Buttons */
 .result-toggle-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 10px;
     margin: 12px 0;
 }
 
@@ -129,16 +456,16 @@
     min-height: 52px;
     font-size: 1.1rem;
     font-weight: 700;
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: 2px solid #cbd5e1;
+    border: 2px solid var(--iqs-border);
     background: var(--iqs-card-bg);
-    color: #475569;
+    color: var(--iqs-text-secondary);
     cursor: pointer;
-    transition: all 0.15s ease-in-out;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-result-choice:active {
@@ -146,70 +473,20 @@
 }
 
 .btn-result-choice.choice-ok.active {
-    background-color: #10b981;
+    background: var(--iqs-success-gradient);
     border-color: #059669;
     color: #ffffff;
-    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+    box-shadow: 0 6px 14px var(--iqs-success-glow);
 }
 
 .btn-result-choice.choice-ng.active {
-    background-color: #ef4444;
+    background: var(--iqs-danger-gradient);
     border-color: #dc2626;
     color: #ffffff;
-    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+    box-shadow: 0 6px 14px var(--iqs-danger-glow);
 }
 
-/* Photo Upload Box */
-.photo-upload-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.photo-box {
-    border: 2px dashed #cbd5e1;
-    border-radius: 10px;
-    padding: 12px 8px;
-    text-align: center;
-    cursor: pointer;
-    background: rgba(241, 245, 249, 0.5);
-    transition: all 0.2s;
-    position: relative;
-    min-height: 100px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.photo-box:hover {
-    border-color: #3b82f6;
-    background: rgba(239, 246, 255, 0.6);
-}
-
-.photo-box.has-file {
-    border-style: solid;
-    border-color: #10b981;
-    background: #f0fdf4;
-}
-
-.photo-preview-img {
-    max-height: 80px;
-    max-width: 100%;
-    object-fit: cover;
-    border-radius: 6px;
-    margin-bottom: 4px;
-}
-
-.photo-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #475569;
-    margin-top: 4px;
-}
-
-/* Numeric verification inputs */
+/* Measurement Input Styling */
 .measure-input-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -217,39 +494,147 @@
     margin-top: 10px;
 }
 
-.measure-input-row label {
-    font-size: 0.78rem;
+.measure-input-card {
+    background: var(--iqs-input-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.measure-input-card label {
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
+    color: var(--iqs-text-secondary);
+    display: block;
     margin-bottom: 2px;
 }
 
-.measure-input-row input {
-    height: 44px;
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: center;
+.measure-input-card input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--iqs-text-primary);
+    text-align: left;
+    outline: none;
 }
 
-/* Sticky Action Bar for Mobile */
-.bottom-submit-bar {
-    position: sticky;
-    bottom: 16px;
-    z-index: 100;
-    background: var(--iqs-card-bg);
-    border: 1px solid var(--iqs-border);
+/* Photo Upload Tile */
+.photo-upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.photo-box {
+    border: 1.5px dashed var(--iqs-border);
     border-radius: 12px;
-    padding: 14px 20px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--iqs-input-bg);
+    transition: all 0.2s;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-box:hover {
+    border-color: var(--iqs-primary);
+    background: rgba(37, 99, 235, 0.04);
+}
+
+.photo-box.has-file {
+    border-style: solid;
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.photo-preview-img {
+    max-height: 70px;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 2px;
+}
+
+.photo-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--iqs-text-secondary);
+    margin-top: 4px;
+}
+
+/* =======================================================
+   BOTTOM FLOATING ACTION BAR
+   ======================================================= */
+.bottom-submit-bar {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    z-index: 1000;
+    background: var(--iqs-glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--iqs-glass-border);
+    border-radius: 16px;
+    padding: 12px 18px;
+    box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.18);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
+    gap: 12px;
 }
 
 @media (max-width: 576px) {
     .bottom-submit-bar {
-        flex-direction: column;
-        align-items: stretch;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        padding: 10px 14px;
     }
+}
+
+.btn-submit-round {
+    min-height: 48px;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 10px 24px;
+    border-radius: 12px;
+    background: var(--iqs-success-gradient);
+    border: none;
+    color: #fff;
+    box-shadow: 0 6px 16px var(--iqs-success-glow);
+    white-space: nowrap;
+}
+
+.btn-submit-round:hover {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.45);
+}
+
+/* =======================================================
+   HISTORY FEED CARDS (FOR MOBILE)
+   ======================================================= */
+.history-card-mobile {
+    background: var(--iqs-card-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.history-card-mobile .hist-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--iqs-text-primary);
 }

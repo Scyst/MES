@@ -10,6 +10,7 @@ const IQS = {
     activeRecordsMap: {},
     isOnline: navigator.onLine,
     selectedTemplateId: null,
+    currentFilter: 'all',
 
     init() {
         this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -123,45 +124,90 @@ const IQS = {
         this.updateProgress();
     },
 
+    filterMachines(filterType, btnElem) {
+        this.currentFilter = filterType;
+        document.querySelectorAll('.iqs-filter-chip').forEach(el => el.classList.remove('active'));
+        if (btnElem) btnElem.classList.add('active');
+
+        const cards = document.querySelectorAll('.machine-card');
+        cards.forEach(card => {
+            const status = card.getAttribute('data-status');
+            if (filterType === 'all') {
+                card.style.display = 'flex';
+            } else if (filterType === 'pending') {
+                card.style.display = (status === 'pending') ? 'flex' : 'none';
+            } else if (filterType === 'ok') {
+                card.style.display = (status === 'ok') ? 'flex' : 'none';
+            } else if (filterType === 'ng') {
+                card.style.display = (status === 'ng') ? 'flex' : 'none';
+            } else if (filterType === 'skip') {
+                card.style.display = (status === 'skip') ? 'flex' : 'none';
+            }
+        });
+    },
+
     renderMachineCards() {
         const container = document.getElementById('machineCardsGrid');
         if (!container || !this.initialData?.machines) return;
 
+        let cntAll = 0, cntPending = 0, cntOk = 0, cntNg = 0, cntSkip = 0;
         container.innerHTML = '';
+
         this.initialData.machines.forEach(m => {
+            cntAll++;
             const rec = this.activeRecordsMap[m.machine_id] || null;
             let cardStateClass = '';
+            let statusKey = 'pending';
             let pullChoice = rec?.pull_result || '';
             let isSkipped = rec?.is_skipped ? true : false;
 
             if (isSkipped) {
                 cardStateClass = 'state-skip';
+                statusKey = 'skip';
+                cntSkip++;
             } else if (pullChoice === 'OK') {
                 cardStateClass = 'state-ok';
+                statusKey = 'ok';
+                cntOk++;
             } else if (pullChoice === 'NG') {
                 cardStateClass = 'state-ng';
+                statusKey = 'ng';
+                cntNg++;
+            } else {
+                cntPending++;
             }
 
+            const isVisible = (this.currentFilter === 'all' || this.currentFilter === statusKey);
+
             const html = `
-            <div class="machine-card ${cardStateClass}" id="machineCard_${m.machine_id}">
+            <div class="machine-card ${cardStateClass}" id="machineCard_${m.machine_id}" 
+                 data-status="${statusKey}" style="display: ${isVisible ? 'flex' : 'none'};">
                 <div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="machine-code-badge text-primary">
-                            <i class="fas fa-microchip"></i> ${m.machine_code}
-                        </span>
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="skipSwitch_${m.machine_id}" 
-                                   ${isSkipped ? 'checked' : ''} onchange="IQS.toggleSkipMachine(${m.machine_id})">
-                            <label class="form-check-label small text-muted" for="skipSwitch_${m.machine_id}">ข้าม</label>
+                    <!-- Machine Header -->
+                    <div class="machine-header-row">
+                        <div class="machine-code-badge">
+                            <span class="machine-status-dot"></span>
+                            <span>${m.machine_code}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="machine-zone-pill"><i class="fas fa-map-marker-alt me-1"></i>${m.area || 'B9'}</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="skipSwitch_${m.machine_id}" 
+                                       ${isSkipped ? 'checked' : ''} onchange="IQS.toggleSkipMachine(${m.machine_id})">
+                                <label class="form-check-label small text-muted" for="skipSwitch_${m.machine_id}">ข้าม</label>
+                            </div>
                         </div>
                     </div>
-                    <div class="small text-muted mb-2">${m.machine_name || '-'} | โซน: ${m.area || '-'}</div>
+                    <div class="small text-muted mb-2">${m.machine_name || '-'}</div>
 
                     <!-- Skip Reason Container -->
-                    <div id="skipBox_${m.machine_id}" style="display: ${isSkipped ? 'block' : 'none'};" class="mb-2">
-                        <input type="text" class="form-control form-control-sm" id="skipReason_${m.machine_id}" 
-                               placeholder="ระบุเหตุผลที่ข้าม (เช่น เครื่องหยุด / ไม่มีงาน)" 
-                               value="${rec?.skip_reason || 'ไม่มีคำสั่งผลิต / เครื่องหยุด'}">
+                    <div id="skipBox_${m.machine_id}" style="display: ${isSkipped ? 'block' : 'none'};" class="mb-3">
+                        <div class="alert alert-secondary py-2 px-3 small mb-0 border-0" style="border-radius: 10px;">
+                            <label class="small text-muted fw-bold mb-1">เหตุผลที่ข้ามเครื่องจักรนี้:</label>
+                            <input type="text" class="form-control form-control-sm" id="skipReason_${m.machine_id}" 
+                                   placeholder="เช่น ไม่มีคำสั่งผลิต / เครื่องหยุดซ่อม" 
+                                   value="${rec?.skip_reason || 'ไม่มีคำสั่งผลิต / เครื่องหยุด'}">
+                        </div>
                     </div>
 
                     <!-- Test Form Fields -->
@@ -169,53 +215,56 @@ const IQS = {
                         <!-- SKU, PO, Thickness -->
                         <div class="row g-2 mb-2">
                             <div class="col-4">
-                                <label class="small text-muted mb-1">SKU</label>
-                                <input type="text" class="form-control form-control-sm" id="sku_${m.machine_id}" 
-                                       placeholder="เช่น 56 TC" value="${rec?.sku || ''}">
+                                <div class="measure-input-card">
+                                    <label>โมเดล SKU</label>
+                                    <input type="text" id="sku_${m.machine_id}" placeholder="56 TC" value="${rec?.sku || ''}">
+                                </div>
                             </div>
                             <div class="col-4">
-                                <label class="small text-muted mb-1">PO</label>
-                                <input type="text" class="form-control form-control-sm" id="po_${m.machine_id}" 
-                                       placeholder="PO No." value="${rec?.po_no || ''}">
+                                <div class="measure-input-card">
+                                    <label>เลขที่ PO</label>
+                                    <input type="text" id="po_${m.machine_id}" placeholder="PO No." value="${rec?.po_no || ''}">
+                                </div>
                             </div>
                             <div class="col-4">
-                                <label class="small text-muted mb-1">ความหนา T</label>
-                                <input type="number" step="0.01" class="form-control form-control-sm" id="thickness_${m.machine_id}" 
-                                       placeholder="1.20" value="${rec?.thickness || '1.20'}">
+                                <div class="measure-input-card">
+                                    <label>ความหนา T</label>
+                                    <input type="number" step="0.01" id="thickness_${m.machine_id}" placeholder="1.20" value="${rec?.thickness || '1.20'}">
+                                </div>
                             </div>
                         </div>
 
                         <!-- Result Choice (OK / NG) -->
-                        <label class="small text-muted mb-1">ผลการทดสอบแรงดึง (Pull Test)</label>
+                        <label class="small text-muted fw-bold mb-1">ผลการทดสอบแรงดึง (Pull Test)</label>
                         <div class="result-toggle-group">
                             <button type="button" class="btn-result-choice choice-ok ${pullChoice === 'OK' ? 'active' : ''}" 
                                     id="btnOk_${m.machine_id}" onclick="IQS.selectResult(${m.machine_id}, 'OK')">
-                                <i class="fas fa-check-circle"></i> OK
+                                <i class="fas fa-check-circle"></i> ผ่าน (OK)
                             </button>
                             <button type="button" class="btn-result-choice choice-ng ${pullChoice === 'NG' ? 'active' : ''}" 
                                     id="btnNg_${m.machine_id}" onclick="IQS.selectResult(${m.machine_id}, 'NG')">
-                                <i class="fas fa-times-circle"></i> NG
+                                <i class="fas fa-times-circle"></i> ไม่ผ่าน (NG)
                             </button>
                         </div>
 
                         <!-- NG Remarks if selected -->
                         <div id="ngBox_${m.machine_id}" style="display: ${pullChoice === 'NG' ? 'block' : 'none'};" class="mb-2">
-                            <label class="small text-danger fw-bold mb-1">อาการ / สาเหตุ NG:</label>
-                            <input type="text" class="form-control form-control-sm border-danger" id="ngRemark_${m.machine_id}" 
-                                   placeholder="ระบุอาการชิ้นงานดึงหลุด/เชื่อมไม่ติด" value="${rec?.ng_remark || ''}">
+                            <div class="alert alert-danger py-2 px-3 small border-0 mb-0" style="border-radius: 10px;">
+                                <label class="small text-danger fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>อาการ / สาเหตุ NG:</label>
+                                <input type="text" class="form-control form-control-sm border-danger" id="ngRemark_${m.machine_id}" 
+                                       placeholder="ระบุอาการชิ้นงานดึงหลุด / จุดเชื่อมไม่ติด" value="${rec?.ng_remark || ''}">
+                            </div>
                         </div>
 
                         <!-- Knock and Distance Verification -->
                         <div class="measure-input-row">
-                            <div>
-                                <label><i class="fas fa-ruler-horizontal me-1"></i>เช็คเคาะ (mm)</label>
-                                <input type="number" step="0.01" class="form-control form-control-sm" 
-                                       id="knock_${m.machine_id}" placeholder="0.00" value="${rec?.knock_check_val || ''}">
+                            <div class="measure-input-card">
+                                <label><i class="fas fa-ruler-horizontal me-1 text-primary"></i>เช็คเคาะ (mm)</label>
+                                <input type="number" step="0.01" id="knock_${m.machine_id}" placeholder="0.00" value="${rec?.knock_check_val || ''}">
                             </div>
-                            <div>
-                                <label><i class="fas fa-ruler-combined me-1"></i>เช็คระยะ (mm)</label>
-                                <input type="number" step="0.01" class="form-control form-control-sm" 
-                                       id="distance_${m.machine_id}" placeholder="0.00" value="${rec?.distance_check_val || ''}">
+                            <div class="measure-input-card">
+                                <label><i class="fas fa-ruler-combined me-1 text-info"></i>เช็คระยะ (mm)</label>
+                                <input type="number" step="0.01" id="distance_${m.machine_id}" placeholder="0.00" value="${rec?.distance_check_val || ''}">
                             </div>
                         </div>
 
@@ -224,7 +273,7 @@ const IQS = {
                             <div class="photo-box ${IQS.hasAttachment(rec, 'PULL_TEST') ? 'has-file' : ''}" 
                                  onclick="document.getElementById('filePull_${m.machine_id}').click()">
                                 <i class="fas fa-camera text-primary fa-lg mb-1"></i>
-                                <span class="photo-label">รูปตอนเทสดึง</span>
+                                <span class="photo-label">รูปชิ้นงานเทสดึง</span>
                                 <input type="file" id="filePull_${m.machine_id}" accept="image/*" capture="environment" 
                                        style="display:none;" onchange="IQS.previewPhoto(this, 'previewPull_${m.machine_id}')">
                                 <div id="previewPull_${m.machine_id}">
@@ -247,16 +296,23 @@ const IQS = {
 
                 <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
                     <span class="small text-muted" id="recordTimestamp_${m.machine_id}">
-                        ${rec ? `<i class="fas fa-clock me-1"></i>${rec.recorded_at}` : 'ยังไม่บันทึก'}
+                        ${rec ? `<i class="fas fa-check-circle text-success me-1"></i>${rec.recorded_at.substring(11, 16)} น.` : '<span class="text-secondary"><i class="far fa-circle me-1"></i>รอตรวจ</span>'}
                     </span>
-                    <button class="btn btn-primary btn-sm px-3" onclick="IQS.saveMachineRecord(${m.machine_id})" 
-                            id="btnSave_${m.machine_id}">
+                    <button class="btn btn-primary btn-sm px-3 fw-bold" onclick="IQS.saveMachineRecord(${m.machine_id})" 
+                            id="btnSave_${m.machine_id}" style="border-radius: 8px;">
                         <i class="fas fa-save me-1"></i>บันทึก
                     </button>
                 </div>
             </div>`;
             container.innerHTML += html;
         });
+
+        // Update Counter Pills
+        document.getElementById('cntAll').textContent = cntAll;
+        document.getElementById('cntPending').textContent = cntPending;
+        document.getElementById('cntOk').textContent = cntOk;
+        document.getElementById('cntNg').textContent = cntNg;
+        document.getElementById('cntSkip').textContent = cntSkip;
     },
 
     hasAttachment(rec, type) {
@@ -380,9 +436,8 @@ const IQS = {
             const json = await res.json();
             if (!json.success) throw new Error(json.message);
 
-            // Update timestamp label
             const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-            document.getElementById(`recordTimestamp_${machineId}`).innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>บันทึกแล้ว (${now.substring(11, 16)})`;
+            document.getElementById(`recordTimestamp_${machineId}`).innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>${now.substring(11, 16)} น.`;
 
             // Update activeRecordsMap
             this.activeRecordsMap[machineId] = {
@@ -390,6 +445,13 @@ const IQS = {
                 is_skipped: isSkipped,
                 recorded_at: now
             };
+
+            const card = document.getElementById(`machineCard_${machineId}`);
+            if (card) {
+                const newStatus = isSkipped ? 'skip' : (pullChoice === 'OK' ? 'ok' : 'ng');
+                card.setAttribute('data-status', newStatus);
+            }
+
             this.updateProgress();
 
             Swal.fire({
@@ -416,8 +478,11 @@ const IQS = {
 
         const fill = document.getElementById('progressFill');
         const countTxt = document.getElementById('progressCount');
+        const dockTxt = document.getElementById('dockProgressText');
+
         if (fill) fill.style.width = pct + '%';
-        if (countTxt) countTxt.textContent = `${recorded} / ${total} เครื่อง (${pct}%)`;
+        if (countTxt) countTxt.textContent = `${recorded} / ${total} (${pct}%)`;
+        if (dockTxt) dockTxt.textContent = `ตรวจแล้ว ${recorded}/${total} เครื่อง (${pct}%)`;
     },
 
     bindUIEvents() {
@@ -526,7 +591,7 @@ const IQS = {
             html: `คุณกำลังจะปิดรอบ <strong>${this.activeRound.round_number}</strong><br>เมื่อปิดแล้วจะไม่สามารถแก้ไขผลทดสอบย้อนหลังได้${warningExtra}`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#0d6efd',
+            confirmButtonColor: '#059669',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'ยืนยันปิดรอบ',
             cancelButtonText: 'ยกเลิก'
@@ -572,12 +637,15 @@ const IQS = {
             if (!json.success) throw new Error(json.message);
 
             const tbody = document.getElementById('historyTableBody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
+            const feedMobile = document.getElementById('historyFeedMobile');
             const rounds = json.data.rounds || [];
+
+            if (tbody) tbody.innerHTML = '';
+            if (feedMobile) feedMobile.innerHTML = '';
+
             if (rounds.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูลประวัติในช่วงเวลาที่เลือก</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูลประวัติในช่วงเวลาที่เลือก</td></tr>';
+                if (feedMobile) feedMobile.innerHTML = '<div class="text-center text-muted py-4">ไม่พบข้อมูลประวัติในช่วงเวลาที่เลือก</div>';
                 return;
             }
 
@@ -587,25 +655,53 @@ const IQS = {
                 else if (r.status === 'COMPLETED_WITH_NG') badgeClass = 'bg-danger';
                 else if (r.status === 'OPEN') badgeClass = 'bg-warning text-dark';
 
-                tbody.innerHTML += `
-                <tr>
-                    <td><strong>${r.round_number}</strong></td>
-                    <td>${r.plan_date}</td>
-                    <td>${r.round_name}</td>
-                    <td>${r.shift}</td>
-                    <td>${r.primary_tester_name || '-'}</td>
-                    <td>
-                        <span class="badge bg-success me-1">OK: ${r.ok_count}</span>
-                        ${r.ng_count > 0 ? `<span class="badge bg-danger me-1">NG: ${r.ng_count}</span>` : ''}
-                        ${r.skip_count > 0 ? `<span class="badge bg-secondary">ข้าม: ${r.skip_count}</span>` : ''}
-                    </td>
-                    <td><span class="badge ${badgeClass}">${r.status}</span></td>
-                    <td>
-                        <a href="print_iqs.php?round_id=${r.round_id}" target="_blank" class="btn btn-outline-primary btn-sm py-0 px-2" title="ดูเอกสาร / พิมพ์">
-                            <i class="fas fa-print"></i> พิมพ์
-                        </a>
-                    </td>
-                </tr>`;
+                // Desktop Table Row
+                if (tbody) {
+                    tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${r.round_number}</strong></td>
+                        <td>${r.plan_date}</td>
+                        <td>${r.round_name}</td>
+                        <td>${r.shift}</td>
+                        <td>${r.primary_tester_name || '-'}</td>
+                        <td>
+                            <span class="badge bg-success me-1">OK: ${r.ok_count}</span>
+                            ${r.ng_count > 0 ? `<span class="badge bg-danger me-1">NG: ${r.ng_count}</span>` : ''}
+                            ${r.skip_count > 0 ? `<span class="badge bg-secondary">ข้าม: ${r.skip_count}</span>` : ''}
+                        </td>
+                        <td><span class="badge ${badgeClass}">${r.status}</span></td>
+                        <td class="text-center">
+                            <a href="print_iqs.php?round_id=${r.round_id}" target="_blank" class="btn btn-outline-primary btn-sm py-1 px-3 fw-bold" style="border-radius: 8px;">
+                                <i class="fas fa-print me-1"></i>พิมพ์
+                            </a>
+                        </td>
+                    </tr>`;
+                }
+
+                // Mobile Card Feed
+                if (feedMobile) {
+                    feedMobile.innerHTML += `
+                    <div class="history-card-mobile">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="hist-title">${r.round_number}</span>
+                            <span class="badge ${badgeClass}">${r.status}</span>
+                        </div>
+                        <div class="small text-muted mb-2">
+                            <div><i class="fas fa-calendar-alt me-1"></i><strong>${r.plan_date}</strong> (${r.round_name}) · กะ ${r.shift}</div>
+                            <div><i class="fas fa-user me-1"></i>ผู้ทดสอบ: ${r.primary_tester_name || '-'}</div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <div class="d-flex gap-1">
+                                <span class="badge bg-success">OK: ${r.ok_count}</span>
+                                ${r.ng_count > 0 ? `<span class="badge bg-danger">NG: ${r.ng_count}</span>` : ''}
+                                ${r.skip_count > 0 ? `<span class="badge bg-secondary">ข้าม: ${r.skip_count}</span>` : ''}
+                            </div>
+                            <a href="print_iqs.php?round_id=${r.round_id}" target="_blank" class="btn btn-outline-primary btn-sm px-3 fw-bold" style="border-radius: 8px;">
+                                <i class="fas fa-print me-1"></i>พิมพ์เอกสาร
+                            </a>
+                        </div>
+                    </div>`;
+                }
             });
         } catch (err) {
             Swal.fire('ข้อผิดพลาด', err.message, 'error');
