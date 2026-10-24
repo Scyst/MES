@@ -4,6 +4,25 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-10-24 — Industry 4.0 Skills in SKILL_DEFINITIONS
+
+**Agent:** Antigravity  
+**Feature:** ลงทะเบียนทักษะหลักสูตร Industry 4.0 จำนวน 7 หลักสูตร เข้าสู่ตาราง `dbo.SKILL_DEFINITIONS`
+
+### Data Inserted: `dbo.SKILL_DEFINITIONS`
+
+| skill_id | skill_code | skill_name | category | line | display_order | is_active |
+|---|---|---|---|---|---|---|
+| 15 | `SKILL_ENTERPRISE_APP` | Enterprise Application Design & Development | โปรแกรมและระบบดิจิทัล | ALL | 15 | 1 |
+| 16 | `SKILL_MACHINE_VISION` | Machine Vision & Image Processing | เครื่องจักรและวิศวกรรมการผลิต | ALL | 16 | 1 |
+| 17 | `SKILL_CAD_CAM` | Advanced CAD/CAM & Mold Engineering | เครื่องจักรและวิศวกรรมการผลิต | ALL | 17 | 1 |
+| 18 | `SKILL_CNC_MACHINING` | CNC 4.0 & High Precision Machining | เครื่องจักรและวิศวกรรมการผลิต | ALL | 18 | 1 |
+| 19 | `SKILL_EV_BATTERY` | EV Conversion & Battery Technology | เครื่องจักรและวิศวกรรมการผลิต | ALL | 19 | 1 |
+| 20 | `SKILL_PLC_AUTOMATION` | PLC Automation & Industrial IoT | เครื่องจักรและวิศวกรรมการผลิต | ALL | 20 | 1 |
+| 21 | `SKILL_ROBOTICS` | Industrial Robot & Cobot Automation | เครื่องจักรและวิศวกรรมการผลิต | ALL | 21 | 1 |
+
+---
+
 ## 2026-10-19 — MES Learning Hub & Employee Grading Integration
 
 **Agent:** Antigravity  

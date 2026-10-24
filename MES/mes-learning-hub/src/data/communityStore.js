@@ -363,7 +363,7 @@ function syncBackendCoursesToLocal(synchedUser, backendCourses) {
   }
 }
 
-async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
+async function reconcileLocalLiveRecordsWithBackend(synchedUser, backendCourses = []) {
   if (!synchedUser || !synchedUser.isLoggedInReal || !synchedUser.emp_id) return;
   try {
     const raw = localStorage.getItem('mes_learning_audit_records') || localStorage.getItem('mes_learning_audit_records_v1');
@@ -374,6 +374,10 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
     let updatedLocal = false;
     const livePassed = [];
 
+    const backendPassedSet = new Set(
+      (backendCourses || []).filter(c => c && (c.passed || c.status === 'completed')).map(c => c.course_id)
+    );
+
     records.forEach(r => {
       if (r && (String(r.recordId || '').startsWith('rec-live-') || r.empId === 'GUEST')) {
         if (r.empId !== synchedUser.emp_id) {
@@ -381,7 +385,13 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
           updatedLocal = true;
         }
         if (r.passed && r.courseId) {
-          livePassed.push(r);
+          if (backendPassedSet.has(r.courseId)) {
+            // Already saved in server database, mark as synced
+            r.recordId = `rec-db-${r.courseId}`;
+            updatedLocal = true;
+          } else {
+            livePassed.push(r);
+          }
         }
       }
     });
@@ -390,9 +400,9 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
       localStorage.setItem('mes_learning_audit_records', JSON.stringify(records));
     }
 
-    const backendPassedCount = Number(synchedUser.grading?.passed_courses || 0);
-    if (livePassed.length > backendPassedCount) {
+    if (livePassed.length > 0) {
       const allCoursesList = [...courses, ...getCustomCourses()];
+      let didSyncAny = false;
       for (const rec of livePassed) {
         const crs = allCoursesList.find(c => c.id === rec.courseId);
         const res = await fetch(`${API_LEARNING_URL}?action=save_course_progress`, {
@@ -414,18 +424,25 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser) {
         });
         if (res.ok) {
           const sJson = await res.json();
-          if (sJson?.success && sJson.data?.learning_grade) {
-            const nextGrading = {
-              ...(getUserGrading() || {}),
-              grade_learning: sJson.data.learning_grade,
-              system_grade_learning: sJson.data.learning_grade,
-              grade_overall: sJson.data.grade_overall || synchedUser.grading?.grade_overall || 'B',
-              skill_count: sJson.data.new_skill_count ?? livePassed.length,
-              passed_courses: sJson.data.passed_courses ?? livePassed.length
-            };
-            saveUserGrading(nextGrading);
+          if (sJson?.success) {
+            rec.recordId = `rec-db-${rec.courseId}`;
+            didSyncAny = true;
+            if (sJson.data?.learning_grade) {
+              const nextGrading = {
+                ...(getUserGrading() || {}),
+                grade_learning: sJson.data.learning_grade,
+                system_grade_learning: sJson.data.learning_grade,
+                grade_overall: sJson.data.grade_overall || synchedUser.grading?.grade_overall || 'B',
+                skill_count: sJson.data.new_skill_count ?? livePassed.length,
+                passed_courses: sJson.data.passed_courses ?? livePassed.length
+              };
+              saveUserGrading(nextGrading);
+            }
           }
         }
+      }
+      if (didSyncAny) {
+        localStorage.setItem('mes_learning_audit_records', JSON.stringify(records));
       }
     }
   } catch {
@@ -455,7 +472,7 @@ export async function fetchRealUserSession() {
         const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
         syncBackendCoursesToLocal(synchedUser, json.data.courses || []);
         saveCurrentUser(synchedUser);
-        reconcileLocalLiveRecordsWithBackend(synchedUser);
+        reconcileLocalLiveRecordsWithBackend(synchedUser, json.data.courses || []);
         return synchedUser;
       }
 

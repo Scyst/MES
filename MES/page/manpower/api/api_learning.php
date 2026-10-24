@@ -739,17 +739,22 @@ try {
                 $newSkillName = !empty($courseTitle) ? mb_substr($courseTitle, 0, 120, 'UTF-8') : $courseId;
                 $newSkillCat  = !empty($category) ? mb_substr($category, 0, 60, 'UTF-8') : 'MES Learning Hub';
                 $stmtCreateSkill = $pdo->prepare("
-                    INSERT INTO dbo.SKILL_DEFINITIONS (skill_code, skill_name, category, description, is_active, display_order, created_at)
-                    VALUES (?, ?, ?, ?, 1, 90, GETDATE())
+                    INSERT INTO dbo.SKILL_DEFINITIONS (skill_code, skill_name, category, line, is_active, display_order, created_at)
+                    VALUES (?, ?, ?, 'ALL', 1, 90, GETDATE())
                 ");
                 $stmtCreateSkill->execute([
                     $skillCode,
                     $newSkillName,
-                    $newSkillCat,
-                    "ทักษะที่รับรองผ่านหลักสูตร MES Learning Hub ($courseId)"
+                    $newSkillCat
                 ]);
+                $newSkillId = (int)$pdo->lastInsertId();
+                if (!$newSkillId) {
+                    $stmtGetId = $pdo->prepare("SELECT skill_id FROM dbo.SKILL_DEFINITIONS WHERE skill_code = ?");
+                    $stmtGetId->execute([$skillCode]);
+                    $newSkillId = (int)$stmtGetId->fetchColumn();
+                }
                 $skill = [
-                    'skill_id'   => (int)$pdo->lastInsertId(),
+                    'skill_id'   => $newSkillId,
                     'skill_name' => $newSkillName
                 ];
             }
