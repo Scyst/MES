@@ -1,6 +1,6 @@
-# FTP Directory Structure List (Total: 352 Directories)
+# FTP Directory Structure List (Total: 356 Directories)
 
-*Last Updated: 8/15/2026, 12:00:24 PM*
+*Last Updated: 10/24/2026, 08:42:00 AM*
 
 Here is the complete list of all directories on the FTP server.
 
@@ -36,6 +36,10 @@ Here is the complete list of all directories on the FTP server.
 /MES/MES/page/AccessoriesInspection/css
 /MES/MES/page/AccessoriesInspection/img
 /MES/MES/page/AccessoriesInspection/script
+/MES/MES/page/IQS
+/MES/MES/page/IQS/api
+/MES/MES/page/IQS/css
+/MES/MES/page/IQS/script
 /MES/MES/page/OEE_Dashboard
 /MES/MES/page/OEE_Dashboard/OEE_Dashboard
 /MES/MES/page/OEE_Dashboard/OEE_Dashboard/api
