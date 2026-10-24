@@ -62,24 +62,28 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
 
                         <!-- Top Cockpit Control Strip -->
                         <div class="cockpit-header-strip mb-3">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-12 col-md-auto">
                                     <div class="cockpit-slot-pill" id="cockpitSlotPill">
                                         <span class="slot-live-dot"></span>
                                         <span id="cockpitSlotText">กำลังตรวจรอบปัจจุบัน (Auto-Round)</span>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalScheduleTimeline" title="ดูตารางรอบเวลา 7 รอบประจำวัน">
-                                        <i class="fas fa-calendar-alt me-1 text-primary"></i>ตารางรอบมาตรฐาน
-                                    </button>
                                 </div>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="text-end d-none d-sm-block">
-                                        <div class="small text-muted fw-bold">ความคืบหน้าการตรวจประจำวัน</div>
-                                        <strong class="text-primary" id="cockpitProgressText">0 / 0 เครื่อง (0%)</strong>
+                                <div class="col-12 col-md d-flex align-items-center justify-content-between justify-content-md-end gap-2 flex-wrap flex-sm-nowrap">
+                                    <div class="text-end d-none d-lg-block me-1">
+                                        <div class="small text-muted fw-bold" style="font-size: 0.74rem;">ความคืบหน้าการตรวจวันนี้</div>
+                                        <strong class="text-primary small" id="cockpitProgressText">0 / 0 เครื่อง (0%)</strong>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" id="btnQuickAuditSheet" onclick="IQS.openCurrentAuditSheet()" title="เปิดใบสรุปผลการตรวจสำหรับออดิท">
-                                        <i class="fas fa-print me-1"></i>ใบตรวจออดิท
-                                    </button>
+                                    <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
+                                        <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0 d-flex align-items-center justify-content-center gap-1 cockpit-action-btn" data-bs-toggle="modal" data-bs-target="#modalScheduleTimeline" title="ดูตารางรอบเวลา 7 รอบประจำวัน">
+                                            <i class="fas fa-calendar-alt text-primary"></i>
+                                            <span>ตารางรอบมาตรฐาน</span>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary fw-bold flex-fill flex-md-grow-0 d-flex align-items-center justify-content-center gap-1 cockpit-action-btn" id="btnQuickAuditSheet" onclick="IQS.openCurrentAuditSheet()" title="เปิดใบสรุปผลการตรวจสำหรับออดิท">
+                                            <i class="fas fa-print"></i>
+                                            <span>ใบตรวจออดิท</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -88,18 +92,21 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                         <div class="line-selector-bar mb-3">
                             <div class="line-tabs-wrapper">
                                 <button type="button" class="line-tab-btn active" data-line="SPOT" onclick="IQS.switchLine('SPOT', this)">
-                                    <i class="fas fa-bolt me-1 text-warning"></i>
-                                    <span>Spot Welding</span>
+                                    <i class="fas fa-bolt text-warning"></i>
+                                    <span class="d-none d-sm-inline">Spot Welding</span>
+                                    <span class="d-inline d-sm-none">Spot</span>
                                     <span class="line-count-badge" id="countBadgeSpot">39</span>
                                 </button>
                                 <button type="button" class="line-tab-btn" data-line="BEND" onclick="IQS.switchLine('BEND', this)">
-                                    <i class="fas fa-ruler-combined me-1 text-info"></i>
-                                    <span>Bending</span>
+                                    <i class="fas fa-ruler-combined text-info"></i>
+                                    <span class="d-none d-sm-inline">Bending</span>
+                                    <span class="d-inline d-sm-none">Bend</span>
                                     <span class="line-count-badge" id="countBadgeBend">22</span>
                                 </button>
                                 <button type="button" class="line-tab-btn" data-line="PRESS" onclick="IQS.switchLine('PRESS', this)">
-                                    <i class="fas fa-industry me-1 text-primary"></i>
-                                    <span>Press Stamping</span>
+                                    <i class="fas fa-industry text-primary"></i>
+                                    <span class="d-none d-sm-inline">Press Stamping</span>
+                                    <span class="d-inline d-sm-none">Press</span>
                                     <span class="line-count-badge" id="countBadgePress">20</span>
                                 </button>
                             </div>

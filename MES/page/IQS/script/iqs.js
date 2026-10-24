@@ -776,13 +776,9 @@ const IQS = {
     },
 
     openCurrentAuditSheet() {
-        // Find latest round conducted today or alert
-        const recList = Object.values(this.todayRecordsMap);
-        if (recList.length > 0 && recList[0].round_id) {
-            window.open(`print_iqs.php?round_id=${recList[0].round_id}`, '_blank');
-        } else {
-            Swal.fire('ยังไม่มีผลตรวจ', 'กรุณากดตรวจเครื่องจักรอย่างน้อย 1 เครื่อง เพื่อออกใบรายงานออดิท', 'info');
-        }
+        const today = this.slotSummary?.cur_server_date || new Date().toISOString().split('T')[0];
+        const line = this.currentLine || 'SPOT';
+        window.open(`print_iqs.php?date=${encodeURIComponent(today)}&line=${encodeURIComponent(line)}&view=matrix`, '_blank');
     },
 
     renderTemplateOptions() {
