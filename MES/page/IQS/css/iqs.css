@@ -51,16 +51,38 @@
     --iqs-glass-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.45);
 }
 
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+}
+
 body {
     font-family: var(--iqs-font) !important;
     background-color: var(--bs-body-bg);
     color: var(--iqs-text-primary);
 }
 
+.page-container {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#main-content {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
 .iqs-container {
     max-width: 1200px;
+    width: 100%;
     margin: 0 auto;
     padding-bottom: 90px;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
 }
 
 /* Offline Banner with Pulse Animation */
@@ -91,6 +113,10 @@ body {
     border-radius: 14px;
     gap: 4px;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 [data-bs-theme="dark"] .iqs-segmented-bar {
@@ -102,17 +128,30 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 16px;
+    padding: 8px 12px;
     border-radius: 10px;
     border: none;
     background: transparent;
     color: var(--iqs-text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     min-height: 44px;
+    height: 44px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+    .iqs-segment-btn {
+        font-size: 0.84rem;
+        padding: 6px 4px;
+        min-height: 42px;
+        height: 42px;
+    }
 }
 
 .iqs-segment-btn:hover {
@@ -131,14 +170,79 @@ body {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
-/* Modal Input Typography Fix */
+/* =======================================================
+   UNIVERSAL INPUT & BUTTON HEIGHT EQUALIZATION & TYPOGRAPHY
+   ======================================================= */
+.form-control,
+.form-select {
+    height: 42px !important;
+    min-height: 42px !important;
+    font-size: 0.9rem !important;
+    border-radius: 10px !important;
+    padding: 8px 12px !important;
+    border: 1px solid var(--iqs-border) !important;
+    box-sizing: border-box !important;
+    background-color: var(--iqs-input-bg);
+    color: var(--iqs-text-primary);
+    line-height: 1.5 !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--iqs-primary) !important;
+    box-shadow: 0 0 0 3px var(--iqs-primary-glow) !important;
+    background-color: var(--iqs-card-bg);
+}
+
+.form-label {
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    color: var(--iqs-text-secondary) !important;
+    margin-bottom: 4px !important;
+}
+
+/* History Filter Form Button & Inputs Equalization */
+#formHistoryFilter .form-control,
+#formHistoryFilter .form-select,
+#formHistoryFilter .btn,
+#btnSearchHistory {
+    height: 42px !important;
+    min-height: 42px !important;
+    font-size: 0.9rem !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+}
+
+#formHistoryFilter .btn {
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 16px !important;
+}
+
+/* Modal Inputs & Buttons */
+.modal .form-control,
 .modal .form-select,
-.modal .form-control {
-    font-size: 0.92rem !important;
+.modal .btn {
+    height: 42px !important;
+    min-height: 42px !important;
+    font-size: 0.9rem !important;
+    box-sizing: border-box !important;
+}
+
+.modal .btn {
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 18px !important;
 }
 
 .modal .form-label {
-    font-size: 0.85rem !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
 }
 
 /* Schedule Timeline Grid */
@@ -151,28 +255,95 @@ body {
 
 .schedule-timeline-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+}
+
+@media (min-width: 576px) {
+    .schedule-timeline-grid {
+        grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    }
 }
 
 .schedule-slot-item {
     background: var(--iqs-card-bg);
-    border: 1px solid var(--iqs-border);
-    border-radius: 10px;
-    padding: 6px 10px;
+    border: 1.5px solid var(--iqs-border);
+    border-radius: 12px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
+    gap: 3px;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .schedule-slot-item .slot-time {
     font-size: 0.95rem;
     font-weight: 700;
     color: var(--iqs-primary);
+    line-height: 1.2;
 }
 
 .schedule-slot-item .slot-desc {
     font-size: 0.72rem;
     color: var(--iqs-text-muted);
+    line-height: 1.2;
+}
+
+.schedule-slot-item.slot-completed {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.schedule-slot-item.slot-completed .slot-time {
+    color: #059669;
+}
+
+.schedule-slot-item.slot-due {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+}
+
+.schedule-slot-item.slot-due .slot-time {
+    color: #d97706;
+}
+
+.schedule-slot-item.slot-missed {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.schedule-slot-item.slot-missed .slot-time {
+    color: #dc2626;
+}
+
+.schedule-slot-item.slot-in-progress {
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.06);
+}
+
+.slot-status-pill {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    width: fit-content;
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.iqs-pulse-badge {
+    animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+    70% { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
 }
 
 /* Desktop Equipment Roster Grid */
@@ -299,15 +470,16 @@ body {
     justify-content: center;
     gap: 10px;
     width: 100%;
-    min-height: 52px;
-    padding: 14px 28px;
-    font-size: 1.05rem;
+    min-height: 48px;
+    height: 48px;
+    padding: 10px 24px;
+    font-size: 1rem;
     font-weight: 700;
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--iqs-primary-gradient);
     color: #ffffff;
     border: none;
-    box-shadow: 0 8px 20px -2px var(--iqs-primary-glow);
+    box-shadow: 0 6px 18px -2px var(--iqs-primary-glow);
     transition: all 0.2s ease;
     text-decoration: none;
 }
@@ -522,10 +694,11 @@ body {
 }
 
 .btn-result-choice {
-    min-height: 52px;
-    font-size: 1.1rem;
+    min-height: 44px;
+    height: 44px;
+    font-size: 0.95rem;
     font-weight: 700;
-    border-radius: 12px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -567,12 +740,14 @@ body {
     background: var(--iqs-input-bg);
     border: 1px solid var(--iqs-border);
     border-radius: 10px;
-    padding: 8px 10px;
+    padding: 6px 10px;
+    min-height: 52px;
+    box-sizing: border-box;
 }
 
 .measure-input-card label {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
     color: var(--iqs-text-secondary);
     display: block;
     margin-bottom: 2px;
@@ -581,12 +756,15 @@ body {
 .measure-input-card input {
     width: 100%;
     background: transparent;
-    border: none;
-    font-size: 1.05rem;
-    font-weight: 700;
+    border: none !important;
+    outline: none !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
     color: var(--iqs-text-primary);
     text-align: left;
-    outline: none;
+    padding: 0 !important;
 }
 
 /* Photo Upload Tile */

@@ -37,13 +37,16 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                 </div>
 
                 <!-- Sleek Segmented Control Navigation -->
-                <!-- Sleek Segmented Control Navigation -->
+                <!-- Sleek Segmented Control Navigation (Responsive & Overflow-Safe) -->
                 <div class="iqs-segmented-bar mb-3">
                     <button class="iqs-segment-btn active" id="tab-active-btn" type="button" onclick="IQS.switchTab('active')">
-                        <i class="fas fa-tasks me-2"></i><span>การทดสอบประจำรอบ</span>
+                        <i class="fas fa-tasks me-1"></i>
+                        <span>การทดสอบประจำรอบ</span>
                     </button>
                     <button class="iqs-segment-btn" id="tab-history-btn" type="button" onclick="IQS.switchTab('history')">
-                        <i class="fas fa-history me-2"></i><span>ประวัติ & รายงานออดิท</span>
+                        <i class="fas fa-history me-1"></i>
+                        <span class="d-none d-sm-inline">ประวัติ & รายงานออดิท</span>
+                        <span class="d-inline d-sm-none">ประวัติ & ออดิท</span>
                     </button>
                 </div>
 
@@ -56,9 +59,13 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
 
                         <!-- Enhanced Empty State / Ready to Start Dual Column on PC -->
                         <div id="noRoundSection" style="display:none;">
-                            <div class="row g-4 align-items-stretch">
+
+                            <!-- Audit Missed Slot Notification Banner (Shown if any slot was missed) -->
+                            <div id="auditMissedAlertBanner" class="mb-3" style="display: none;"></div>
+
+                            <div class="row g-3 g-md-4 align-items-stretch mx-0">
                                 <!-- Left Column: Start Round Hero & Standard Daily Timeline -->
-                                <div class="col-lg-6 col-xl-5">
+                                <div class="col-lg-6 col-xl-5 px-0 px-md-2">
                                     <div class="iqs-empty-hero h-100 mb-0">
                                         <div class="iqs-pulse-pill">
                                             <span class="iqs-pulse-dot"></span>
@@ -81,54 +88,29 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                         <!-- Daily Standard Timeline Schedule Card -->
                                         <div class="schedule-timeline-card text-start">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="small fw-bold text-muted"><i class="fas fa-clock me-1 text-primary"></i>รอบเวลามาตรฐานประจำวัน (7 รอบ)</span>
+                                                <span class="small fw-bold text-muted">
+                                                    <i class="fas fa-clock me-1 text-primary"></i>รอบเวลามาตรฐานประจำวัน (7 รอบ)
+                                                </span>
                                                 <span class="badge bg-primary-subtle text-primary" style="font-size: 0.72rem;">มาตรฐานโรงงาน</span>
                                             </div>
-                                            <div class="schedule-timeline-grid">
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">08:30</span>
-                                                    <span class="slot-desc">รอบเช้า (Day)</span>
-                                                </div>
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">10:30</span>
-                                                    <span class="slot-desc">รอบสาย (Day)</span>
-                                                </div>
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">13:00</span>
-                                                    <span class="slot-desc">รอบบ่าย (Day)</span>
-                                                </div>
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">15:30</span>
-                                                    <span class="slot-desc">รอบบ่ายแก่ (Day)</span>
-                                                </div>
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">20:30</span>
-                                                    <span class="slot-desc">รอบค่ำ (OT)</span>
-                                                </div>
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">22:30</span>
-                                                    <span class="slot-desc">รอบดึก (OT)</span>
-                                                </div>
-                                                <div class="schedule-slot-item">
-                                                    <span class="slot-time">02:30</span>
-                                                    <span class="slot-desc">กะดึก (Night)</span>
-                                                </div>
+                                            <div class="schedule-timeline-grid" id="scheduleTimelineGrid">
+                                                <div class="text-center text-muted small py-3 col-12">กำลังโหลดตารางรอบเวลา...</div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Right Column: Spot Welding Equipment Roster & Phase 2 Digital Twin Preview -->
-                                <div class="col-lg-6 col-xl-7">
+                                <div class="col-lg-6 col-xl-7 px-0 px-md-2">
                                     <div class="card border-0 shadow-sm h-100 p-3 p-md-4" style="border-radius: 20px; background: var(--iqs-card-bg);">
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <div>
+                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                            <div style="flex: 1; min-width: 200px;">
                                                 <h5 class="fw-bold mb-0 text-body">
                                                     <i class="fas fa-microchip me-2 text-primary"></i>เครื่องจักรในสายการผลิต Spot Welding
                                                 </h5>
                                                 <small class="text-muted">ระบบตรวจสอบความพร้อมของเครื่องจักรที่เชื่อมโยงกับ PE_MACHINES</small>
                                             </div>
-                                            <span class="badge bg-success-subtle text-success px-3 py-2 fw-bold" style="border-radius: 10px;">
+                                            <span class="badge bg-success-subtle text-success px-3 py-2 fw-bold" style="border-radius: 10px; white-space: nowrap;">
                                                 <i class="fas fa-check-circle me-1"></i>พร้อมตรวจ 39 เครื่อง
                                             </span>
                                         </div>
@@ -154,7 +136,7 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                         <!-- Phase 2 Floor Map Teaser Banner -->
                                         <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 p-3 mb-0 mt-auto">
                                             <div class="d-flex align-items-center gap-3">
-                                                <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px;">
                                                     <i class="fas fa-map-marked-alt fa-lg"></i>
                                                 </div>
                                                 <div>
@@ -263,7 +245,7 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                     <label class="form-label small fw-bold text-muted mb-1">ถึงวันที่</label>
                                     <input type="date" class="form-control" id="histEndDate" value="<?php echo date('Y-m-d'); ?>">
                                 </div>
-                                <div class="col-md-3 col-8">
+                                <div class="col-md-3 col-7">
                                     <label class="form-label small fw-bold text-muted mb-1">สถานะ</label>
                                     <select class="form-select" id="histStatus">
                                         <option value="">ทั้งหมด (All Status)</option>
@@ -272,8 +254,8 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                         <option value="OPEN">OPEN (ยังไม่ปิดรอบ)</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3 col-4">
-                                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                                <div class="col-md-3 col-5">
+                                    <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnSearchHistory">
                                         <i class="fas fa-search me-1"></i>ค้นหา
                                     </button>
                                 </div>
@@ -335,7 +317,8 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                             <select class="form-select" id="newRoundTemplate">
                                 <option value="">กำลังโหลดแม่แบบ...</option>
                             </select>
-                            <small class="text-muted">เลือกแม่แบบเพื่อระบุชื่อรอบและกะโดยอัตโนมัติ</small>
+                            <div id="modalSlotAlert" class="mt-2" style="display:none;"></div>
+                            <small class="text-muted d-block mt-1">เลือกแม่แบบเพื่อระบุชื่อรอบและกะโดยอัตโนมัติ</small>
                         </div>
 
                         <div class="mb-3">

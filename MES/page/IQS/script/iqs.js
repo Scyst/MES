@@ -8,6 +8,8 @@ const IQS = {
     initialData: null,
     activeRound: null,
     activeRecordsMap: {},
+    slotStatuses: [],
+    slotSummary: null,
     isOnline: navigator.onLine,
     selectedTemplateId: null,
     currentFilter: 'all',
@@ -60,6 +62,11 @@ const IQS = {
             if (!data.success) throw new Error(data.message);
 
             this.initialData = data.data;
+            this.slotStatuses = data.data.slot_statuses || [];
+            this.slotSummary = data.data.slot_summary || null;
+
+            this.renderDailyTimeline();
+            this.renderAuditMissedAlert();
             this.renderTemplateOptions();
             this.renderCoTesterOptions();
             this.renderDesktopRoster();
@@ -71,6 +78,75 @@ const IQS = {
         }
     },
 
+    renderDailyTimeline() {
+        const grid = document.getElementById('scheduleTimelineGrid');
+        if (!grid || !this.slotStatuses || this.slotStatuses.length === 0) return;
+
+        grid.innerHTML = '';
+        this.slotStatuses.forEach(slot => {
+            let cardClass = '';
+            let iconHtml = '';
+            if (slot.status === 'COMPLETED') {
+                cardClass = 'slot-completed';
+                iconHtml = '<i class="fas fa-check-circle me-1"></i>';
+            } else if (slot.status === 'IN_PROGRESS') {
+                cardClass = 'slot-in-progress';
+                iconHtml = '<i class="fas fa-spinner fa-spin me-1"></i>';
+            } else if (slot.status === 'DUE_NOW') {
+                cardClass = 'slot-due';
+                iconHtml = '<i class="fas fa-exclamation-circle me-1"></i>';
+            } else if (slot.status === 'MISSED') {
+                cardClass = 'slot-missed';
+                iconHtml = '<i class="fas fa-times-circle me-1"></i>';
+            } else {
+                cardClass = 'slot-upcoming';
+                iconHtml = '<i class="fas fa-clock me-1"></i>';
+            }
+
+            grid.innerHTML += `
+            <div class="schedule-slot-item ${cardClass}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="slot-time">${slot.std_time}</span>
+                    <span class="slot-desc">กะ ${slot.shift}</span>
+                </div>
+                <span class="slot-desc text-truncate">${slot.template_name}</span>
+                <span class="slot-status-pill badge ${slot.badge_class}">
+                    ${iconHtml}${slot.status_label}
+                </span>
+            </div>`;
+        });
+    },
+
+    renderAuditMissedAlert() {
+        const banner = document.getElementById('auditMissedAlertBanner');
+        if (!banner) return;
+
+        if (this.slotSummary?.has_missed && this.slotSummary.missed_count > 0) {
+            const missedNames = (this.slotSummary.missed_list || []).join(', ');
+            banner.innerHTML = `
+            <div class="alert alert-danger border-danger-subtle d-flex align-items-start gap-3 p-3 shadow-sm mb-0" style="border-radius: 14px;">
+                <div class="bg-danger text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; min-width: 38px;">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+                        <strong class="text-danger" style="font-size: 0.95rem;">
+                            <i class="fas fa-bell me-1"></i>แจ้งเตือนรอบที่ขาดการทดสอบ (${this.slotSummary.missed_count} รอบ)
+                        </strong>
+                        <span class="badge bg-danger text-white" style="font-size: 0.72rem;">ห้ามบันทึกย้อนหลัง (Non-backdatable)</span>
+                    </div>
+                    <div class="small text-muted mt-1" style="font-size: 0.82rem;">
+                        รอบที่ไม่มีการบันทึกตามกำหนด: <strong class="text-danger">${missedNames}</strong><br>
+                        * ตามข้อตกลงผู้บริหาร ระบบบันทึกแบบ Real-time ณ ขณะทำการตรวจเท่านั้น จะไม่มีการเปิดให้บันทึกย้อนหลัง และถูกระบุใน Audit Trail
+                    </div>
+                </div>
+            </div>`;
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
+    },
+
     renderDesktopRoster() {
         const rosterContainer = document.getElementById('desktopMachineRoster');
         if (!rosterContainer || !this.initialData?.machines) return;
@@ -79,11 +155,34 @@ const IQS = {
         this.initialData.machines.forEach(m => {
             const isRobot = m.machine_type === 'Robot' || (m.machine_name && m.machine_name.includes('Robot'));
             const iconClass = isRobot ? 'fa-robot text-primary' : 'fa-bolt text-warning';
+            
+            // Machine inspection state in current open round if active
+            const rec = this.activeRecordsMap ? this.activeRecordsMap[m.machine_id] : null;
+            let statusPill = '';
+            if (this.activeRound) {
+                if (rec) {
+                    if (rec.is_skipped) {
+                        statusPill = '<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">ข้าม</span>';
+                    } else if (rec.pull_result === 'OK') {
+                        statusPill = '<span class="badge bg-success-subtle text-success" style="font-size: 0.65rem;"><i class="fas fa-check me-1"></i>OK</span>';
+                    } else if (rec.pull_result === 'NG') {
+                        statusPill = '<span class="badge bg-danger-subtle text-danger" style="font-size: 0.65rem;"><i class="fas fa-times me-1"></i>NG</span>';
+                    }
+                } else {
+                    statusPill = '<span class="badge bg-warning-subtle text-warning-emphasis" style="font-size: 0.65rem;">รอตรวจ</span>';
+                }
+            } else {
+                statusPill = '<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">พร้อมตรวจ</span>';
+            }
+
             rosterContainer.innerHTML += `
             <div class="roster-chip">
                 <i class="fas ${iconClass}"></i>
-                <div class="ms-1">
-                    <strong class="d-block text-body" style="font-size: 0.85rem;">${m.machine_code}</strong>
+                <div class="ms-1 flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-body" style="font-size: 0.85rem;">${m.machine_code}</strong>
+                        ${statusPill}
+                    </div>
                     <span class="text-muted" style="font-size: 0.72rem;">${m.area || 'B9'}</span>
                 </div>
             </div>`;
@@ -92,11 +191,17 @@ const IQS = {
 
     renderTemplateOptions() {
         const sel = document.getElementById('newRoundTemplate');
-        if (!sel || !this.initialData?.templates) return;
+        if (!sel || !this.slotStatuses) return;
         sel.innerHTML = '<option value="">-- เลือกรอบเวลามาตรฐาน (หรือระบุเอง) --</option>';
-        this.initialData.templates.forEach(t => {
-            sel.innerHTML += `<option value="${t.template_id}" data-name="${t.template_name}" data-shift="${t.shift}">
-                ${t.template_name} (${t.std_time}) - กะ ${t.shift}
+        this.slotStatuses.forEach(t => {
+            let tag = '';
+            if (t.status === 'COMPLETED') tag = ' [ตรวจแล้ว]';
+            else if (t.status === 'IN_PROGRESS') tag = ' [กำลังตรวจ]';
+            else if (t.status === 'DUE_NOW') tag = ' [★ ถึงเวลาตรวจ]';
+            else if (t.status === 'MISSED') tag = ' [! ขาดการตรวจ/เลยเวลา]';
+
+            sel.innerHTML += `<option value="${t.template_id}" data-name="${t.template_name}" data-shift="${t.shift}" data-status="${t.status}">
+                ${t.template_name} (${t.std_time}) - กะ ${t.shift}${tag}
             </option>`;
         });
     },
@@ -140,6 +245,9 @@ const IQS = {
         document.getElementById('noRoundSection').style.display = 'block';
         document.getElementById('activeRoundSection').style.display = 'none';
         document.getElementById('bottomSubmitBar').style.display = 'none';
+        this.renderDesktopRoster();
+        this.renderDailyTimeline();
+        this.renderAuditMissedAlert();
     },
 
     renderActiveRoundUI() {
@@ -161,6 +269,7 @@ const IQS = {
         document.getElementById('dispTesters').textContent = testers;
 
         this.renderMachineCards();
+        this.renderDesktopRoster();
         this.updateProgress();
     },
 
@@ -523,6 +632,8 @@ const IQS = {
         if (fill) fill.style.width = pct + '%';
         if (countTxt) countTxt.textContent = `${recorded} / ${total} (${pct}%)`;
         if (dockTxt) dockTxt.textContent = `ตรวจแล้ว ${recorded}/${total} เครื่อง (${pct}%)`;
+
+        this.renderDesktopRoster();
     },
 
     bindUIEvents() {
@@ -531,9 +642,32 @@ const IQS = {
         if (templateSel) {
             templateSel.addEventListener('change', (e) => {
                 const opt = e.target.selectedOptions[0];
+                const alertBox = document.getElementById('modalSlotAlert');
                 if (opt && opt.value) {
                     document.getElementById('newRoundName').value = opt.getAttribute('data-name');
                     document.getElementById('newRoundShift').value = opt.getAttribute('data-shift') || 'Day';
+                    const status = opt.getAttribute('data-status');
+                    if (alertBox) {
+                        if (status === 'MISSED') {
+                            alertBox.innerHTML = `
+                            <div class="alert alert-warning py-2 px-3 small mb-0 border-0" style="border-radius: 10px;">
+                                <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                <strong>แจ้งเตือนข้อตกลง Audit:</strong> รอบนี้เลยกำหนดเวลามาตรฐานแล้ว ระบบจะประทับเวลาจริง (${this.slotSummary?.cur_server_time || 'Real-time'} น.) ณ ขณะบันทึกเพื่อความถูกต้อง ไม่อนุญาตให้แก้ไขเวลาย้อนหลัง
+                            </div>`;
+                            alertBox.style.display = 'block';
+                        } else if (status === 'COMPLETED') {
+                            alertBox.innerHTML = `
+                            <div class="alert alert-info py-2 px-3 small mb-0 border-0" style="border-radius: 10px;">
+                                <i class="fas fa-info-circle text-primary me-1"></i>
+                                <strong>หมายเหตุ:</strong> รอบเวลานี้เคยทำการตรวจและปิดรอบไปแล้ว หากเริ่มรอบจะเป็นการตรวจซ้ำเพิ่มเติม
+                            </div>`;
+                            alertBox.style.display = 'block';
+                        } else {
+                            alertBox.style.display = 'none';
+                        }
+                    }
+                } else if (alertBox) {
+                    alertBox.style.display = 'none';
                 }
             });
         }

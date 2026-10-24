@@ -40,6 +40,148 @@ if (!$userId) {
     jsonError('Unauthorized user session.', 401);
 }
 
+// Helper function: Compute live inspection status for standard daily time slots
+function computeSlotStatuses(PDO $pdo, array $templates): array {
+    $stmtNow = $pdo->query("SELECT CONVERT(varchar(5), GETDATE(), 108) AS cur_time, CAST(GETDATE() AS date) AS cur_date");
+    $nowRow = $stmtNow->fetch(PDO::FETCH_ASSOC);
+    $curTimeStr = $nowRow['cur_time'] ?? date('H:i');
+    $curDate = $nowRow['cur_date'] ?? date('Y-m-d');
+
+    list($curH, $curM) = explode(':', $curTimeStr);
+    $curMins = (int)$curH * 60 + (int)$curM;
+
+    // Fetch all rounds conducted today
+    $stmtRounds = $pdo->prepare("
+        SELECT round_id, round_number, template_id, round_name, shift, status,
+               CONVERT(varchar(5), started_at, 108) AS start_time,
+               CONVERT(varchar(5), submitted_at, 108) AS submit_time
+        FROM dbo.IQS_ROUNDS
+        WHERE plan_date = :cur_date
+    ");
+    $stmtRounds->execute([':cur_date' => $curDate]);
+    $todayRounds = $stmtRounds->fetchAll(PDO::FETCH_ASSOC);
+
+    // Index rounds by template_id
+    $roundsByTemplate = [];
+    foreach ($todayRounds as $r) {
+        if (!empty($r['template_id'])) {
+            $roundsByTemplate[$r['template_id']] = $r;
+        }
+    }
+
+    $slotList = [];
+    $missedCount = 0;
+    $missedList = [];
+    $completedCount = 0;
+
+    foreach ($templates as $t) {
+        $tid = (int)$t['template_id'];
+        $stdTime = $t['std_time'];
+        list($sh, $sm) = explode(':', $stdTime);
+        $stdMins = (int)$sh * 60 + (int)$sm;
+
+        $existingRound = $roundsByTemplate[$tid] ?? null;
+        $status = 'UPCOMING';
+        $statusLabel = 'ยังไม่ถึงเวลา';
+        $badgeClass = 'bg-secondary-subtle text-secondary';
+        $roundInfo = null;
+
+        if ($existingRound) {
+            $rStatus = $existingRound['status'];
+            $roundInfo = [
+                'round_id' => (int)$existingRound['round_id'],
+                'round_number' => $existingRound['round_number'],
+                'status' => $rStatus,
+                'start_time' => $existingRound['start_time'],
+                'submit_time' => $existingRound['submit_time']
+            ];
+            if ($rStatus === 'OPEN') {
+                $status = 'IN_PROGRESS';
+                $statusLabel = 'กำลังตรวจ';
+                $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+            } else {
+                $status = 'COMPLETED';
+                $statusLabel = ($rStatus === 'COMPLETED_WITH_NG') ? 'ตรวจแล้ว (พบ NG)' : 'ตรวจแล้ว (ผ่าน)';
+                $badgeClass = ($rStatus === 'COMPLETED_WITH_NG') ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-success-subtle text-success border border-success-subtle';
+                $completedCount++;
+            }
+        } else {
+            // Window calculation: [std_time - 30m, std_time + 60m]
+            $windowStart = $stdMins - 30;
+            $windowEnd = $stdMins + 60;
+
+            if ($stdMins < 360) {
+                // Night slot (e.g. 02:30)
+                if ($curMins < 360) {
+                    if ($curMins >= $windowStart && $curMins <= $windowEnd) {
+                        $status = 'DUE_NOW';
+                        $statusLabel = 'ถึงเวลาตรวจ (Due)';
+                        $badgeClass = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle iqs-pulse-badge';
+                    } elseif ($curMins > $windowEnd) {
+                        $status = 'MISSED';
+                        $statusLabel = 'ขาดการตรวจ (เลยเวลา)';
+                        $badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+                        $missedCount++;
+                        $missedList[] = $t['template_name'];
+                    } else {
+                        $status = 'UPCOMING';
+                        $statusLabel = 'ยังไม่ถึงเวลา';
+                        $badgeClass = 'bg-secondary-subtle text-secondary';
+                    }
+                } else {
+                    $status = 'UPCOMING';
+                    $statusLabel = 'รอบกะดึก';
+                    $badgeClass = 'bg-secondary-subtle text-secondary';
+                }
+            } else {
+                // Day & OT slots (08:30, 10:30, 13:00, 15:30, 20:30, 22:30)
+                if ($curMins >= $windowStart && $curMins <= $windowEnd) {
+                    $status = 'DUE_NOW';
+                    $statusLabel = 'ถึงเวลาตรวจ (Due)';
+                    $badgeClass = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle iqs-pulse-badge';
+                } elseif ($curMins > $windowEnd) {
+                    $status = 'MISSED';
+                    $statusLabel = 'ขาดการตรวจ (เลยเวลา)';
+                    $badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+                    $missedCount++;
+                    $missedList[] = $t['template_name'];
+                } else {
+                    $status = 'UPCOMING';
+                    $statusLabel = 'ยังไม่ถึงเวลา';
+                    $badgeClass = 'bg-secondary-subtle text-secondary';
+                }
+            }
+        }
+
+        $slotList[] = [
+            'template_id' => $tid,
+            'template_code' => $t['template_code'],
+            'template_name' => $t['template_name'],
+            'std_time' => $stdTime,
+            'shift' => $t['shift'],
+            'status' => $status,
+            'status_label' => $statusLabel,
+            'badge_class' => $badgeClass,
+            'round' => $roundInfo,
+            'is_missed' => ($status === 'MISSED'),
+            'is_due' => ($status === 'DUE_NOW')
+        ];
+    }
+
+    return [
+        'slots' => $slotList,
+        'summary' => [
+            'cur_server_time' => $curTimeStr,
+            'cur_server_date' => $curDate,
+            'total_slots' => count($templates),
+            'completed_count' => $completedCount,
+            'missed_count' => $missedCount,
+            'missed_list' => $missedList,
+            'has_missed' => ($missedCount > 0)
+        ]
+    ];
+}
+
 try {
     switch ($action) {
 
@@ -56,6 +198,9 @@ try {
                 ORDER BY sort_order ASC
             ");
             $templates = $stmtTemplates->fetchAll(PDO::FETCH_ASSOC);
+
+            // Compute live slot compliance & missed round checks
+            $slotData = computeSlotStatuses($pdo, $templates);
 
             // 1.2 Spot welding machines (from PE_MACHINES)
             $stmtMachines = $pdo->query("
@@ -78,6 +223,8 @@ try {
 
             jsonSuccess([
                 'templates' => $templates,
+                'slot_statuses' => $slotData['slots'],
+                'slot_summary' => $slotData['summary'],
                 'machines' => $machines,
                 'users' => $users,
                 'current_user' => [
