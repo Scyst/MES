@@ -1,18 +1,21 @@
 /**
  * iqs.js — In-process Quality System (IQS) Frontend Logic
- * Industrial mobile-first test execution, real-time sync, photo attachment with SHA-256 verification.
+ * Machine-First Direct Inspection Cockpit with Line-Adaptive Criteria (SPOT, BEND, PRESS),
+ * Automatic Background Round Binding, and Non-backdatable Audit Compliance.
  */
 
 const IQS = {
     csrfToken: '',
     initialData: null,
-    activeRound: null,
-    activeRecordsMap: {},
+    todayRecordsMap: {},
     slotStatuses: [],
     slotSummary: null,
     isOnline: navigator.onLine,
-    selectedTemplateId: null,
+    currentLine: 'SPOT',
     currentFilter: 'all',
+    searchKeyword: '',
+    activeInspectMachine: null,
+    currentInspectResult: 'OK',
 
     init() {
         this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -64,17 +67,69 @@ const IQS = {
             this.initialData = data.data;
             this.slotStatuses = data.data.slot_statuses || [];
             this.slotSummary = data.data.slot_summary || null;
+            this.todayRecordsMap = data.data.today_records || {};
 
+            // Calculate Machine Line counts
+            this.updateLineCounters();
+
+            // Render all UI components
             this.renderDailyTimeline();
             this.renderAuditMissedAlert();
+            this.renderCockpitStatus();
+            this.renderInteractiveGrid();
             this.renderTemplateOptions();
             this.renderCoTesterOptions();
-            this.renderDesktopRoster();
-            await this.loadActiveRound();
         } catch (err) {
             Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลเริ่มต้นได้: ' + err.message, 'error');
         } finally {
             this.showLoading(false);
+        }
+    },
+
+    updateLineCounters() {
+        if (!this.initialData?.machines) return;
+        const machines = this.initialData.machines;
+        const countSpot = machines.filter(m => m.line_group === 'SPOT').length;
+        const countBend = machines.filter(m => m.line_group === 'BEND').length;
+        const countPress = machines.filter(m => m.line_group === 'PRESS').length;
+
+        const badgeSpot = document.getElementById('countBadgeSpot');
+        const badgeBend = document.getElementById('countBadgeBend');
+        const badgePress = document.getElementById('countBadgePress');
+
+        if (badgeSpot) badgeSpot.textContent = countSpot;
+        if (badgeBend) badgeBend.textContent = countBend;
+        if (badgePress) badgePress.textContent = countPress;
+    },
+
+    renderCockpitStatus() {
+        // Find current due slot or upcoming slot
+        let currentSlotName = 'รอบมาตรฐานประจำวัน';
+        if (this.slotStatuses && this.slotStatuses.length > 0) {
+            const dueSlot = this.slotStatuses.find(s => s.status === 'DUE_NOW');
+            const inProgSlot = this.slotStatuses.find(s => s.status === 'IN_PROGRESS');
+            const activeSlot = dueSlot || inProgSlot || this.slotStatuses[0];
+            if (activeSlot) {
+                currentSlotName = `${activeSlot.template_name} (${activeSlot.std_time}) - กะ ${activeSlot.shift}`;
+            }
+        }
+
+        const pillText = document.getElementById('cockpitSlotText');
+        if (pillText) {
+            pillText.textContent = `รอบปัจจุบัน: ${currentSlotName}`;
+        }
+
+        // Calculate progress for currently selected line
+        if (this.initialData?.machines) {
+            const lineMachines = this.initialData.machines.filter(m => m.line_group === this.currentLine);
+            const total = lineMachines.length;
+            const recorded = lineMachines.filter(m => !!this.todayRecordsMap[m.machine_id]).length;
+            const pct = total > 0 ? Math.round((recorded / total) * 100) : 0;
+
+            const progressTxt = document.getElementById('cockpitProgressText');
+            if (progressTxt) {
+                progressTxt.textContent = `${recorded} / ${total} เครื่อง (${pct}%)`;
+            }
         }
     },
 
@@ -147,321 +202,409 @@ const IQS = {
         }
     },
 
-    renderDesktopRoster() {
-        const rosterContainer = document.getElementById('desktopMachineRoster');
-        if (!rosterContainer || !this.initialData?.machines) return;
+    switchLine(lineKey, btnElem) {
+        this.currentLine = lineKey;
+        document.querySelectorAll('.line-tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (btnElem) btnElem.classList.add('active');
 
-        rosterContainer.innerHTML = '';
-        this.initialData.machines.forEach(m => {
-            const isRobot = m.machine_type === 'Robot' || (m.machine_name && m.machine_name.includes('Robot'));
-            const iconClass = isRobot ? 'fa-robot text-primary' : 'fa-bolt text-warning';
-            
-            // Machine inspection state in current open round if active
-            const rec = this.activeRecordsMap ? this.activeRecordsMap[m.machine_id] : null;
-            let statusPill = '';
-            if (this.activeRound) {
-                if (rec) {
-                    if (rec.is_skipped) {
-                        statusPill = '<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">ข้าม</span>';
-                    } else if (rec.pull_result === 'OK') {
-                        statusPill = '<span class="badge bg-success-subtle text-success" style="font-size: 0.65rem;"><i class="fas fa-check me-1"></i>OK</span>';
-                    } else if (rec.pull_result === 'NG') {
-                        statusPill = '<span class="badge bg-danger-subtle text-danger" style="font-size: 0.65rem;"><i class="fas fa-times me-1"></i>NG</span>';
-                    }
-                } else {
-                    statusPill = '<span class="badge bg-warning-subtle text-warning-emphasis" style="font-size: 0.65rem;">รอตรวจ</span>';
-                }
-            } else {
-                statusPill = '<span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">พร้อมตรวจ</span>';
-            }
-
-            rosterContainer.innerHTML += `
-            <div class="roster-chip">
-                <i class="fas ${iconClass}"></i>
-                <div class="ms-1 flex-grow-1">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <strong class="text-body" style="font-size: 0.85rem;">${m.machine_code}</strong>
-                        ${statusPill}
-                    </div>
-                    <span class="text-muted" style="font-size: 0.72rem;">${m.area || 'B9'}</span>
-                </div>
-            </div>`;
-        });
+        this.renderCockpitStatus();
+        this.renderInteractiveGrid();
     },
 
-    renderTemplateOptions() {
-        const sel = document.getElementById('newRoundTemplate');
-        if (!sel || !this.slotStatuses) return;
-        sel.innerHTML = '<option value="">-- เลือกรอบเวลามาตรฐาน (หรือระบุเอง) --</option>';
-        this.slotStatuses.forEach(t => {
-            let tag = '';
-            if (t.status === 'COMPLETED') tag = ' [ตรวจแล้ว]';
-            else if (t.status === 'IN_PROGRESS') tag = ' [กำลังตรวจ]';
-            else if (t.status === 'DUE_NOW') tag = ' [★ ถึงเวลาตรวจ]';
-            else if (t.status === 'MISSED') tag = ' [! ขาดการตรวจ/เลยเวลา]';
-
-            sel.innerHTML += `<option value="${t.template_id}" data-name="${t.template_name}" data-shift="${t.shift}" data-status="${t.status}">
-                ${t.template_name} (${t.std_time}) - กะ ${t.shift}${tag}
-            </option>`;
-        });
-    },
-
-    renderCoTesterOptions() {
-        const u1 = document.getElementById('coTester1');
-        const u2 = document.getElementById('coTester2');
-        if (!this.initialData?.users) return;
-
-        let options = '<option value="">-- ไม่มี --</option>';
-        this.initialData.users.forEach(u => {
-            if (u.id !== this.initialData.current_user?.id) {
-                options += `<option value="${u.id}">${u.fullname} (${u.role || u.username})</option>`;
-            }
-        });
-        if (u1) u1.innerHTML = options;
-        if (u2) u2.innerHTML = options;
-    },
-
-    async loadActiveRound() {
-        try {
-            const res = await fetch('api/iqs_api.php?action=get_active_round');
-            const json = await res.json();
-            if (json.success && json.data) {
-                this.activeRound = json.data.round;
-                this.activeRecordsMap = {};
-                (json.data.records || []).forEach(r => {
-                    this.activeRecordsMap[r.machine_id] = r;
-                });
-                this.renderActiveRoundUI();
-            } else {
-                this.activeRound = null;
-                this.renderNoActiveRoundUI();
-            }
-        } catch (err) {
-            console.error('Error fetching active round:', err);
-        }
-    },
-
-    renderNoActiveRoundUI() {
-        document.getElementById('noRoundSection').style.display = 'block';
-        document.getElementById('activeRoundSection').style.display = 'none';
-        document.getElementById('bottomSubmitBar').style.display = 'none';
-        this.renderDesktopRoster();
-        this.renderDailyTimeline();
-        this.renderAuditMissedAlert();
-    },
-
-    renderActiveRoundUI() {
-        document.getElementById('noRoundSection').style.display = 'none';
-        document.getElementById('activeRoundSection').style.display = 'block';
-        document.getElementById('bottomSubmitBar').style.display = 'flex';
-
-        // Update Round details
-        document.getElementById('dispRoundNumber').textContent = this.activeRound.round_number;
-        document.getElementById('dispRoundName').textContent = this.activeRound.round_name;
-        document.getElementById('dispShift').textContent = this.activeRound.shift;
-        document.getElementById('dispStartedAt').textContent = this.activeRound.started_at;
-        
-        const testers = [
-            this.activeRound.primary_tester_name,
-            this.activeRound.co_tester_name_1,
-            this.activeRound.co_tester_name_2
-        ].filter(Boolean).join(', ');
-        document.getElementById('dispTesters').textContent = testers;
-
-        this.renderMachineCards();
-        this.renderDesktopRoster();
-        this.updateProgress();
-    },
-
-    filterMachines(filterType, btnElem) {
-        this.currentFilter = filterType;
+    filterByStatus(statusKey, btnElem) {
+        this.currentFilter = statusKey;
         document.querySelectorAll('.iqs-filter-chip').forEach(el => el.classList.remove('active'));
         if (btnElem) btnElem.classList.add('active');
 
-        const cards = document.querySelectorAll('.machine-card');
+        this.applyGridFiltering();
+    },
+
+    filterMachinesBySearch(keyword) {
+        this.searchKeyword = (keyword || '').toLowerCase().trim();
+        this.applyGridFiltering();
+    },
+
+    renderInteractiveGrid() {
+        const container = document.getElementById('interactiveMachineGrid');
+        if (!container || !this.initialData?.machines) return;
+
+        const lineMachines = this.initialData.machines.filter(m => m.line_group === this.currentLine);
+
+        let cntAll = 0, cntPending = 0, cntOk = 0, cntNg = 0, cntSkip = 0;
+        let html = '';
+
+        lineMachines.forEach(m => {
+            cntAll++;
+            const rec = this.todayRecordsMap[m.machine_id] || null;
+            let statusKey = 'pending';
+            let cardStateClass = '';
+            let statusHtml = '';
+
+            // Machine Type Icon
+            let iconClass = 'fa-bolt text-warning';
+            if (this.currentLine === 'SPOT') {
+                const isRobot = m.machine_type === 'Robot' || (m.machine_name && m.machine_name.includes('Robot'));
+                iconClass = isRobot ? 'fa-robot text-primary' : 'fa-bolt text-warning';
+            } else if (this.currentLine === 'BEND') {
+                iconClass = 'fa-ruler-combined text-info';
+            } else if (this.currentLine === 'PRESS') {
+                iconClass = 'fa-industry text-primary';
+            }
+
+            if (rec) {
+                if (rec.is_skipped) {
+                    statusKey = 'skip';
+                    cardStateClass = 'state-skip';
+                    cntSkip++;
+                    statusHtml = `
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="badge bg-secondary-subtle text-secondary px-2 py-1" style="font-size: 0.72rem;">
+                            <i class="fas fa-forward me-1"></i>ข้ามเครื่องนี้
+                        </span>
+                        <span class="text-muted small text-truncate ms-2" style="font-size: 0.72rem; max-width: 140px;">
+                            ${rec.skip_reason || 'ไม่มีคำสั่งผลิต'}
+                        </span>
+                    </div>`;
+                } else if (rec.pull_result === 'OK') {
+                    statusKey = 'ok';
+                    cardStateClass = 'state-ok';
+                    cntOk++;
+                    let measureText = '';
+                    if (this.currentLine === 'SPOT') {
+                        measureText = rec.knock_check_val ? `เคาะ: ${rec.knock_check_val} mm` : 'ดึง OK';
+                    } else if (this.currentLine === 'BEND') {
+                        measureText = rec.custom_check_val_1 ? `มุม: ${rec.custom_check_val_1}°` : 'พับ OK';
+                    } else if (this.currentLine === 'PRESS') {
+                        measureText = rec.custom_check_val_1 ? `ครีบ: ${rec.custom_check_val_1} mm` : 'ชิ้นแรก OK';
+                    }
+
+                    statusHtml = `
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="badge bg-success-subtle text-success px-2 py-1" style="font-size: 0.72rem;">
+                            <i class="fas fa-check-circle me-1"></i>ผ่าน OK
+                        </span>
+                        <span class="text-success small fw-bold" style="font-size: 0.75rem;">
+                            ${measureText} (${rec.recorded_at ? rec.recorded_at.substring(11, 16) : ''} น.)
+                        </span>
+                    </div>`;
+                } else if (rec.pull_result === 'NG') {
+                    statusKey = 'ng';
+                    cardStateClass = 'state-ng';
+                    cntNg++;
+                    statusHtml = `
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="badge bg-danger-subtle text-danger px-2 py-1" style="font-size: 0.72rem;">
+                            <i class="fas fa-times-circle me-1"></i>ไม่ผ่าน NG
+                        </span>
+                        <span class="text-danger small text-truncate ms-2" style="font-size: 0.72rem; max-width: 140px;">
+                            ${rec.ng_remark || 'พบปัญหา'}
+                        </span>
+                    </div>`;
+                }
+            } else {
+                cntPending++;
+                statusHtml = `
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="badge bg-warning-subtle text-warning-emphasis px-2 py-1" style="font-size: 0.72rem;">
+                        <i class="fas fa-hourglass-half me-1"></i>รอตรวจ
+                    </span>
+                    <span class="mach-action-cue">
+                        ตรวจทันที <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>`;
+            }
+
+            html += `
+            <div class="interactive-machine-card ${cardStateClass}" id="mCard_${m.machine_id}"
+                 data-status="${statusKey}" 
+                 data-code="${(m.machine_code || '').toLowerCase()}" 
+                 data-name="${(m.machine_name || '').toLowerCase()}"
+                 onclick="IQS.openInspectModal(${m.machine_id})">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas ${iconClass}"></i>
+                            <span class="mach-card-code">${m.machine_code}</span>
+                        </div>
+                        <span class="badge bg-light text-secondary border" style="font-size: 0.68rem;">${m.area || 'B9'}</span>
+                    </div>
+                    <div class="mach-card-sub text-truncate">${m.machine_name || m.machine_type || '-'}</div>
+                </div>
+                ${statusHtml}
+            </div>`;
+        });
+
+        container.innerHTML = html;
+
+        // Update Counter Pills
+        const elAll = document.getElementById('cntAll');
+        const elPending = document.getElementById('cntPending');
+        const elOk = document.getElementById('cntOk');
+        const elNg = document.getElementById('cntNg');
+        const elSkip = document.getElementById('cntSkip');
+
+        if (elAll) elAll.textContent = cntAll;
+        if (elPending) elPending.textContent = cntPending;
+        if (elOk) elOk.textContent = cntOk;
+        if (elNg) elNg.textContent = cntNg;
+        if (elSkip) elSkip.textContent = cntSkip;
+
+        this.applyGridFiltering();
+        this.renderCockpitStatus();
+    },
+
+    applyGridFiltering() {
+        const cards = document.querySelectorAll('.interactive-machine-card');
         cards.forEach(card => {
             const status = card.getAttribute('data-status');
-            if (filterType === 'all') {
+            const code = card.getAttribute('data-code') || '';
+            const name = card.getAttribute('data-name') || '';
+
+            const statusMatch = (this.currentFilter === 'all' || status === this.currentFilter);
+            const searchMatch = !this.searchKeyword || code.includes(this.searchKeyword) || name.includes(this.searchKeyword);
+
+            if (statusMatch && searchMatch) {
                 card.style.display = 'flex';
-            } else if (filterType === 'pending') {
-                card.style.display = (status === 'pending') ? 'flex' : 'none';
-            } else if (filterType === 'ok') {
-                card.style.display = (status === 'ok') ? 'flex' : 'none';
-            } else if (filterType === 'ng') {
-                card.style.display = (status === 'ng') ? 'flex' : 'none';
-            } else if (filterType === 'skip') {
-                card.style.display = (status === 'skip') ? 'flex' : 'none';
+            } else {
+                card.style.display = 'none';
             }
         });
     },
 
-    renderMachineCards() {
-        const container = document.getElementById('machineCardsGrid');
-        if (!container || !this.initialData?.machines) return;
+    openInspectModal(machineId) {
+        const m = this.initialData?.machines?.find(x => x.machine_id == machineId);
+        if (!m) return;
 
-        let cntAll = 0, cntPending = 0, cntOk = 0, cntNg = 0, cntSkip = 0;
-        container.innerHTML = '';
+        this.activeInspectMachine = m;
+        const rec = this.todayRecordsMap[machineId] || null;
+        this.currentInspectResult = rec?.pull_result === 'NG' ? 'NG' : 'OK';
 
-        this.initialData.machines.forEach(m => {
-            cntAll++;
-            const rec = this.activeRecordsMap[m.machine_id] || null;
-            let cardStateClass = '';
-            let statusKey = 'pending';
-            let pullChoice = rec?.pull_result || '';
-            let isSkipped = rec?.is_skipped ? true : false;
+        // Setup Modal Header
+        document.getElementById('inspectMachineId').value = m.machine_id;
+        document.getElementById('inspectRoundId').value = rec?.round_id || '';
+        document.getElementById('inspectLine').value = m.line_group;
 
-            if (isSkipped) {
-                cardStateClass = 'state-skip';
-                statusKey = 'skip';
-                cntSkip++;
-            } else if (pullChoice === 'OK') {
-                cardStateClass = 'state-ok';
-                statusKey = 'ok';
-                cntOk++;
-            } else if (pullChoice === 'NG') {
-                cardStateClass = 'state-ng';
-                statusKey = 'ng';
-                cntNg++;
-            } else {
-                cntPending++;
+        document.getElementById('modalInspectMachineLabel').textContent = m.machine_code;
+        document.getElementById('modalLineBadge').textContent = m.line_group;
+        document.getElementById('modalAreaBadge').textContent = m.area || 'Zone B9';
+        document.getElementById('modalMachineSubtext').textContent = m.machine_name || m.machine_type || '-';
+
+        // Modal Icon
+        const iconElem = document.getElementById('modalLineIcon');
+        if (iconElem) {
+            if (m.line_group === 'SPOT') {
+                const isRobot = m.machine_type === 'Robot' || (m.machine_name && m.machine_name.includes('Robot'));
+                iconElem.className = `fas ${isRobot ? 'fa-robot' : 'fa-bolt'} fa-lg`;
+            } else if (m.line_group === 'BEND') {
+                iconElem.className = 'fas fa-ruler-combined fa-lg';
+            } else if (m.line_group === 'PRESS') {
+                iconElem.className = 'fas fa-industry fa-lg';
             }
+        }
 
-            const isVisible = (this.currentFilter === 'all' || this.currentFilter === statusKey);
+        // Current Slot Info
+        let currentSlot = 'รอบมาตรฐาน';
+        if (this.slotStatuses && this.slotStatuses.length > 0) {
+            const activeSlot = this.slotStatuses.find(s => s.status === 'DUE_NOW') || 
+                               this.slotStatuses.find(s => s.status === 'IN_PROGRESS') || 
+                               this.slotStatuses[0];
+            if (activeSlot) {
+                currentSlot = `${activeSlot.template_name} (${activeSlot.std_time}) - กะ ${activeSlot.shift}`;
+            }
+        }
+        document.getElementById('modalSlotTitle').textContent = currentSlot;
 
-            const html = `
-            <div class="machine-card ${cardStateClass}" id="machineCard_${m.machine_id}" 
-                 data-status="${statusKey}" style="display: ${isVisible ? 'flex' : 'none'};">
-                <div>
-                    <!-- Machine Header -->
-                    <div class="machine-header-row">
-                        <div class="machine-code-badge">
-                            <span class="machine-status-dot"></span>
-                            <span>${m.machine_code}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="machine-zone-pill"><i class="fas fa-map-marker-alt me-1"></i>${m.area || 'B9'}</span>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="skipSwitch_${m.machine_id}" 
-                                       ${isSkipped ? 'checked' : ''} onchange="IQS.toggleSkipMachine(${m.machine_id})">
-                                <label class="form-check-label small text-muted" for="skipSwitch_${m.machine_id}">ข้าม</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="small text-muted mb-2">${m.machine_name || '-'}</div>
+        // Pre-fill Common Form Inputs
+        document.getElementById('inspectSku').value = rec?.sku || '';
+        document.getElementById('inspectPoNo').value = rec?.po_no || '';
+        document.getElementById('inspectThickness').value = rec?.thickness || '1.20';
 
-                    <!-- Skip Reason Container -->
-                    <div id="skipBox_${m.machine_id}" style="display: ${isSkipped ? 'block' : 'none'};" class="mb-3">
-                        <div class="alert alert-secondary py-2 px-3 small mb-0 border-0" style="border-radius: 10px;">
-                            <label class="small text-muted fw-bold mb-1">เหตุผลที่ข้ามเครื่องจักรนี้:</label>
-                            <input type="text" class="form-control form-control-sm" id="skipReason_${m.machine_id}" 
-                                   placeholder="เช่น ไม่มีคำสั่งผลิต / เครื่องหยุดซ่อม" 
-                                   value="${rec?.skip_reason || 'ไม่มีคำสั่งผลิต / เครื่องหยุด'}">
-                        </div>
-                    </div>
+        // Pre-fill Skip State
+        const isSkipped = rec?.is_skipped ? true : false;
+        const skipSwitch = document.getElementById('inspectIsSkipped');
+        if (skipSwitch) skipSwitch.checked = isSkipped;
+        document.getElementById('inspectSkipReason').value = rec?.skip_reason || '';
+        this.toggleInspectSkip(isSkipped);
 
-                    <!-- Test Form Fields -->
-                    <div id="testBox_${m.machine_id}" style="display: ${isSkipped ? 'none' : 'block'};">
-                        <!-- SKU, PO, Thickness -->
-                        <div class="row g-2 mb-2">
-                            <div class="col-4">
-                                <div class="measure-input-card">
-                                    <label>โมเดล SKU</label>
-                                    <input type="text" id="sku_${m.machine_id}" placeholder="56 TC" value="${rec?.sku || ''}">
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="measure-input-card">
-                                    <label>เลขที่ PO</label>
-                                    <input type="text" id="po_${m.machine_id}" placeholder="PO No." value="${rec?.po_no || ''}">
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="measure-input-card">
-                                    <label>ความหนา T</label>
-                                    <input type="number" step="0.01" id="thickness_${m.machine_id}" placeholder="1.20" value="${rec?.thickness || '1.20'}">
-                                </div>
-                            </div>
-                        </div>
+        // Pre-fill NG Remark
+        document.getElementById('inspectNgRemark').value = rec?.ng_remark || '';
+        document.getElementById('inspectNgBox').style.display = (this.currentInspectResult === 'NG') ? 'block' : 'none';
 
-                        <!-- Result Choice (OK / NG) -->
-                        <label class="small text-muted fw-bold mb-1">ผลการทดสอบแรงดึง (Pull Test)</label>
-                        <div class="result-toggle-group">
-                            <button type="button" class="btn-result-choice choice-ok ${pullChoice === 'OK' ? 'active' : ''}" 
-                                    id="btnOk_${m.machine_id}" onclick="IQS.selectResult(${m.machine_id}, 'OK')">
-                                <i class="fas fa-check-circle"></i> ผ่าน (OK)
-                            </button>
-                            <button type="button" class="btn-result-choice choice-ng ${pullChoice === 'NG' ? 'active' : ''}" 
-                                    id="btnNg_${m.machine_id}" onclick="IQS.selectResult(${m.machine_id}, 'NG')">
-                                <i class="fas fa-times-circle"></i> ไม่ผ่าน (NG)
-                            </button>
-                        </div>
+        // Render Adaptive Criteria Inputs
+        this.renderAdaptiveForm(m.line_group, rec);
 
-                        <!-- NG Remarks if selected -->
-                        <div id="ngBox_${m.machine_id}" style="display: ${pullChoice === 'NG' ? 'block' : 'none'};" class="mb-2">
-                            <div class="alert alert-danger py-2 px-3 small border-0 mb-0" style="border-radius: 10px;">
-                                <label class="small text-danger fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>อาการ / สาเหตุ NG:</label>
-                                <input type="text" class="form-control form-control-sm border-danger" id="ngRemark_${m.machine_id}" 
-                                       placeholder="ระบุอาการชิ้นงานดึงหลุด / จุดเชื่อมไม่ติด" value="${rec?.ng_remark || ''}">
-                            </div>
-                        </div>
+        // Render existing attachment previews
+        const prev1 = document.getElementById('previewInspectPull');
+        const prev2 = document.getElementById('previewInspectPanel');
+        const tile1 = document.getElementById('tilePullPhoto');
+        const tile2 = document.getElementById('tilePanelPhoto');
 
-                        <!-- Knock and Distance Verification -->
-                        <div class="measure-input-row">
-                            <div class="measure-input-card">
-                                <label><i class="fas fa-ruler-horizontal me-1 text-primary"></i>เช็คเคาะ (mm)</label>
-                                <input type="number" step="0.01" id="knock_${m.machine_id}" placeholder="0.00" value="${rec?.knock_check_val || ''}">
-                            </div>
-                            <div class="measure-input-card">
-                                <label><i class="fas fa-ruler-combined me-1 text-info"></i>เช็คระยะ (mm)</label>
-                                <input type="number" step="0.01" id="distance_${m.machine_id}" placeholder="0.00" value="${rec?.distance_check_val || ''}">
-                            </div>
-                        </div>
+        if (prev1) prev1.innerHTML = this.renderAttachmentThumb(rec, 'PULL_TEST');
+        if (prev2) prev2.innerHTML = this.renderAttachmentThumb(rec, 'CONTROL_PANEL');
+        if (tile1) tile1.className = `photo-upload-tile ${this.hasAttachment(rec, 'PULL_TEST') ? 'has-file' : ''}`;
+        if (tile2) tile2.className = `photo-upload-tile ${this.hasAttachment(rec, 'CONTROL_PANEL') ? 'has-file' : ''}`;
 
-                        <!-- Photo Proofs Upload -->
-                        <div class="photo-upload-grid">
-                            <div class="photo-box ${IQS.hasAttachment(rec, 'PULL_TEST') ? 'has-file' : ''}" 
-                                 onclick="document.getElementById('filePull_${m.machine_id}').click()">
-                                <i class="fas fa-camera text-primary fa-lg mb-1"></i>
-                                <span class="photo-label">รูปชิ้นงานเทสดึง</span>
-                                <input type="file" id="filePull_${m.machine_id}" accept="image/*" capture="environment" 
-                                       style="display:none;" onchange="IQS.previewPhoto(this, 'previewPull_${m.machine_id}')">
-                                <div id="previewPull_${m.machine_id}">
-                                    ${IQS.renderAttachmentThumb(rec, 'PULL_TEST')}
-                                </div>
-                            </div>
-                            <div class="photo-box ${IQS.hasAttachment(rec, 'CONTROL_PANEL') ? 'has-file' : ''}" 
-                                 onclick="document.getElementById('filePanel_${m.machine_id}').click()">
-                                <i class="fas fa-sliders-h text-info fa-lg mb-1"></i>
-                                <span class="photo-label">รูปหน้าตู้คอนโทรล</span>
-                                <input type="file" id="filePanel_${m.machine_id}" accept="image/*" capture="environment" 
-                                       style="display:none;" onchange="IQS.previewPhoto(this, 'previewPanel_${m.machine_id}')">
-                                <div id="previewPanel_${m.machine_id}">
-                                    ${IQS.renderAttachmentThumb(rec, 'CONTROL_PANEL')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        // Clear file input values
+        const filePull = document.getElementById('inspectPhotoPull');
+        const filePanel = document.getElementById('inspectPhotoPanel');
+        if (filePull) filePull.value = '';
+        if (filePanel) filePanel.value = '';
+
+        // Show Modal
+        const modalEl = document.getElementById('modalInspectMachine');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+    },
+
+    renderAdaptiveForm(line, rec) {
+        const container = document.getElementById('adaptiveCriteriaContainer');
+        const labelPhoto1 = document.getElementById('labelPhoto1');
+        const labelPhoto2 = document.getElementById('labelPhoto2');
+        if (!container) return;
+
+        const result = this.currentInspectResult;
+
+        if (line === 'SPOT') {
+            if (labelPhoto1) labelPhoto1.textContent = 'รูปชิ้นงานเทสดึง';
+            if (labelPhoto2) labelPhoto2.textContent = 'รูปหน้าตู้คอนโทรล';
+
+            container.innerHTML = `
+            <label class="small text-muted fw-bold mb-1">ผลการทดสอบแรงดึง (Pull Test)</label>
+            <div class="result-toggle-group mb-3">
+                <button type="button" class="btn-result-choice choice-ok ${result === 'OK' ? 'active' : ''}" 
+                        id="modalBtnOk" onclick="IQS.setInspectResult('OK')">
+                    <i class="fas fa-check-circle"></i> ผ่าน (OK)
+                </button>
+                <button type="button" class="btn-result-choice choice-ng ${result === 'NG' ? 'active' : ''}" 
+                        id="modalBtnNg" onclick="IQS.setInspectResult('NG')">
+                    <i class="fas fa-times-circle"></i> ไม่ผ่าน (NG)
+                </button>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-ruler-horizontal me-1 text-primary"></i>เช็คเคาะ (mm)
+                    </label>
+                    <input type="number" step="0.01" class="form-control" id="inspectKnock" placeholder="0.00" value="${rec?.knock_check_val || ''}">
                 </div>
-
-                <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
-                    <span class="small text-muted" id="recordTimestamp_${m.machine_id}">
-                        ${rec ? `<i class="fas fa-check-circle text-success me-1"></i>${rec.recorded_at.substring(11, 16)} น.` : '<span class="text-secondary"><i class="far fa-circle me-1"></i>รอตรวจ</span>'}
-                    </span>
-                    <button class="btn btn-primary btn-sm px-3 fw-bold" onclick="IQS.saveMachineRecord(${m.machine_id})" 
-                            id="btnSave_${m.machine_id}" style="border-radius: 8px;">
-                        <i class="fas fa-save me-1"></i>บันทึก
-                    </button>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-ruler-combined me-1 text-info"></i>เช็คระยะ (mm)
+                    </label>
+                    <input type="number" step="0.01" class="form-control" id="inspectDistance" placeholder="0.00" value="${rec?.distance_check_val || ''}">
                 </div>
             </div>`;
-            container.innerHTML += html;
-        });
+        } else if (line === 'BEND') {
+            if (labelPhoto1) labelPhoto1.textContent = 'รูปชิ้นงานหลังดัด';
+            if (labelPhoto2) labelPhoto2.textContent = 'รูปหน้าตู้ / พารามิเตอร์';
 
-        // Update Counter Pills
-        document.getElementById('cntAll').textContent = cntAll;
-        document.getElementById('cntPending').textContent = cntPending;
-        document.getElementById('cntOk').textContent = cntOk;
-        document.getElementById('cntNg').textContent = cntNg;
-        document.getElementById('cntSkip').textContent = cntSkip;
+            container.innerHTML = `
+            <label class="small text-muted fw-bold mb-1">ผลการตรวจรอยพับและครีบ (Burr / Surface Check)</label>
+            <div class="result-toggle-group mb-3">
+                <button type="button" class="btn-result-choice choice-ok ${result === 'OK' ? 'active' : ''}" 
+                        id="modalBtnOk" onclick="IQS.setInspectResult('OK')">
+                    <i class="fas fa-check-circle"></i> ผ่านเกณฑ์ (OK)
+                </button>
+                <button type="button" class="btn-result-choice choice-ng ${result === 'NG' ? 'active' : ''}" 
+                        id="modalBtnNg" onclick="IQS.setInspectResult('NG')">
+                    <i class="fas fa-times-circle"></i> พบรอยพับแตก/ครีบคม (NG)
+                </button>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-drafting-compass me-1 text-primary"></i>มุมดัดที่วัดได้ Bending Angle (°)
+                    </label>
+                    <input type="number" step="0.1" class="form-control" id="inspectBendAngle" placeholder="เช่น 90.0" value="${rec?.custom_check_val_1 || ''}">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-ruler me-1 text-info"></i>ความยาวปีก Flange Length (mm)
+                    </label>
+                    <input type="number" step="0.01" class="form-control" id="inspectFlangeLen" placeholder="เช่น 25.40" value="${rec?.custom_check_val_2 || ''}">
+                </div>
+            </div>`;
+        } else if (line === 'PRESS') {
+            if (labelPhoto1) labelPhoto1.textContent = 'รูปชิ้นงานปั๊มขึ้นรูป';
+            if (labelPhoto2) labelPhoto2.textContent = 'รูปแม่พิมพ์ / หน้าตู้';
+
+            container.innerHTML = `
+            <label class="small text-muted fw-bold mb-1">ผลการตรวจชิ้นงานแรก (First Piece Stamping)</label>
+            <div class="result-toggle-group mb-3">
+                <button type="button" class="btn-result-choice choice-ok ${result === 'OK' ? 'active' : ''}" 
+                        id="modalBtnOk" onclick="IQS.setInspectResult('OK')">
+                    <i class="fas fa-check-circle"></i> ผ่านเกณฑ์ (OK)
+                </button>
+                <button type="button" class="btn-result-choice choice-ng ${result === 'NG' ? 'active' : ''}" 
+                        id="modalBtnNg" onclick="IQS.setInspectResult('NG')">
+                    <i class="fas fa-times-circle"></i> ชิ้นงานผิดรูป/มีรอยร้าว (NG)
+                </button>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-stamp me-1 text-primary"></i>รหัสแม่พิมพ์ (Die No.)
+                    </label>
+                    <input type="text" class="form-control" id="inspectDieNo" placeholder="เช่น DIE-B9-042" value="${rec?.custom_check_text || ''}">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fas fa-ruler-vertical me-1 text-info"></i>ความสูงของครีบ Burr Height (mm)
+                    </label>
+                    <input type="number" step="0.01" class="form-control" id="inspectBurrHeight" placeholder="เช่น 0.05" value="${rec?.custom_check_val_1 || ''}">
+                </div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small fw-bold text-muted mb-1">
+                    <i class="fas fa-search me-1 text-warning"></i>การแตกลายงา/รอยร้าว (Crack Check)
+                </label>
+                <select class="form-select" id="inspectCrackCheck">
+                    <option value="OK">ปกติ — ไม่พบรอยร้าว/แตกลายงา</option>
+                    <option value="NG" ${rec?.pull_result === 'NG' ? 'selected' : ''}>พบรอยร้าว / แตกบริเวณขอบดัด</option>
+                </select>
+            </div>`;
+        }
+    },
+
+    setInspectResult(choice) {
+        this.currentInspectResult = choice;
+        const btnOk = document.getElementById('modalBtnOk');
+        const btnNg = document.getElementById('modalBtnNg');
+        const ngBox = document.getElementById('inspectNgBox');
+
+        if (choice === 'OK') {
+            if (btnOk) btnOk.classList.add('active');
+            if (btnNg) btnNg.classList.remove('active');
+            if (ngBox) ngBox.style.display = 'none';
+        } else {
+            if (btnNg) btnNg.classList.add('active');
+            if (btnOk) btnOk.classList.remove('active');
+            if (ngBox) ngBox.style.display = 'block';
+        }
+    },
+
+    toggleInspectSkip(isSkipped) {
+        const skipBox = document.getElementById('inspectSkipBox');
+        const formBody = document.getElementById('inspectFormBody');
+
+        if (skipBox) skipBox.style.display = isSkipped ? 'block' : 'none';
+        if (formBody) formBody.style.display = isSkipped ? 'none' : 'block';
+    },
+
+    previewInspectPhoto(input, containerId) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const container = document.getElementById(containerId);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (container) {
+                container.innerHTML = `<img src="${e.target.result}" class="photo-preview-img mt-1">`;
+            }
+            input.parentElement.classList.add('has-file');
+        };
+        reader.readAsDataURL(file);
     },
 
     hasAttachment(rec, type) {
@@ -476,168 +619,17 @@ const IQS = {
         return `<img src="../../${att.file_path}" class="photo-preview-img mt-1" alt="Proof">`;
     },
 
-    selectResult(machineId, choice) {
-        const btnOk = document.getElementById(`btnOk_${machineId}`);
-        const btnNg = document.getElementById(`btnNg_${machineId}`);
-        const card = document.getElementById(`machineCard_${machineId}`);
-        const ngBox = document.getElementById(`ngBox_${machineId}`);
-
-        if (choice === 'OK') {
-            btnOk.classList.add('active');
-            btnNg.classList.remove('active');
-            card.classList.remove('state-ng');
-            card.classList.add('state-ok');
-            if (ngBox) ngBox.style.display = 'none';
-        } else {
-            btnNg.classList.add('active');
-            btnOk.classList.remove('active');
-            card.classList.remove('state-ok');
-            card.classList.add('state-ng');
-            if (ngBox) ngBox.style.display = 'block';
-        }
-    },
-
-    toggleSkipMachine(machineId) {
-        const sw = document.getElementById(`skipSwitch_${machineId}`);
-        const skipBox = document.getElementById(`skipBox_${machineId}`);
-        const testBox = document.getElementById(`testBox_${machineId}`);
-        const card = document.getElementById(`machineCard_${machineId}`);
-
-        if (sw.checked) {
-            skipBox.style.display = 'block';
-            testBox.style.display = 'none';
-            card.className = 'machine-card state-skip';
-        } else {
-            skipBox.style.display = 'none';
-            testBox.style.display = 'block';
-            card.className = 'machine-card';
-        }
-    },
-
-    previewPhoto(input, previewContainerId) {
-        if (!input.files || !input.files[0]) return;
-        const file = input.files[0];
-        const container = document.getElementById(previewContainerId);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            container.innerHTML = `<img src="${e.target.result}" class="photo-preview-img mt-1">`;
-            input.parentElement.classList.add('has-file');
-        };
-        reader.readAsDataURL(file);
-    },
-
-    async saveMachineRecord(machineId) {
-        if (!this.isOnline) {
-            Swal.fire('ออฟไลน์', 'ไม่สามารถบันทึกข้อมูลได้เนื่องจากไม่มีการเชื่อมต่อเครือข่าย', 'warning');
-            return;
-        }
-
-        const sw = document.getElementById(`skipSwitch_${machineId}`);
-        const isSkipped = sw.checked;
-        const btnOk = document.getElementById(`btnOk_${machineId}`);
-        const btnNg = document.getElementById(`btnNg_${machineId}`);
-        let pullResult = '';
-
-        if (!isSkipped) {
-            if (btnOk.classList.contains('active')) pullResult = 'OK';
-            else if (btnNg.classList.contains('active')) pullResult = 'NG';
-
-            if (!pullResult) {
-                Swal.fire('ระบุผลทดสอบ', 'กรุณากดเลือกผลการทดสอบแรงดึง (OK หรือ NG)', 'info');
-                return;
-            }
-        }
-
-        const formData = new FormData();
-        formData.append('action', 'save_record');
-        formData.append('csrf_token', this.csrfToken);
-        formData.append('round_id', this.activeRound.round_id);
-        formData.append('machine_id', machineId);
-        formData.append('is_skipped', isSkipped ? '1' : '0');
-        formData.append('skip_reason', document.getElementById(`skipReason_${machineId}`)?.value || '');
-
-        if (!isSkipped) {
-            formData.append('pull_result', pullResult);
-            formData.append('sku', document.getElementById(`sku_${machineId}`)?.value || '');
-            formData.append('po_no', document.getElementById(`po_${machineId}`)?.value || '');
-            formData.append('thickness', document.getElementById(`thickness_${machineId}`)?.value || '');
-            formData.append('knock_check_val', document.getElementById(`knock_${machineId}`)?.value || '');
-            formData.append('distance_check_val', document.getElementById(`distance_${machineId}`)?.value || '');
-            formData.append('ng_remark', document.getElementById(`ngRemark_${machineId}`)?.value || '');
-
-            const filePull = document.getElementById(`filePull_${machineId}`)?.files[0];
-            const filePanel = document.getElementById(`filePanel_${machineId}`)?.files[0];
-
-            if (filePull) formData.append('photo_pull', filePull);
-            if (filePanel) formData.append('photo_panel', filePanel);
-        }
-
-        const btnSave = document.getElementById(`btnSave_${machineId}`);
-        btnSave.disabled = true;
-        btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก...';
-
-        try {
-            const res = await fetch('api/iqs_api.php', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': this.csrfToken },
-                body: formData
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.message);
-
-            const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-            document.getElementById(`recordTimestamp_${machineId}`).innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>${now.substring(11, 16)} น.`;
-
-            // Update activeRecordsMap
-            this.activeRecordsMap[machineId] = {
-                pull_result: pullResult,
-                is_skipped: isSkipped,
-                recorded_at: now
-            };
-
-            const card = document.getElementById(`machineCard_${machineId}`);
-            if (card) {
-                const newStatus = isSkipped ? 'skip' : (pullChoice === 'OK' ? 'ok' : 'ng');
-                card.setAttribute('data-status', newStatus);
-            }
-
-            this.updateProgress();
-
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: json.message,
-                showConfirmButton: false,
-                timer: 2000
-            });
-        } catch (err) {
-            Swal.fire('ข้อผิดพลาด', err.message, 'error');
-        } finally {
-            btnSave.disabled = false;
-            btnSave.innerHTML = '<i class="fas fa-save me-1"></i>บันทึก';
-        }
-    },
-
-    updateProgress() {
-        if (!this.initialData?.machines) return;
-        const total = this.initialData.machines.length;
-        const recorded = Object.keys(this.activeRecordsMap).length;
-        const pct = total > 0 ? Math.round((recorded / total) * 100) : 0;
-
-        const fill = document.getElementById('progressFill');
-        const countTxt = document.getElementById('progressCount');
-        const dockTxt = document.getElementById('dockProgressText');
-
-        if (fill) fill.style.width = pct + '%';
-        if (countTxt) countTxt.textContent = `${recorded} / ${total} (${pct}%)`;
-        if (dockTxt) dockTxt.textContent = `ตรวจแล้ว ${recorded}/${total} เครื่อง (${pct}%)`;
-
-        this.renderDesktopRoster();
-    },
-
     bindUIEvents() {
-        // Template Selection Change
+        // Inspect Machine Form Submit
+        const formInspect = document.getElementById('formInspectMachine');
+        if (formInspect) {
+            formInspect.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.saveInspectRecord();
+            });
+        }
+
+        // Legacy/Manual Round Template Selection Change
         const templateSel = document.getElementById('newRoundTemplate');
         if (templateSel) {
             templateSel.addEventListener('change', (e) => {
@@ -672,20 +664,12 @@ const IQS = {
             });
         }
 
-        // Create Round Form
+        // Create Round Form (Legacy/Manual)
         const formRound = document.getElementById('formCreateRound');
         if (formRound) {
             formRound.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await this.createRound();
-            });
-        }
-
-        // Close Round Button
-        const btnSubmitRound = document.getElementById('btnSubmitRound');
-        if (btnSubmitRound) {
-            btnSubmitRound.addEventListener('click', async () => {
-                await this.submitRound();
             });
         }
 
@@ -697,6 +681,140 @@ const IQS = {
                 await this.loadHistory();
             });
         }
+    },
+
+    async saveInspectRecord() {
+        if (!this.isOnline) {
+            Swal.fire('ออฟไลน์', 'ไม่สามารถบันทึกข้อมูลได้เนื่องจากไม่มีการเชื่อมต่อเครือข่าย', 'warning');
+            return;
+        }
+
+        const machineId = document.getElementById('inspectMachineId').value;
+        const roundId = document.getElementById('inspectRoundId').value;
+        const line = document.getElementById('inspectLine').value || 'SPOT';
+        const isSkipped = document.getElementById('inspectIsSkipped')?.checked ? 1 : 0;
+        const skipReason = document.getElementById('inspectSkipReason')?.value.trim() || '';
+
+        const formData = new FormData();
+        formData.append('action', 'save_record');
+        formData.append('csrf_token', this.csrfToken);
+        formData.append('machine_id', machineId);
+        formData.append('round_id', roundId);
+        formData.append('is_skipped', isSkipped ? '1' : '0');
+        formData.append('skip_reason', skipReason);
+
+        if (!isSkipped) {
+            const pullResult = this.currentInspectResult;
+            formData.append('pull_result', pullResult);
+            formData.append('sku', document.getElementById('inspectSku')?.value.trim() || '');
+            formData.append('po_no', document.getElementById('inspectPoNo')?.value.trim() || '');
+            formData.append('thickness', document.getElementById('inspectThickness')?.value || '');
+            formData.append('ng_remark', document.getElementById('inspectNgRemark')?.value.trim() || '');
+
+            // Adaptive Line Parameters
+            if (line === 'SPOT') {
+                formData.append('knock_check_val', document.getElementById('inspectKnock')?.value || '');
+                formData.append('distance_check_val', document.getElementById('inspectDistance')?.value || '');
+            } else if (line === 'BEND') {
+                formData.append('custom_check_val_1', document.getElementById('inspectBendAngle')?.value || '');
+                formData.append('custom_check_val_2', document.getElementById('inspectFlangeLen')?.value || '');
+            } else if (line === 'PRESS') {
+                formData.append('custom_check_text', document.getElementById('inspectDieNo')?.value.trim() || '');
+                formData.append('custom_check_val_1', document.getElementById('inspectBurrHeight')?.value || '');
+                const crack = document.getElementById('inspectCrackCheck')?.value || 'OK';
+                if (crack === 'NG') formData.append('pull_result', 'NG');
+            }
+
+            // Photo Files
+            const filePull = document.getElementById('inspectPhotoPull')?.files[0];
+            const filePanel = document.getElementById('inspectPhotoPanel')?.files[0];
+            if (filePull) formData.append('photo_pull', filePull);
+            if (filePanel) formData.append('photo_panel', filePanel);
+        }
+
+        const btnSave = document.getElementById('btnSaveInspectRecord');
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก...';
+
+        try {
+            const res = await fetch('api/iqs_api.php', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': this.csrfToken },
+                body: formData
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+
+            // Update todayRecordsMap
+            this.todayRecordsMap[machineId] = json.data;
+
+            // Re-render Interactive Grid & Cockpit Status
+            this.renderInteractiveGrid();
+            this.renderCockpitStatus();
+
+            // Hide Modal
+            const modalEl = document.getElementById('modalInspectMachine');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: json.message,
+                showConfirmButton: false,
+                timer: 2200
+            });
+        } catch (err) {
+            Swal.fire('ข้อผิดพลาด', err.message, 'error');
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="fas fa-check-circle me-1"></i>บันทึกผลการตรวจสอบ';
+        }
+    },
+
+    openCurrentAuditSheet() {
+        // Find latest round conducted today or alert
+        const recList = Object.values(this.todayRecordsMap);
+        if (recList.length > 0 && recList[0].round_id) {
+            window.open(`print_iqs.php?round_id=${recList[0].round_id}`, '_blank');
+        } else {
+            Swal.fire('ยังไม่มีผลตรวจ', 'กรุณากดตรวจเครื่องจักรอย่างน้อย 1 เครื่อง เพื่อออกใบรายงานออดิท', 'info');
+        }
+    },
+
+    renderTemplateOptions() {
+        const sel = document.getElementById('newRoundTemplate');
+        if (!sel || !this.slotStatuses) return;
+        sel.innerHTML = '<option value="">-- เลือกรอบเวลามาตรฐาน (หรือระบุเอง) --</option>';
+        this.slotStatuses.forEach(t => {
+            let tag = '';
+            if (t.status === 'COMPLETED') tag = ' [ตรวจแล้ว]';
+            else if (t.status === 'IN_PROGRESS') tag = ' [กำลังตรวจ]';
+            else if (t.status === 'DUE_NOW') tag = ' [★ ถึงเวลาตรวจ]';
+            else if (t.status === 'MISSED') tag = ' [! ขาดการตรวจ/เลยเวลา]';
+
+            sel.innerHTML += `<option value="${t.template_id}" data-name="${t.template_name}" data-shift="${t.shift}" data-status="${t.status}">
+                ${t.template_name} (${t.std_time}) - กะ ${t.shift}${tag}
+            </option>`;
+        });
+    },
+
+    renderCoTesterOptions() {
+        const u1 = document.getElementById('coTester1');
+        const u2 = document.getElementById('coTester2');
+        if (!this.initialData?.users) return;
+
+        let options = '<option value="">-- ไม่มี --</option>';
+        this.initialData.users.forEach(u => {
+            if (u.id !== this.initialData.current_user?.id) {
+                options += `<option value="${u.id}">${u.fullname} (${u.role || u.username})</option>`;
+            }
+        });
+        if (u1) u1.innerHTML = options;
+        if (u2) u2.innerHTML = options;
     },
 
     async createRound() {
@@ -741,58 +859,9 @@ const IQS = {
             if (modal) modal.hide();
 
             Swal.fire('สำเร็จ', json.message, 'success');
-            await this.loadActiveRound();
+            await this.loadInitialData();
         } catch (err) {
             Swal.fire('ไม่สามารถเปิดรอบได้', err.message, 'error');
-        } finally {
-            this.showLoading(false);
-        }
-    },
-
-    async submitRound() {
-        if (!this.activeRound) return;
-
-        const total = this.initialData?.machines?.length || 0;
-        const recorded = Object.keys(this.activeRecordsMap).length;
-
-        let warningExtra = '';
-        if (recorded < total) {
-            warningExtra = `<br><span class="text-warning">คำเตือน: ยังมีเครื่องที่ยังไม่ได้บันทึกผลอีก ${total - recorded} เครื่อง</span>`;
-        }
-
-        const confirm = await Swal.fire({
-            title: 'ยืนยันปิดรอบการทดสอบ?',
-            html: `คุณกำลังจะปิดรอบ <strong>${this.activeRound.round_number}</strong><br>เมื่อปิดแล้วจะไม่สามารถแก้ไขผลทดสอบย้อนหลังได้${warningExtra}`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#059669',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'ยืนยันปิดรอบ',
-            cancelButtonText: 'ยกเลิก'
-        });
-
-        if (!confirm.isConfirmed) return;
-
-        const formData = new FormData();
-        formData.append('action', 'submit_round');
-        formData.append('csrf_token', this.csrfToken);
-        formData.append('round_id', this.activeRound.round_id);
-
-        try {
-            this.showLoading(true);
-            const res = await fetch('api/iqs_api.php', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': this.csrfToken },
-                body: formData
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.message);
-
-            await Swal.fire('สำเร็จ', json.message, 'success');
-            // Redirect to printable report
-            window.location.href = `print_iqs.php?round_id=${this.activeRound.round_id}`;
-        } catch (err) {
-            Swal.fire('ข้อผิดพลาด', err.message, 'error');
         } finally {
             this.showLoading(false);
         }

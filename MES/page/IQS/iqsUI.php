@@ -53,179 +53,110 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                 <div class="tab-content" id="iqsTabContent">
 
                     <!-- ========================================== -->
-                    <!-- TAB 1: ACTIVE INSPECTION ROUND             -->
+                    <!-- TAB 1: INTERACTIVE MACHINE INSPECTION COCKPIT -->
                     <!-- ========================================== -->
                     <div class="tab-pane fade show active" id="tab-active" role="tabpanel">
 
-                        <!-- Enhanced Empty State / Ready to Start Dual Column on PC -->
-                        <div id="noRoundSection" style="display:none;">
+                        <!-- Audit Missed Slot Notification Banner (Shown if any slot was missed) -->
+                        <div id="auditMissedAlertBanner" class="mb-3" style="display: none;"></div>
 
-                            <!-- Audit Missed Slot Notification Banner (Shown if any slot was missed) -->
-                            <div id="auditMissedAlertBanner" class="mb-3" style="display: none;"></div>
+                        <!-- Top Cockpit Control Strip -->
+                        <div class="cockpit-header-strip mb-3">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <div class="cockpit-slot-pill" id="cockpitSlotPill">
+                                        <span class="slot-live-dot"></span>
+                                        <span id="cockpitSlotText">กำลังตรวจรอบปัจจุบัน (Auto-Round)</span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalScheduleTimeline" title="ดูตารางรอบเวลา 7 รอบประจำวัน">
+                                        <i class="fas fa-calendar-alt me-1 text-primary"></i>ตารางรอบมาตรฐาน
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="text-end d-none d-sm-block">
+                                        <div class="small text-muted fw-bold">ความคืบหน้าการตรวจประจำวัน</div>
+                                        <strong class="text-primary" id="cockpitProgressText">0 / 0 เครื่อง (0%)</strong>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" id="btnQuickAuditSheet" onclick="IQS.openCurrentAuditSheet()" title="เปิดใบสรุปผลการตรวจสำหรับออดิท">
+                                        <i class="fas fa-print me-1"></i>ใบตรวจออดิท
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-                            <div class="row g-3 g-md-4 align-items-stretch mx-0">
-                                <!-- Left Column: Start Round Hero & Standard Daily Timeline -->
-                                <div class="col-lg-6 col-xl-5 px-0 px-md-2">
-                                    <div class="iqs-empty-hero h-100 mb-0">
-                                        <div class="iqs-pulse-pill">
-                                            <span class="iqs-pulse-dot"></span>
-                                            <span>พร้อมเริ่มรอบการทดสอบ</span>
-                                        </div>
-                                        <div class="iqs-glow-icon-wrap">
-                                            <i class="fas fa-clipboard-check"></i>
-                                        </div>
-                                        <h4 class="fw-bold mb-2 text-body">เปิดรอบการทดสอบแรงดึง</h4>
-                                        <p class="text-muted small mb-3">
-                                            ระบบบันทึกผลการทดสอบแรงดึง พารามิเตอร์ และรูปถ่ายชิ้นงาน<br class="d-none d-sm-inline">
-                                            แบบเรียลไทม์เพื่อรองรับการตรวจ Audit ตามมาตรฐาน
-                                        </p>
+                        <!-- Line Selector Tabs (Segmented Control for SPOT, BEND, PRESS) -->
+                        <div class="line-selector-bar mb-3">
+                            <div class="line-tabs-wrapper">
+                                <button type="button" class="line-tab-btn active" data-line="SPOT" onclick="IQS.switchLine('SPOT', this)">
+                                    <i class="fas fa-bolt me-1 text-warning"></i>
+                                    <span>Spot Welding</span>
+                                    <span class="line-count-badge" id="countBadgeSpot">39</span>
+                                </button>
+                                <button type="button" class="line-tab-btn" data-line="BEND" onclick="IQS.switchLine('BEND', this)">
+                                    <i class="fas fa-ruler-combined me-1 text-info"></i>
+                                    <span>Bending</span>
+                                    <span class="line-count-badge" id="countBadgeBend">22</span>
+                                </button>
+                                <button type="button" class="line-tab-btn" data-line="PRESS" onclick="IQS.switchLine('PRESS', this)">
+                                    <i class="fas fa-industry me-1 text-primary"></i>
+                                    <span>Press Stamping</span>
+                                    <span class="line-count-badge" id="countBadgePress">20</span>
+                                </button>
+                            </div>
+                        </div>
 
-                                        <button class="btn-iqs-primary-lg mb-4" data-bs-toggle="modal" data-bs-target="#modalStartRound">
-                                            <i class="fas fa-play-circle fa-lg"></i>
-                                            <span>เปิดรอบการทดสอบใหม่ (Start Round)</span>
-                                        </button>
-
-                                        <!-- Daily Standard Timeline Schedule Card -->
-                                        <div class="schedule-timeline-card text-start">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="small fw-bold text-muted">
-                                                    <i class="fas fa-clock me-1 text-primary"></i>รอบเวลามาตรฐานประจำวัน (7 รอบ)
-                                                </span>
-                                                <span class="badge bg-primary-subtle text-primary" style="font-size: 0.72rem;">มาตรฐานโรงงาน</span>
-                                            </div>
-                                            <div class="schedule-timeline-grid" id="scheduleTimelineGrid">
-                                                <div class="text-center text-muted small py-3 col-12">กำลังโหลดตารางรอบเวลา...</div>
-                                            </div>
-                                        </div>
+                        <!-- Filter Chips & Search Toolbar -->
+                        <div class="iqs-toolbar-card mb-3">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-5 col-12">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-transparent border-end-0 text-muted">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control border-start-0 ps-0" id="machineSearchInput" 
+                                               placeholder="ค้นหารหัสเครื่องจักร (เช่น ROB, 35K, BEND, PRESS)..." 
+                                               oninput="IQS.filterMachinesBySearch(this.value)">
                                     </div>
                                 </div>
-
-                                <!-- Right Column: Spot Welding Equipment Roster & Phase 2 Digital Twin Preview -->
-                                <div class="col-lg-6 col-xl-7 px-0 px-md-2">
-                                    <div class="card border-0 shadow-sm h-100 p-3 p-md-4" style="border-radius: 20px; background: var(--iqs-card-bg);">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                                            <div style="flex: 1; min-width: 200px;">
-                                                <h5 class="fw-bold mb-0 text-body">
-                                                    <i class="fas fa-microchip me-2 text-primary"></i>เครื่องจักรในสายการผลิต Spot Welding
-                                                </h5>
-                                                <small class="text-muted">ระบบตรวจสอบความพร้อมของเครื่องจักรที่เชื่อมโยงกับ PE_MACHINES</small>
-                                            </div>
-                                            <span class="badge bg-success-subtle text-success px-3 py-2 fw-bold" style="border-radius: 10px; white-space: nowrap;">
-                                                <i class="fas fa-check-circle me-1"></i>พร้อมตรวจ 39 เครื่อง
-                                            </span>
-                                        </div>
-
-                                        <!-- Summary Stat Pills -->
-                                        <div class="d-flex flex-wrap gap-2 mb-3">
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
-                                                <i class="fas fa-robot me-1"></i>Robot Spot: <strong>5 เครื่อง</strong>
-                                            </span>
-                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
-                                                <i class="fas fa-bolt me-1"></i>Manual Spot: <strong>34 เครื่อง</strong>
-                                            </span>
-                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2">
-                                                <i class="fas fa-map-marker-alt me-1"></i>พื้นที่: <strong>Zone B9</strong>
-                                            </span>
-                                        </div>
-
-                                        <!-- Machine Grid Container (Populated by JS) -->
-                                        <div class="desktop-roster-grid mb-3" id="desktopMachineRoster">
-                                            <div class="text-center text-muted py-4 small">กำลังโหลดรายการเครื่องจักร...</div>
-                                        </div>
-
-                                        <!-- Phase 2 Floor Map Teaser Banner -->
-                                        <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 p-3 mb-0 mt-auto">
-                                            <div class="d-flex align-items-center gap-3">
-                                                <div class="bg-primary text-white p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px;">
-                                                    <i class="fas fa-map-marked-alt fa-lg"></i>
-                                                </div>
-                                                <div>
-                                                    <strong class="text-primary d-block small">Phase 2: Digital Twin & Interactive Floor Map</strong>
-                                                    <span class="text-muted small" style="font-size: 0.78rem;">
-                                                        ระบบจะแสดงพิกัดเครื่องจักรบนผังโรงงานจำลองแบบเรียลไทม์ พร้อมสีแสดงสถานะการตรวจรอบ และระบบสแกน QR Code ประจำเครื่อง
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <div class="col-md-7 col-12">
+                                    <div class="iqs-filter-group mb-0 justify-content-md-end" id="filterGroup">
+                                        <button type="button" class="iqs-filter-chip active" data-filter="all" onclick="IQS.filterByStatus('all', this)">
+                                            ทั้งหมด (<span id="cntAll">0</span>)
+                                        </button>
+                                        <button type="button" class="iqs-filter-chip" data-filter="pending" onclick="IQS.filterByStatus('pending', this)">
+                                            <i class="fas fa-hourglass-half text-warning"></i> รอตรวจ (<span id="cntPending">0</span>)
+                                        </button>
+                                        <button type="button" class="iqs-filter-chip" data-filter="ok" onclick="IQS.filterByStatus('ok', this)">
+                                            <i class="fas fa-check-circle text-success"></i> ผ่าน OK (<span id="cntOk">0</span>)
+                                        </button>
+                                        <button type="button" class="iqs-filter-chip" data-filter="ng" onclick="IQS.filterByStatus('ng', this)">
+                                            <i class="fas fa-times-circle text-danger"></i> ไม่ผ่าน NG (<span id="cntNg">0</span>)
+                                        </button>
+                                        <button type="button" class="iqs-filter-chip" data-filter="skip" onclick="IQS.filterByStatus('skip', this)">
+                                            <i class="fas fa-forward text-secondary"></i> ข้าม (<span id="cntSkip">0</span>)
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Active Round State -->
-                        <div id="activeRoundSection" style="display:none;">
-
-                            <!-- Hero Info Card -->
-                            <div class="round-hero-card">
-                                <div class="row align-items-center">
-                                    <div class="col-md-7">
-                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                                <i class="fas fa-dot-circle me-1"></i>กำลังดำเนินการ (OPEN)
-                                            </span>
-                                            <span class="hero-meta-badge" id="dispRoundNumber">-</span>
-                                            <span class="hero-meta-badge">
-                                                <i class="fas fa-sun text-warning me-1"></i>กะ <strong id="dispShift">-</strong>
-                                            </span>
-                                        </div>
-                                        <h3 class="fw-bold mb-1 text-body" id="dispRoundName">-</h3>
-                                        <div class="text-muted small mt-1 d-flex flex-wrap gap-3">
-                                            <span><i class="fas fa-clock text-info me-1"></i>เริ่ม: <span id="dispStartedAt">-</span></span>
-                                            <span><i class="fas fa-users text-primary me-1"></i>ผู้ทดสอบ: <strong id="dispTesters">-</strong></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-5 mt-3 mt-md-0 text-md-end">
-                                        <div class="d-flex justify-content-between justify-content-md-end align-items-baseline gap-2 mb-1">
-                                            <span class="small text-muted fw-bold">ความคืบหน้าการตรวจ</span>
-                                            <h4 class="fw-bold text-primary mb-0" id="progressCount">0 / 0</h4>
-                                        </div>
-                                        <div class="progress-track">
-                                            <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
-                                        </div>
-                                    </div>
-                                </div>
+                        <!-- Interactive Machine Grid -->
+                        <div class="interactive-machine-grid mb-4" id="interactiveMachineGrid">
+                            <div class="text-center text-muted py-5 col-12">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                กำลังโหลดข้อมูลเครื่องจักร...
                             </div>
+                        </div>
 
-                            <!-- Quick Filter Chips -->
-                            <div class="iqs-filter-group" id="filterGroup">
-                                <button type="button" class="iqs-filter-chip active" data-filter="all" onclick="IQS.filterMachines('all', this)">
-                                    <i class="fas fa-layer-group"></i> ทั้งหมด (<span id="cntAll">0</span>)
-                                </button>
-                                <button type="button" class="iqs-filter-chip" data-filter="pending" onclick="IQS.filterMachines('pending', this)">
-                                    <i class="fas fa-hourglass-half text-warning"></i> ยังไม่ตรวจ (<span id="cntPending">0</span>)
-                                </button>
-                                <button type="button" class="iqs-filter-chip" data-filter="ok" onclick="IQS.filterMachines('ok', this)">
-                                    <i class="fas fa-check-circle text-success"></i> ผ่าน OK (<span id="cntOk">0</span>)
-                                </button>
-                                <button type="button" class="iqs-filter-chip" data-filter="ng" onclick="IQS.filterMachines('ng', this)">
-                                    <i class="fas fa-times-circle text-danger"></i> ไม่ผ่าน NG (<span id="cntNg">0</span>)
-                                </button>
-                                <button type="button" class="iqs-filter-chip" data-filter="skip" onclick="IQS.filterMachines('skip', this)">
-                                    <i class="fas fa-forward text-secondary"></i> ข้าม (<span id="cntSkip">0</span>)
-                                </button>
+                        <!-- Discreet Phase 2 Floor Map Notice -->
+                        <div class="floor-map-subtle-hint p-3 rounded-4 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-map-marked-alt text-primary fa-lg"></i>
+                                <span class="small text-muted">
+                                    <strong>Phase 2 Ready:</strong> ผังจำลองโรงงานดิจิทัล (Digital Twin) และระบบสแกน QR Code ประจำเครื่องกำลังเชื่อมโยงข้อมูลพิกัด
+                                </span>
                             </div>
-
-                            <!-- Machine Checklist Cards Grid -->
-                            <div class="machine-grid" id="machineCardsGrid">
-                                <!-- Populated dynamically by IQS.renderMachineCards() -->
-                            </div>
-
-                            <!-- Bottom Floating Action Bar -->
-                            <div class="bottom-submit-bar" id="bottomSubmitBar" style="display:none;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="badge bg-primary-subtle text-primary p-2 rounded-circle d-none d-sm-block">
-                                        <i class="fas fa-tasks fa-lg"></i>
-                                    </div>
-                                    <div>
-                                        <strong class="text-body d-block small" id="dockProgressText">ตรวจแล้ว 0/0 เครื่อง</strong>
-                                        <span class="text-muted" style="font-size: 0.72rem;">พร้อมปิดรอบเพื่อบันทึกประวัติออดิท</span>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-submit-round" id="btnSubmitRound">
-                                    <i class="fas fa-check-double me-1"></i> ปิดรอบการทดสอบ
-                                </button>
-                            </div>
-
+                            <span class="badge bg-primary-subtle text-primary" style="font-size: 0.72rem;">Zone B9 Live</span>
                         </div>
 
                     </div>
@@ -300,7 +231,164 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
         </div>
     </div>
 
-    <!-- Modal: Start Round -->
+    <!-- Modal: Line-Adaptive Machine Inspection -->
+    <div class="modal fade" id="modalInspectMachine" tabindex="-1" aria-labelledby="modalInspectMachineLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+                <div class="modal-header bg-primary text-white py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="modal-machine-icon-box bg-white bg-opacity-20 text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="fas fa-microchip fa-lg" id="modalLineIcon"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold mb-0 text-white" id="modalInspectMachineLabel">ROB-SPOT-001</h5>
+                                <span class="badge bg-white text-primary fw-bold" id="modalLineBadge" style="font-size: 0.72rem;">SPOT</span>
+                                <span class="badge bg-white bg-opacity-25 text-white" id="modalAreaBadge" style="font-size: 0.72rem;">Zone B9</span>
+                            </div>
+                            <span class="small text-white-50" id="modalMachineSubtext">Robot Spot Welding</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <form id="formInspectMachine">
+                    <input type="hidden" id="inspectMachineId" value="">
+                    <input type="hidden" id="inspectRoundId" value="">
+                    <input type="hidden" id="inspectLine" value="SPOT">
+
+                    <div class="modal-body p-4">
+
+                        <!-- Round & Auto-Slot Info Banner -->
+                        <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 py-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-history text-primary"></i>
+                                <span class="small text-body">
+                                    รอบเวลา: <strong class="text-primary" id="modalSlotTitle">รอบเช้า (08:30)</strong>
+                                </span>
+                            </div>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                                <i class="fas fa-magic me-1"></i>ระบบผูกรอบอัตโนมัติ (Auto-Round)
+                            </span>
+                        </div>
+
+                        <!-- Skip Switch Option -->
+                        <div class="card p-3 mb-3 border-0 bg-light rounded-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="text-body d-block small">ข้ามการตรวจเครื่องจักรนี้ในรอบนี้ (Skip)</strong>
+                                    <span class="text-muted" style="font-size: 0.75rem;">กรณีไม่มีคำสั่งผลิต / เครื่องหยุดซ่อมบำรุง</span>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="inspectIsSkipped" onchange="IQS.toggleInspectSkip(this.checked)">
+                                </div>
+                            </div>
+                            <div id="inspectSkipBox" class="mt-2" style="display: none;">
+                                <label class="form-label small text-muted fw-bold mb-1">เหตุผลที่ข้ามเครื่องจักร:</label>
+                                <input type="text" class="form-control form-control-sm" id="inspectSkipReason" placeholder="เช่น ไม่มีคำสั่งผลิต / กำลังซ่อมบำรุง">
+                            </div>
+                        </div>
+
+                        <!-- Inspection Form Content (Hidden if Skipped) -->
+                        <div id="inspectFormBody">
+
+                            <!-- Model / SKU / PO / Thickness Header Row -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4 col-12">
+                                    <label class="form-label small fw-bold text-muted mb-1">โมเดลชิ้นงาน (SKU)</label>
+                                    <input type="text" class="form-control" id="inspectSku" placeholder="เช่น 56 TC" required>
+                                </div>
+                                <div class="col-md-4 col-6">
+                                    <label class="form-label small fw-bold text-muted mb-1">เลขที่คำสั่งซื้อ (PO No.)</label>
+                                    <input type="text" class="form-control" id="inspectPoNo" placeholder="PO Number">
+                                </div>
+                                <div class="col-md-4 col-6">
+                                    <label class="form-label small fw-bold text-muted mb-1">ความหนาชิ้นงาน T (mm)</label>
+                                    <input type="number" step="0.01" class="form-control" id="inspectThickness" placeholder="1.20" value="1.20">
+                                </div>
+                            </div>
+
+                            <!-- Adaptive Criteria Section (Dynamically injected per Line: SPOT, BEND, PRESS) -->
+                            <div id="adaptiveCriteriaContainer" class="mb-3">
+                                <!-- Populated dynamically by IQS.renderAdaptiveForm() -->
+                            </div>
+
+                            <!-- NG Remark Field (Shown when NG is selected) -->
+                            <div id="inspectNgBox" class="mb-3" style="display: none;">
+                                <div class="alert alert-danger p-3 border-danger-subtle rounded-3 mb-0">
+                                    <label class="form-label small text-danger fw-bold mb-1">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>ระบุสาเหตุ / อาการที่ไม่ผ่านเกณฑ์ (NG Remark):
+                                    </label>
+                                    <input type="text" class="form-control border-danger" id="inspectNgRemark" placeholder="ระบุอาการชิ้นงานหลุด / องศาพับเอียง / ครีบเกินเกณฑ์">
+                                </div>
+                            </div>
+
+                            <!-- Photo Proofs Section -->
+                            <div class="card p-3 border-0 bg-light rounded-3 mb-2">
+                                <label class="form-label small fw-bold text-muted mb-2">
+                                    <i class="fas fa-camera text-primary me-1"></i>หลักฐานรูปถ่ายประกอบการตรวจสอบ (ตามมาตรฐาน Audit)
+                                </label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="photo-upload-tile" id="tilePullPhoto" onclick="document.getElementById('inspectPhotoPull').click()">
+                                            <i class="fas fa-camera fa-lg text-primary mb-1"></i>
+                                            <span class="photo-tile-label" id="labelPhoto1">รูปชิ้นงานทดสอบ</span>
+                                            <input type="file" id="inspectPhotoPull" accept="image/*" capture="environment" style="display:none;" onchange="IQS.previewInspectPhoto(this, 'previewInspectPull')">
+                                            <div id="previewInspectPull" class="mt-1"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="photo-upload-tile" id="tilePanelPhoto" onclick="document.getElementById('inspectPhotoPanel').click()">
+                                            <i class="fas fa-sliders-h fa-lg text-info mb-1"></i>
+                                            <span class="photo-tile-label" id="labelPhoto2">รูปหน้าตู้ / พารามิเตอร์</span>
+                                            <input type="file" id="inspectPhotoPanel" accept="image/*" capture="environment" style="display:none;" onchange="IQS.previewInspectPhoto(this, 'previewInspectPanel')">
+                                            <div id="previewInspectPanel" class="mt-1"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold" id="btnSaveInspectRecord">
+                            <i class="fas fa-check-circle me-1"></i>บันทึกผลการตรวจสอบ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Daily Standard 7-Slots Timeline Schedule -->
+    <div class="modal fade" id="modalScheduleTimeline" tabindex="-1" aria-labelledby="modalScheduleTimelineLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow" style="border-radius: 20px; overflow: hidden;">
+                <div class="modal-header bg-light py-3 px-4">
+                    <h5 class="modal-title fw-bold mb-0 text-body" id="modalScheduleTimelineLabel">
+                        <i class="fas fa-clock text-primary me-2"></i>ตารางรอบเวลามาตรฐานประจำวัน (7 รอบ)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">
+                        ระบบจัดเวลาการตรวจสอบคุณภาพตามช่วงเวลามาตรฐานของโรงงาน พร้อมตรวจจับรอบที่ขาด (Missed Slots) อัตโนมัติ
+                    </p>
+                    <div class="schedule-timeline-grid" id="scheduleTimelineGrid">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">ปิด</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Start Round (Legacy/Manual Option) -->
     <div class="modal fade" id="modalStartRound" tabindex="-1" aria-labelledby="modalStartRoundLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow" style="border-radius: 20px; overflow: hidden;">

@@ -4,6 +4,24 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-10-24 — IQS Multi-Line Expansion (SPOT, BEND, PRESS) & Adaptive Criteria
+
+**Agent:** Antigravity  
+**Feature:** ขยายสถาปัตยกรรมระบบ IQS เพื่อรองรับการตรวจเครื่องจักรแบบ Machine-First ครอบคลุมสายการผลิต SPOT, BEND, และ PRESS พร้อมระบบผูกรอบเวลาอัตโนมัติ (Auto-Round)
+
+### Schema Alterations
+
+#### 1. `dbo.IQS_ROUNDS`
+- เพิ่มคอลัมน์ `line VARCHAR(30) NOT NULL DEFAULT 'SPOT'` เพื่อระบุสายการผลิตประจำรอบการทดสอบ (`SPOT`, `BEND`, `PRESS`)
+
+#### 2. `dbo.IQS_TEST_RECORDS`
+- เพิ่มคอลัมน์รองรับเกณฑ์การตรวจสอบเฉพาะของไลน์ BEND และ PRESS:
+  - `custom_check_val_1 DECIMAL(10,3) NULL` (องศาพับ Bending Angle / ความสูงเสี้ยน Burr Height)
+  - `custom_check_val_2 DECIMAL(10,3) NULL` (ความยาวปีกพับ Flange Length)
+  - `custom_check_text NVARCHAR(100) NULL` (หมายเลขแม่พิมพ์ Die No. / Tooling Code)
+
+---
+
 ## 2026-10-24 — Industry 4.0 Skills in SKILL_DEFINITIONS
 
 **Agent:** Antigravity  

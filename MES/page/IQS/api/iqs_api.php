@@ -182,11 +182,106 @@ function computeSlotStatuses(PDO $pdo, array $templates): array {
     ];
 }
 
+// Helper function: Find active OPEN round or auto-create a standard round for the machine's line
+function getOrAutoCreateRound(PDO $pdo, string $line, int $userId, string $userFullname): int {
+    $curDate = date('Y-m-d');
+    $curTime = date('H:i');
+    list($curH, $curM) = explode(':', $curTime);
+    $curMins = (int)$curH * 60 + (int)$curM;
+
+    // Check if there is already an active OPEN round for today in this line
+    $stmtOpen = $pdo->prepare("
+        SELECT TOP 1 round_id 
+        FROM dbo.IQS_ROUNDS 
+        WHERE plan_date = :cur_date AND line = :line AND status = 'OPEN'
+        ORDER BY round_id DESC
+    ");
+    $stmtOpen->execute([':cur_date' => $curDate, ':line' => $line]);
+    $openRoundId = $stmtOpen->fetchColumn();
+
+    if ($openRoundId) {
+        return (int)$openRoundId;
+    }
+
+    // If none is OPEN, find matching template by closest time slot
+    $stmtTpl = $pdo->query("
+        SELECT template_id, template_code, template_name, CONVERT(varchar(5), std_time, 108) AS std_time, shift 
+        FROM dbo.IQS_ROUND_TEMPLATES 
+        WHERE is_active = 1 
+        ORDER BY sort_order ASC
+    ");
+    $templates = $stmtTpl->fetchAll(PDO::FETCH_ASSOC);
+
+    $matchedTemplate = null;
+    $closestDiff = 999999;
+    foreach ($templates as $tpl) {
+        list($th, $tm) = explode(':', $tpl['std_time']);
+        $tMins = (int)$th * 60 + (int)$tm;
+        $diff = abs($curMins - $tMins);
+        if ($diff < $closestDiff) {
+            $closestDiff = $diff;
+            $matchedTemplate = $tpl;
+        }
+    }
+
+    if (!$matchedTemplate) {
+        $matchedTemplate = [
+            'template_id' => 1,
+            'template_name' => 'รอบเช้า (08:30)',
+            'shift' => 'Day'
+        ];
+    }
+
+    // Determine sequence number for today
+    $stmtSeq = $pdo->prepare("SELECT COUNT(*) FROM dbo.IQS_ROUNDS WHERE plan_date = :cur_date AND line = :line");
+    $stmtSeq->execute([':cur_date' => $curDate, ':line' => $line]);
+    $seq = ((int)$stmtSeq->fetchColumn()) + 1;
+
+    $roundNumber = sprintf('IQS-%s-%s-%02d', date('Ymd'), strtoupper($line), $seq);
+    $roundName = sprintf('%s - %s', $matchedTemplate['template_name'], strtoupper($line));
+
+    $insStmt = $pdo->prepare("
+        INSERT INTO dbo.IQS_ROUNDS (
+            round_number, plan_date, template_id, round_name, line, shift,
+            primary_tester_id, status, started_at
+        ) VALUES (
+            :round_number, :plan_date, :template_id, :round_name, :line, :shift,
+            :primary_tester_id, 'OPEN', GETDATE()
+        )
+    ");
+    $insStmt->execute([
+        ':round_number' => $roundNumber,
+        ':plan_date' => $curDate,
+        ':template_id' => $matchedTemplate['template_id'],
+        ':round_name' => $roundName,
+        ':line' => $line,
+        ':shift' => $matchedTemplate['shift'],
+        ':primary_tester_id' => $userId
+    ]);
+
+    $newRoundId = (int)$pdo->lastInsertId();
+
+    // Audit log
+    $auditStmt = $pdo->prepare("
+        INSERT INTO dbo.IQS_AUDIT_LOGS (round_id, action_type, user_id, user_fullname, new_data, ip_address)
+        VALUES (:round_id, 'AUTO_CREATE_ROUND', :user_id, :user_fullname, :new_data, :ip)
+    ");
+    $auditStmt->execute([
+        ':round_id' => $newRoundId,
+        ':user_id' => $userId,
+        ':user_fullname' => $userFullname,
+        ':new_data' => json_encode(['round_number' => $roundNumber, 'line' => $line, 'auto_created' => true], JSON_UNESCAPED_UNICODE),
+        ':ip' => $_SERVER['REMOTE_ADDR'] ?? ''
+    ]);
+
+    return $newRoundId;
+}
+
 try {
     switch ($action) {
 
         // -------------------------------------------------------------
-        // 1. GET INITIAL DATA (Templates, Spot Machines, Active Users)
+        // 1. GET INITIAL DATA (Templates, Multi-Line Machines, Today's Records)
         // -------------------------------------------------------------
         case 'get_initial_data':
             // 1.1 Round templates
@@ -202,17 +297,68 @@ try {
             // Compute live slot compliance & missed round checks
             $slotData = computeSlotStatuses($pdo, $templates);
 
-            // 1.2 Spot welding machines (from PE_MACHINES)
+            // 1.2 Multi-line machines (SPOT, BEND, PRESS from PE_MACHINES)
             $stmtMachines = $pdo->query("
-                SELECT machine_id, machine_code, machine_name, line, area, machine_type,
+                SELECT machine_id, machine_code, machine_name, 
+                       CASE 
+                           WHEN line = 'BEND' OR machine_type LIKE '%Bend%' OR machine_name LIKE '%Bend%' THEN 'BEND'
+                           WHEN line = 'PRESS' OR machine_type LIKE '%Press%' OR machine_name LIKE '%Press%' THEN 'PRESS'
+                           ELSE 'SPOT'
+                       END AS line_group,
+                       line, area, machine_type,
                        ISNULL(map_x, 0) AS map_x, ISNULL(map_y, 0) AS map_y
                 FROM dbo.PE_MACHINES
-                WHERE is_active = 1 AND (line = 'SPOT' OR machine_type LIKE '%Spot%' OR machine_name LIKE '%Spot%')
+                WHERE is_active = 1 AND (line IN ('SPOT', 'BEND', 'PRESS') OR machine_type LIKE '%Spot%' OR machine_name LIKE '%Spot%')
                 ORDER BY machine_code ASC
             ");
             $machines = $stmtMachines->fetchAll(PDO::FETCH_ASSOC);
 
-            // 1.3 Active Users for co-testers
+            // 1.3 Today's records for all machines (so machine cards show live status immediately)
+            $curDate = date('Y-m-d');
+            $stmtTodayRecs = $pdo->prepare("
+                SELECT rec.record_id, rec.round_id, rec.machine_id, rec.machine_code,
+                       rec.sku, rec.po_no, rec.thickness, rec.pull_result,
+                       rec.knock_check_val, rec.distance_check_val,
+                       rec.custom_check_val_1, rec.custom_check_val_2, rec.custom_check_text,
+                       CONVERT(varchar(19), rec.recorded_at, 120) AS recorded_at,
+                       rec.is_skipped, rec.skip_reason, rec.ng_status, rec.ng_remark,
+                       r.round_number, r.round_name, r.line AS round_line
+                FROM dbo.IQS_TEST_RECORDS rec
+                JOIN dbo.IQS_ROUNDS r ON rec.round_id = r.round_id
+                WHERE r.plan_date = :cur_date
+                ORDER BY rec.recorded_at DESC
+            ");
+            $stmtTodayRecs->execute([':cur_date' => $curDate]);
+            $todayRecs = $stmtTodayRecs->fetchAll(PDO::FETCH_ASSOC);
+
+            $latestRecByMachine = [];
+            foreach ($todayRecs as $tr) {
+                $mid = (int)$tr['machine_id'];
+                if (!isset($latestRecByMachine[$mid])) {
+                    $latestRecByMachine[$mid] = $tr;
+                }
+            }
+
+            // Attachments for today's records
+            if (!empty($latestRecByMachine)) {
+                $recIds = array_column($latestRecByMachine, 'record_id');
+                $inClause = implode(',', array_map('intval', $recIds));
+                $stmtAtt = $pdo->query("
+                    SELECT attach_id, record_id, attach_type, file_path, file_name, file_size
+                    FROM dbo.IQS_ATTACHMENTS
+                    WHERE record_id IN ($inClause)
+                ");
+                $allAtts = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
+                $attByRec = [];
+                foreach ($allAtts as $att) {
+                    $attByRec[$att['record_id']][] = $att;
+                }
+                foreach ($latestRecByMachine as &$lRec) {
+                    $lRec['attachments'] = $attByRec[$lRec['record_id']] ?? [];
+                }
+            }
+
+            // 1.4 Active Users for co-testers
             $stmtUsers = $pdo->query("
                 SELECT id, username, fullname, role, team_group 
                 FROM dbo.USERS 
@@ -226,6 +372,7 @@ try {
                 'slot_statuses' => $slotData['slots'],
                 'slot_summary' => $slotData['summary'],
                 'machines' => $machines,
+                'today_records' => $latestRecByMachine,
                 'users' => $users,
                 'current_user' => [
                     'id' => $userId,
@@ -268,6 +415,7 @@ try {
                 SELECT rec.record_id, rec.round_id, rec.machine_id, rec.machine_code,
                        rec.sku, rec.po_no, rec.thickness, rec.pull_result,
                        rec.knock_check_val, rec.distance_check_val,
+                       rec.custom_check_val_1, rec.custom_check_val_2, rec.custom_check_text,
                        CONVERT(varchar(19), rec.recorded_at, 120) AS recorded_at,
                        rec.is_skipped, rec.skip_reason, rec.ng_status, rec.ng_remark,
                        m.machine_name
@@ -391,12 +539,39 @@ try {
             $pullResult = strtoupper(trim($_POST['pull_result'] ?? ''));
             $knockCheckVal = isset($_POST['knock_check_val']) && $_POST['knock_check_val'] !== '' ? (float)$_POST['knock_check_val'] : null;
             $distanceCheckVal = isset($_POST['distance_check_val']) && $_POST['distance_check_val'] !== '' ? (float)$_POST['distance_check_val'] : null;
+            $customCheckVal1 = isset($_POST['custom_check_val_1']) && $_POST['custom_check_val_1'] !== '' ? (float)$_POST['custom_check_val_1'] : null;
+            $customCheckVal2 = isset($_POST['custom_check_val_2']) && $_POST['custom_check_val_2'] !== '' ? (float)$_POST['custom_check_val_2'] : null;
+            $customCheckText = trim($_POST['custom_check_text'] ?? '');
             $isSkipped = !empty($_POST['is_skipped']) ? 1 : 0;
             $skipReason = trim($_POST['skip_reason'] ?? '');
             $ngRemark = trim($_POST['ng_remark'] ?? '');
 
-            if (!$roundId || !$machineId) {
-                jsonError('ข้อมูลรอบหรือรหัสเครื่องจักรไม่ถูกต้อง');
+            if (!$machineId) {
+                jsonError('กรุณาระบุรหัสเครื่องจักร');
+            }
+
+            // Get machine details from PE_MACHINES
+            $mCheck = $pdo->prepare("SELECT machine_code, line, machine_name, machine_type FROM dbo.PE_MACHINES WHERE machine_id = :m_id");
+            $mCheck->execute([':m_id' => $machineId]);
+            $mRow = $mCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$mRow) {
+                jsonError('ไม่พบข้อมูลเครื่องจักรในระบบ PE_MACHINES');
+            }
+            $machineCode = $mRow['machine_code'];
+            $machineLine = strtoupper($mRow['line'] ?? 'SPOT');
+            if (in_array($machineLine, ['BEND', 'PRESS', 'SPOT'])) {
+                // exact match
+            } elseif (stripos($mRow['machine_name'], 'Bend') !== false || stripos($mRow['machine_type'], 'Bend') !== false) {
+                $machineLine = 'BEND';
+            } elseif (stripos($mRow['machine_name'], 'Press') !== false || stripos($mRow['machine_type'], 'Press') !== false) {
+                $machineLine = 'PRESS';
+            } else {
+                $machineLine = 'SPOT';
+            }
+
+            // Auto-detect or create open round if not provided
+            if (!$roundId) {
+                $roundId = getOrAutoCreateRound($pdo, $machineLine, $userId, $userFullname);
             }
 
             // Verify round is still OPEN
@@ -407,17 +582,9 @@ try {
                 jsonError('รอบการทดสอบนี้ถูกปิดหรือยกเลิกแล้ว ไม่สามารถแก้ไขได้');
             }
 
-            // Get machine code
-            $mCheck = $pdo->prepare("SELECT machine_code FROM dbo.PE_MACHINES WHERE machine_id = :m_id");
-            $mCheck->execute([':m_id' => $machineId]);
-            $machineCode = $mCheck->fetchColumn();
-            if (!$machineCode) {
-                jsonError('ไม่พบข้อมูลเครื่องจักรในระบบ PE_MACHINES');
-            }
-
             if (!$isSkipped) {
                 if (!in_array($pullResult, ['OK', 'NG'])) {
-                    jsonError('กรุณาระบุผลทดสอบแรงดึงเป็น OK หรือ NG');
+                    jsonError('กรุณาระบุผลทดสอบเป็น OK หรือ NG');
                 }
             } else {
                 $pullResult = 'SKIP';
@@ -442,6 +609,9 @@ try {
                         pull_result = :pull_result,
                         knock_check_val = :knock_check_val,
                         distance_check_val = :distance_check_val,
+                        custom_check_val_1 = :custom_check_val_1,
+                        custom_check_val_2 = :custom_check_val_2,
+                        custom_check_text = :custom_check_text,
                         is_skipped = :is_skipped,
                         skip_reason = :skip_reason,
                         ng_status = :ng_status,
@@ -456,6 +626,9 @@ try {
                     ':pull_result' => $pullResult,
                     ':knock_check_val' => $knockCheckVal,
                     ':distance_check_val' => $distanceCheckVal,
+                    ':custom_check_val_1' => $customCheckVal1,
+                    ':custom_check_val_2' => $customCheckVal2,
+                    ':custom_check_text' => $customCheckText ?: null,
                     ':is_skipped' => $isSkipped,
                     ':skip_reason' => $isSkipped ? $skipReason : null,
                     ':ng_status' => $ngStatus,
@@ -467,10 +640,12 @@ try {
                     INSERT INTO dbo.IQS_TEST_RECORDS (
                         round_id, machine_id, machine_code, sku, po_no, thickness,
                         pull_result, knock_check_val, distance_check_val,
+                        custom_check_val_1, custom_check_val_2, custom_check_text,
                         recorded_at, is_skipped, skip_reason, ng_status, ng_remark
                     ) VALUES (
                         :round_id, :machine_id, :machine_code, :sku, :po_no, :thickness,
                         :pull_result, :knock_check_val, :distance_check_val,
+                        :custom_check_val_1, :custom_check_val_2, :custom_check_text,
                         GETDATE(), :is_skipped, :skip_reason, :ng_status, :ng_remark
                     )
                 ");
@@ -484,6 +659,9 @@ try {
                     ':pull_result' => $pullResult,
                     ':knock_check_val' => $knockCheckVal,
                     ':distance_check_val' => $distanceCheckVal,
+                    ':custom_check_val_1' => $customCheckVal1,
+                    ':custom_check_val_2' => $customCheckVal2,
+                    ':custom_check_text' => $customCheckText ?: null,
                     ':is_skipped' => $isSkipped,
                     ':skip_reason' => $isSkipped ? $skipReason : null,
                     ':ng_status' => $ngStatus,
@@ -574,7 +752,26 @@ try {
 
             $pdo->commit();
 
-            jsonSuccess(['record_id' => $recordId], 'บันทึกผลการทดสอบเครื่อง ' . $machineCode . ' เรียบร้อยแล้ว');
+            jsonSuccess([
+                'record_id' => $recordId,
+                'round_id' => $roundId,
+                'machine_id' => $machineId,
+                'machine_code' => $machineCode,
+                'sku' => $sku,
+                'po_no' => $poNo,
+                'thickness' => $thickness,
+                'pull_result' => $pullResult,
+                'knock_check_val' => $knockCheckVal,
+                'distance_check_val' => $distanceCheckVal,
+                'custom_check_val_1' => $customCheckVal1,
+                'custom_check_val_2' => $customCheckVal2,
+                'custom_check_text' => $customCheckText,
+                'is_skipped' => $isSkipped,
+                'skip_reason' => $isSkipped ? $skipReason : null,
+                'ng_status' => $ngStatus,
+                'ng_remark' => $ngRemark,
+                'recorded_at' => date('Y-m-d H:i:s')
+            ], 'บันทึกผลการทดสอบเครื่อง ' . $machineCode . ' เรียบร้อยแล้ว');
             break;
 
         // -------------------------------------------------------------
