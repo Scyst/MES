@@ -475,8 +475,7 @@ function ShutterComparisonSimulator() {
     <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold mb-1 border border-indigo-500/30">
-            <FiCamera className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold mb-1 border border-indigo-500/30">
             <span>Industrial Sensor Comparison &middot; การเลือกชัตเตอร์เซนเซอร์</span>
           </div>
           <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
@@ -505,60 +504,15 @@ function ShutterComparisonSimulator() {
         </div>
       </div>
 
-      {/* Side-by-Side Comparison */}
+      {/* Side-by-Side Comparison: Rolling Shutter (Problem) FIRST, Global Shutter (Standard) SECOND */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         
-        {/* Global Shutter (Industrial Standard) */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-xs flex items-center justify-center flex-shrink-0">✓</span>
-              <h4 className="font-bold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">Global Shutter (มาตรฐานโรงงานอุตสาหกรรม)</h4>
-            </div>
-            <span className="self-start sm:self-auto text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/30 whitespace-nowrap">
-              ทุกพิกเซลเปิดพร้อมกัน
-            </span>
-          </div>
-
-          <div className="aspect-[16/9] w-full bg-slate-900 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-            {/* Speed indicator */}
-            <div className="absolute top-2 left-2 text-[10px] font-mono text-slate-400">
-              Sensor Exposure: 50 &mu;s
-            </div>
-
-            {/* Perfect Square Stamp part */}
-            <div className="w-28 h-28 bg-slate-700 border-2 border-emerald-400 rounded-md relative flex items-center justify-center shadow-lg transition-transform">
-              <div className="w-10 h-10 rounded-full border border-emerald-300 flex items-center justify-center text-[10px] font-mono font-bold text-emerald-200">
-                &Oslash; 20mm
-              </div>
-              <span className="absolute -bottom-5 text-[10px] font-mono text-emerald-300 font-bold">
-                ขนาด 50.00 mm (Error 0.00%)
-              </span>
-            </div>
-          </div>
-
-          <div className="text-xs text-slate-300 space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-              <span className="text-slate-400">อาการภาพบิดเบี้ยว (Distortion):</span>
-              <strong className="text-emerald-400 font-mono">0.00% (ไม่มีอาการเอียง)</strong>
-            </div>
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-              <span className="text-slate-400">ความแม่นยำในการวัดมิติ:</span>
-              <strong className="text-emerald-400 font-mono">&plusmn;0.01 mm (มาตรฐานยานยนต์)</strong>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
-              ทุกพิกเซลในเซนเซอร์เปิดรับแสงพร้อมกันในเสี้ยววินาที ชัตเตอร์อิเล็กทรอนิกส์หยุดการเคลื่อนไหวของชิ้นงานได้ 100% แม้วัตถุจะวิ่งเร็วแค่ไหนก็ไม่เบี้ยว
-            </p>
-          </div>
-        </div>
-
-        {/* Rolling Shutter (Consumer Grade) */}
+        {/* 1. Rolling Shutter (Consumer Grade / Mobile / Webcam) */}
         <div className="bg-slate-950 p-4 rounded-xl border border-rose-500/40 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 h-5 rounded-md bg-rose-500/20 text-rose-600 dark:text-rose-400 font-black text-xs flex items-center justify-center flex-shrink-0">✗</span>
-              <h4 className="font-bold text-rose-700 dark:text-rose-300 text-xs sm:text-sm">Rolling Shutter (กล้องมือถือ / เว็บแคม)</h4>
-            </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
+            <h4 className="font-bold text-rose-700 dark:text-rose-300 text-xs sm:text-sm">
+              Rolling Shutter (กล้องมือถือ / เว็บแคม)
+            </h4>
             <span className="self-start sm:self-auto text-[10px] font-bold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30 whitespace-nowrap">
               อ่านทีละแถวจากบนลงล่าง
             </span>
@@ -585,7 +539,7 @@ function ShutterComparisonSimulator() {
               >
                 รีเบี้ยว
               </div>
-              <span className="absolute -bottom-5 text-[10px] font-mono text-rose-400 font-bold">
+              <span className="absolute -bottom-5 text-[10px] font-mono text-rose-400 font-bold whitespace-nowrap">
                 อ่านได้: {(50 + (Number(measurementError) * 0.5)).toFixed(2)} mm (เพี้ยน +{measurementError}%)
               </span>
             </div>
@@ -602,6 +556,49 @@ function ShutterComparisonSimulator() {
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
               เซนเซอร์อ่านข้อมูลทีละแถวจากบนลงล่าง เมื่อชิ้นงานเคลื่อนที่ แถวล่างจะถูกบันทึกช้ากว่าแถวบน ส่งผลให้ชิ้นงานสี่เหลี่ยมกลายเป็นสี่เหลี่ยมด้านขนานทันที
+            </p>
+          </div>
+        </div>
+
+        {/* 2. Global Shutter (Industrial Standard) */}
+        <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
+            <h4 className="font-bold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">
+              Global Shutter (มาตรฐานโรงงานอุตสาหกรรม)
+            </h4>
+            <span className="self-start sm:self-auto text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/30 whitespace-nowrap">
+              ทุกพิกเซลเปิดพร้อมกัน
+            </span>
+          </div>
+
+          <div className="aspect-[16/9] w-full bg-slate-900 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
+            {/* Speed indicator */}
+            <div className="absolute top-2 left-2 text-[10px] font-mono text-slate-400">
+              Sensor Exposure: 50 &mu;s
+            </div>
+
+            {/* Perfect Square Stamp part */}
+            <div className="w-28 h-28 bg-slate-700 border-2 border-emerald-400 rounded-md relative flex items-center justify-center shadow-lg transition-transform">
+              <div className="w-10 h-10 rounded-full border border-emerald-300 flex items-center justify-center text-[10px] font-mono font-bold text-emerald-200">
+                &Oslash; 20mm
+              </div>
+              <span className="absolute -bottom-5 text-[10px] font-mono text-emerald-300 font-bold whitespace-nowrap">
+                ขนาด 50.00 mm (Error 0.00%)
+              </span>
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-300 space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
+              <span className="text-slate-400">อาการภาพบิดเบี้ยว (Distortion):</span>
+              <strong className="text-emerald-400 font-mono">0.00% (ไม่มีอาการเอียง)</strong>
+            </div>
+            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
+              <span className="text-slate-400">ความแม่นยำในการวัดมิติ:</span>
+              <strong className="text-emerald-400 font-mono">&plusmn;0.01 mm (มาตรฐานยานยนต์)</strong>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
+              ทุกพิกเซลในเซนเซอร์เปิดรับแสงพร้อมกันในเสี้ยววินาที ชัตเตอร์อิเล็กทรอนิกส์หยุดการเคลื่อนไหวของชิ้นงานได้ 100% แม้วัตถุจะวิ่งเร็วแค่ไหนก็ไม่เบี้ยว
             </p>
           </div>
         </div>
@@ -1151,27 +1148,27 @@ export function MachineVisionMod1() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs pt-1">
           <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
-            <h3 className="font-bold text-blue-300 text-sm flex items-center gap-1.5"><FiCamera /> 1. Industrial Camera</h3>
+            <h3 className="font-bold text-blue-300 text-sm">1. Industrial Camera</h3>
             <p className="text-slate-300">กล้องอุตสาหกรรมความทนทานสูง (IP67) เลือกระหว่างเซนเซอร์ Monochrome (ขาวดำ เน้นความคมชัดของขอบ) หรือ Color (ตรวจเช็คสีของสายไฟ/ชิ้นงาน)</p>
           </div>
           <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
-            <h3 className="font-bold text-sky-300 text-sm flex items-center gap-1.5"><FiMaximize2 /> 2. Optical Lens</h3>
+            <h3 className="font-bold text-sky-300 text-sm">2. Optical Lens</h3>
             <p className="text-slate-300">เลนส์ออปติกควบคุมระยะการมองเห็น (Field of View: FOV) และความลึกของภาพ (Depth of Field: DOF) เช่น เลนส์ทางยาวโฟกัสคงที่ หรือ Telecentric Lens ที่ไร้ความเพี้ยนเชิงมิติ</p>
           </div>
           <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
-            <h3 className="font-bold text-amber-300 text-sm flex items-center gap-1.5"><FiSun /> 3. Lighting Source</h3>
+            <h3 className="font-bold text-amber-300 text-sm">3. Lighting Source</h3>
             <p className="text-slate-300">แสงสว่างเฉพาะทาง: Ring Light, Bar Light, Coaxial Light, Dome Light หรือ Backlight เพื่อสร้าง Contrast ระหว่างพื้นผิวชิ้นงานและรอยตำหนิ</p>
           </div>
           <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
-            <h3 className="font-bold text-emerald-300 text-sm flex items-center gap-1.5"><FiActivity /> 4. Trigger &amp; Encoder</h3>
+            <h3 className="font-bold text-emerald-300 text-sm">4. Trigger &amp; Encoder</h3>
             <p className="text-slate-300">เซนเซอร์ตรวจจับตำแหน่งชิ้นงาน หรือ Rotary Encoder บนสายพานลำเลียง เพื่อสั่งกล้องจับภาพในจังหวะที่ชิ้นงานมาถึงจุดศูนย์กลางอย่างแม่นยำ</p>
           </div>
           <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
-            <h3 className="font-bold text-purple-300 text-sm flex items-center gap-1.5"><FiCpu /> 5. Controller &amp; Edge AI</h3>
+            <h3 className="font-bold text-purple-300 text-sm">5. Controller &amp; Edge AI</h3>
             <p className="text-slate-300">คอมพิวเตอร์อุตสาหกรรม (IPC) หรือ Smart Camera ที่มีหน่วยประมวลผล GPU/NPU สำหรับรันอัลกอริทึมประมวลผลภาพแบบทันที (Cycle Time &lt; 50ms)</p>
           </div>
           <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
-            <h3 className="font-bold text-fuchsia-300 text-sm flex items-center gap-1.5"><FiSettings /> 6. Industrial I/O Interface</h3>
+            <h3 className="font-bold text-fuchsia-300 text-sm">6. Industrial I/O Interface</h3>
             <p className="text-slate-300">ช่องทางส่งสัญญาณ Pass/Fail (OK/NG) และพิกัด X/Y/Angle ไปยัง PLC, กระบอกลมเตะงานเสีย (Pneumatic Ejector), หรือแขนกลหุ่นยนต์หยิบชิ้นงาน</p>
           </div>
         </div>
