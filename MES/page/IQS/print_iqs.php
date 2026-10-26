@@ -70,18 +70,26 @@ if ($selectedShift === 'DAY') {
     $activeSlots = $dailySlots;
 }
 
-// 3. Query all target machines
+// 3. Query all target machines matching iqs_api.php line-group classification
 $sqlMachines = "
-    SELECT m.machine_id, m.machine_code, m.machine_name, m.line, m.line AS line_group, m.area, m.machine_type
+    SELECT m.machine_id, m.machine_code, m.machine_name, 
+           CASE 
+               WHEN m.line = 'BEND' OR m.machine_type LIKE '%Bend%' OR m.machine_name LIKE '%Bend%' THEN 'BEND'
+               WHEN m.line = 'PRESS' OR m.machine_type LIKE '%Press%' OR m.machine_name LIKE '%Press%' THEN 'PRESS'
+               ELSE 'SPOT'
+           END AS line_group,
+           m.line, m.area, m.machine_type
     FROM dbo.PE_MACHINES m
-    WHERE m.area = 'B9'
+    WHERE m.is_active = 1 AND (m.line IN ('SPOT', 'BEND', 'PRESS') OR m.machine_type LIKE '%Spot%' OR m.machine_name LIKE '%Spot%')
 ";
 $paramsM = [];
 if ($selectedLine !== 'ALL') {
-    $sqlMachines .= " AND m.line = :line";
+    $sqlMachines = "
+        SELECT sub.* FROM ($sqlMachines) sub WHERE sub.line_group = :line
+    ";
     $paramsM[':line'] = $selectedLine;
 }
-$sqlMachines .= " ORDER BY m.line ASC, m.machine_code ASC";
+$sqlMachines .= " ORDER BY machine_code ASC";
 
 $stmtM = $pdo->prepare($sqlMachines);
 $stmtM->execute($paramsM);
@@ -221,7 +229,7 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
   /* ===== PRINT & A4 SETUP (Matching paintChem export_pdf.php) ===== */
   @page {
     size: A4 landscape;
-    margin: 6mm 6mm 6mm 6mm;
+    margin: 5mm 6mm 5mm 6mm;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -230,8 +238,8 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     font-family: 'TH Sarabun New', 'Sarabun', 'Segoe UI', Arial, sans-serif;
     font-size: 7.5pt;
     color: #111;
-    background: #4b5563; /* Dark background preview */
-    padding: 15px 0;
+    background: #334155; /* Neutral slate dark background preview */
+    padding: 12px 0;
   }
 
   .page {
@@ -239,8 +247,8 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     min-height: 198mm;
     background: #ffffff;
     margin: 0 auto 15px auto;
-    padding: 5mm 6mm;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    padding: 4mm 5mm;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
     position: relative;
     border-radius: 2px;
   }
@@ -248,62 +256,143 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
   /* ===== NO-PRINT FLOATING CONTROLS ===== */
   .no-print-toolbar {
     position: sticky;
-    top: 10px;
+    top: 8px;
     z-index: 9999;
     max-width: 285mm;
-    margin: 0 auto 12px auto;
-    background: #1e293b;
+    margin: 0 auto 10px auto;
+    background: #0f172a;
+    border: 1px solid #334155;
     color: #ffffff;
-    padding: 8px 14px;
-    border-radius: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     flex-wrap: wrap;
   }
 
-  .toolbar-group {
+  .toolbar-left,
+  .toolbar-right {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
   }
 
-  .toolbar-group select,
-  .toolbar-group input {
-    background: #0f172a;
-    border: 1px solid #334155;
-    color: #ffffff;
-    border-radius: 6px;
-    padding: 5px 8px;
-    font-size: 8.5pt;
-  }
-
-  .btn-tb {
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 8.5pt;
-    font-weight: bold;
-    cursor: pointer;
-    border: none;
+  .filter-pill {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    text-decoration: none;
-    transition: opacity 0.15s ease;
+    gap: 6px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 8pt;
+    color: #cbd5e1;
   }
-  .btn-tb:hover { opacity: 0.9; }
-  .btn-tb-primary { background: #2563eb; color: #fff; }
-  .btn-tb-success { background: #16a34a; color: #fff; }
-  .btn-tb-outline { background: transparent; color: #94a3b8; border: 1px solid #475569; }
+  .filter-pill label {
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #94a3b8;
+  }
+  .filter-pill input,
+  .filter-pill select {
+    background: #0f172a;
+    border: 1px solid #475569;
+    color: #f8fafc;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 8pt;
+    outline: none;
+  }
+  .filter-pill input:focus,
+  .filter-pill select:focus {
+    border-color: #3b82f6;
+  }
+
+  /* Segmented control for view switch */
+  .view-segmented-group {
+    display: inline-flex;
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 3px;
+    border-radius: 8px;
+    gap: 3px;
+  }
+  .view-seg-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 8pt;
+    font-weight: 600;
+    text-decoration: none;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+  .view-seg-btn:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.05);
+  }
+  .view-seg-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.4);
+  }
+
+  .btn-print-action {
+    background: #16a34a;
+    color: #ffffff;
+    border: none;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 8pt;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(22,163,74,0.3);
+    transition: all 0.15s ease;
+  }
+  .btn-print-action:hover {
+    background: #15803d;
+    transform: translateY(-1px);
+  }
+
+  .btn-back-cockpit {
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid #475569;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 8pt;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+  .btn-back-cockpit:hover {
+    color: #f8fafc;
+    border-color: #94a3b8;
+    background: rgba(255,255,255,0.05);
+  }
 
   /* ===== DOCUMENT HEADER ===== */
   .doc-header-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 3mm;
+    margin-bottom: 2mm;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   .doc-header-table td {
     vertical-align: middle;
@@ -315,24 +404,24 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     gap: 8px;
   }
   .logo-box img {
-    height: 28px;
+    height: 26px;
     object-fit: contain;
   }
   .company-title {
-    font-size: 11pt;
+    font-size: 10.5pt;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.15;
   }
   .company-sub {
-    font-size: 6.5pt;
+    font-size: 6.2pt;
     color: #475569;
   }
   .doc-center-box {
     text-align: center;
   }
   .doc-main-title {
-    font-size: 10.5pt;
+    font-size: 10pt;
     font-weight: 900;
     color: #1e3a8a;
     letter-spacing: 0.5px;
@@ -341,14 +430,14 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     display: inline-block;
   }
   .doc-sub-title {
-    font-size: 8pt;
+    font-size: 7.5pt;
     font-weight: bold;
     color: #b91c1c;
     margin-top: 1px;
   }
   .doc-meta-table {
     width: 100%;
-    font-size: 6.8pt;
+    font-size: 6.5pt;
     border-collapse: collapse;
     text-align: right;
   }
@@ -364,58 +453,99 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     border-collapse: collapse;
     table-layout: fixed;
     font-size: 6.2pt;
-    line-height: 1.2;
+    line-height: 1.15;
+    page-break-inside: auto;
   }
   table.main-matrix th,
   table.main-matrix td {
     border: 1px solid #374151;
-    padding: 3px 2px;
+    padding: 2px 2px;
     text-align: center;
     vertical-align: middle;
     word-break: break-word;
     overflow: hidden;
   }
+  table.main-matrix tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  table.main-matrix thead {
+    display: table-header-group !important;
+  }
+  table.main-matrix tfoot {
+    display: table-footer-group !important;
+  }
+
   .th-primary {
     background-color: #1e3a8a;
     color: #ffffff;
     font-weight: 700;
-    font-size: 6.5pt;
+    font-size: 6.2pt;
+    padding: 3px 2px !important;
   }
   .th-sub {
     background-color: #dbeafe;
     color: #1e3a8a;
     font-weight: 700;
-    font-size: 6pt;
+    font-size: 5.8pt;
+    padding: 2px 1px !important;
   }
   .td-left {
     text-align: left !important;
-    padding-left: 4px !important;
+    padding-left: 3px !important;
+  }
+
+  /* Compact Matrix Cell Styles */
+  .matrix-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    line-height: 1.1;
+  }
+  .cell-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  .cell-time {
+    font-size: 5pt;
+    color: #64748b;
+    font-family: monospace, sans-serif;
+  }
+  .cell-val-note {
+    font-size: 4.9pt;
+    color: #334155;
+    line-height: 1.05;
+    white-space: nowrap;
   }
   .badge-ok {
     display: inline-block;
     color: #15803d;
-    font-weight: 900;
-    font-size: 6.5pt;
+    font-weight: 800;
+    font-size: 6pt;
   }
   .badge-ng {
     display: inline-block;
     color: #b91c1c;
-    font-weight: 900;
-    font-size: 6.5pt;
+    font-weight: 800;
+    font-size: 6pt;
     background: #fee2e2;
-    padding: 1px 3px;
-    border-radius: 3px;
+    padding: 0 2px;
+    border-radius: 2px;
   }
   .badge-skip {
     display: inline-block;
-    color: #6b7280;
+    color: #64748b;
     font-weight: 600;
-    font-size: 5.5pt;
-  }
-  .cell-val-note {
     font-size: 5.2pt;
-    color: #4b5563;
-    display: block;
+  }
+  .cell-empty {
+    color: #94a3b8;
+    font-size: 6pt;
   }
   .row-zebra {
     background-color: #f8fafc;
@@ -426,17 +556,25 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     width: 100%;
     border-collapse: collapse;
     font-size: 6.2pt;
+    page-break-inside: auto;
+  }
+  table.detailed-log thead {
+    display: table-header-group !important;
+  }
+  table.detailed-log tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   table.detailed-log th,
   table.detailed-log td {
     border: 1px solid #374151;
-    padding: 3px 3px;
+    padding: 2.5px 3px;
     text-align: center;
     vertical-align: middle;
   }
   .thumb-img {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     object-fit: cover;
     border-radius: 3px;
     border: 1px solid #cbd5e1;
@@ -447,30 +585,33 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
   table.doc-footer-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 2.5mm;
-    font-size: 6.5pt;
+    margin-top: 2mm;
+    font-size: 6.2pt;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   table.doc-footer-table td {
     border: 1px solid #374151;
-    padding: 3px 5px;
+    padding: 2.5px 4px;
     vertical-align: middle;
   }
   .sig-box-title {
     text-align: center;
     font-weight: bold;
-    height: 18px;
+    height: 15px;
+    font-size: 6pt;
     background: #f1f5f9;
   }
   .sig-box-body {
-    height: 40px;
+    height: 30px;
     text-align: center;
     vertical-align: bottom !important;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
   .sig-line {
     border-bottom: 1px dotted #475569;
     width: 80%;
-    margin: 0 auto 3px auto;
+    margin: 0 auto 2px auto;
   }
 
   /* ===== PRINT OVERRIDES ===== */
@@ -489,14 +630,37 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     }
     .page {
       width: 100% !important;
-      min-height: auto !important;
+      min-height: 0 !important;
+      height: auto !important;
       margin: 0 !important;
-      padding: 3mm 4mm !important;
+      padding: 0 !important;
       box-shadow: none !important;
       border: none !important;
     }
+    .doc-header-table {
+      margin-bottom: 1.5mm !important;
+    }
     table.main-matrix {
+      font-size: 5.6pt !important;
+    }
+    table.main-matrix th {
+      padding: 2px 2px !important;
+    }
+    table.main-matrix td {
+      padding: 1.2px 2px !important;
+    }
+    table.doc-footer-table {
+      margin-top: 1.5mm !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .sig-box-title {
+      height: 14px !important;
       font-size: 5.8pt !important;
+    }
+    .sig-box-body {
+      height: 26px !important;
+      padding-bottom: 2px !important;
     }
   }
 </style>
@@ -505,46 +669,53 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
 
 <!-- Interactive Filter Toolbar (Hidden on Print) -->
 <div class="no-print-toolbar no-print">
-  <div class="toolbar-group">
-    <a href="iqsUI.php" class="btn-tb btn-tb-outline">
+  <div class="toolbar-left">
+    <a href="iqsUI.php" class="btn-back-cockpit">
       <i class="fas fa-arrow-left"></i> กลับ Cockpit
     </a>
-    <form method="GET" action="print_iqs.php" id="filterPrintForm" style="display:flex; gap:6px; align-items:center;">
+
+    <form method="GET" action="print_iqs.php" id="filterPrintForm" style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap; margin:0;">
       <input type="hidden" name="view" value="<?php echo htmlspecialchars($viewMode); ?>">
       
-      <label style="font-size:8pt; font-weight:bold;">วันที่:</label>
-      <input type="date" name="date" value="<?php echo htmlspecialchars($logDate); ?>" onchange="this.form.submit()">
+      <div class="filter-pill">
+        <label><i class="far fa-calendar-alt text-primary"></i> วันที่:</label>
+        <input type="date" name="date" value="<?php echo htmlspecialchars($logDate); ?>" onchange="this.form.submit()">
+      </div>
 
-      <label style="font-size:8pt; font-weight:bold;">สายการผลิต:</label>
-      <select name="line" onchange="this.form.submit()">
-        <option value="SPOT" <?php echo $selectedLine === 'SPOT' ? 'selected' : ''; ?>>⚡ Spot Welding (39 เครื่อง)</option>
-        <option value="BEND" <?php echo $selectedLine === 'BEND' ? 'selected' : ''; ?>>📐 Bending (22 เครื่อง)</option>
-        <option value="PRESS" <?php echo $selectedLine === 'PRESS' ? 'selected' : ''; ?>>🔨 Press Stamping (20 เครื่อง)</option>
-        <option value="ALL" <?php echo $selectedLine === 'ALL' ? 'selected' : ''; ?>>🏭 รวมทุกสาย (81 เครื่อง)</option>
-      </select>
+      <div class="filter-pill">
+        <label><i class="fas fa-industry text-info"></i> สายการผลิต:</label>
+        <select name="line" onchange="this.form.submit()">
+          <option value="SPOT" <?php echo $selectedLine === 'SPOT' ? 'selected' : ''; ?>>⚡ Spot Welding (39 เครื่อง)</option>
+          <option value="BEND" <?php echo $selectedLine === 'BEND' ? 'selected' : ''; ?>>📐 Bending (22 เครื่อง)</option>
+          <option value="PRESS" <?php echo $selectedLine === 'PRESS' ? 'selected' : ''; ?>>🔨 Press Stamping (20 เครื่อง)</option>
+          <option value="ALL" <?php echo $selectedLine === 'ALL' ? 'selected' : ''; ?>>🏭 รวมทุกสาย (81 เครื่อง)</option>
+        </select>
+      </div>
 
-      <label style="font-size:8pt; font-weight:bold;">กะ:</label>
-      <select name="shift" onchange="this.form.submit()">
-        <option value="ALL" <?php echo $selectedShift === 'ALL' ? 'selected' : ''; ?>>ทุกกะ (ALL)</option>
-        <option value="DAY" <?php echo $selectedShift === 'DAY' ? 'selected' : ''; ?>>กลางวัน (DAY)</option>
-        <option value="NIGHT" <?php echo $selectedShift === 'NIGHT' ? 'selected' : ''; ?>>กลางคืน (NIGHT)</option>
-      </select>
+      <div class="filter-pill">
+        <label><i class="far fa-clock text-warning"></i> กะ:</label>
+        <select name="shift" onchange="this.form.submit()">
+          <option value="ALL" <?php echo $selectedShift === 'ALL' ? 'selected' : ''; ?>>ทุกกะ (ALL)</option>
+          <option value="DAY" <?php echo $selectedShift === 'DAY' ? 'selected' : ''; ?>>กลางวัน (DAY)</option>
+          <option value="NIGHT" <?php echo $selectedShift === 'NIGHT' ? 'selected' : ''; ?>>กลางคืน (NIGHT)</option>
+        </select>
+      </div>
     </form>
   </div>
 
-  <div class="toolbar-group">
-    <div style="background:#0f172a; padding:3px; border-radius:6px; display:flex; gap:3px;">
+  <div class="toolbar-right">
+    <div class="view-segmented-group">
       <a href="print_iqs.php?date=<?php echo urlencode($logDate); ?>&line=<?php echo urlencode($selectedLine); ?>&shift=<?php echo urlencode($selectedShift); ?>&view=matrix" 
-         class="btn-tb <?php echo $viewMode === 'matrix' ? 'btn-tb-primary' : 'btn-tb-outline'; ?>" style="font-size:7.5pt; padding:4px 8px;">
-        <i class="fas fa-th"></i> เมทริกซ์ 7 รอบ (เหมือนโรงพ่นสี)
+         class="view-seg-btn <?php echo $viewMode === 'matrix' ? 'active' : ''; ?>">
+        <i class="fas fa-table-cells"></i> ตารางสรุปประจำวัน (Daily Matrix)
       </a>
       <a href="print_iqs.php?date=<?php echo urlencode($logDate); ?>&line=<?php echo urlencode($selectedLine); ?>&shift=<?php echo urlencode($selectedShift); ?>&view=log" 
-         class="btn-tb <?php echo $viewMode === 'log' ? 'btn-tb-primary' : 'btn-tb-outline'; ?>" style="font-size:7.5pt; padding:4px 8px;">
-        <i class="fas fa-list-check"></i> บันทึกตรวจละเอียด (Log)
+         class="view-seg-btn <?php echo $viewMode === 'log' ? 'active' : ''; ?>">
+        <i class="fas fa-clipboard-list"></i> ประวัติการตรวจละเอียด (Audit Log)
       </a>
     </div>
 
-    <button type="button" onclick="window.print()" class="btn-tb btn-tb-success">
+    <button type="button" onclick="window.print()" class="btn-print-action">
       <i class="fas fa-print"></i> พิมพ์เอกสาร / บันทึก PDF
     </button>
   </div>
@@ -586,22 +757,22 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
        ======================================================= -->
   <table class="main-matrix">
     <colgroup>
-      <col style="width: 14px;"> <!-- No -->
-      <col style="width: 48px;"> <!-- Machine Code -->
-      <col style="width: 70px;"> <!-- Machine Name -->
-      <col style="width: 46px;"> <!-- Model SKU -->
-      <col style="width: 26px;"> <!-- Thickness -->
+      <col style="width: 18px;"> <!-- No -->
+      <col style="width: 74px;"> <!-- Machine Code -->
+      <col style="width: 66px;"> <!-- Machine Name -->
+      <col style="width: 58px;"> <!-- Model SKU -->
+      <col style="width: 32px;"> <!-- Thickness -->
       <?php foreach ($activeSlots as $slotKey => $slotDef): ?>
       <col style="width: auto;"> <!-- Time Slot -->
       <?php endforeach; ?>
     </colgroup>
     <thead>
       <tr class="th-primary">
-        <th rowspan="2">#</th>
-        <th rowspan="2">รหัสเครื่อง<br>Machine No.</th>
-        <th rowspan="2">ชื่อเครื่องจักร<br>Machine Description</th>
-        <th rowspan="2">โมเดล<br>Model SKU</th>
-        <th rowspan="2">ความหนา<br>T (mm)</th>
+        <th rowspan="2" style="width: 18px;">#</th>
+        <th rowspan="2" style="width: 74px; white-space: nowrap;">รหัสเครื่อง<br>Machine No.</th>
+        <th rowspan="2" style="width: 66px;">ชื่อเครื่องจักร<br>Machine Description</th>
+        <th rowspan="2" style="width: 58px;">โมเดล<br>Model SKU</th>
+        <th rowspan="2" style="width: 32px; white-space: nowrap;">ความหนา<br>T (mm)</th>
         <th colspan="<?php echo count($activeSlots); ?>">
           รอบเวลาการตรวจสอบตามมาตรฐานประจำวัน (Daily Standard Inspection Time Slots)
         </th>
@@ -622,7 +793,7 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
       ?>
       <tr class="<?php echo $zebraClass; ?>">
         <td><?php echo $no++; ?></td>
-        <td style="font-weight: bold;"><?php echo htmlspecialchars($m['machine_code']); ?></td>
+        <td style="font-weight: bold; white-space: nowrap;"><?php echo htmlspecialchars($m['machine_code']); ?></td>
         <td class="td-left" style="font-size: 5.6pt;"><?php echo htmlspecialchars($m['machine_name']); ?></td>
         <td><?php echo htmlspecialchars($meta['sku'] ?? '-'); ?></td>
         <td><?php echo !empty($meta['thickness']) ? number_format((float)$meta['thickness'], 2) : '-'; ?></td>
@@ -633,25 +804,50 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
         <td>
           <?php if ($rec): ?>
               <?php if ($rec['is_skipped']): ?>
-                  <span class="badge-skip">ข้าม</span>
-                  <span class="cell-val-note"><?php echo htmlspecialchars($rec['skip_reason'] ?: 'ไม่มีผลิต'); ?></span>
-              <?php elseif ($rec['pull_result'] === 'OK'): ?>
-                  <span class="badge-ok">✓ OK</span>
-                  <?php if ($selectedLine === 'SPOT' || $m['line_group'] === 'SPOT'): ?>
-                      <span class="cell-val-note"><?php echo !empty($rec['knock_check_val']) ? 'เคาะ ' . $rec['knock_check_val'] : ''; ?><?php echo !empty($rec['distance_check_val']) ? ' | ระ ' . $rec['distance_check_val'] : ''; ?></span>
-                  <?php elseif ($selectedLine === 'BEND' || $m['line_group'] === 'BEND'): ?>
-                      <span class="cell-val-note"><?php echo !empty($rec['custom_check_val_1']) ? $rec['custom_check_val_1'] . '°' : ''; ?><?php echo !empty($rec['custom_check_val_2']) ? ' | ' . $rec['custom_check_val_2'] . 'mm' : ''; ?></span>
-                  <?php elseif ($selectedLine === 'PRESS' || $m['line_group'] === 'PRESS'): ?>
-                      <span class="cell-val-note"><?php echo !empty($rec['custom_check_val_1']) ? 'ครีบ ' . $rec['custom_check_val_1'] . 'mm' : ($rec['custom_check_text'] ?? ''); ?></span>
-                  <?php endif; ?>
-                  <span style="font-size:4.8pt; color:#64748b;"><?php echo $rec['recorded_time']; ?></span>
+                  <div class="matrix-cell">
+                    <span class="badge-skip">ข้าม</span>
+                    <span class="cell-val-note" style="color:#64748b;"><?php echo htmlspecialchars(mb_strimwidth($rec['skip_reason'] ?: 'ไม่มีผลิต', 0, 14, '..')); ?></span>
+                  </div>
+              <?php elseif ($rec['pull_result'] === 'OK'): 
+                  $paramText = '';
+                  if ($selectedLine === 'SPOT' || $m['line_group'] === 'SPOT') {
+                      $parts = [];
+                      if (!empty($rec['knock_check_val'])) $parts[] = 'เคาะ ' . $rec['knock_check_val'];
+                      if (!empty($rec['distance_check_val'])) $parts[] = 'ระยะ ' . $rec['distance_check_val'];
+                      $paramText = implode(' | ', $parts);
+                  } elseif ($selectedLine === 'BEND' || $m['line_group'] === 'BEND') {
+                      $parts = [];
+                      if (!empty($rec['custom_check_val_1'])) $parts[] = 'มุม ' . $rec['custom_check_val_1'] . '°';
+                      if (!empty($rec['custom_check_val_2'])) $parts[] = 'ปีก ' . $rec['custom_check_val_2'] . 'mm';
+                      $paramText = implode(' | ', $parts);
+                  } elseif ($selectedLine === 'PRESS' || $m['line_group'] === 'PRESS') {
+                      if (!empty($rec['custom_check_val_1'])) {
+                          $paramText = 'ครีบ ' . $rec['custom_check_val_1'] . 'mm';
+                      } elseif (!empty($rec['custom_check_text'])) {
+                          $paramText = $rec['custom_check_text'];
+                      }
+                  }
+              ?>
+                  <div class="matrix-cell">
+                    <div class="cell-row-top">
+                      <span class="badge-ok">✓ OK</span>
+                      <span class="cell-time"><?php echo $rec['recorded_time']; ?></span>
+                    </div>
+                    <?php if ($paramText !== ''): ?>
+                      <div class="cell-val-note"><?php echo htmlspecialchars($paramText); ?></div>
+                    <?php endif; ?>
+                  </div>
               <?php else: ?>
-                  <span class="badge-ng">✗ NG</span>
-                  <span class="cell-val-note" style="color:#b91c1c;"><?php echo htmlspecialchars(mb_strimwidth($rec['ng_remark'] ?: 'ตกเกณฑ์', 0, 16, '..')); ?></span>
-                  <span style="font-size:4.8pt; color:#b91c1c;"><?php echo $rec['recorded_time']; ?></span>
+                  <div class="matrix-cell">
+                    <div class="cell-row-top">
+                      <span class="badge-ng">✗ NG</span>
+                      <span class="cell-time" style="color:#b91c1c;"><?php echo $rec['recorded_time']; ?></span>
+                    </div>
+                    <div class="cell-val-note" style="color:#b91c1c;"><?php echo htmlspecialchars(mb_strimwidth($rec['ng_remark'] ?: 'ตกเกณฑ์', 0, 16, '..')); ?></div>
+                  </div>
               <?php endif; ?>
           <?php else: ?>
-              <span style="color:#94a3b8; font-size:5.5pt;">—</span>
+              <span class="cell-empty">—</span>
           <?php endif; ?>
         </td>
         <?php endforeach; ?>
