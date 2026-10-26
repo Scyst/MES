@@ -178,15 +178,24 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
 
                         <div class="card p-3 mb-3 border-0 shadow-sm" style="border-radius: 16px;">
                             <form id="formHistoryFilter" class="row g-2 align-items-end">
-                                <div class="col-md-3 col-6">
+                                <div class="col-lg-3 col-md-3 col-6">
+                                    <label class="form-label small fw-bold text-muted mb-1">สายการผลิต</label>
+                                    <select class="form-select" id="histLine">
+                                        <option value="ALL">ทุกสายการผลิต (All Lines)</option>
+                                        <option value="SPOT">Spot Welding</option>
+                                        <option value="BEND">Bending</option>
+                                        <option value="PRESS">Press</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-2 col-md-3 col-6">
                                     <label class="form-label small fw-bold text-muted mb-1">ตั้งแต่วันที่</label>
                                     <input type="date" class="form-control" id="histStartDate" value="<?php echo date('Y-m-d', strtotime('-7 days')); ?>">
                                 </div>
-                                <div class="col-md-3 col-6">
+                                <div class="col-lg-2 col-md-3 col-6">
                                     <label class="form-label small fw-bold text-muted mb-1">ถึงวันที่</label>
                                     <input type="date" class="form-control" id="histEndDate" value="<?php echo date('Y-m-d'); ?>">
                                 </div>
-                                <div class="col-md-3 col-7">
+                                <div class="col-lg-3 col-md-3 col-6">
                                     <label class="form-label small fw-bold text-muted mb-1">สถานะ</label>
                                     <select class="form-select" id="histStatus">
                                         <option value="">ทั้งหมด (All Status)</option>
@@ -195,9 +204,9 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                         <option value="OPEN">OPEN (ยังไม่ปิดรอบ)</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3 col-5">
+                                <div class="col-lg-2 col-md-12 col-12">
                                     <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnSearchHistory">
-                                        <i class="fas fa-search me-1"></i>ค้นหา
+                                        <i class="fas fa-search me-1"></i>ค้นหาประวัติ
                                     </button>
                                 </div>
                             </form>
@@ -215,23 +224,27 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                     <thead class="table-light">
                                         <tr>
                                             <th>เลขที่รอบ</th>
+                                            <th>สายการผลิต</th>
                                             <th>วันที่</th>
                                             <th>ชื่อรอบ / เวลา</th>
                                             <th>กะ</th>
                                             <th>ผู้ทดสอบหลัก</th>
                                             <th>ผลสรุป (เครื่อง)</th>
                                             <th>สถานะ</th>
-                                            <th class="text-center">เอกสารออดิท</th>
+                                            <th class="text-center">เปิดเอกสาร Check Sheet</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td>
+                                            <td colspan="9" class="text-center text-muted py-4">กำลังโหลดข้อมูล...</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Pagination Container -->
+                        <div id="historyPagination" class="d-flex justify-content-between align-items-center mt-3 px-2 flex-wrap gap-2"></div>
 
                     </div>
 

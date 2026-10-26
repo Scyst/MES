@@ -953,12 +953,13 @@ try {
             break;
 
         // -------------------------------------------------------------
-        // 8. GET HISTORY / AUDIT LIST (Search by date, shift, status)
+        // 8. GET HISTORY / AUDIT LIST (Search by date, shift, status, line)
         // -------------------------------------------------------------
         case 'get_history':
             $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
             $endDate = $_GET['end_date'] ?? date('Y-m-d');
             $status = $_GET['status'] ?? '';
+            $line = strtoupper(trim($_GET['line'] ?? ''));
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(1, min(100, (int)($_GET['limit'] ?? 20)));
             $offset = ($page - 1) * $limit;
@@ -971,6 +972,15 @@ try {
                 $params[':status'] = $status;
             }
 
+            if ($line && $line !== 'ALL') {
+                if ($line === 'SPOT') {
+                    $whereSql .= " AND (r.line = 'SPOT' OR r.line IS NULL)";
+                } else {
+                    $whereSql .= " AND r.line = :line";
+                    $params[':line'] = $line;
+                }
+            }
+
             // Total count
             $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM dbo.IQS_ROUNDS r $whereSql");
             $stmtCount->execute($params);
@@ -978,7 +988,10 @@ try {
 
             // Paged query
             $stmtList = $pdo->prepare("
-                SELECT r.round_id, r.round_number, r.plan_date, r.round_name, r.shift, r.status,
+                SELECT r.round_id, r.round_number, 
+                       CONVERT(varchar(10), r.plan_date, 120) AS plan_date,
+                       r.round_name, r.shift, r.status,
+                       ISNULL(r.line, 'SPOT') AS line,
                        CONVERT(varchar(19), r.started_at, 120) AS started_at,
                        CONVERT(varchar(19), r.submitted_at, 120) AS submitted_at,
                        u1.fullname AS primary_tester_name,

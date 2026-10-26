@@ -863,28 +863,32 @@ const IQS = {
         }
     },
 
-    async loadHistory() {
-        const start = document.getElementById('histStartDate').value;
-        const end = document.getElementById('histEndDate').value;
-        const status = document.getElementById('histStatus').value;
+    async loadHistory(page = 1) {
+        const start = document.getElementById('histStartDate')?.value || '';
+        const end = document.getElementById('histEndDate')?.value || '';
+        const status = document.getElementById('histStatus')?.value || '';
+        const line = document.getElementById('histLine')?.value || 'ALL';
 
         try {
             this.showLoading(true);
-            const url = `api/iqs_api.php?action=get_history&start_date=${start}&end_date=${end}&status=${status}`;
+            const url = `api/iqs_api.php?action=get_history&start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}&status=${encodeURIComponent(status)}&line=${encodeURIComponent(line)}&page=${page}&limit=15`;
             const res = await fetch(url);
             const json = await res.json();
             if (!json.success) throw new Error(json.message);
 
             const tbody = document.getElementById('historyTableBody');
             const feedMobile = document.getElementById('historyFeedMobile');
+            const paginationEl = document.getElementById('historyPagination');
             const rounds = json.data.rounds || [];
+            const pagination = json.data.pagination || { page: 1, total_pages: 1, total_rows: rounds.length };
 
             if (tbody) tbody.innerHTML = '';
             if (feedMobile) feedMobile.innerHTML = '';
+            if (paginationEl) paginationEl.innerHTML = '';
 
             if (rounds.length === 0) {
-                if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูลประวัติในช่วงเวลาที่เลือก</td></tr>';
-                if (feedMobile) feedMobile.innerHTML = '<div class="text-center text-muted py-4">ไม่พบข้อมูลประวัติในช่วงเวลาที่เลือก</div>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block text-secondary opacity-50"></i>ไม่พบข้อมูลประวัติการตรวจสอบตามเงื่อนไขที่เลือก</td></tr>';
+                if (feedMobile) feedMobile.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block text-secondary opacity-50"></i>ไม่พบข้อมูลประวัติการตรวจสอบตามเงื่อนไขที่เลือก</div>';
                 return;
             }
 
@@ -894,15 +898,29 @@ const IQS = {
                 else if (r.status === 'COMPLETED_WITH_NG') badgeClass = 'bg-danger';
                 else if (r.status === 'OPEN') badgeClass = 'bg-warning text-dark';
 
+                // Line badge helper
+                let lineBadge = '';
+                const rLine = (r.line || 'SPOT').toUpperCase();
+                if (rLine === 'SPOT') {
+                    lineBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="fas fa-bolt me-1"></i>Spot</span>';
+                } else if (rLine === 'BEND') {
+                    lineBadge = '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1"><i class="fas fa-ruler-combined me-1"></i>Bend</span>';
+                } else if (rLine === 'PRESS') {
+                    lineBadge = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1"><i class="fas fa-industry me-1"></i>Press</span>';
+                } else {
+                    lineBadge = `<span class="badge bg-secondary px-2 py-1">${rLine}</span>`;
+                }
+
                 // Desktop Table Row
                 if (tbody) {
                     tbody.innerHTML += `
                     <tr>
-                        <td><strong>${r.round_number}</strong></td>
-                        <td>${r.plan_date}</td>
-                        <td>${r.round_name}</td>
-                        <td>${r.shift}</td>
-                        <td>${r.primary_tester_name || '-'}</td>
+                        <td><strong class="text-primary font-monospace">${r.round_number}</strong></td>
+                        <td>${lineBadge}</td>
+                        <td><i class="far fa-calendar-alt text-muted me-1"></i>${r.plan_date}</td>
+                        <td><strong>${r.round_name}</strong></td>
+                        <td><span class="badge bg-light text-dark border">กะ ${r.shift}</span></td>
+                        <td><i class="far fa-user text-muted me-1"></i>${r.primary_tester_name || '-'}</td>
                         <td>
                             <span class="badge bg-success me-1">OK: ${r.ok_count}</span>
                             ${r.ng_count > 0 ? `<span class="badge bg-danger me-1">NG: ${r.ng_count}</span>` : ''}
@@ -910,9 +928,14 @@ const IQS = {
                         </td>
                         <td><span class="badge ${badgeClass}">${r.status}</span></td>
                         <td class="text-center">
-                            <a href="print_iqs.php?round_id=${r.round_id}" target="_blank" class="btn btn-outline-primary btn-sm py-1 px-3 fw-bold" style="border-radius: 8px;">
-                                <i class="fas fa-print me-1"></i>พิมพ์
-                            </a>
+                            <div class="d-inline-flex gap-1">
+                                <a href="print_iqs.php?date=${encodeURIComponent(r.plan_date)}&line=${encodeURIComponent(r.line || 'SPOT')}&view=matrix" target="_blank" class="btn btn-outline-primary btn-sm py-1 px-2 fw-semibold" title="ตารางสรุป 7 รอบประจำวัน" style="border-radius: 8px; font-size: 0.78rem;">
+                                    <i class="fas fa-table me-1"></i>สรุป 7 รอบ
+                                </a>
+                                <a href="print_iqs.php?round_id=${encodeURIComponent(r.round_id)}&view=log" target="_blank" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold" title="บันทึกการตรวจสอบรอบนี้แบบละเอียด" style="border-radius: 8px; font-size: 0.78rem;">
+                                    <i class="fas fa-file-alt me-1"></i>รอบนี้
+                                </a>
+                            </div>
                         </td>
                     </tr>`;
                 }
@@ -920,28 +943,60 @@ const IQS = {
                 // Mobile Card Feed
                 if (feedMobile) {
                     feedMobile.innerHTML += `
-                    <div class="history-card-mobile">
+                    <div class="history-card-mobile p-3 mb-3 bg-white border shadow-sm" style="border-radius: 14px;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="hist-title">${r.round_number}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="hist-title fw-bold text-dark font-monospace">${r.round_number}</span>
+                                ${lineBadge}
+                            </div>
                             <span class="badge ${badgeClass}">${r.status}</span>
                         </div>
                         <div class="small text-muted mb-2">
-                            <div><i class="fas fa-calendar-alt me-1"></i><strong>${r.plan_date}</strong> (${r.round_name}) · กะ ${r.shift}</div>
-                            <div><i class="fas fa-user me-1"></i>ผู้ทดสอบ: ${r.primary_tester_name || '-'}</div>
+                            <div><i class="fas fa-calendar-alt me-1 text-primary"></i><strong>${r.plan_date}</strong> (${r.round_name}) · กะ ${r.shift}</div>
+                            <div><i class="fas fa-user-check me-1 text-info"></i>ผู้ทดสอบ: <strong>${r.primary_tester_name || '-'}</strong></div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                            <div class="d-flex gap-1">
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top gap-2 flex-wrap">
+                            <div class="d-flex gap-1 align-items-center">
                                 <span class="badge bg-success">OK: ${r.ok_count}</span>
                                 ${r.ng_count > 0 ? `<span class="badge bg-danger">NG: ${r.ng_count}</span>` : ''}
                                 ${r.skip_count > 0 ? `<span class="badge bg-secondary">ข้าม: ${r.skip_count}</span>` : ''}
                             </div>
-                            <a href="print_iqs.php?round_id=${r.round_id}" target="_blank" class="btn btn-outline-primary btn-sm px-3 fw-bold" style="border-radius: 8px;">
-                                <i class="fas fa-print me-1"></i>พิมพ์เอกสาร
-                            </a>
+                            <div class="d-flex gap-1">
+                                <a href="print_iqs.php?date=${encodeURIComponent(r.plan_date)}&line=${encodeURIComponent(r.line || 'SPOT')}&view=matrix" target="_blank" class="btn btn-outline-primary btn-sm px-2 py-1 fw-bold" style="border-radius: 8px; font-size: 0.78rem;">
+                                    <i class="fas fa-table me-1"></i>สรุป 7 รอบ
+                                </a>
+                                <a href="print_iqs.php?round_id=${encodeURIComponent(r.round_id)}&view=log" target="_blank" class="btn btn-outline-secondary btn-sm px-2 py-1 fw-bold" style="border-radius: 8px; font-size: 0.78rem;">
+                                    <i class="fas fa-file-alt me-1"></i>รอบนี้
+                                </a>
+                            </div>
                         </div>
                     </div>`;
                 }
             });
+
+            // Render Pagination
+            if (paginationEl && pagination.total_pages > 1) {
+                let pagHtml = `
+                <div class="small text-muted">
+                    แสดงหน้า <strong>${pagination.page}</strong> จากทั้งหมด <strong>${pagination.total_pages}</strong> หน้า (รวม ${pagination.total_rows} รายการ)
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" ${pagination.page <= 1 ? 'disabled' : ''} onclick="IQS.loadHistory(${pagination.page - 1})">
+                        <i class="fas fa-chevron-left me-1"></i>ก่อนหน้า
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" ${pagination.page >= pagination.total_pages ? 'disabled' : ''} onclick="IQS.loadHistory(${pagination.page + 1})">
+                        ถัดไป<i class="fas fa-chevron-right ms-1"></i>
+                    </button>
+                </div>`;
+                paginationEl.innerHTML = pagHtml;
+                paginationEl.style.display = 'flex';
+            } else if (paginationEl) {
+                paginationEl.innerHTML = `
+                <div class="small text-muted">
+                    พบทั้งหมด <strong>${pagination.total_rows || rounds.length}</strong> รายการ
+                </div>`;
+                paginationEl.style.display = 'flex';
+            }
         } catch (err) {
             Swal.fire('ข้อผิดพลาด', err.message, 'error');
         } finally {
