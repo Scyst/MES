@@ -111,19 +111,20 @@ function renderQaScheduleTable() {
     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     const dataToRender = currentQaData.filter(po => {
+        const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
+        const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
+        const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
+        const isFailed = (resUpper === 'FAIL');
+        const isDone = (isPassed || isFailed || stUpper === 'DONE');
+        const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+        const isWaiting = (!isDone && !isInProgress);
+
         let matchStatus = true;
         if (qaCurrentStatusFilter !== 'ALL') {
-            if (qaCurrentStatusFilter === 'PASS' && po.inspection_result !== 'PASS') matchStatus = false;
-            else if (qaCurrentStatusFilter === 'FAIL' && po.inspection_result !== 'FAIL') matchStatus = false;
-            else if (qaCurrentStatusFilter === 'IN_PROGRESS') {
-                // If result is already PASS/FAIL, it's not IN_PROGRESS conceptually based on backend stats logic
-                if (po.inspection_result === 'PASS' || po.inspection_result === 'FAIL' || po.inspection_status !== 'IN_PROGRESS') matchStatus = false;
-            }
-            else if (qaCurrentStatusFilter === 'WAITING') {
-                if (po.inspection_result === 'PASS' || po.inspection_result === 'FAIL' || po.inspection_status === 'IN_PROGRESS') {
-                    matchStatus = false;
-                }
-            }
+            if (qaCurrentStatusFilter === 'PASS' && !isPassed) matchStatus = false;
+            else if (qaCurrentStatusFilter === 'FAIL' && !isFailed) matchStatus = false;
+            else if (qaCurrentStatusFilter === 'IN_PROGRESS' && !isInProgress) matchStatus = false;
+            else if (qaCurrentStatusFilter === 'WAITING' && !isWaiting) matchStatus = false;
         }
         if (!matchStatus) return false;
 
@@ -144,20 +145,27 @@ function renderQaScheduleTable() {
 
     let html = '';
     dataToRender.forEach(po => {
+        const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
+        const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
+        const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
+        const isFailed = (resUpper === 'FAIL');
+        const isDone = (isPassed || isFailed || stUpper === 'DONE');
+        const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+
         let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
-        if (po.inspection_status === 'IN_PROGRESS') statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
-        if (po.inspection_status === 'DONE') statusBadge = '<span class="badge bg-success">DONE</span>';
+        if (isInProgress) statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
+        if (isDone) statusBadge = '<span class="badge bg-success">DONE</span>';
         
         let typeBadge = '';
         if (po.inspect_type === 'Remote') typeBadge = '<span class="badge bg-info mt-1 d-block" style="width:fit-content; margin:0 auto;">Remote</span>';
         if (po.inspect_type === 'On-site') typeBadge = '<span class="badge bg-primary mt-1 d-block" style="width:fit-content; margin:0 auto;">On-site</span>';
 
         let resultBadge = '';
-        if (po.inspection_result === 'PASS') resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
-        if (po.inspection_result === 'FAIL') resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+        if (isPassed) resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
+        else if (isFailed) resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
 
         let rowClass = '';
-        if (po.inspection_status !== 'DONE' && po.loading_date) {
+        if (!isDone && po.loading_date) {
             const lDate = new Date(po.loading_date);
             lDate.setHours(0,0,0,0);
             if (lDate <= todayDate) {
@@ -404,10 +412,51 @@ function removeSchedule(id, force = false) {
     });
 }
 
+function onQaInspectionResultChange(result) {
+    if (result === 'PASS' || result === 'FAIL') {
+        const doneRadio = document.getElementById('status_done');
+        if (doneRadio) doneRadio.checked = true;
+        const dateInput = document.getElementById('inspect_actual_date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    } else if (result === 'PENDING') {
+        const doneRadio = document.getElementById('status_done');
+        if (doneRadio && doneRadio.checked) {
+            const inProgressRadio = document.getElementById('status_in_progress');
+            if (inProgressRadio) inProgressRadio.checked = true;
+        }
+    }
+}
+
+function onQaInspectionStatusChange(status) {
+    if (status === 'DONE') {
+        const passRadio = document.getElementById('res_pass');
+        const failRadio = document.getElementById('result_fail');
+        if (!failRadio.checked && passRadio) {
+            passRadio.checked = true;
+        }
+        const dateInput = document.getElementById('inspect_actual_date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    } else if (status === 'WAITING') {
+        const pendRadio = document.getElementById('res_pending');
+        if (pendRadio) pendRadio.checked = true;
+    } else if (status === 'IN_PROGRESS') {
+        const pendRadio = document.getElementById('res_pending');
+        if (pendRadio) pendRadio.checked = true;
+        const dateInput = document.getElementById('inspect_actual_date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    }
+}
+
 function openUpdateModal(po) {
     currentUpdatePo = po;
     document.getElementById('inspect_po_id').value = po.id;
-    document.getElementById('inspect_po_number').value = po.po_number + ' - ' + po.sku;
+    document.getElementById('inspect_po_number').value = po.po_number + ' - ' + (po.sku || '');
     document.getElementById('inspect_ticket_number').value = po.ticket_number || '';
     document.getElementById('inspect_qa_inspector').value = po.qa_inspector || '';
 
@@ -419,29 +468,38 @@ function openUpdateModal(po) {
         document.querySelectorAll(`input[name="inspect_type"]`).forEach(el => el.checked = false);
     }
     
-    if (po.inspection_result === 'PASS') document.getElementById('res_pass').checked = true;
-    else if (po.inspection_result === 'FAIL') document.getElementById('result_fail').checked = true;
-    else if (po.inspection_result === 'PENDING') document.getElementById('res_pending').checked = true;
-    else document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => el.checked = false);
-    
-    let status = po.inspection_status ? po.inspection_status.toString().trim().toUpperCase() : '';
-    if (status !== 'IN_PROGRESS' && status !== 'DONE') {
-        status = 'WAITING';
-    }
-    
-    document.getElementById('inspect_status').value = status;
-    document.getElementById('inspect_actual_date').value = po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '';
-    
-    let result = po.inspection_result ? po.inspection_result.toString().trim().toUpperCase() : '';
-    if (result === 'NULL') result = '';
-    
-    if (result) {
-        const resultRadio = document.getElementById('result_' + result.toLowerCase());
-        if (resultRadio) resultRadio.checked = true;
+    const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
+    const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
+    const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
+    const isFailed = (resUpper === 'FAIL');
+    const isDone = (isPassed || isFailed || stUpper === 'DONE');
+    const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+
+    // Check Status radio
+    if (isDone) {
+        const el = document.getElementById('status_done');
+        if (el) el.checked = true;
+    } else if (isInProgress) {
+        const el = document.getElementById('status_in_progress');
+        if (el) el.checked = true;
     } else {
-        document.querySelectorAll(`input[name="inspection_result"]`).forEach(el => el.checked = false);
+        const el = document.getElementById('status_waiting');
+        if (el) el.checked = true;
     }
     
+    // Check Result radio
+    if (isPassed) {
+        const el = document.getElementById('res_pass');
+        if (el) el.checked = true;
+    } else if (isFailed) {
+        const el = document.getElementById('result_fail');
+        if (el) el.checked = true;
+    } else {
+        const el = document.getElementById('res_pending');
+        if (el) el.checked = true;
+    }
+    
+    document.getElementById('inspect_actual_date').value = po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '';
     document.getElementById('inspect_remark').value = po.inspection_remark || '';
     
     // Bind remove button inside the modal
@@ -641,10 +699,17 @@ function buildCustomQaCalendar(eventsData) {
         if (dayEvents.length > 0) {
             // Render all on desktop
             dayEvents.forEach(evt => {
+                const stUpper = (evt.extendedProps.status || '').toString().trim().toUpperCase();
+                const resUpper = (evt.extendedProps.result || '').toString().trim().toUpperCase();
+                const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
+                const isFailed = (resUpper === 'FAIL');
+                const isDone = (isPassed || isFailed || stUpper === 'DONE');
+                const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+
                 let statusClass = 'status-waiting';
-                if (evt.extendedProps.status === 'IN_PROGRESS') statusClass = 'status-progress';
-                if (evt.extendedProps.status === 'DONE') statusClass = 'status-done';
-                if (evt.extendedProps.result === 'FAIL') statusClass = 'result-fail';
+                if (isInProgress) statusClass = 'status-progress';
+                if (isDone) statusClass = 'status-done';
+                if (isFailed) statusClass = 'result-fail';
 
                 const pill = document.createElement('div');
                 pill.className = `qa-event-pill ${statusClass}`;
@@ -1298,20 +1363,27 @@ function viewDayJobs(dateStr) {
         dayEvents.forEach(evt => {
             const po = evt.extendedProps.poData;
             
+            const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
+            const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
+            const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
+            const isFailed = (resUpper === 'FAIL');
+            const isDone = (isPassed || isFailed || stUpper === 'DONE');
+            const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+
             let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
-            if (po.inspection_status === 'IN_PROGRESS') {
-                statusBadge = '<span class="badge bg-warning text-dark">IN_PROGRESS</span>';
-            } else if (po.inspection_status === 'DONE') {
+            if (isInProgress) {
+                statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
+            } else if (isDone) {
                 statusBadge = '<span class="badge bg-success">DONE</span>';
             }
             
             let resultBadge = '';
-            if (po.inspection_result === 'PASS') {
-                resultBadge = '<span class="badge bg-success">PASS</span>';
-            } else if (po.inspection_result === 'FAIL') {
-                resultBadge = '<span class="badge bg-danger">FAIL</span>';
-            } else if (po.inspection_result === 'HOLD') {
-                resultBadge = '<span class="badge bg-warning text-dark">HOLD</span>';
+            if (isPassed) {
+                resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
+            } else if (isFailed) {
+                resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+            } else if (resUpper === 'HOLD') {
+                resultBadge = '<span class="badge bg-warning text-dark ms-1">HOLD</span>';
             }
 
             html += `

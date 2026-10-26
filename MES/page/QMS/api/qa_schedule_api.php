@@ -60,16 +60,16 @@ try {
         ];
 
         foreach ($data as $row) {
-            if ($row['inspection_result'] === 'PASS') {
+            $res = strtoupper(trim($row['inspection_result'] ?? ''));
+            $st = strtoupper(trim($row['inspection_status'] ?? ''));
+            if ($res === 'PASS' || $st === 'PASS') {
                 $stats['passed']++;
-            } elseif ($row['inspection_result'] === 'FAIL') {
+            } elseif ($res === 'FAIL') {
                 $stats['failed']++;
+            } elseif ($st === 'IN_PROGRESS') {
+                $stats['in_progress']++;
             } else {
-                if ($row['inspection_status'] === 'IN_PROGRESS') {
-                    $stats['in_progress']++;
-                } else {
-                    $stats['waiting']++;
-                }
+                $stats['waiting']++;
             }
         }
 
@@ -125,14 +125,30 @@ try {
     }
     elseif ($action === 'update_result') {
         $po_id = $_POST['id'] ?? '';
-        $inspection_status = $_POST['inspection_status'] ?? '';
-        $inspection_result = $_POST['inspection_result'] ?? '';
+        $inspection_status = strtoupper(trim($_POST['inspection_status'] ?? ''));
+        $inspection_result = strtoupper(trim($_POST['inspection_result'] ?? ''));
+        if ($inspection_result === 'PENDING' || $inspection_result === '') $inspection_result = null;
         $remark = $_POST['remark'] ?? '';
         $ticket_number = $_POST['ticket_number'] ?? null;
         $qa_inspector = $_POST['qa_inspector'] ?? null;
         $inspect_type = $_POST['inspect_type'] ?? null;
         $actual_inspection_date = $_POST['actual_inspection_date'] ?? null;
         if ($actual_inspection_date === '') $actual_inspection_date = null;
+
+        // Auto-consistency: if PASS or FAIL, status MUST be DONE
+        if (in_array($inspection_result, ['PASS', 'FAIL'])) {
+            $inspection_status = 'DONE';
+            if (empty($actual_inspection_date)) {
+                $actual_inspection_date = date('Y-m-d');
+            }
+        } elseif ($inspection_status === 'DONE' && empty($inspection_result)) {
+            $inspection_result = 'PASS';
+            if (empty($actual_inspection_date)) {
+                $actual_inspection_date = date('Y-m-d');
+            }
+        } elseif ($inspection_status === 'WAITING') {
+            $inspection_result = null;
+        }
 
         if (empty($po_id) || empty($inspection_status)) {
             throw new Exception("Missing required fields.");

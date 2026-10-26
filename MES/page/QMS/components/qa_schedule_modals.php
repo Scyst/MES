@@ -107,20 +107,6 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold small text-muted">Inspection Status</label>
-                            <select name="inspection_status" id="inspect_status" class="form-select" onchange="toggleResultFields()">
-                                <option value="WAITING">WAITING</option>
-                                <option value="IN_PROGRESS">IN PROGRESS</option>
-                                <option value="DONE">DONE</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold small text-muted">Actual Inspection Date</label>
-                            <input type="date" name="actual_inspection_date" id="inspect_actual_date" class="form-control">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold small text-muted">Ticket Number (เลขตั๋ว)</label>
                             <input type="text" name="ticket_number" id="inspect_ticket_number" class="form-control" placeholder="Ticket No...">
                         </div>
@@ -130,14 +116,20 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Type</label>
-                        <div class="custom-segmented w-100">
-                            <input type="radio" class="btn-check" name="inspect_type" id="type_remote" value="Remote">
-                            <label class="btn flex-fill" for="type_remote">Remote</label>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted">Actual Inspection Date (วันที่ตรวจจริง)</label>
+                            <input type="date" name="actual_inspection_date" id="inspect_actual_date" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Type</label>
+                            <div class="custom-segmented w-100">
+                                <input type="radio" class="btn-check" name="inspect_type" id="type_remote" value="Remote">
+                                <label class="btn flex-fill" for="type_remote">Remote</label>
 
-                            <input type="radio" class="btn-check" name="inspect_type" id="type_onsite" value="On-site">
-                            <label class="btn flex-fill" for="type_onsite">On-site</label>
+                                <input type="radio" class="btn-check" name="inspect_type" id="type_onsite" value="On-site">
+                                <label class="btn flex-fill" for="type_onsite">On-site</label>
+                            </div>
                         </div>
                     </div>
 
@@ -175,13 +167,13 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold small text-muted text-uppercase mb-2">Inspection Status <span class="text-danger">*</span></label>
                         <div class="custom-segmented w-100">
-                            <input type="radio" class="btn-check" name="inspection_status" id="status_waiting" value="WAITING" required>
+                            <input type="radio" class="btn-check" name="inspection_status" id="status_waiting" value="WAITING" onchange="onQaInspectionStatusChange('WAITING')" required>
                             <label class="btn flex-fill" for="status_waiting">WAITING</label>
 
-                            <input type="radio" class="btn-check" name="inspection_status" id="status_in_progress" value="IN_PROGRESS">
+                            <input type="radio" class="btn-check" name="inspection_status" id="status_in_progress" value="IN_PROGRESS" onchange="onQaInspectionStatusChange('IN_PROGRESS')">
                             <label class="btn flex-fill" for="status_in_progress">IN PROGRESS</label>
 
-                            <input type="radio" class="btn-check" name="inspection_status" id="status_done" value="DONE">
+                            <input type="radio" class="btn-check" name="inspection_status" id="status_done" value="DONE" onchange="onQaInspectionStatusChange('DONE')">
                             <label class="btn flex-fill" for="status_done">DONE</label>
                         </div>
                     </div>
@@ -189,13 +181,13 @@
                     <div class="mb-3 mt-4">
                         <label class="form-label fw-bold small text-muted text-uppercase mb-2">Final Result</label>
                         <div class="custom-segmented w-100">
-                            <input type="radio" class="btn-check" name="inspection_result" id="res_pending" value="PENDING">
+                            <input type="radio" class="btn-check" name="inspection_result" id="res_pending" value="PENDING" onchange="onQaInspectionResultChange('PENDING')">
                             <label class="btn flex-fill text-secondary border-secondary" for="res_pending">PENDING</label>
 
-                            <input type="radio" class="btn-check" name="inspection_result" id="res_pass" value="PASS">
+                            <input type="radio" class="btn-check" name="inspection_result" id="res_pass" value="PASS" onchange="onQaInspectionResultChange('PASS')">
                             <label class="btn flex-fill text-success border-success" for="res_pass"><i class="fas fa-check-circle me-1"></i> PASS</label>
 
-                            <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL">
+                            <input type="radio" class="btn-check" name="inspection_result" id="result_fail" value="FAIL" onchange="onQaInspectionResultChange('FAIL')">
                             <label class="btn flex-fill" for="result_fail"><i class="fas fa-times-circle me-1"></i> FAIL</label>
                         </div>
                     </div>

@@ -378,7 +378,11 @@ try {
                 if ($field === 'snc_load_day') $field = 'loading_date';
                 if ($val && (strpos($field, 'date') !== false || in_array($field, ['etd', 'si_vgm_cut_off']))) $val = $fnDate($val);
                 
-                $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
+                if ($field === 'inspection_result' && in_array(strtoupper(trim($val ?? '')), ['PASS', 'FAIL'])) {
+                    $pdo->prepare("UPDATE $table SET inspection_result = ?, inspection_status = 'DONE', updated_at = GETDATE() WHERE id = ?")->execute([strtoupper(trim($val)), $id]);
+                } else {
+                    $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
+                }
                 echo json_encode(['success' => true]);
             } else { echo json_encode(['success' => false, 'message' => 'Invalid Field']); }
             break;
@@ -393,8 +397,9 @@ try {
                  } elseif ($field === 'is_production_done' && $val == 1) {
                      $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                  } elseif ($field === 'inspection_status') {
-                     $statusStr = ($val == 1) ? 'Pass' : '';
-                     $pdo->prepare("UPDATE $table SET inspection_status = ?, updated_at = GETDATE() WHERE id = ?")->execute([$statusStr, $id]);
+                     $statusStr = ($val == 1) ? 'DONE' : 'WAITING';
+                     $resultStr = ($val == 1) ? 'PASS' : null;
+                     $pdo->prepare("UPDATE $table SET inspection_status = ?, inspection_result = ?, updated_at = GETDATE() WHERE id = ?")->execute([$statusStr, $resultStr, $id]);
                  } else {
                      $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
                  }
