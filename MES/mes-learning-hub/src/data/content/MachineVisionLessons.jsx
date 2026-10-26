@@ -99,7 +99,7 @@ function OpticalLightingSimulator() {
   const current = getLightingInfo();
 
   return (
-    <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-5 md:p-6 shadow-2xl space-y-5">
+    <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold mb-1 border border-cyan-500/30">
@@ -472,7 +472,7 @@ function ShutterComparisonSimulator() {
   const measurementError = ((conveyorSpeed / 90) * 16.5).toFixed(1);
 
   return (
-    <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 md:p-6 shadow-2xl space-y-5">
+    <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold mb-1 border border-indigo-500/30">
@@ -673,7 +673,7 @@ function VisionLogicInspector() {
   const curr = cases[activeCase];
 
   return (
-    <div className="bg-slate-900 border border-violet-500/30 rounded-2xl p-5 md:p-6 shadow-2xl space-y-5">
+    <div className="bg-slate-900 border border-violet-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-1 border border-violet-500/30">
@@ -868,7 +868,7 @@ function ThresholdTuningLab() {
   const overkillPercent = threshold < 50 ? (12.5 - threshold * 0.2).toFixed(1) : (Math.max(0.2, (75 - threshold) * 0.08)).toFixed(2);
 
   return (
-    <div className="bg-slate-900 border border-rose-500/30 rounded-2xl p-5 md:p-6 shadow-2xl space-y-5">
+    <div className="bg-slate-900 border border-rose-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold mb-1 border border-rose-500/30">
@@ -1056,7 +1056,7 @@ function VisionHardwareArchitecture() {
   const curr = stages[activeStage - 1];
 
   return (
-    <div className="bg-slate-900 border border-blue-500/30 rounded-2xl p-5 md:p-6 shadow-2xl space-y-5">
+    <div className="bg-slate-900 border border-blue-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-1 border border-blue-500/30">
@@ -1128,49 +1128,49 @@ function VisionHardwareArchitecture() {
 
 export function MachineVisionMod1() {
   return (
-    <div className="space-y-8 text-slate-200">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
-      <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-blue-500/30 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-3 border border-blue-500/30">
+      <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-blue-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-2 sm:mb-3 border border-blue-500/30">
           <FiEye className="w-4 h-4" /> โมดูลที่ 1 (Module 1)
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
           พื้นฐานระบบ Machine Vision และโครงสร้างระบบตรวจสอบในโรงงานอัจฉริยะ
         </h1>
-        <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
           ทำความเข้าใจ 6 องค์ประกอบหลักของระบบแมชชีนวิชัน: กล้องอุตสาหกรรม, เลนส์, แสงสว่าง, เซนเซอร์ Trigger, 
           Edge Controller และการส่งสัญญาณ I/O ร่วมกับ PLC / Robot ในสายการผลิตอัจฉริยะ (Industry 4.0)
         </p>
       </div>
 
       {/* 6 Core Components Grid */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+      <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
           <span className="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center text-sm font-black border border-blue-500/40">1</span>
           6 องค์ประกอบหลักของระบบ Industrial Machine Vision
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs pt-1">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs pt-1">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-blue-300 text-sm flex items-center gap-1.5"><FiCamera /> 1. Industrial Camera</h3>
             <p className="text-slate-300">กล้องอุตสาหกรรมความทนทานสูง (IP67) เลือกระหว่างเซนเซอร์ Monochrome (ขาวดำ เน้นความคมชัดของขอบ) หรือ Color (ตรวจเช็คสีของสายไฟ/ชิ้นงาน)</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-sky-300 text-sm flex items-center gap-1.5"><FiMaximize2 /> 2. Optical Lens</h3>
             <p className="text-slate-300">เลนส์ออปติกควบคุมระยะการมองเห็น (Field of View: FOV) และความลึกของภาพ (Depth of Field: DOF) เช่น เลนส์ทางยาวโฟกัสคงที่ หรือ Telecentric Lens ที่ไร้ความเพี้ยนเชิงมิติ</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-amber-300 text-sm flex items-center gap-1.5"><FiSun /> 3. Lighting Source</h3>
             <p className="text-slate-300">แสงสว่างเฉพาะทาง: Ring Light, Bar Light, Coaxial Light, Dome Light หรือ Backlight เพื่อสร้าง Contrast ระหว่างพื้นผิวชิ้นงานและรอยตำหนิ</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-emerald-300 text-sm flex items-center gap-1.5"><FiActivity /> 4. Trigger &amp; Encoder</h3>
             <p className="text-slate-300">เซนเซอร์ตรวจจับตำแหน่งชิ้นงาน หรือ Rotary Encoder บนสายพานลำเลียง เพื่อสั่งกล้องจับภาพในจังหวะที่ชิ้นงานมาถึงจุดศูนย์กลางอย่างแม่นยำ</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-purple-300 text-sm flex items-center gap-1.5"><FiCpu /> 5. Controller &amp; Edge AI</h3>
             <p className="text-slate-300">คอมพิวเตอร์อุตสาหกรรม (IPC) หรือ Smart Camera ที่มีหน่วยประมวลผล GPU/NPU สำหรับรันอัลกอริทึมประมวลผลภาพแบบทันที (Cycle Time &lt; 50ms)</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-fuchsia-300 text-sm flex items-center gap-1.5"><FiSettings /> 6. Industrial I/O Interface</h3>
             <p className="text-slate-300">ช่องทางส่งสัญญาณ Pass/Fail (OK/NG) และพิกัด X/Y/Angle ไปยัง PLC, กระบอกลมเตะงานเสีย (Pneumatic Ejector), หรือแขนกลหุ่นยนต์หยิบชิ้นงาน</p>
           </div>
@@ -1185,16 +1185,16 @@ export function MachineVisionMod1() {
 
 export function MachineVisionMod2() {
   return (
-    <div className="space-y-8 text-slate-200">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
-      <div className="bg-gradient-to-r from-cyan-950/70 via-blue-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-cyan-500/30 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold mb-3 border border-cyan-500/30">
+      <div className="bg-gradient-to-r from-cyan-950/70 via-blue-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-cyan-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold mb-2 sm:mb-3 border border-cyan-500/30">
           <FiCamera className="w-4 h-4" /> โมดูลที่ 2 (Module 2)
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
           การเตรียมชิ้นงาน อุปกรณ์ภาพ และเทคนิคการจัดแสงอุตสาหกรรม
         </h1>
-        <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
           "Lighting is 80% of Success" &mdash; แสงสว่างคือหัวใจของความแม่นยำในระบบแมชชีนวิชัน 
           เรียนรู้เทคนิคการตัดแสงสะท้อนจ้า (Glare) บนโลหะชุบน้ำมัน, การเลือกใช้เลนส์ Telecentric, 
           และการใช้ฟิลเตอร์โพลาไรซ์เพื่อเพิ่มความคมชัดของภาพ
@@ -1205,8 +1205,8 @@ export function MachineVisionMod2() {
       <OpticalLightingSimulator />
 
       {/* Detailed Lighting Cheat Sheet Table */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+      <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
           <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">2</span>
           ตารางสรุปการเลือกชนิดของแสงตามโจทย์ชิ้นงานโรงงาน (Lighting Cheat Sheet)
         </h2>
@@ -1256,16 +1256,16 @@ export function MachineVisionMod2() {
 
 export function MachineVisionMod3() {
   return (
-    <div className="space-y-8 text-slate-200">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
-      <div className="bg-gradient-to-r from-violet-950/70 via-purple-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-violet-500/30 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-3 border border-violet-500/30">
+      <div className="bg-gradient-to-r from-violet-950/70 via-purple-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-violet-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-2 sm:mb-3 border border-violet-500/30">
           <FiSliders className="w-4 h-4" /> โมดูลที่ 3 (Module 3)
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
           การเขียน Logic ตรวจสอบภาพด้วย Classical Vision และ AI Deep Learning
         </h1>
-        <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
           เปรียบเทียบจุดแข็ง-จุดอ่อนระหว่าง Rule-Based Vision (แม่นยำสูง วัดขนาดระดับไมครอน &middot; ไร้ AI Hallucination) 
           กับ AI Deep Learning (ตรวจจับรอยแตกร้าว รอยไหม้ และสิ่งผิดปกติบนพื้นผิวที่ซับซ้อน)
         </p>
@@ -1275,13 +1275,13 @@ export function MachineVisionMod3() {
       <VisionLogicInspector />
 
       {/* Comparison Guide */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+      <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
           <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">2</span>
           เกณฑ์การตัดสินใจเลือกเทคโนโลยี (Decision Matrix: Classical vs AI)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-blue-300 text-sm">เมื่อไหร่ควรใช้ Classical Rule-Based?</h3>
             <ul className="text-slate-300 space-y-1.5 list-disc list-inside">
               <li>โจทย์คือการวัดขนาดมิติ (Dimension ±0.01 mm) เช่น รูเจาะ, ความกว้าง, ความหนา</li>
@@ -1292,7 +1292,7 @@ export function MachineVisionMod3() {
             </ul>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1.5 sm:space-y-2">
             <h3 className="font-bold text-purple-300 text-sm">เมื่อไหร่ต้องใช้ AI Deep Learning?</h3>
             <ul className="text-slate-300 space-y-1.5 list-disc list-inside">
               <li>รอยตำหนิมีรูปทรงไม่แน่นอน เช่น รอยแตกร้าว (Crack), รอยบุบ, รอยขูดขีด</li>
@@ -1310,16 +1310,16 @@ export function MachineVisionMod3() {
 
 export function MachineVisionMod4() {
   return (
-    <div className="space-y-8 text-slate-200">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
-      <div className="bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-emerald-500/30 shadow-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
+      <div className="bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-emerald-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2 sm:mb-3 border border-emerald-500/30">
           <FiCheckCircle className="w-4 h-4" /> โมดูลที่ 4 (Module 4)
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
           การกำหนดค่ากระบวนการทดสอบหน้างานจริง และการเชื่อมต่อระบบ MES
         </h1>
-        <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
           การบริหารจัดการค่า Margin ความปลอดภัย, การปรับจูน Threshold ป้องกันชิ้นงานเสียหลุดรอดสู่ลูกค้า (Escape Rate = 0 PPM), 
           การควบคุม Yield งานดีถูกเตะทิ้ง (Overkill &lt; 0.5%), และการส่งข้อมูลเข้าสู่ฐานข้อมูล MES เพื่อการสืบย้อนกลับ 100%
         </p>

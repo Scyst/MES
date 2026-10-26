@@ -22,6 +22,9 @@ import {
   FiHelpCircle,
   FiAlertTriangle,
   FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiList,
   FiRefreshCw,
   FiLock,
   FiBookOpen
@@ -62,6 +65,27 @@ export default function CourseViewer() {
   const [latestExamScore, setLatestExamScore] = useState(null);
   const [userGrading, setUserGrading] = useState(() => getUserGrading());
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [isMobileSyllabusOpen, setIsMobileSyllabusOpen] = useState(false);
+  const contentTopRef = useRef(null);
+  const isInitialMount = useRef(true);
+
+  // Scroll to top on course change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [courseId]);
+
+  // Scroll smoothly to lesson content header when active module changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (contentTopRef.current) {
+      const yOffset = -115;
+      const y = contentTopRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+  }, [activeModuleId]);
 
   useEffect(() => {
     const handleUserUpdated = (e) => {
@@ -192,7 +216,6 @@ export default function CourseViewer() {
     if (currentIndex < totalModules - 1) {
       const nextModuleId = course.modules[currentIndex + 1].id;
       setActiveModuleId(nextModuleId);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -201,7 +224,6 @@ export default function CourseViewer() {
     if (currentIndex > 0) {
       const prevModuleId = course.modules[currentIndex - 1].id;
       setActiveModuleId(prevModuleId);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -682,8 +704,8 @@ export default function CourseViewer() {
         </div>
       )}
 
-      {/* Sidebar / Syllabus */}
-      <div className="viewer-sidebar">
+      {/* Desktop Sidebar / Syllabus */}
+      <div className="viewer-sidebar hidden md:flex">
         <div className="sidebar-header">
           <div className="flex items-center justify-between mb-3">
             <button className="back-btn m-0" onClick={() => navigate('/')}>
@@ -762,7 +784,6 @@ export default function CourseViewer() {
                 className={`module-item ${isSelected ? 'active' : ''}`}
                 onClick={() => {
                   setActiveModuleId(module.id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               >
                 <div className="module-icon">
@@ -795,12 +816,246 @@ export default function CourseViewer() {
         </div>
       </div>
 
+      {/* Mobile Sticky Lesson Bar (Visible only on screens < md) */}
+      <div className={`md:hidden sticky top-16 z-30 px-3 py-2 border-b flex items-center justify-between gap-2 shadow-md transition-colors ${
+        isDark ? 'bg-slate-900/95 backdrop-blur-md border-slate-800' : 'bg-white/95 backdrop-blur-md border-slate-200'
+      }`}>
+        <button
+          onClick={() => navigate('/')}
+          className={`p-2 rounded-xl border flex-shrink-0 transition-colors ${
+            isDark ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+          }`}
+          title="กลับหน้าหลัก (Back to Catalog)"
+        >
+          <FiArrowLeft className="w-4 h-4" />
+        </button>
+
+        {/* Interactive Dropdown Button that reveals Syllabus Bottom Sheet */}
+        <button
+          onClick={() => setIsMobileSyllabusOpen(prev => !prev)}
+          className={`flex-1 min-w-0 border rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2 transition-all active:scale-[0.99] ${
+            isDark ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0 text-left">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+              completedModuleIds.includes(activeModuleId) || isCompleted
+                ? 'bg-emerald-500 text-white'
+                : 'bg-fuchsia-600 text-white'
+            }`}>
+              {currentIndex + 1}
+            </div>
+            <div className="min-w-0">
+              <div className={`text-[10px] font-bold leading-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                บทที่ {currentIndex + 1}/{totalModules}
+              </div>
+              <div className={`text-xs font-bold truncate leading-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {activeModule?.title || 'เลือกบทเรียน'}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+              isCompleted 
+                ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800'
+                : isDark ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-fuchsia-100 text-fuchsia-800'
+            }`}>
+              {progressPercent}%
+            </span>
+            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isMobileSyllabusOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
+
+        {/* Quick Nav Prev / Next Arrow Buttons */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={handlePrevLesson}
+            disabled={currentIndex === 0}
+            className={`p-2 rounded-xl border transition-colors ${
+              currentIndex === 0
+                ? 'opacity-35 cursor-not-allowed border-transparent text-slate-600'
+                : isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+            }`}
+            title="บทก่อนหน้า"
+          >
+            <FiChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleNextLesson}
+            disabled={currentIndex >= totalModules - 1 || !isCurrentModuleUnlocked}
+            className={`p-2 rounded-xl border transition-colors ${
+              currentIndex >= totalModules - 1 || !isCurrentModuleUnlocked
+                ? 'opacity-35 cursor-not-allowed border-transparent text-slate-600'
+                : 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-fuchsia-500 shadow-sm'
+            }`}
+            title="บทถัดไป"
+          >
+            <FiChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Syllabus Bottom Sheet / Drawer Modal */}
+      {isMobileSyllabusOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex flex-col justify-end animate-in fade-in duration-200">
+          {/* Backdrop Tap to Close */}
+          <div className="flex-1" onClick={() => setIsMobileSyllabusOpen(false)} />
+
+          <div className={`border-t rounded-t-3xl max-h-[82vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-250 ${
+            isDark ? 'bg-slate-900 border-slate-750' : 'bg-white border-slate-200'
+          }`}>
+            {/* Drawer Header */}
+            <div className={`p-4 border-b flex items-center justify-between ${
+              isDark ? 'border-slate-800' : 'border-slate-200'
+            }`}>
+              <div>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                  isDark ? 'text-fuchsia-400' : 'text-fuchsia-700'
+                }`}>
+                  สารบัญหลักสูตร (Syllabus)
+                </span>
+                <h3 className={`text-sm font-black mt-0.5 truncate max-w-[250px] ${
+                  isDark ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {course.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsMobileSyllabusOpen(false)}
+                className={`p-2 rounded-full transition-colors ${
+                  isDark ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Progress Bar inside drawer */}
+            <div className={`px-4 py-3 border-b ${
+              isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between text-xs mb-1.5 font-bold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ความคืบหน้ารวม</span>
+                <span className={
+                  isCompleted 
+                    ? isDark ? 'text-emerald-400 font-mono' : 'text-emerald-700 font-mono font-bold'
+                    : isDark ? 'text-fuchsia-400 font-mono' : 'text-fuchsia-700 font-mono font-bold'
+                }>
+                  {isCompleted ? '✓ ผ่านแล้ว 100%' : `${progressPercent}%`}
+                </span>
+              </div>
+              <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+                <div 
+                  className={`h-full transition-all duration-300 ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-fuchsia-500 to-violet-500'}`}
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs">
+                <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  ผ่านแล้ว {completedModuleIds.length}/{totalModules} บท ({course.duration})
+                </span>
+                <button
+                  onClick={() => {
+                    setIsMobileSyllabusOpen(false);
+                    setIsTrainerGuideOpen(true);
+                  }}
+                  className={`font-bold underline flex items-center gap-1 ${
+                    isDark ? 'text-purple-300 hover:text-purple-200' : 'text-purple-700 hover:text-purple-900'
+                  }`}
+                >
+                  <span>📘 แผนการสอน 3 วัน</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Syllabus Lessons List in Drawer */}
+            <div className="overflow-y-auto p-3 space-y-2 flex-1">
+              {course.modules?.map((module, index) => {
+                const isSelected = activeModule?.id === module.id;
+                const isDone = completedModuleIds.includes(module.id) || isCompleted;
+
+                return (
+                  <div
+                    key={module.id}
+                    onClick={() => {
+                      setActiveModuleId(module.id);
+                      setIsMobileSyllabusOpen(false);
+                    }}
+                    className={`p-3 rounded-2xl border flex items-center gap-3 transition-all cursor-pointer ${
+                      isSelected
+                        ? isDark
+                          ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white ring-1 ring-fuchsia-500/50 shadow-sm'
+                          : 'bg-fuchsia-50 border-fuchsia-500 text-fuchsia-950 ring-1 ring-fuchsia-500/50 shadow-sm'
+                        : isDone
+                          ? isDark
+                            ? 'bg-slate-850/80 border-emerald-500/30 text-slate-200 hover:border-emerald-500/50'
+                            : 'bg-white border-emerald-200 text-slate-800 hover:border-emerald-400'
+                          : isDark
+                            ? 'bg-slate-850 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex-shrink-0">
+                      {isDone ? (
+                        <FiCheckCircle className="text-emerald-500 w-5 h-5" />
+                      ) : isSelected ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-fuchsia-500 flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-fuchsia-500" />
+                        </div>
+                      ) : (
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold ${
+                          isDark ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-600'
+                        }`}>
+                          {index + 1}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between text-[11px] mb-0.5">
+                        <span className={`font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          บทเรียนที่ {index + 1}
+                        </span>
+                        {isDone && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
+                            isDark ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                          }`}>
+                            ผ่านแล้ว
+                          </span>
+                        )}
+                        {isSelected && !isDone && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                            isDark ? 'text-fuchsia-300 bg-fuchsia-500/20' : 'text-fuchsia-800 bg-fuchsia-100'
+                          }`}>
+                            กำลังเรียน
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-xs font-bold leading-snug line-clamp-2 ${
+                        isSelected 
+                          ? isDark ? 'text-white' : 'text-fuchsia-950'
+                          : isDark ? 'text-slate-300' : 'text-slate-800'
+                      }`}>
+                        {module.title}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
-      <div className="viewer-content">
+      <div className="viewer-content" ref={contentTopRef}>
         <div className="content-body">
           {/* Completed Golden Banner */}
           {isCompleted && (
-            <div className={`p-4 mb-6 rounded-2xl border flex items-center justify-between gap-4 shadow-sm ${
+            <div className={`p-4 mb-6 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${
               isDark
                 ? 'bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border-emerald-500/30 text-emerald-200'
                 : 'bg-emerald-50 border-emerald-300 text-emerald-950'
@@ -812,7 +1067,7 @@ export default function CourseViewer() {
                   <FiAward />
                 </div>
                 <div>
-                  <div className={`text-sm font-bold flex items-center gap-2 ${
+                  <div className={`text-sm font-bold flex flex-wrap items-center gap-2 ${
                     isDark ? 'text-white' : 'text-slate-900'
                   }`}>
                     <span>คุณผ่านการอบรมหลักสูตรนี้สำเร็จ 100%</span>
@@ -829,7 +1084,7 @@ export default function CourseViewer() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-1 sm:pt-0">
                 <button
                   onClick={() => setIsCertificateModalOpen(true)}
                   className="px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 hover:scale-105 active:scale-95"

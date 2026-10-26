@@ -16,6 +16,14 @@ import UserProfile from './pages/UserProfile';
 import { getCurrentUser, getMesLoginUrl } from './data/communityStore';
 import './index.css';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
+  return null;
+}
+
 function AppLayout() {
   const { isDark } = useTheme();
   const location = useLocation();
@@ -151,6 +159,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
+        <ScrollToTop />
         <AppLayout />
       </Router>
     </ThemeProvider>
