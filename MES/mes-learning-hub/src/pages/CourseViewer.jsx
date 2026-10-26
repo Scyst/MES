@@ -705,8 +705,8 @@ export default function CourseViewer() {
       )}
 
       {/* Desktop Sidebar / Syllabus */}
-      <div className="viewer-sidebar hidden md:flex">
-        <div className="sidebar-header">
+      <div className="viewer-sidebar hidden md:flex md:flex-col shrink-0 md:w-80">
+        <div className="sidebar-header shrink-0 w-full">
           <div className="flex items-center justify-between mb-3">
             <button className="back-btn m-0" onClick={() => navigate('/')}>
               <FiArrowLeft /> Back

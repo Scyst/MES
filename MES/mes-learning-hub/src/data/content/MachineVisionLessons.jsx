@@ -1832,8 +1832,8 @@ export function MachineVisionMod1() {
 
       {/* Section 1: Why Machine Vision in Industry 4.0? Human vs Machine */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center text-sm font-black border border-blue-500/40">1</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-blue-400 font-black mr-2">1.</span>
           ทำไมโรงงาน Industry 4.0 ต้องเปลี่ยนสู่ระบบ Machine Vision? (Human vs Machine Vision)
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
@@ -1884,8 +1884,8 @@ export function MachineVisionMod1() {
 
       {/* Section 2: Hierarchy & Venn Diagram: AI vs CV vs DL vs Machine Vision */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">2</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-indigo-400 font-black mr-2">2.</span>
           ลำดับชั้นและแผนภาพเวนน์: AI vs Computer Vision vs Machine Vision
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
@@ -1910,26 +1910,37 @@ export function MachineVisionMod1() {
           </div>
 
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-center">
-            {/* SVG Venn Diagram */}
+            {/* SVG Venn Diagram with High-Contrast Solid Badge Pills */}
             <svg viewBox="0 0 320 220" className="w-full h-full max-h-56">
               {/* Outer AI circle */}
-              <circle cx="160" cy="110" r="100" fill="rgba(168, 85, 247, 0.1)" stroke="#a855f7" strokeWidth="1.5" />
-              <text x="160" y="30" textAnchor="middle" fill="#d8b4fe" fontSize="11" fontWeight="bold">Artificial Intelligence (AI)</text>
+              <circle cx="160" cy="110" r="100" fill="rgba(168, 85, 247, 0.12)" stroke="#a855f7" strokeWidth="2" />
+              {/* AI Badge Pill */}
+              <rect x="75" y="16" width="170" height="20" rx="10" fill="#7e22ce" />
+              <text x="160" y="30" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="bold">Artificial Intelligence (AI)</text>
 
               {/* CV Circle */}
-              <circle cx="160" cy="120" r="75" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" strokeWidth="1.5" />
-              <text x="160" y="65" textAnchor="middle" fill="#7dd3fc" fontSize="10" fontWeight="bold">Computer Vision (CV)</text>
+              <circle cx="160" cy="120" r="75" fill="rgba(56, 189, 248, 0.15)" stroke="#0284c7" strokeWidth="2" />
+              {/* CV Badge Pill */}
+              <rect x="95" y="52" width="130" height="19" rx="9.5" fill="#0284c7" />
+              <text x="160" y="65.5" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="bold">Computer Vision (CV)</text>
 
-              {/* Overlapping DL & Machine Vision */}
-              <circle cx="125" cy="135" r="45" fill="rgba(244, 63, 94, 0.25)" stroke="#f43f5e" strokeWidth="1.5" />
-              <text x="110" y="130" textAnchor="middle" fill="#fda4af" fontSize="9" fontWeight="bold">Deep Learning</text>
-              <text x="110" y="142" textAnchor="middle" fill="#fda4af" fontSize="8">(AI Vision)</text>
+              {/* Left Circle: Deep Learning */}
+              <circle cx="125" cy="135" r="45" fill="rgba(244, 63, 94, 0.22)" stroke="#e11d48" strokeWidth="1.8" />
+              {/* DL Badge Pill */}
+              <rect x="58" y="118" width="94" height="30" rx="8" fill="#e11d48" />
+              <text x="105" y="130" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">Deep Learning</text>
+              <text x="105" y="142" textAnchor="middle" fill="#ffe4e6" fontSize="8" fontWeight="medium">(AI Vision)</text>
 
-              <circle cx="195" cy="135" r="45" fill="rgba(34, 197, 94, 0.25)" stroke="#22c55e" strokeWidth="1.5" />
-              <text x="210" y="130" textAnchor="middle" fill="#86efac" fontSize="9" fontWeight="bold">Machine Vision</text>
-              <text x="210" y="142" textAnchor="middle" fill="#86efac" fontSize="8">(Industrial HW &amp; Optics)</text>
+              {/* Right Circle: Machine Vision */}
+              <circle cx="195" cy="135" r="45" fill="rgba(34, 197, 94, 0.22)" stroke="#16a34a" strokeWidth="1.8" />
+              {/* MV Badge Pill */}
+              <rect x="164" y="118" width="112" height="30" rx="8" fill="#16a34a" />
+              <text x="220" y="130" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">Machine Vision</text>
+              <text x="220" y="142" textAnchor="middle" fill="#dcfce7" fontSize="7.5" fontWeight="medium">(Industrial HW &amp; Optics)</text>
 
-              <text x="160" y="140" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="black">Edge AI</text>
+              {/* Overlap Center: Edge AI Pill */}
+              <rect x="135" y="126" width="50" height="18" rx="9" fill="#0f172a" stroke="#ffffff" strokeWidth="1.2" />
+              <text x="160" y="139" textAnchor="middle" fill="#38bdf8" fontSize="8.5" fontWeight="black">Edge AI</text>
             </svg>
           </div>
         </div>
@@ -1937,8 +1948,8 @@ export function MachineVisionMod1() {
 
       {/* Section 3: The 4-Stage Core Working Principle Pipeline */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-sky-600/30 text-sky-400 flex items-center justify-center text-sm font-black border border-sky-500/40">3</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-sky-400 font-black mr-2">3.</span>
           วงจรการทำงาน 4 ขั้นตอนของระบบ Machine Vision (Core Working Pipeline)
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
@@ -1990,8 +2001,8 @@ export function MachineVisionMod1() {
 
       {/* Section 4: Types of Machine Vision (1D vs 2D vs 3D) */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">4</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-violet-400 font-black mr-2">4.</span>
           ประเภทของระบบแมชชีนวิชันตามมิติภาพ (1D Line Scan vs 2D Area Scan vs 3D Vision)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -2041,8 +2052,8 @@ export function MachineVisionMod1() {
 
       {/* Section 5: 4 Industrial Application Pillars */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-sm font-black border border-emerald-500/40">5</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-emerald-400 font-black mr-2">5.</span>
           4 เสาหลักการประยุกต์ใช้ในโรงงานอุตสาหกรรม (4 Core Industrial Application Pillars)
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
@@ -2090,8 +2101,8 @@ export function MachineVisionMod1() {
 
       {/* Section 6: 6 Core Components of Industrial Machine Vision */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center text-sm font-black border border-blue-500/40">6</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-blue-400 font-black mr-2">6.</span>
           6 องค์ประกอบหลักของระบบ Industrial Machine Vision Hardware
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs pt-1">
@@ -2154,8 +2165,8 @@ export function MachineVisionMod2() {
 
       {/* Detailed Lighting Cheat Sheet Table */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">2</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-cyan-400 font-black mr-2">2.</span>
           ตารางสรุปการเลือกชนิดของแสงตามโจทย์ชิ้นงานโรงงาน (Lighting Cheat Sheet)
         </h2>
         
@@ -2216,8 +2227,8 @@ export function MachineVisionMod2() {
 
       {/* Industrial Camera Interface Comparison Matrix */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-sky-600/30 text-sky-400 flex items-center justify-center text-sm font-black border border-sky-500/40">4</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-sky-400 font-black mr-2">4.</span>
           ตารางเปรียบเทียบพอร์ตเชื่อมต่อกล้องอุตสาหกรรม (Industrial Camera Interfaces Comparison)
         </h2>
         <div className="space-y-1.5">
@@ -2297,8 +2308,8 @@ export function MachineVisionMod3() {
 
       {/* Section 1: Digital Image as Numerical Matrix & Color Spaces */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">1</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-violet-400 font-black mr-2">1.</span>
           โครงสร้างภาพดิจิทัลในเชิงคณิตศาสตร์และระบบสี (Matrix &amp; Color Spaces)
         </h2>
         
@@ -2353,8 +2364,8 @@ export function MachineVisionMod3() {
 
       {/* Comparison Guide */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">5</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-violet-400 font-black mr-2">5.</span>
           เกณฑ์การตัดสินใจเลือกเทคโนโลยี (Decision Matrix: Classical vs AI)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs">
@@ -2411,8 +2422,8 @@ export function MachineVisionMod4() {
 
       {/* Confusion Matrix in Manufacturing Engineering Table */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-rose-600/30 text-rose-400 flex items-center justify-center text-sm font-black border border-rose-500/40">2</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-rose-400 font-black mr-2">2.</span>
           ตารางวิเคราะห์ Confusion Matrix ในระบบควบคุมคุณภาพโรงงาน (Manufacturing Quality Matrix)
         </h2>
         <div className="space-y-1.5">
@@ -2466,8 +2477,8 @@ export function MachineVisionMod4() {
 
       {/* Capstone Mini-Project: Real-Time YOLO Defect Detection Loop (Slide 55) */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-purple-600/30 text-purple-400 flex items-center justify-center text-sm font-black border border-purple-500/40">4</span>
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-purple-400 font-black mr-2">4.</span>
           มินิโปรเจกต์ส่งท้าย: Real-Time YOLO Defect Inspection &amp; PLC Trigger Integration (Slide 55)
         </h2>
         <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
