@@ -646,45 +646,55 @@ export const courses = [
     ]
   },
 
-  // 7. Integrated Robotics Programming, Troubleshooting & Intelligent Sensing
+  // 7. Integrated Robotics Programming, Troubleshooting & Intelligent Sensing (SNC Robot Advance Curriculum)
   {
     id: 'c-robot-automation',
     title: 'Integrated Robotics Programming, Troubleshooting & Intelligent Sensing',
-    description: 'หลักสูตรการเขียนโปรแกรมหุ่นยนต์อุตสาหกรรม การแก้ปัญหา และเทคโนโลยีเซนเซอร์อัจฉริยะ: หุ่นยนต์ 6 แกนและ SCARA, ระบบพิกัด Joint/World/Tool, การเชื่อมต่อสัญญาณ I/O และ Handshaking กับ PLC, มาตรฐานความปลอดภัย ISO 10218, การใช้ Teach Pendant และ Workshop Pick & Place',
-    instructor: 'ทีมวิศวกรรมหุ่นยนต์อุตสาหกรรม (99 Industrial Solutions / SNC Former)',
-    duration: '18 hours (3 days)',
+    description: 'หลักสูตรวิศวกรรมหุ่นยนต์อุตสาหกรรมขั้นสูง (SNC Robot Advance & ARAI Academy): สถาปัตยกรรมแขนกล 6 แกน (S/L/U/R/B/T), ผัง 10 Skills Robot, ระบบเซนเซอร์และอุปกรณ์ไฟฟ้า I/O, วงจร Handshaking ป้องกันการชนในแม่พิมพ์ปั๊มขึ้นรูป, ระบบพิกัด 3 มิติและกฎมือขวา, เส้นทาง PTP vs Linear vs Singularity, การเขียนโปรแกรม IF-ELSE, ฟังก์ชัน Position Offset และระบบจัดเรียงพาเลท Matrix Palletizing',
+    instructor: 'ทีมวิศวกรรมหุ่นยนต์และระบบอัตโนมัติ (SNC Former / ARAI Academy)',
+    duration: '24 hours (3-4 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
     modules: [
       {
         id: 'm1',
-        title: '1. พื้นฐานหุ่นยนต์อุตสาหกรรมและแนวคิด Industry 4.0 (6-Axis, SCARA, Cobot)',
-        content: 'robot-basics-industry4'
+        title: '1. สถาปัตยกรรมหุ่นยนต์ 6 แกน (S/L/U/R/B/T) และมาตรฐาน 10 Skills Robot',
+        content: 'robot-basics-architecture'
       },
       {
         id: 'm2',
-        title: '2. โครงสร้างหุ่นยนต์ ระบบพิกัด และโหมดการเคลื่อนที่ (Joint, World, Tool TCP)',
-        content: 'robot-kinematics-coordinates'
+        title: '2. ระบบเซนเซอร์และอุปกรณ์ไฟฟ้า INPUT - OUTPUT ในสายการผลิต',
+        content: 'robot-sensors-io'
       },
       {
         id: 'm3',
-        title: '3. ระบบไฟฟ้าและสัญญาณ I/O ระหว่างหุ่นยนต์กับสายการผลิต (Handshaking)',
-        content: 'robot-io-signals'
+        title: '3. วงจรควบคุมสัญญาณ I/O และการทำ Handshaking ป้องกันการชน',
+        content: 'robot-handshaking-interlock'
       },
       {
         id: 'm4',
-        title: '4. มาตรฐานความปลอดภัยในการทำงานร่วมกับหุ่นยนต์ (Safety Light Curtain & Deadman)',
-        content: 'robot-safety-standards'
+        title: '4. ระบบพิกัด 3 มิติ กฎมือขวา และโหมดการเคลื่อนที่ (Joint, World, Tool TCP)',
+        content: 'robot-coordinates-righthand'
       },
       {
         id: 'm5',
-        title: '5. การใช้ Teach Pendant และการเขียนโปรแกรมหุ่นยนต์เบื้องต้น (MOVEJ vs MOVEL)',
-        content: 'robot-teach-pendant'
+        title: '5. รูปแบบเส้นทางการเคลื่อนที่ (PTP / MOVEJ vs MOVEL & Singularity)',
+        content: 'robot-motion-trajectories'
       },
       {
         id: 'm6',
-        title: '6. การประยุกต์ใช้งานจริงในโรงงานและ Workshop (Pick & Place & Palletizing)',
-        content: 'robot-workshop-applications'
+        title: '6. การเขียนโปรแกรมหุ่นยนต์ ตัวแปร คณิตศาสตร์ และตรรกะเงื่อนไข (IF-ELSE)',
+        content: 'robot-programming-logic'
+      },
+      {
+        id: 'm7',
+        title: '7. การคำนวณ TCP, การ Offset ตำแหน่ง และระบบจัดเรียงพาเลท (Palletizing)',
+        content: 'robot-offset-palletizing'
+      },
+      {
+        id: 'm8',
+        title: '8. มาตรฐานความปลอดภัยสากล ISO 10218, Deadman Switch และการบำรุงรักษา',
+        content: 'robot-safety-maintenance'
       }
     ]
   }

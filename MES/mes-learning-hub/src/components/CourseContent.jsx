@@ -124,7 +124,9 @@ import {
   RobotMod3,
   RobotMod4,
   RobotMod5,
-  RobotMod6
+  RobotMod6,
+  RobotMod7,
+  RobotMod8
 } from '../data/content/RobotLessons';
 
 export default function CourseContent({ courseId, moduleContent }) {
@@ -255,12 +257,21 @@ export default function CourseContent({ courseId, moduleContent }) {
     'plc-troubleshooting': <PlcMod6 />,
 
     // 7. Integrated Robotics Programming, Troubleshooting & Intelligent Sensing
+    'robot-basics-architecture': <RobotMod1 />,
+    'robot-sensors-io': <RobotMod2 />,
+    'robot-handshaking-interlock': <RobotMod3 />,
+    'robot-coordinates-righthand': <RobotMod4 />,
+    'robot-motion-trajectories': <RobotMod5 />,
+    'robot-programming-logic': <RobotMod6 />,
+    'robot-offset-palletizing': <RobotMod7 />,
+    'robot-safety-maintenance': <RobotMod8 />,
+    // Legacy mapping fallback
     'robot-basics-industry4': <RobotMod1 />,
-    'robot-kinematics-coordinates': <RobotMod2 />,
-    'robot-io-signals': <RobotMod3 />,
-    'robot-safety-standards': <RobotMod4 />,
-    'robot-teach-pendant': <RobotMod5 />,
-    'robot-workshop-applications': <RobotMod6 />
+    'robot-kinematics-coordinates': <RobotMod4 />,
+    'robot-io-signals': <RobotMod2 />,
+    'robot-safety-standards': <RobotMod8 />,
+    'robot-teach-pendant': <RobotMod1 />,
+    'robot-workshop-applications': <RobotMod7 />
   };
 
   const ContentComponent = contentMap[moduleContent];
