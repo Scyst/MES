@@ -1549,11 +1549,57 @@ function VisionLogicInspector() {
 /* ========================================================================= */
 /* 8. CONFUSION MATRIX & THRESHOLD TUNING LAB                                */
 /* ========================================================================= */
-function ThresholdTuningLab() {
-  const [threshold, setThreshold] = useState(65);
 
-  const escapePPM = threshold > 75 ? Math.round(Math.pow((threshold - 75) * 1.8, 2)) : 0;
-  const overkillPercent = threshold < 50 ? (12.5 - threshold * 0.2).toFixed(1) : (Math.max(0.2, (75 - threshold) * 0.08)).toFixed(2);
+// สถิติจำลอง: คะแนนความมั่นใจของชิ้นงานเสีย (เฉลี่ย 25) และชิ้นงานดี (เฉลี่ย 88)
+const DEFECTIVE_SCORE_DIST = { mean: 25, sd: 8 };
+const GOOD_SCORE_DIST = { mean: 88, sd: 7 };
+const CURVE_X_MIN = 40;
+const CURVE_X_RANGE = 440;
+const CURVE_BASELINE_Y = 150;
+const CURVE_PEAK_HEIGHT = 120;
+
+// Complementary error function (Numerical Recipes erfcc, relative error < 1.2e-7)
+function complementaryErrorFunction(value) {
+  const absValue = Math.abs(value);
+  const t = 1 / (1 + 0.5 * absValue);
+  const polynomial = -absValue * absValue - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418
+    + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277))))))));
+  const result = t * Math.exp(polynomial);
+  return value >= 0 ? result : 2 - result;
+}
+
+// P(score >= threshold) สำหรับกลุ่มที่มีค่าเฉลี่ยและ SD ที่กำหนด
+function probabilityAtOrAbove(threshold, { mean, sd }) {
+  return 0.5 * complementaryErrorFunction((threshold - mean) / (sd * Math.SQRT2));
+}
+
+function scoreToCurveX(score) {
+  return CURVE_X_MIN + (score / 100) * CURVE_X_RANGE;
+}
+
+// ความสูงของเส้นโค้งแบบขยายหาง (รากที่สองของความหนาแน่น) เพื่อให้มองเห็นพื้นที่ซ้อนทับชัดเจน
+function scoreToCurveY(score, { mean, sd }) {
+  const z = (score - mean) / sd;
+  return CURVE_BASELINE_Y - CURVE_PEAK_HEIGHT * Math.exp(-0.25 * z * z);
+}
+
+function buildCurveAreaPath(distribution, fromScore, toScore) {
+  const points = [];
+  for (let score = fromScore; score <= toScore; score += 1) {
+    points.push(`${scoreToCurveX(score).toFixed(1)},${scoreToCurveY(score, distribution).toFixed(1)}`);
+  }
+  points.push(`${scoreToCurveX(toScore).toFixed(1)},${scoreToCurveY(toScore, distribution).toFixed(1)}`);
+  return `M ${scoreToCurveX(fromScore)},${CURVE_BASELINE_Y} L ${points.join(' L ')} L ${scoreToCurveX(toScore)},${CURVE_BASELINE_Y} Z`;
+}
+
+function ThresholdTuningLab() {
+  const [threshold, setThreshold] = useState(50);
+
+  const escapeRate = probabilityAtOrAbove(threshold, DEFECTIVE_SCORE_DIST);
+  const overkillRate = 1 - probabilityAtOrAbove(threshold, GOOD_SCORE_DIST);
+  const escapePPM = Math.round(escapeRate * 1000000);
+  const overkillPercent = (overkillRate * 100).toFixed(2);
+  const thresholdX = scoreToCurveX(threshold);
 
   return (
     <div className="bg-slate-900 border border-rose-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
@@ -1609,7 +1655,7 @@ function ThresholdTuningLab() {
               <span className={`text-3xl font-black font-mono ${escapePPM === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {escapePPM}
               </span>
-              <span className="text-xs text-slate-400">PPM (ชิ้นในหนึ่งล้านชิ้น)</span>
+              <span className="text-xs text-slate-400">PPM (ของเสียหลุดรอดต่อชิ้นงานเสีย 1 ล้านชิ้น)</span>
             </div>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed border-t border-slate-800 pt-2 m-0">
@@ -1638,7 +1684,7 @@ function ThresholdTuningLab() {
               <span className={`text-3xl font-black font-mono ${Number(overkillPercent) <= 0.5 ? 'text-emerald-400' : 'text-amber-400'}`}>
                 {overkillPercent}%
               </span>
-              <span className="text-xs text-slate-400">ของงานทั้งหมดในไลน์</span>
+              <span className="text-xs text-slate-400">ของชิ้นงานดีทั้งหมดในไลน์</span>
             </div>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed border-t border-slate-800 pt-2 m-0">
@@ -1649,39 +1695,76 @@ function ThresholdTuningLab() {
         </div>
       </div>
 
+      {/* Beginner-friendly guide: how to read the distribution chart */}
+      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+        <div className="text-xs font-bold text-slate-300">
+          วิธีอ่านกราฟด้านล่าง (สำหรับผู้เริ่มต้น)
+        </div>
+        <ol className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px] text-slate-300 leading-relaxed list-none p-0 m-0">
+          <li className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+            <strong className="text-cyan-400 block mb-0.5">1. กล้องให้คะแนนทุกชิ้นงาน</strong>
+            ระบบวิชันให้ &quot;คะแนนความมั่นใจ&quot; 0-100 แก่ชิ้นงานทุกชิ้น โดย 0 คือเสียชัดเจน และ 100 คือดีสมบูรณ์แบบ
+          </li>
+          <li className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+            <strong className="text-amber-400 block mb-0.5">2. ภูเขาคือจำนวนชิ้นงาน</strong>
+            ภูเขาสีแดงคือกลุ่มชิ้นงานเสีย (คะแนนต่ำ) ภูเขาสีเขียวคือกลุ่มชิ้นงานดี (คะแนนสูง) ยิ่งภูเขาสูงยิ่งมีชิ้นงานคะแนนนั้นมาก
+          </li>
+          <li className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+            <strong className="text-sky-400 block mb-0.5">3. เส้นฟ้าคือเกณฑ์ตัดสิน</strong>
+            ชิ้นงานที่คะแนนอยู่ทางขวาของเส้นจะผ่าน (OK) ส่วนทางซ้ายของเส้นจะถูกเตะทิ้ง (NG) ลองเลื่อน Threshold เพื่อดูผล
+          </li>
+        </ol>
+      </div>
+
       {/* Bell Curve Gaussian SVG */}
-      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-        <div className="text-xs font-bold text-slate-400 mb-2 flex items-center justify-between">
+      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+        <div className="text-xs font-bold text-slate-400 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <span>เส้นโค้งการแจกแจงค่าการตรวจ (Distribution Curves &amp; Decision Boundary)</span>
-          <span className="text-[10px] text-cyan-400 font-mono">Sweet Spot: 65% - 72%</span>
+          <span className="text-[10px] text-cyan-400 font-mono">Sweet Spot: 65% - 70%</span>
         </div>
         <div className="relative aspect-[16/7] w-full bg-slate-900 rounded-lg p-2">
           <svg className="w-full h-full" viewBox="0 0 500 180">
             <line x1="40" y1="150" x2="480" y2="150" stroke="#475569" strokeWidth="1.5" />
             <text x="40" y="168" fill="#94a3b8" fontSize="10">0 (เสียชัดเจน)</text>
-            <text x="480" y="168" textAnchor="end" fill="#94a3b8" fontSize="10">100 (สมบูรณ์แบบ)</text>
+            <text x="480" y="168" textAnchor="end" fill="#94a3b8" fontSize="10">100 (ดีสมบูรณ์)</text>
 
-            <path d="M 50 150 Q 130 20 210 150" fill="rgba(244, 63, 94, 0.2)" stroke="#f43f5e" strokeWidth="2" />
-            <text x="130" y="80" textAnchor="middle" fill="#f43f5e" fontSize="11" fontWeight="bold">ชิ้นงานเสีย (Defective Parts)</text>
+            {/* Full distribution curves */}
+            <path d={buildCurveAreaPath(DEFECTIVE_SCORE_DIST, 0, 100)} fill="rgba(244, 63, 94, 0.18)" stroke="#f43f5e" strokeWidth="2" />
+            <path d={buildCurveAreaPath(GOOD_SCORE_DIST, 0, 100)} fill="rgba(34, 197, 94, 0.18)" stroke="#22c55e" strokeWidth="2" />
+            <text x={scoreToCurveX(DEFECTIVE_SCORE_DIST.mean)} y="38" textAnchor="middle" fill="#fb7185" fontSize="11" fontWeight="bold">กลุ่มชิ้นงานเสีย</text>
+            <text x={scoreToCurveX(GOOD_SCORE_DIST.mean)} y="38" textAnchor="middle" fill="#4ade80" fontSize="11" fontWeight="bold">กลุ่มชิ้นงานดี</text>
 
-            <path d="M 230 150 Q 350 10 470 150" fill="rgba(34, 197, 94, 0.2)" stroke="#22c55e" strokeWidth="2" />
-            <text x="350" y="70" textAnchor="middle" fill="#22c55e" fontSize="11" fontWeight="bold">ชิ้นงานดี (Good Parts)</text>
+            {/* Risk areas: defective parts passing (right of line) and good parts rejected (left of line) */}
+            {threshold < 100 && (
+              <path d={buildCurveAreaPath(DEFECTIVE_SCORE_DIST, threshold, 100)} fill="rgba(244, 63, 94, 0.85)" />
+            )}
+            {threshold > 0 && (
+              <path d={buildCurveAreaPath(GOOD_SCORE_DIST, 0, threshold)} fill="rgba(245, 158, 11, 0.85)" />
+            )}
 
-            {(() => {
-              const xPos = 40 + (threshold / 100) * 440;
-              return (
-                <g>
-                  <line x1={xPos} y1="10" x2={xPos} y2="150" stroke="#38bdf8" strokeWidth="3" strokeDasharray="4,3" />
-                  <polygon points={`${xPos-6},10 ${xPos+6},10 ${xPos},18`} fill="#38bdf8" />
-                  <rect x={xPos - 45} y="15" width="90" height="20" rx="3" fill="#0284c7" />
-                  <text x={xPos} y="29" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold">
-                    Threshold: {threshold}%
-                  </text>
-                </g>
-              );
-            })()}
+            {/* Threshold line */}
+            <line x1={thresholdX} y1="10" x2={thresholdX} y2="150" stroke="#38bdf8" strokeWidth="3" strokeDasharray="4,3" />
+            <rect x={thresholdX - 45} y="10" width="90" height="18" rx="9" fill="#0284c7" />
+            <text x={thresholdX} y="22.5" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold">
+              Threshold: {threshold}%
+            </text>
+            <text x={thresholdX - 6} y="143" textAnchor="end" fill="#fbbf24" fontSize="9" fontWeight="bold">NG ◀</text>
+            <text x={thresholdX + 6} y="143" textAnchor="start" fill="#4ade80" fontSize="9" fontWeight="bold">▶ OK</text>
           </svg>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] leading-relaxed">
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-slate-900 border border-rose-500/30 text-slate-300">
+            <span className="w-3 h-3 rounded-sm bg-rose-500 flex-shrink-0 mt-1"></span>
+            <span><strong className="text-rose-300">พื้นที่แดงทางขวาของเส้น</strong> = ชิ้นงานเสียที่คะแนนสูงพอจะผ่านเกณฑ์ (Escape) อันตรายต่อลูกค้า</span>
+          </div>
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-slate-900 border border-amber-500/30 text-slate-300">
+            <span className="w-3 h-3 rounded-sm bg-amber-500 flex-shrink-0 mt-1"></span>
+            <span><strong className="text-amber-300">พื้นที่ส้มทางซ้ายของเส้น</strong> = ชิ้นงานดีที่คะแนนต่ำจนถูกเตะทิ้ง (Overkill) เสียต้นทุนและ Yield</span>
+          </div>
+        </div>
+        <p className="text-[10px] text-slate-500 m-0">
+          หมายเหตุ: กราฟแสดงแบบขยายส่วนปลายโค้งเพื่อให้มองเห็นพื้นที่เสี่ยงชัดเจน ค่า PPM และ Overkill ด้านบนคำนวณจากสถิติจริงของทั้งสองกลุ่ม
+        </p>
       </div>
     </div>
   );
@@ -1806,11 +1889,11 @@ function VisionHardwareArchitecture() {
 }
 
 /* ========================================================================= */
-/* MAIN EXPORTED LESSON MODULES (1 - 4)                                     */
+/* MAIN EXPORTED LESSON MODULES (1 - 8)                                     */
 /* ========================================================================= */
 
 /* ------------------------------------------------------------------------- */
-/* MODULE 1: MACHINE VISION BASICS & SYSTEM ARCHITECTURE                     */
+/* MODULE 1: MACHINE VISION FUNDAMENTALS, AI/CV/MV HIERARCHY & 4-STAGE FLOW  */
 /* ------------------------------------------------------------------------- */
 export function MachineVisionMod1() {
   return (
@@ -1818,15 +1901,14 @@ export function MachineVisionMod1() {
       {/* Module Header */}
       <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-blue-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-2 sm:mb-3 border border-blue-500/30">
-          <FiEye className="w-4 h-4" /> โมดูลที่ 1 (Module 1)
+          <FiEye className="w-4 h-4" /> บทเรียนที่ 1 (Lesson 1 of 8)
         </div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
-          พื้นฐานระบบ Machine Vision และโครงสร้างระบบตรวจสอบในโรงงานอัจฉริยะ (Industry 4.0)
+          พื้นฐานระบบ Machine Vision, แผนภาพ AI/CV/MV และวงจรการทำงาน 4 ขั้นตอน
         </h1>
         <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
-          เข้าใจรากฐานของแมชชีนวิชัน: ความแตกต่างระหว่าง Human Vision กับ Machine Vision, 
-          ลำดับชั้น AI / Computer Vision / Machine Vision, วงจรการทำงาน 4 ขั้นตอน (Acquisition &rarr; Processing &rarr; Analysis &rarr; Decision), 
-          ประเภทระบบ 1D / 2D / 3D, 4 เสาหลักการใช้งานในโรงงาน และการเลือกเซนเซอร์ Global Shutter
+          เข้าใจรากฐานของแมชชีนวิชันในโรงงานอัจฉริยะ (Industry 4.0): ความแตกต่างเชิงวิศวกรรมระหว่างสายตามนุษย์กับระบบ Machine Vision, 
+          ความสัมพันธ์ระหว่าง AI / Computer Vision / Deep Learning / Machine Vision และวงจรการทำงานมาตรฐาน 4 ขั้นตอน (Acquisition &rarr; Processing &rarr; Analysis &rarr; Decision)
         </p>
       </div>
 
@@ -1998,11 +2080,34 @@ export function MachineVisionMod1() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
 
-      {/* Section 4: Types of Machine Vision (1D vs 2D vs 3D) */}
+/* ------------------------------------------------------------------------- */
+/* MODULE 2: 1D/2D/3D SYSTEMS, 6 HARDWARE COMPONENTS & SHUTTER TECHNOLOGY    */
+/* ------------------------------------------------------------------------- */
+export function MachineVisionMod2() {
+  return (
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
+      {/* Module Header */}
+      <div className="bg-gradient-to-r from-indigo-950/70 via-blue-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-indigo-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold mb-2 sm:mb-3 border border-indigo-500/30">
+          <FiCpu className="w-4 h-4" /> บทเรียนที่ 2 (Lesson 2 of 8)
+        </div>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
+          ประเภทระบบภาพ 1D/2D/3D, องค์ประกอบฮาร์ดแวร์ 6 ส่วน และชัตเตอร์กล้อง Global vs Rolling
+        </h1>
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
+          เจาะลึกการจำแนกระบบแมชชีนวิชันตามมิติภาพ (1D Line Scan, 2D Area Scan, 3D Point Cloud), 
+          4 เสาหลักการใช้งานในสายการผลิต, 6 องค์ประกอบฮาร์ดแวร์หลัก และการทดลองเปรียบเทียบเซนเซอร์ Global Shutter กับ Rolling Shutter บนสายพานความเร็วสูง
+        </p>
+      </div>
+
+      {/* Section 1: Types of Machine Vision (1D vs 2D vs 3D) */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
-          <span className="text-violet-400 font-black mr-2">4.</span>
+          <span className="text-violet-400 font-black mr-2">1.</span>
           ประเภทของระบบแมชชีนวิชันตามมิติภาพ (1D Line Scan vs 2D Area Scan vs 3D Vision)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
@@ -2050,10 +2155,10 @@ export function MachineVisionMod1() {
         </div>
       </section>
 
-      {/* Section 5: 4 Industrial Application Pillars */}
+      {/* Section 2: 4 Industrial Application Pillars */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
-          <span className="text-emerald-400 font-black mr-2">5.</span>
+          <span className="text-emerald-400 font-black mr-2">2.</span>
           4 เสาหลักการประยุกต์ใช้ในโรงงานอุตสาหกรรม (4 Core Industrial Application Pillars)
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
@@ -2099,10 +2204,10 @@ export function MachineVisionMod1() {
         </div>
       </section>
 
-      {/* Section 6: 6 Core Components of Industrial Machine Vision */}
+      {/* Section 3: 6 Core Components of Industrial Machine Vision */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
-          <span className="text-blue-400 font-black mr-2">6.</span>
+          <span className="text-blue-400 font-black mr-2">3.</span>
           6 องค์ประกอบหลักของระบบ Industrial Machine Vision Hardware
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs pt-1">
@@ -2140,23 +2245,22 @@ export function MachineVisionMod1() {
 }
 
 /* ------------------------------------------------------------------------- */
-/* MODULE 2: OPTICAL HARDWARE, LIGHTING & 3-PIXEL RULE                      */
+/* MODULE 3: INDUSTRIAL LIGHTING ENGINEERING & POLARIZER GLARE REDUCTION     */
 /* ------------------------------------------------------------------------- */
-export function MachineVisionMod2() {
+export function MachineVisionMod3() {
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
       <div className="bg-gradient-to-r from-cyan-950/70 via-blue-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-cyan-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold mb-2 sm:mb-3 border border-cyan-500/30">
-          <FiCamera className="w-4 h-4" /> โมดูลที่ 2 (Module 2)
+          <FiCamera className="w-4 h-4" /> บทเรียนที่ 3 (Lesson 3 of 8)
         </div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
-          การเตรียมชิ้นงาน อุปกรณ์ภาพ การคำนวณทางเลนส์ และเทคนิคการจัดแสง
+          วิศวกรรมการจัดแสงอุตสาหกรรมและการตัดแสงสะท้อนด้วยโพลาไรเซอร์ (Optical Lighting Setup)
         </h1>
         <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
-          "Lighting is 80% of Success" &mdash; แสงสว่างและการเลือกเลนส์คือหัวใจของความแม่นยำในระบบแมชชีนวิชัน 
-          เรียนรู้เทคนิคการตัดแสงสะท้อนจ้า (Glare), การคำนวณความละเอียดด้วย <strong>กฎ 3 พิกเซล (The 3-Pixel Rule)</strong>, 
-          สูตรคำนวณทางยาวโฟกัส (Focal Length), การป้องกันขอบภาพมืด (Vignetting), และตารางเปรียบเทียบพอร์ตเชื่อมต่อกล้องอุตสาหกรรม
+          "Lighting is 80% of Success" &mdash; แสงสว่างคือหัวใจของการสร้างคอนทราสต์ในระบบแมชชีนวิชัน 
+          ฝึกจำลองการจัดแสง 5 รูปแบบ (Front Light, Polarizer CPL, Coaxial, Diffuse Dome, Backlight) และตารางเลือกชนิดไฟตามลักษณะพื้นผิวชิ้นงานจริง
         </p>
       </div>
 
@@ -2221,6 +2325,29 @@ export function MachineVisionMod2() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* MODULE 4: OPTICAL CALCULATIONS, 3-PIXEL RULE & CAMERA INTERFACES          */
+/* ------------------------------------------------------------------------- */
+export function MachineVisionMod4() {
+  return (
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
+      {/* Module Header */}
+      <div className="bg-gradient-to-r from-sky-950/70 via-cyan-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-sky-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-bold mb-2 sm:mb-3 border border-sky-500/30">
+          <FiLayers className="w-4 h-4" /> บทเรียนที่ 4 (Lesson 4 of 8)
+        </div>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
+          การคำนวณทางเลนส์ กฎ 3 พิกเซล (3-Pixel Rule) และมาตรฐานพอร์ตเชื่อมต่อกล้อง
+        </h1>
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
+          ฝึกคำนวณสเปกกล้องและเลนส์อย่างแม่นยำด้วย <strong>กฎ 3 พิกเซล (The 3-Pixel Rule)</strong>, 
+          สูตรคำนวณทางยาวโฟกัสเลนส์ $f = (h \times WD) / FOV$, การจับคู่ขนาดวงภาพเลนส์กับเซนเซอร์เพื่อป้องกันขอบภาพมืด (Vignetting), เลนส์ Telecentric และตารางเปรียบเทียบพอร์ตเชื่อมต่อกล้องอุตสาหกรรม
+        </p>
+      </div>
 
       {/* Optical Formulas & 3-Pixel Rule Calculator */}
       <OpticalFormulasCalculator />
@@ -2228,7 +2355,7 @@ export function MachineVisionMod2() {
       {/* Industrial Camera Interface Comparison Matrix */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
-          <span className="text-sky-400 font-black mr-2">4.</span>
+          <span className="text-sky-400 font-black mr-2">2.</span>
           ตารางเปรียบเทียบพอร์ตเชื่อมต่อกล้องอุตสาหกรรม (Industrial Camera Interfaces Comparison)
         </h2>
         <div className="space-y-1.5">
@@ -2286,23 +2413,22 @@ export function MachineVisionMod2() {
 }
 
 /* ------------------------------------------------------------------------- */
-/* MODULE 3: PYTHON OPENCV & AI DEEP LEARNING LOGIC                          */
+/* MODULE 5: DIGITAL IMAGE MATRIX, COLOR SPACES & PYTHON OPENCV WORKSHOP     */
 /* ------------------------------------------------------------------------- */
-export function MachineVisionMod3() {
+export function MachineVisionMod5() {
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
       <div className="bg-gradient-to-r from-violet-950/70 via-purple-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-violet-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-2 sm:mb-3 border border-violet-500/30">
-          <FiSliders className="w-4 h-4" /> โมดูลที่ 3 (Module 3)
+          <FiCode className="w-4 h-4" /> บทเรียนที่ 5 (Lesson 5 of 8)
         </div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
-          การประมวลผลภาพด้วย Python &amp; OpenCV และ AI Deep Learning ในโรงงานอัจฉริยะ
+          โครงสร้างภาพดิจิทัล ระบบสี BGR/HSV และการประมวลผลภาพด้วย Python &amp; OpenCV
         </h1>
         <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
-          ครอบคลุมทฤษฎีภาพดิจิทัลในเชิงเมทริกซ์ตัวเลข (0-255), ระบบสี BGR vs RGB และ HSV, 
-          13 ฟังก์ชันสำคัญของ OpenCV สำหรับงานโรงงาน, ลำดับขั้นของ AI ใน Computer Vision (Classification &rarr; Segmentation), 
-          และกลไก 4 ขั้นตอนของอัลกอริทึม YOLO สำหรับสายพานความเร็วสูง
+          เข้าใจโครงสร้างภาพดิจิทัลในเชิงเมทริกซ์ตัวเลข (0-255), ความแตกต่างระหว่างลำดับช่องสี BGR กับ RGB, 
+          การคัดแยกสีชิ้นงานด้วยปริภูมิสี HSV ที่ทนต่อความผันผวนของแสงโรงงาน และปฏิบัติการ 13 ฟังก์ชันสำคัญของ OpenCV
         </p>
       </div>
 
@@ -2337,7 +2463,7 @@ export function MachineVisionMod3() {
             </p>
             <div className="space-y-1.5 pt-1">
               <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
-                <strong className="text-cyan-400">H (Hue - โทนสี 0°-180° ใน OpenCV):</strong> กำหนดเฉดสีบริสุทธิ์ (แดง เขียว น้ำเงิน ทองแดง)
+                <strong className="text-cyan-400">H (Hue - โทนสี 0°-179° ใน OpenCV):</strong> กำหนดเฉดสีบริสุทธิ์ (แดง เขียว น้ำเงิน ทองแดง)
               </div>
               <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
                 <strong className="text-emerald-400">S (Saturation - ความสด 0-255):</strong> ความเข้มข้นของเนื้อสีตัดกับสีเทา
@@ -2355,6 +2481,29 @@ export function MachineVisionMod3() {
 
       {/* 13 Essential OpenCV Operations Workshop */}
       <OpenCVPythonWorkshop />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* MODULE 6: AI DEEP LEARNING, CNN, YOLO & RULE-BASED VS AI DECISION MATRIX  */
+/* ------------------------------------------------------------------------- */
+export function MachineVisionMod6() {
+  return (
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
+      {/* Module Header */}
+      <div className="bg-gradient-to-r from-fuchsia-950/70 via-purple-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-fuchsia-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/20 text-fuchsia-300 text-xs font-bold mb-2 sm:mb-3 border border-fuchsia-500/30">
+          <FiSliders className="w-4 h-4" /> บทเรียนที่ 6 (Lesson 6 of 8)
+        </div>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
+          เทคโนโลยี AI Deep Learning, โครงข่าย CNN, อัลกอริทึม YOLO และการเลือกใช้ Rule-Based vs AI
+        </h1>
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
+          เข้าใจลำดับขั้นของงาน AI Vision (Classification &rarr; Object Detection &rarr; Segmentation), 
+          กลไกการทำงาน 4 ขั้นตอนของอัลกอริทึม YOLO (Grid, BBox Regression, Confidence, NMS), แล็บทดลองเปรียบเทียบอัลกอริทึม และตารางตัดสินใจเลือกใช้ Classical Rule-Based คู่กับ AI Deep Learning
+        </p>
+      </div>
 
       {/* AI Vision Architecture & YOLO Explorer */}
       <AIVisionArchitectureLab />
@@ -2365,7 +2514,7 @@ export function MachineVisionMod3() {
       {/* Comparison Guide */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
-          <span className="text-violet-400 font-black mr-2">5.</span>
+          <span className="text-violet-400 font-black mr-2">3.</span>
           เกณฑ์การตัดสินใจเลือกเทคโนโลยี (Decision Matrix: Classical vs AI)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs">
@@ -2397,23 +2546,22 @@ export function MachineVisionMod3() {
 }
 
 /* ------------------------------------------------------------------------- */
-/* MODULE 4: INDUSTRIAL WORKSHOPS, THRESHOLD TUNING & MES INTEGRATION        */
+/* MODULE 7: THRESHOLD TUNING, DISTRIBUTION CURVES & CONFUSION MATRIX        */
 /* ------------------------------------------------------------------------- */
-export function MachineVisionMod4() {
+export function MachineVisionMod7() {
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
       {/* Module Header */}
       <div className="bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-emerald-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2 sm:mb-3 border border-emerald-500/30">
-          <FiCheckCircle className="w-4 h-4" /> โมดูลที่ 4 (Module 4)
+          <FiActivity className="w-4 h-4" /> บทเรียนที่ 7 (Lesson 7 of 8)
         </div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
-          การกำหนดค่ากระบวนการทดสอบหน้างานจริง การปรับจูน Threshold และ Case Studies
+          การปรับจูนค่าเกณฑ์ตัดสิน (Threshold Tuning), เส้นโค้งการแจกแจง และตาราง Confusion Matrix
         </h1>
         <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
-          การบริหารจัดการค่า Margin ความปลอดภัย, การปรับจูน Threshold ป้องกันชิ้นงานเสียหลุดรอดสู่ลูกค้า (Escape Rate = 0 PPM), 
-          การควบคุม Yield งานดีถูกเตะทิ้ง (Overkill &lt; 0.5%), 3 เวิร์กช็อปจริงจากหน้างานโรงงาน (Part Counting, Poka-Yoke, Robot Guidance), 
-          มินิโปรเจกต์ YOLO Defect Detection และการส่งข้อมูลเข้าสู่ฐานข้อมูล MES เพื่อการสืบย้อนกลับ 100%
+          เรียนรู้วิธีอ่านกราฟเส้นโค้งการแจกแจงคะแนนการตรวจ (Distribution Curves), การบริหารจัดการค่า Margin ความปลอดภัย, 
+          การปรับจูนเส้น Decision Boundary เพื่อป้องกันของเสียหลุดรอดถึงลูกค้า (Escape = 0%) ควบคู่กับการคุมอัตราคัดทิ้งผิดพลาด (Overkill &lt; 0.5%) และตารางวิเคราะห์ Confusion Matrix
         </p>
       </div>
 
@@ -2471,6 +2619,29 @@ export function MachineVisionMod4() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* MODULE 8: INDUSTRIAL WORKSHOPS, YOLO+PLC PROJECT & MES TRACEABILITY       */
+/* ------------------------------------------------------------------------- */
+export function MachineVisionMod8() {
+  return (
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 text-slate-200">
+      {/* Module Header */}
+      <div className="bg-gradient-to-r from-teal-950/70 via-emerald-950/50 to-slate-900 p-4 sm:p-6 md:p-8 rounded-2xl border border-teal-500/30 shadow-xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold mb-2 sm:mb-3 border border-teal-500/30">
+          <FiCheckCircle className="w-4 h-4" /> บทเรียนที่ 8 (Lesson 8 of 8)
+        </div>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 sm:mb-3">
+          เวิร์กช็อปปฏิบัติการหน้างาน, โปรเจกต์ YOLO + PLC และการเชื่อมต่อฐานข้อมูล MES Traceability
+        </h1>
+        <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed m-0">
+          ประยุกต์ใช้ความรู้ทั้งหมดผ่าน 3 เวิร์กช็อปจริงจากหน้างานโรงงาน (Part Counting, Poka-Yoke Verification, Robot Pick &amp; Place Guidance), 
+          มินิโปรเจกต์ Python รันโมเดล YOLOv8 สั่งงาน PLC Ejector และการส่งข้อมูลเข้าสู่ฐานข้อมูล MES เพื่อการสืบย้อนกลับตามมาตรฐาน IATF 16949
+        </p>
+      </div>
 
       {/* 3 Industrial Workshops from Slides 49-55 */}
       <IndustrialWorkshopsLab />
@@ -2478,7 +2649,7 @@ export function MachineVisionMod4() {
       {/* Capstone Mini-Project: Real-Time YOLO Defect Detection Loop (Slide 55) */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
-          <span className="text-purple-400 font-black mr-2">4.</span>
+          <span className="text-purple-400 font-black mr-2">2.</span>
           มินิโปรเจกต์ส่งท้าย: Real-Time YOLO Defect Inspection &amp; PLC Trigger Integration (Slide 55)
         </h2>
         <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">

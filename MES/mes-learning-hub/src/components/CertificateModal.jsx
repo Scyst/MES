@@ -1,8 +1,21 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FiPrinter, FiX, FiCheckCircle, FiShield, FiAward } from 'react-icons/fi';
+
+const PRINT_BODY_CLASS = 'printing-certificate';
 
 export default function CertificateModal({ isOpen, onClose, data }) {
   const printRef = useRef(null);
+
+  // Remove the print isolation class once the print dialog closes (or if the modal unmounts mid-print)
+  useEffect(() => {
+    const clearPrintMode = () => document.body.classList.remove(PRINT_BODY_CLASS);
+    window.addEventListener('afterprint', clearPrintMode);
+    return () => {
+      window.removeEventListener('afterprint', clearPrintMode);
+      clearPrintMode();
+    };
+  }, []);
 
   if (!isOpen || !data) return null;
 
@@ -21,11 +34,12 @@ export default function CertificateModal({ isOpen, onClose, data }) {
   } = data;
 
   const handlePrint = () => {
+    document.body.classList.add(PRINT_BODY_CLASS);
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
+  return createPortal(
+    <div className="certificate-print-root fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
       <div className="relative w-full max-w-5xl bg-white text-slate-900 rounded-3xl shadow-2xl overflow-hidden my-auto border border-amber-300 print:border-none print:shadow-none print:rounded-none print:max-w-none print:w-full">
         
         {/* Top Control Bar (Hidden when printing) */}
@@ -199,6 +213,7 @@ export default function CertificateModal({ isOpen, onClose, data }) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

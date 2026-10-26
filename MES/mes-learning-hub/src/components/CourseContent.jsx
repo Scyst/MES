@@ -76,7 +76,11 @@ import {
   MachineVisionMod1,
   MachineVisionMod2,
   MachineVisionMod3,
-  MachineVisionMod4
+  MachineVisionMod4,
+  MachineVisionMod5,
+  MachineVisionMod6,
+  MachineVisionMod7,
+  MachineVisionMod8
 } from '../data/content/MachineVisionLessons';
 
 import {
@@ -205,11 +209,19 @@ export default function CourseContent({ courseId, moduleContent }) {
     'enterprise-app-integration': <EnterpriseAppMod4 />,
     'enterprise-app-qa-security': <EnterpriseAppMod5 />,
 
-    // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories
+    // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories (8 Lessons + Legacy Aliases)
+    'vision-m1-basics': <MachineVisionMod1 />,
+    'vision-m2-shutter': <MachineVisionMod2 />,
+    'vision-m3-lighting': <MachineVisionMod3 />,
+    'vision-m4-optics': <MachineVisionMod4 />,
+    'vision-m5-opencv': <MachineVisionMod5 />,
+    'vision-m6-ai-yolo': <MachineVisionMod6 />,
+    'vision-m7-threshold': <MachineVisionMod7 />,
+    'vision-m8-workshops-mes': <MachineVisionMod8 />,
     'vision-basics-structure': <MachineVisionMod1 />,
-    'vision-hardware-optical': <MachineVisionMod2 />,
-    'vision-logic-ai': <MachineVisionMod3 />,
-    'vision-conditions-testing': <MachineVisionMod4 />,
+    'vision-hardware-optical': <MachineVisionMod3 />,
+    'vision-logic-ai': <MachineVisionMod5 />,
+    'vision-conditions-testing': <MachineVisionMod7 />,
 
     // 3. CAD-CAM for Mold and Die Design and Manufacturing
     'cadcam-mold-process': <CadCamMod1 />,

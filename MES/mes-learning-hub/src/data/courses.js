@@ -438,23 +438,43 @@ export const courses = [
     modules: [
       {
         id: 'm1',
-        title: '1. พื้นฐานระบบ Machine Vision และโครงสร้างระบบตรวจสอบ',
-        content: 'vision-basics-structure'
+        title: '1. พื้นฐานระบบ Machine Vision, แผนภาพ AI/CV/MV และวงจรการทำงาน 4 ขั้นตอน',
+        content: 'vision-m1-basics'
       },
       {
         id: 'm2',
-        title: '2. การเตรียมชิ้นงาน อุปกรณ์ภาพ และการตั้งค่า Hardware (Global Shutter & Optical)',
-        content: 'vision-hardware-optical'
+        title: '2. ประเภทระบบภาพ 1D/2D/3D, องค์ประกอบฮาร์ดแวร์ 6 ส่วน และชัตเตอร์ Global vs Rolling',
+        content: 'vision-m2-shutter'
       },
       {
         id: 'm3',
-        title: '3. การเขียน Logic ตรวจสอบภาพด้วย Classical Vision และ AI Vision',
-        content: 'vision-logic-ai'
+        title: '3. วิศวกรรมการจัดแสงอุตสาหกรรมและการตัดแสงสะท้อนด้วยโพลาไรเซอร์ (Optical Lighting)',
+        content: 'vision-m3-lighting'
       },
       {
         id: 'm4',
-        title: '4. การกำหนดค่ากระบวนการตรวจสอบและทดสอบระบบจริง (Threshold & Overkill Prevention)',
-        content: 'vision-conditions-testing'
+        title: '4. การคำนวณทางเลนส์ กฎ 3 พิกเซล (3-Pixel Rule) และมาตรฐานพอร์ตเชื่อมต่อกล้อง',
+        content: 'vision-m4-optics'
+      },
+      {
+        id: 'm5',
+        title: '5. โครงสร้างภาพดิจิทัล ระบบสี BGR/HSV และการประมวลผลภาพด้วย Python & OpenCV',
+        content: 'vision-m5-opencv'
+      },
+      {
+        id: 'm6',
+        title: '6. เทคโนโลยี AI Deep Learning, โครงข่าย CNN, อัลกอริทึม YOLO และการเลือก Rule-Based vs AI',
+        content: 'vision-m6-ai-yolo'
+      },
+      {
+        id: 'm7',
+        title: '7. การปรับจูนค่าเกณฑ์ตัดสิน (Threshold Tuning), เส้นโค้งการแจกแจง และ Confusion Matrix',
+        content: 'vision-m7-threshold'
+      },
+      {
+        id: 'm8',
+        title: '8. เวิร์กช็อปปฏิบัติการหน้างาน, โปรเจกต์ YOLO + PLC และการเชื่อมต่อฐานข้อมูล MES',
+        content: 'vision-m8-workshops-mes'
       }
     ]
   },

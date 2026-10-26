@@ -138,23 +138,54 @@ export default function CourseViewer() {
   const totalModules = course?.modules?.length || 1;
   const progressPercent = isCompleted ? 100 : Math.round((completedModuleIds.length / totalModules) * 100);
 
-  // W3Schools-Style Active Recall Checkpoint for current active module
-  const currentCheckpoint = useMemo(() => {
-    if (!course || !activeModule) return null;
-    return getModuleCheckpoint(course, activeModule, currentIndex);
+  // Active Recall Checkpoints for current active module (supports single object or array of questions)
+  const checkpointList = useMemo(() => {
+    if (!course || !activeModule) return [];
+    const raw = getModuleCheckpoint(course, activeModule, currentIndex);
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [raw];
   }, [course, activeModule, currentIndex]);
 
+  const [activeCheckpointIdx, setActiveCheckpointIdx] = useState(0);
+  const [passedCheckpointMap, setPassedCheckpointMap] = useState({});
   const [checkpointSelected, setCheckpointSelected] = useState(null);
   const [checkpointStatus, setCheckpointStatus] = useState(null); // 'correct' | 'incorrect' | null
   const [checkpointShowHint, setCheckpointShowHint] = useState(false);
+
+  const currentCheckpoint = checkpointList[activeCheckpointIdx] || checkpointList[0] || null;
+  const totalCheckpointsInModule = checkpointList.length;
+  const passedCountInModule = checkpointList.filter((_, idx) => Boolean(passedCheckpointMap[idx])).length;
+  const allCheckpointsPassed = totalCheckpointsInModule > 0 && passedCountInModule >= totalCheckpointsInModule;
 
   // Synchronize Checkpoint state whenever activeModuleId or completedModuleIds change
   useEffect(() => {
     if (!course || !activeModuleId) return;
 
     const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
+    setActiveCheckpointIdx(0);
     if (alreadyDone) {
-      setCheckpointSelected(currentCheckpoint?.correctAnswer ?? 0);
+      const allPassed = {};
+      checkpointList.forEach((_, idx) => {
+        allPassed[idx] = true;
+      });
+      setPassedCheckpointMap(allPassed);
+      setCheckpointSelected(checkpointList[0]?.correctAnswer ?? 0);
+      setCheckpointStatus('correct');
+      setCheckpointShowHint(false);
+    } else {
+      setPassedCheckpointMap({});
+      setCheckpointSelected(null);
+      setCheckpointStatus(null);
+      setCheckpointShowHint(false);
+    }
+  }, [courseId, activeModuleId, completedModuleIds, isCompleted, checkpointList]);
+
+  // Switch between checkpoint questions within the same module
+  const handleSwitchCheckpointQuestion = (nextIdx) => {
+    if (nextIdx < 0 || nextIdx >= checkpointList.length) return;
+    setActiveCheckpointIdx(nextIdx);
+    if (passedCheckpointMap[nextIdx]) {
+      setCheckpointSelected(checkpointList[nextIdx]?.correctAnswer ?? 0);
       setCheckpointStatus('correct');
       setCheckpointShowHint(false);
     } else {
@@ -162,7 +193,7 @@ export default function CourseViewer() {
       setCheckpointStatus(null);
       setCheckpointShowHint(false);
     }
-  }, [courseId, activeModuleId, completedModuleIds, isCompleted, currentCheckpoint]);
+  };
 
   // Select Checkpoint option and evaluate immediately (Active Recall)
   const handleSelectCheckpointOption = (optIdx) => {
@@ -174,8 +205,13 @@ export default function CourseViewer() {
       setCheckpointStatus('correct');
       setCheckpointShowHint(false);
 
-      // Officially mark module completed in training audit store
-      if (!completedModuleIds.includes(activeModuleId) && !isCompleted) {
+      const updatedMap = { ...passedCheckpointMap, [activeCheckpointIdx]: true };
+      setPassedCheckpointMap(updatedMap);
+
+      const allPassedNow = checkpointList.every((_, idx) => Boolean(updatedMap[idx]));
+
+      // Officially mark module completed in training audit store once all questions in the lesson are passed
+      if (allPassedNow && !completedModuleIds.includes(activeModuleId) && !isCompleted) {
         const res = markModuleCompleted({
           courseId: course.id,
           moduleId: activeModuleId,
@@ -195,7 +231,7 @@ export default function CourseViewer() {
     }
   };
 
-  const isCurrentModuleUnlocked = completedModuleIds.includes(activeModuleId) || isCompleted || checkpointStatus === 'correct';
+  const isCurrentModuleUnlocked = completedModuleIds.includes(activeModuleId) || isCompleted || allCheckpointsPassed;
 
   if (!course) {
     return (
@@ -1154,29 +1190,74 @@ export default function CourseViewer() {
                       Checkpoint ท้ายบทเรียน (Active Recall)
                     </h4>
                     <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                      ตอบคำถามวัดความเข้าใจสั้นๆ 1 ข้อด้านล่างให้ถูกต้องเพื่อปลดล็อกบทเรียนถัดไป
+                      {totalCheckpointsInModule > 1
+                        ? `ตอบคำถามทบทวนท้ายบทเรียนให้ครบทั้ง ${totalCheckpointsInModule} ข้อ (ผ่านแล้ว ${passedCountInModule}/${totalCheckpointsInModule} ข้อ) เพื่อปลดล็อกบทเรียนถัดไป`
+                        : 'ตอบคำถามวัดความเข้าใจสั้นๆ 1 ข้อด้านล่างให้ถูกต้องเพื่อปลดล็อกบทเรียนถัดไป'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
-                  {checkpointStatus === 'correct' ? (
+                  {isCurrentModuleUnlocked ? (
                     <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 shadow-sm ${
                       isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                     }`}>
                       <FiCheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>ผ่านแล้ว (+5 EXP)</span>
+                      <span>ผ่านครบแล้ว (+5 EXP)</span>
                     </span>
                   ) : (
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
                       isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
                     }`}>
                       <FiLock className="w-3.5 h-3.5 text-amber-500" />
-                      <span>ปลดล็อกเมื่อตอบถูก (+5 EXP)</span>
+                      <span>
+                        {totalCheckpointsInModule > 1
+                          ? `ผ่านแล้ว ${passedCountInModule}/${totalCheckpointsInModule} ข้อ (+5 EXP)`
+                          : 'ปลดล็อกเมื่อตอบถูก (+5 EXP)'}
+                      </span>
                     </span>
                   )}
                 </div>
               </div>
+
+              {/* Multi-question Selector Pills (shown when module has > 1 checkpoint question) */}
+              {totalCheckpointsInModule > 1 && (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  {checkpointList.map((cpItem, qIdx) => {
+                    const isQPassed = Boolean(passedCheckpointMap[qIdx]) || isCurrentModuleUnlocked;
+                    const isQActive = qIdx === activeCheckpointIdx;
+                    return (
+                      <button
+                        key={cpItem.id || qIdx}
+                        type="button"
+                        onClick={() => handleSwitchCheckpointQuestion(qIdx)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isQActive
+                            ? isDark
+                              ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-500/20'
+                              : 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                            : isQPassed
+                              ? isDark
+                                ? 'bg-emerald-950/50 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/50'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                              : isDark
+                                ? 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        {isQPassed ? (
+                          <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">
+                            {qIdx + 1}
+                          </span>
+                        )}
+                        <span>ข้อที่ {qIdx + 1}/{totalCheckpointsInModule}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Question */}
               <div className="mb-4">
@@ -1282,16 +1363,24 @@ export default function CourseViewer() {
                 <div className={`p-4 rounded-xl border text-xs space-y-2 animate-fadeIn ${
                   isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-950'
                 }`}>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className={`flex items-center gap-2 font-bold text-sm ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>
                       <FiCheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                       <span>ยอดเยี่ยมมาก! ตอบถูกต้องตามหลักวิศวกรรม/มาตรฐานอุตสาหกรรม</span>
                     </div>
-                    <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
-                      isDark ? 'text-emerald-400 bg-emerald-500/20' : 'text-emerald-900 bg-emerald-100 border border-emerald-300'
-                    }`}>
-                      ✓ ปลดล็อกบทเรียนแล้ว
-                    </span>
+                    {isCurrentModuleUnlocked ? (
+                      <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
+                        isDark ? 'text-emerald-400 bg-emerald-500/20' : 'text-emerald-900 bg-emerald-100 border border-emerald-300'
+                      }`}>
+                        ✓ ปลดล็อกบทเรียนแล้ว
+                      </span>
+                    ) : (
+                      <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
+                        isDark ? 'text-amber-300 bg-amber-500/20' : 'text-amber-900 bg-amber-100 border border-amber-300'
+                      }`}>
+                        ผ่านข้อนี้แล้ว ({passedCountInModule}/{totalCheckpointsInModule})
+                      </span>
+                    )}
                   </div>
                   {currentCheckpoint.explanation && (
                     <div className={`p-3 rounded-lg border text-xs leading-relaxed ${
@@ -1299,6 +1388,17 @@ export default function CourseViewer() {
                     }`}>
                       <strong className={isDark ? 'text-emerald-400' : 'text-emerald-700'}>คำอธิบายเฉลย: </strong>
                       <span>{currentCheckpoint.explanation}</span>
+                    </div>
+                  )}
+                  {totalCheckpointsInModule > 1 && activeCheckpointIdx < totalCheckpointsInModule - 1 && (
+                    <div className="pt-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchCheckpointQuestion(activeCheckpointIdx + 1)}
+                        className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>ทำข้อถัดไป (ข้อที่ {activeCheckpointIdx + 2}/{totalCheckpointsInModule}) →</span>
+                      </button>
                     </div>
                   )}
                 </div>
