@@ -66,6 +66,7 @@ export default function CourseViewer() {
   const [userGrading, setUserGrading] = useState(() => getUserGrading());
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [isMobileSyllabusOpen, setIsMobileSyllabusOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const contentTopRef = useRef(null);
   const isInitialMount = useRef(true);
 
@@ -740,8 +741,27 @@ export default function CourseViewer() {
         </div>
       )}
 
+      {/* Desktop Floating Button to Re-open Sidebar when Collapsed */}
+      {!isDesktopSidebarOpen && (
+        <button
+          onClick={() => setIsDesktopSidebarOpen(true)}
+          className={`hidden md:flex fixed left-4 top-28 z-40 items-center gap-2 px-3.5 py-2 rounded-xl border shadow-lg transition-all hover:scale-[1.02] ${
+            isDark
+              ? 'bg-slate-900/95 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-black/40'
+              : 'bg-white/95 hover:bg-slate-50 text-slate-800 border-slate-300 shadow-slate-300/60'
+          }`}
+          title="เปิดแถบสารบัญบทเรียน (Show Syllabus Sidebar)"
+        >
+          <FiList className="w-4 h-4 text-fuchsia-500" />
+          <span className="text-xs font-bold">
+            สารบัญ ({currentIndex + 1}/{totalModules})
+          </span>
+          <FiChevronRight className="w-3.5 h-3.5 opacity-70" />
+        </button>
+      )}
+
       {/* Desktop Sidebar / Syllabus */}
-      <div className="viewer-sidebar hidden md:flex md:flex-col shrink-0 md:w-80">
+      <div className={`viewer-sidebar ${isDesktopSidebarOpen ? '' : 'sidebar-collapsed'} shrink-0 md:w-80`}>
         <div className="sidebar-header shrink-0 w-full">
           <div className="flex items-center justify-between mb-3">
             <button 
@@ -778,6 +798,17 @@ export default function CourseViewer() {
                 title="แก้ไขหลักสูตรนี้"
               >
                 <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
+              </button>
+              <button
+                onClick={() => setIsDesktopSidebarOpen(false)}
+                className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700/80'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                }`}
+                title="ซ่อนแถบสารบัญ (Collapse Sidebar)"
+              >
+                <FiChevronLeft className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1095,7 +1126,10 @@ export default function CourseViewer() {
       )}
 
       {/* Main Content Area */}
-      <div className="viewer-content" ref={contentTopRef}>
+      <div
+        className={`viewer-content ${isDesktopSidebarOpen ? 'viewer-content--sidebar-open' : 'viewer-content--sidebar-closed'}`}
+        ref={contentTopRef}
+      >
         <div className="content-body">
           {/* Completed Golden Banner */}
           {isCompleted && (
