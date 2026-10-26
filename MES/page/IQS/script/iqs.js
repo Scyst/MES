@@ -893,46 +893,57 @@ const IQS = {
             }
 
             rounds.forEach(r => {
-                let badgeClass = 'bg-secondary';
-                if (r.status === 'SUBMITTED') badgeClass = 'bg-success';
-                else if (r.status === 'COMPLETED_WITH_NG') badgeClass = 'bg-danger';
-                else if (r.status === 'OPEN') badgeClass = 'bg-warning text-dark';
+                // Unified Status Badge (Soft, readable, rounded pill)
+                let statusBadge = '';
+                if (r.status === 'SUBMITTED') {
+                    statusBadge = '<span class="badge-status badge-status-submitted"><i class="fas fa-check-circle me-1"></i>สมบูรณ์</span>';
+                } else if (r.status === 'COMPLETED_WITH_NG') {
+                    statusBadge = '<span class="badge-status badge-status-ng"><i class="fas fa-exclamation-circle me-1"></i>พบ NG</span>';
+                } else {
+                    statusBadge = '<span class="badge-status badge-status-open"><i class="fas fa-clock me-1"></i>กำลังตรวจ</span>';
+                }
 
-                // Line badge helper
+                // Unified Line Badge (Soft, consistent height and font)
                 let lineBadge = '';
                 const rLine = (r.line || 'SPOT').toUpperCase();
                 if (rLine === 'SPOT') {
-                    lineBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="fas fa-bolt me-1"></i>Spot</span>';
+                    lineBadge = '<span class="badge-line badge-line-spot"><i class="fas fa-bolt"></i>Spot</span>';
                 } else if (rLine === 'BEND') {
-                    lineBadge = '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1"><i class="fas fa-ruler-combined me-1"></i>Bend</span>';
+                    lineBadge = '<span class="badge-line badge-line-bend"><i class="fas fa-ruler-combined"></i>Bend</span>';
                 } else if (rLine === 'PRESS') {
-                    lineBadge = '<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2 py-1"><i class="fas fa-industry me-1"></i>Press</span>';
+                    lineBadge = '<span class="badge-line badge-line-press"><i class="fas fa-industry"></i>Press</span>';
                 } else {
-                    lineBadge = `<span class="badge bg-secondary px-2 py-1">${rLine}</span>`;
+                    lineBadge = `<span class="badge-line badge-line-press">${rLine}</span>`;
                 }
 
-                // Desktop Table Row
+                // Desktop Table Row - All cells standard Prompt font (14px), balanced weights, aligned baselines
                 if (tbody) {
                     tbody.innerHTML += `
                     <tr>
-                        <td><strong class="text-primary font-monospace">${r.round_number}</strong></td>
-                        <td>${lineBadge}</td>
-                        <td><i class="far fa-calendar-alt text-muted me-1"></i>${r.plan_date}</td>
-                        <td><strong>${r.round_name}</strong></td>
-                        <td><span class="badge bg-light text-dark border">กะ ${r.shift}</span></td>
-                        <td><i class="far fa-user text-muted me-1"></i>${r.primary_tester_name || '-'}</td>
                         <td>
-                            <span class="badge bg-success me-1">OK: ${r.ok_count}</span>
-                            ${r.ng_count > 0 ? `<span class="badge bg-danger me-1">NG: ${r.ng_count}</span>` : ''}
-                            ${r.skip_count > 0 ? `<span class="badge bg-secondary">ข้าม: ${r.skip_count}</span>` : ''}
+                            <span class="fw-semibold text-primary" style="font-size: 0.875rem;">${r.round_number}</span>
                         </td>
-                        <td><span class="badge ${badgeClass}">${r.status}</span></td>
+                        <td>${lineBadge}</td>
+                        <td class="text-secondary" style="font-size: 0.875rem;">${r.plan_date}</td>
+                        <td>
+                            <span class="text-dark fw-medium" style="font-size: 0.875rem;">${r.round_name}</span>
+                        </td>
+                        <td class="text-secondary" style="font-size: 0.875rem;">กะ ${r.shift}</td>
+                        <td class="text-secondary" style="font-size: 0.875rem;">${r.primary_tester_name ? r.primary_tester_name : '<span class="text-muted">-</span>'}</td>
+                        <td>
+                            <div class="d-inline-flex gap-1 align-items-center">
+                                <span class="badge-metric badge-metric-ok">OK ${r.ok_count}</span>
+                                ${r.ng_count > 0 ? `<span class="badge-metric badge-metric-ng">NG ${r.ng_count}</span>` : ''}
+                                ${r.skip_count > 0 ? `<span class="badge-metric badge-metric-skip">ข้าม ${r.skip_count}</span>` : ''}
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
                         <td class="text-center">
-                            <div class="d-inline-flex gap-1">
-                                <a href="print_iqs.php?date=${encodeURIComponent(r.plan_date)}&line=${encodeURIComponent(r.line || 'SPOT')}&view=matrix" target="_blank" class="btn btn-outline-primary btn-sm py-1 px-2 fw-semibold" title="ตารางสรุป 7 รอบประจำวัน" style="border-radius: 8px; font-size: 0.78rem;">
+                            <div class="history-btn-group">
+                                <a href="print_iqs.php?date=${encodeURIComponent(r.plan_date)}&line=${encodeURIComponent(r.line || 'SPOT')}&view=matrix" target="_blank" class="btn btn-outline-primary" title="ตารางสรุป 7 รอบประจำวัน">
                                     <i class="fas fa-table me-1"></i>สรุป 7 รอบ
                                 </a>
-                                <a href="print_iqs.php?round_id=${encodeURIComponent(r.round_id)}&view=log" target="_blank" class="btn btn-outline-secondary btn-sm py-1 px-2 fw-semibold" title="บันทึกการตรวจสอบรอบนี้แบบละเอียด" style="border-radius: 8px; font-size: 0.78rem;">
+                                <a href="print_iqs.php?round_id=${encodeURIComponent(r.round_id)}&view=log" target="_blank" class="btn btn-outline-secondary" title="บันทึกการตรวจสอบรอบนี้แบบละเอียด">
                                     <i class="fas fa-file-alt me-1"></i>รอบนี้
                                 </a>
                             </div>
@@ -940,32 +951,33 @@ const IQS = {
                     </tr>`;
                 }
 
-                // Mobile Card Feed
+                // Mobile Card Feed - Matching typography and clean spacing
                 if (feedMobile) {
                     feedMobile.innerHTML += `
-                    <div class="history-card-mobile p-3 mb-3 bg-white border shadow-sm" style="border-radius: 14px;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="hist-title fw-bold text-dark font-monospace">${r.round_number}</span>
-                                ${lineBadge}
-                            </div>
-                            <span class="badge ${badgeClass}">${r.status}</span>
+                    <div class="history-card-mobile">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="hist-title">${r.round_number}</span>
+                            ${statusBadge}
                         </div>
-                        <div class="small text-muted mb-2">
-                            <div><i class="fas fa-calendar-alt me-1 text-primary"></i><strong>${r.plan_date}</strong> (${r.round_name}) · กะ ${r.shift}</div>
-                            <div><i class="fas fa-user-check me-1 text-info"></i>ผู้ทดสอบ: <strong>${r.primary_tester_name || '-'}</strong></div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            ${lineBadge}
+                            <span class="text-secondary" style="font-size: 0.8rem;">กะ ${r.shift}</span>
+                        </div>
+                        <div class="text-secondary mb-2" style="font-size: 0.82rem; line-height: 1.5;">
+                            <div><i class="fas fa-calendar-alt me-1 text-primary"></i><strong>${r.plan_date}</strong> (${r.round_name})</div>
+                            <div><i class="fas fa-user-check me-1 text-info"></i>ผู้ทดสอบ: ${r.primary_tester_name ? r.primary_tester_name : '<span class="text-muted">-</span>'}</div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center pt-2 border-top gap-2 flex-wrap">
                             <div class="d-flex gap-1 align-items-center">
-                                <span class="badge bg-success">OK: ${r.ok_count}</span>
-                                ${r.ng_count > 0 ? `<span class="badge bg-danger">NG: ${r.ng_count}</span>` : ''}
-                                ${r.skip_count > 0 ? `<span class="badge bg-secondary">ข้าม: ${r.skip_count}</span>` : ''}
+                                <span class="badge-metric badge-metric-ok">OK ${r.ok_count}</span>
+                                ${r.ng_count > 0 ? `<span class="badge-metric badge-metric-ng">NG ${r.ng_count}</span>` : ''}
+                                ${r.skip_count > 0 ? `<span class="badge-metric badge-metric-skip">ข้าม ${r.skip_count}</span>` : ''}
                             </div>
-                            <div class="d-flex gap-1">
-                                <a href="print_iqs.php?date=${encodeURIComponent(r.plan_date)}&line=${encodeURIComponent(r.line || 'SPOT')}&view=matrix" target="_blank" class="btn btn-outline-primary btn-sm px-2 py-1 fw-bold" style="border-radius: 8px; font-size: 0.78rem;">
+                            <div class="history-btn-group">
+                                <a href="print_iqs.php?date=${encodeURIComponent(r.plan_date)}&line=${encodeURIComponent(r.line || 'SPOT')}&view=matrix" target="_blank" class="btn btn-outline-primary">
                                     <i class="fas fa-table me-1"></i>สรุป 7 รอบ
                                 </a>
-                                <a href="print_iqs.php?round_id=${encodeURIComponent(r.round_id)}&view=log" target="_blank" class="btn btn-outline-secondary btn-sm px-2 py-1 fw-bold" style="border-radius: 8px; font-size: 0.78rem;">
+                                <a href="print_iqs.php?round_id=${encodeURIComponent(r.round_id)}&view=log" target="_blank" class="btn btn-outline-secondary">
                                     <i class="fas fa-file-alt me-1"></i>รอบนี้
                                 </a>
                             </div>

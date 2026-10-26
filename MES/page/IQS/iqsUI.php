@@ -218,20 +218,20 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                         </div>
 
                         <!-- Desktop Table View (>= 768px) -->
-                        <div class="card border-0 shadow-sm d-none d-md-block" style="border-radius: 16px; overflow: hidden;">
+                        <div class="card iqs-history-card border-0 d-none d-md-block" style="overflow: hidden;">
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light">
+                                <table class="table table-hover align-middle mb-0 iqs-history-table">
+                                    <thead>
                                         <tr>
-                                            <th>เลขที่รอบ</th>
-                                            <th>สายการผลิต</th>
-                                            <th>วันที่</th>
+                                            <th style="width: 180px;">เลขที่รอบ</th>
+                                            <th style="width: 110px;">สายการผลิต</th>
+                                            <th style="width: 105px;">วันที่</th>
                                             <th>ชื่อรอบ / เวลา</th>
-                                            <th>กะ</th>
-                                            <th>ผู้ทดสอบหลัก</th>
-                                            <th>ผลสรุป (เครื่อง)</th>
-                                            <th>สถานะ</th>
-                                            <th class="text-center">เปิดเอกสาร Check Sheet</th>
+                                            <th style="width: 80px;">กะ</th>
+                                            <th style="width: 140px;">ผู้ทดสอบ</th>
+                                            <th style="width: 130px;">ผลสรุป</th>
+                                            <th style="width: 110px;">สถานะ</th>
+                                            <th class="text-center" style="width: 190px;">เอกสาร Check Sheet</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">
