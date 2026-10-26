@@ -708,24 +708,33 @@ export default function CourseViewer() {
       <div className="viewer-sidebar hidden md:flex md:flex-col shrink-0 md:w-80">
         <div className="sidebar-header shrink-0 w-full">
           <div className="flex items-center justify-between mb-3">
-            <button className="back-btn m-0" onClick={() => navigate('/')}>
-              <FiArrowLeft /> Back
+            <button 
+              onClick={() => navigate('/')}
+              className={`h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm ${
+                isDark 
+                  ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700/80 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:text-slate-900'
+              }`}
+              title="ย้อนกลับสู่หน้ารวมหลักสูตร"
+            >
+              <FiArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
             </button>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setIsTrainerGuideOpen(true)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm ${
+                className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
                   isDark
                     ? 'bg-purple-950/70 hover:bg-purple-900/90 text-purple-200 border-purple-500/40 hover:border-purple-400'
-                    : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-300'
+                    : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300'
                 }`}
-                title="เปิดคู่มือวิทยากรและแผนการสอน 3 วัน"
+                title="คู่มือวิทยากรและแผนการสอน 3 วัน"
               >
-                <span>📘 แผนการสอน 3 วัน</span>
+                <FiBookOpen className="w-4 h-4 text-purple-400 dark:text-purple-300" />
               </button>
               <button
                 onClick={() => navigate(`/admin/course-builder?courseId=${course.id}`)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 shadow-sm ${
+                className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
                   isDark
                     ? 'bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border-slate-700/80'
                     : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
@@ -733,7 +742,6 @@ export default function CourseViewer() {
                 title="แก้ไขหลักสูตรนี้"
               >
                 <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
-                <span>แก้ไข</span>
               </button>
             </div>
           </div>

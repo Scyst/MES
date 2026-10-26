@@ -1926,21 +1926,21 @@ export function MachineVisionMod1() {
 
               {/* Left Circle: Deep Learning */}
               <circle cx="125" cy="135" r="45" fill="rgba(244, 63, 94, 0.22)" stroke="#e11d48" strokeWidth="1.8" />
-              {/* DL Badge Pill */}
-              <rect x="58" y="118" width="94" height="30" rx="8" fill="#e11d48" />
-              <text x="105" y="130" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">Deep Learning</text>
-              <text x="105" y="142" textAnchor="middle" fill="#ffe4e6" fontSize="8" fontWeight="medium">(AI Vision)</text>
+              {/* DL Badge Pill (Positioned upper-left to prevent overlap with Edge AI) */}
+              <rect x="62" y="105" width="86" height="28" rx="8" fill="#e11d48" />
+              <text x="105" y="117" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">Deep Learning</text>
+              <text x="105" y="128" textAnchor="middle" fill="#ffe4e6" fontSize="8" fontWeight="medium">(AI Vision)</text>
 
               {/* Right Circle: Machine Vision */}
               <circle cx="195" cy="135" r="45" fill="rgba(34, 197, 94, 0.22)" stroke="#16a34a" strokeWidth="1.8" />
-              {/* MV Badge Pill */}
-              <rect x="164" y="118" width="112" height="30" rx="8" fill="#16a34a" />
-              <text x="220" y="130" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">Machine Vision</text>
-              <text x="220" y="142" textAnchor="middle" fill="#dcfce7" fontSize="7.5" fontWeight="medium">(Industrial HW &amp; Optics)</text>
+              {/* MV Badge Pill (Positioned upper-right to prevent overlap with Edge AI) */}
+              <rect x="172" y="105" width="96" height="28" rx="8" fill="#16a34a" />
+              <text x="220" y="117" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold">Machine Vision</text>
+              <text x="220" y="128" textAnchor="middle" fill="#dcfce7" fontSize="7.5" fontWeight="medium">(Industrial HW)</text>
 
-              {/* Overlap Center: Edge AI Pill */}
-              <rect x="135" y="126" width="50" height="18" rx="9" fill="#0f172a" stroke="#ffffff" strokeWidth="1.2" />
-              <text x="160" y="139" textAnchor="middle" fill="#38bdf8" fontSize="8.5" fontWeight="black">Edge AI</text>
+              {/* Overlap Center: Edge AI Pill (Positioned lower center of intersection, zero text clipping) */}
+              <rect x="135" y="145" width="50" height="20" rx="10" fill="#0f172a" stroke="#ffffff" strokeWidth="1.2" />
+              <text x="160" y="159" textAnchor="middle" fill="#38bdf8" fontSize="8.5" fontWeight="black">Edge AI</text>
             </svg>
           </div>
         </div>
