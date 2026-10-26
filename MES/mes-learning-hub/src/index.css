@@ -665,7 +665,8 @@ body.theme-light {
 
 /* Indigo (ISA-95 Level 3, Operations) */
 .theme-light .text-indigo-400,
-.theme-light .text-indigo-300 { color: #3730a3 !important; font-weight: 600; }
+.theme-light .text-indigo-300,
+.theme-light .text-indigo-200 { color: #312e81 !important; font-weight: 600; }
 .theme-light .bg-indigo-500\/20,
 .theme-light .bg-indigo-500\/30,
 .theme-light .bg-indigo-600\/30,
@@ -674,8 +675,14 @@ body.theme-light {
   border-color: #a5b4fc !important;
 }
 .theme-light .bg-indigo-900\/40,
+.theme-light .bg-indigo-950,
 .theme-light .bg-indigo-950\/80,
-.theme-light .bg-indigo-950\/50 {
+.theme-light .bg-indigo-950\/70,
+.theme-light .bg-indigo-950\/60,
+.theme-light .bg-indigo-950\/50,
+.theme-light .bg-indigo-950\/40,
+.theme-light .bg-indigo-950\/30,
+.theme-light .bg-indigo-950\/20 {
   background-color: #eef2ff !important;
   border-color: #c7d2fe !important;
   color: #1e1b4b !important;
@@ -683,7 +690,8 @@ body.theme-light {
 
 /* Purple (ISA-95 Level 4, Enterprise ERP) */
 .theme-light .text-purple-400,
-.theme-light .text-purple-300 { color: #6b21a8 !important; font-weight: 600; }
+.theme-light .text-purple-300,
+.theme-light .text-purple-200 { color: #581c87 !important; font-weight: 600; }
 .theme-light .bg-purple-500\/20,
 .theme-light .bg-purple-500\/30,
 .theme-light .bg-purple-600\/30,
@@ -692,8 +700,14 @@ body.theme-light {
   border-color: #d8b4fe !important;
 }
 .theme-light .bg-purple-900\/40,
+.theme-light .bg-purple-950,
 .theme-light .bg-purple-950\/80,
-.theme-light .bg-purple-950\/50 {
+.theme-light .bg-purple-950\/70,
+.theme-light .bg-purple-950\/60,
+.theme-light .bg-purple-950\/50,
+.theme-light .bg-purple-950\/40,
+.theme-light .bg-purple-950\/30,
+.theme-light .bg-purple-950\/20 {
   background-color: #faf5ff !important;
   border-color: #e9d5ff !important;
   color: #3b0764 !important;
@@ -701,7 +715,8 @@ body.theme-light {
 
 /* Fuchsia (Monolithic & Architecture) */
 .theme-light .text-fuchsia-400,
-.theme-light .text-fuchsia-300 { color: #86198f !important; font-weight: 600; }
+.theme-light .text-fuchsia-300,
+.theme-light .text-fuchsia-200 { color: #86198f !important; font-weight: 600; }
 .theme-light .bg-fuchsia-500\/20,
 .theme-light .bg-fuchsia-500\/30,
 .theme-light .bg-fuchsia-600\/30,
@@ -710,6 +725,7 @@ body.theme-light {
   border-color: #f0abfc !important;
 }
 .theme-light .bg-fuchsia-900\/40,
+.theme-light .bg-fuchsia-950,
 .theme-light .bg-fuchsia-950\/80,
 .theme-light .bg-fuchsia-950\/50 {
   background-color: #fdf4ff !important;
@@ -718,7 +734,8 @@ body.theme-light {
 
 /* Pink (Module 2, Industrial UX/UI) */
 .theme-light .text-pink-400,
-.theme-light .text-pink-300 { color: #9d174d !important; font-weight: 600; }
+.theme-light .text-pink-300,
+.theme-light .text-pink-200 { color: #9d174d !important; font-weight: 600; }
 .theme-light .bg-pink-500\/20,
 .theme-light .bg-pink-500\/30,
 .theme-light .bg-pink-600\/30,
@@ -727,6 +744,7 @@ body.theme-light {
   border-color: #f472b6 !important;
 }
 .theme-light .bg-pink-900\/40,
+.theme-light .bg-pink-950,
 .theme-light .bg-pink-950\/70,
 .theme-light .bg-pink-950\/50 {
   background-color: #fdf2f8 !important;
@@ -735,7 +753,8 @@ body.theme-light {
 
 /* Rose (Legacy Shop Floor / Defect Warnings) */
 .theme-light .text-rose-400,
-.theme-light .text-rose-300 { color: #9f1239 !important; font-weight: 600; }
+.theme-light .text-rose-300,
+.theme-light .text-rose-200 { color: #9f1239 !important; font-weight: 600; }
 .theme-light .bg-rose-500\/20,
 .theme-light .bg-rose-500\/30,
 .theme-light .bg-rose-600\/30,
@@ -744,9 +763,14 @@ body.theme-light {
   background-color: #ffe4e6 !important;
   border-color: #fecdd3 !important;
 }
-.theme-light .bg-rose-950\/30,
-.theme-light .bg-rose-950\/50,
+.theme-light .bg-rose-950,
 .theme-light .bg-rose-950\/80,
+.theme-light .bg-rose-950\/70,
+.theme-light .bg-rose-950\/60,
+.theme-light .bg-rose-950\/50,
+.theme-light .bg-rose-950\/40,
+.theme-light .bg-rose-950\/30,
+.theme-light .bg-rose-950\/20,
 .theme-light .bg-rose-900\/40 {
   background-color: #fff1f2 !important;
   border-color: #fecdd3 !important;
@@ -755,7 +779,8 @@ body.theme-light {
 
 /* Cyan (ISA-95 Level 2, SCADA / Edge IPC) */
 .theme-light .text-cyan-400,
-.theme-light .text-cyan-300 { color: #0e7490 !important; font-weight: 600; }
+.theme-light .text-cyan-300,
+.theme-light .text-cyan-200 { color: #0e7490 !important; font-weight: 600; }
 .theme-light .bg-cyan-500\/20,
 .theme-light .bg-cyan-500\/30,
 .theme-light .bg-cyan-600\/30,
@@ -764,9 +789,14 @@ body.theme-light {
   border-color: #a5f3fc !important;
 }
 .theme-light .bg-cyan-900\/40,
+.theme-light .bg-cyan-950,
 .theme-light .bg-cyan-950\/80,
 .theme-light .bg-cyan-950\/70,
-.theme-light .bg-cyan-950\/50 {
+.theme-light .bg-cyan-950\/60,
+.theme-light .bg-cyan-950\/50,
+.theme-light .bg-cyan-950\/40,
+.theme-light .bg-cyan-950\/30,
+.theme-light .bg-cyan-950\/20 {
   background-color: #ecfeff !important;
   border-color: #bae6fd !important;
   color: #164e63 !important;
@@ -774,7 +804,8 @@ body.theme-light {
 
 /* Teal (ISA-95 Level 1, PLC Sensing) */
 .theme-light .text-teal-400,
-.theme-light .text-teal-300 { color: #0f766e !important; font-weight: 600; }
+.theme-light .text-teal-300,
+.theme-light .text-teal-200 { color: #0f766e !important; font-weight: 600; }
 .theme-light .bg-teal-500\/20,
 .theme-light .bg-teal-500\/30,
 .theme-light .bg-teal-600\/30,
@@ -783,9 +814,14 @@ body.theme-light {
   border-color: #99f6e4 !important;
 }
 .theme-light .bg-teal-900\/40,
+.theme-light .bg-teal-950,
 .theme-light .bg-teal-950\/80,
 .theme-light .bg-teal-950\/70,
-.theme-light .bg-teal-950\/50 {
+.theme-light .bg-teal-950\/60,
+.theme-light .bg-teal-950\/50,
+.theme-light .bg-teal-950\/40,
+.theme-light .bg-teal-950\/30,
+.theme-light .bg-teal-950\/20 {
   background-color: #f0fdfa !important;
   border-color: #99f6e4 !important;
   color: #134e4a !important;
@@ -793,7 +829,8 @@ body.theme-light {
 
 /* Emerald (Smart Factory, Success, Pass Criteria) */
 .theme-light .text-emerald-400,
-.theme-light .text-emerald-300 { color: #065f46 !important; font-weight: 600; }
+.theme-light .text-emerald-300,
+.theme-light .text-emerald-200 { color: #065f46 !important; font-weight: 600; }
 .theme-light .bg-emerald-500\/20,
 .theme-light .bg-emerald-500\/30,
 .theme-light .bg-emerald-600\/30,
@@ -802,9 +839,13 @@ body.theme-light {
   background-color: #d1fae5 !important;
   border-color: #a7f3d0 !important;
 }
-.theme-light .bg-emerald-950\/30,
-.theme-light .bg-emerald-950\/50,
+.theme-light .bg-emerald-950,
 .theme-light .bg-emerald-950\/80,
+.theme-light .bg-emerald-950\/70,
+.theme-light .bg-emerald-950\/50,
+.theme-light .bg-emerald-950\/40,
+.theme-light .bg-emerald-950\/30,
+.theme-light .bg-emerald-950\/20,
 .theme-light .bg-emerald-900\/40 {
   background-color: #ecfdf5 !important;
   border-color: #a7f3d0 !important;
@@ -813,9 +854,11 @@ body.theme-light {
 
 /* Sky & Blue (Client-Server, Network Protocols) */
 .theme-light .text-sky-400,
-.theme-light .text-sky-300 { color: #0369a1 !important; font-weight: 600; }
+.theme-light .text-sky-300,
+.theme-light .text-sky-200 { color: #0369a1 !important; font-weight: 600; }
 .theme-light .text-blue-400,
-.theme-light .text-blue-300 { color: #1d4ed8 !important; font-weight: 600; }
+.theme-light .text-blue-300,
+.theme-light .text-blue-200 { color: #1d4ed8 !important; font-weight: 600; }
 .theme-light .bg-sky-500\/20,
 .theme-light .bg-sky-500\/30,
 .theme-light .bg-sky-600\/30,
@@ -826,17 +869,29 @@ body.theme-light {
   border-color: #bae6fd !important;
 }
 .theme-light .bg-sky-900\/40,
+.theme-light .bg-sky-950,
+.theme-light .bg-sky-950\/80,
 .theme-light .bg-blue-900\/40,
-.theme-light .bg-sky-950\/80 {
+.theme-light .bg-blue-950,
+.theme-light .bg-blue-950\/80,
+.theme-light .bg-blue-950\/70,
+.theme-light .bg-blue-950\/60,
+.theme-light .bg-blue-950\/50,
+.theme-light .bg-blue-950\/40,
+.theme-light .bg-blue-950\/30,
+.theme-light .bg-blue-950\/20 {
   background-color: #f0f9ff !important;
   border-color: #bfdbfe !important;
+  color: #172554 !important;
 }
 
 /* Amber & Orange (Module 5, Quality & UAT Testing) */
 .theme-light .text-amber-400,
-.theme-light .text-amber-300 { color: #b45309 !important; font-weight: 600; }
+.theme-light .text-amber-300,
+.theme-light .text-amber-200 { color: #b45309 !important; font-weight: 600; }
 .theme-light .text-orange-400,
-.theme-light .text-orange-300 { color: #c2410c !important; font-weight: 600; }
+.theme-light .text-orange-300,
+.theme-light .text-orange-200 { color: #c2410c !important; font-weight: 600; }
 .theme-light .bg-amber-500\/20,
 .theme-light .bg-amber-500\/30,
 .theme-light .bg-amber-600\/30,
@@ -846,8 +901,13 @@ body.theme-light {
   background-color: #fef3c7 !important;
   border-color: #fde68a !important;
 }
-.theme-light .bg-amber-950\/30,
+.theme-light .bg-amber-950,
+.theme-light .bg-amber-950\/80,
 .theme-light .bg-amber-950\/70,
+.theme-light .bg-amber-950\/50,
+.theme-light .bg-amber-950\/40,
+.theme-light .bg-amber-950\/30,
+.theme-light .bg-amber-950\/20,
 .theme-light .bg-orange-950\/50,
 .theme-light .bg-amber-900\/40 {
   background-color: #fffbeb !important;
@@ -1013,7 +1073,11 @@ body.theme-light {
   color: #1e293b !important;
 }
 
-/* Dark Slate Gradient Banners -> Crisp Elegant Light Gradients */
+/* Dark Slate & Deep Palette Gradient Banners -> Crisp Elegant Light Gradients */
+.theme-light [class*="bg-gradient-to-r"][class*="from-blue-950"],
+.theme-light [class*="bg-gradient-to-r"][class*="from-cyan-950"],
+.theme-light [class*="bg-gradient-to-r"][class*="from-violet-950"],
+.theme-light [class*="bg-gradient-to-r"][class*="from-emerald-950"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-slate-800"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-slate-900"],
 .theme-light [class*="bg-gradient-to-br"][class*="from-slate-800"],
@@ -1021,6 +1085,25 @@ body.theme-light {
   background-image: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%) !important;
   border-color: #cbd5e1 !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Code & Pre Blocks in Light Mode */
+.theme-light pre {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light pre code,
+.theme-light code {
+  color: #0f172a !important;
+}
+
+/* Simulator & Interactive Slider Control Panels in Light Mode */
+.theme-light .bg-slate-950\/80 {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
 }
 
 /* Borders and Dividers in Light Mode */
@@ -1101,21 +1184,32 @@ body.theme-light {
   color: #1e293b !important;
 }
 
+.theme-light thead,
+.theme-light thead.bg-slate-950,
 .theme-light thead tr {
-  background-color: #f8fafc !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  background-color: #f1f5f9 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
 }
 
 .theme-light thead th {
-  color: #475569 !important;
+  color: #334155 !important;
 }
 
 .theme-light tbody tr {
-  border-bottom: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.theme-light tbody tr:hover {
+.theme-light tbody tr:hover,
+.theme-light tbody tr.hover\:bg-slate-850\/50:hover {
   background-color: #f8fafc !important;
+}
+
+.theme-light tr.bg-amber-950\/20 {
+  background-color: #fffbeb !important;
+}
+
+.theme-light tr.bg-rose-950\/30 {
+  background-color: #fff1f2 !important;
 }
 
 /* General Text Overrides in Light Mode */

@@ -1841,38 +1841,44 @@ export function MachineVisionMod1() {
           ความเร็วการตอบสนอง และการตัดสินที่มีอคติส่วนบุคคล (Subjective Judgment) แมชชีนวิชันจึงเข้ามาแก้ปัญหาด้วยคุณสมบัติหลัก:
         </p>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
-              <tr>
-                <th className="py-3 px-4">ปัจจัยเปรียบเทียบ (Criteria)</th>
-                <th className="py-3 px-4 text-rose-300">สายตามนุษย์ (Human Inspection)</th>
-                <th className="py-3 px-4 text-emerald-300">ระบบแมชชีนวิชัน (Industrial Machine Vision)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-white">ความเร็วในการตรวจ (Inspection Speed)</td>
-                <td className="py-3 px-4 text-slate-300">จำกัดที่ 1 - 2 ชิ้นต่อวินาที หากเร็วกว่านี้จะเริ่มหลุดรอด</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">มากกว่า 30 - 120 ชิ้นต่อวินาที (ตามรอบชัตเตอร์และ IPC)</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-white">ความสม่ำเสมอและความเที่ยงตรง (Repeatability)</td>
-                <td className="py-3 px-4 text-slate-300">ผันแปรตามความเหนื่อยล้า กะกลางคืน อารมณ์ และแสงสว่าง</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">100% สม่ำเสมอตลอด 24 ชม. ไม่มีความเมื่อยล้า ไร้อคติ</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-white">การวัดขนาดมิติ (Dimension Gauging)</td>
-                <td className="py-3 px-4 text-slate-300">กะประมาณด้วยสายตาได้แค่ระดับมิลลิเมตร ต้องใช้เวอร์เนียร์วัดทีละชิ้น</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">วัดขนาดได้ระดับไมครอน (&plusmn;0.005 mm) วัดครบทุกชิ้น 100% Inline</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-white">การบันทึกข้อมูลเพื่อการสืบย้อนกลับ (Traceability)</td>
-                <td className="py-3 px-4 text-slate-300">ต้องจดบันทึกลงกระดาษ เสี่ยงต่อการสูญหายและบันทึกย้อนหลังเท็จ</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">บันทึกรูปภาพและค่ามิติลงฐานข้อมูล MES / SQL Server ทันทีทุกชิ้นงาน</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-1.5">
+          <div className="sm:hidden text-[11px] text-slate-400 flex items-center justify-end gap-1.5 font-mono">
+            <span>เลื่อนแนวนอนเพื่อดูตารางเปรียบเทียบเต็ม</span>
+            <span className="text-cyan-400">↔</span>
+          </div>
+          <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-800">
+            <table className="w-full min-w-[640px] text-left text-xs text-slate-300 border-collapse">
+              <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
+                <tr>
+                  <th className="w-[28%] align-top py-3 px-4">ปัจจัยเปรียบเทียบ (Criteria)</th>
+                  <th className="w-[36%] align-top py-3 px-4 text-rose-300">สายตามนุษย์ (Human Inspection)</th>
+                  <th className="w-[36%] align-top py-3 px-4 text-emerald-300">ระบบแมชชีนวิชัน (Industrial Machine Vision)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-white">ความเร็วในการตรวจ (Inspection Speed)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">จำกัดที่ 1 - 2 ชิ้นต่อวินาที หากเร็วกว่านี้จะเริ่มหลุดรอด</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400 leading-relaxed">มากกว่า 30 - 120 ชิ้นต่อวินาที (ตามรอบชัตเตอร์และ IPC)</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-white">ความสม่ำเสมอและความเที่ยงตรง (Repeatability)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">ผันแปรตามความเหนื่อยล้า กะกลางคืน อารมณ์ และแสงสว่าง</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400 leading-relaxed">100% สม่ำเสมอตลอด 24 ชม. ไม่มีความเมื่อยล้า ไร้อคติ</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-white">การวัดขนาดมิติ (Dimension Gauging)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">กะประมาณด้วยสายตาได้แค่ระดับมิลลิเมตร ต้องใช้เวอร์เนียร์วัดทีละชิ้น</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400 leading-relaxed">วัดขนาดได้ระดับไมครอน (&plusmn;0.005 mm) วัดครบทุกชิ้น 100% Inline</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-white">การบันทึกข้อมูลเพื่อการสืบย้อนกลับ (Traceability)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">ต้องจดบันทึกลงกระดาษ เสี่ยงต่อการสูญหายและบันทึกย้อนหลังเท็จ</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400 leading-relaxed">บันทึกรูปภาพและค่ามิติลงฐานข้อมูล MES / SQL Server ทันทีทุกชิ้นงาน</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -2153,49 +2159,55 @@ export function MachineVisionMod2() {
           ตารางสรุปการเลือกชนิดของแสงตามโจทย์ชิ้นงานโรงงาน (Lighting Cheat Sheet)
         </h2>
         
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
-              <tr>
-                <th className="py-3 px-4">ชนิดแสง (Lighting Type)</th>
-                <th className="py-3 px-4">ลักษณะการให้แสง</th>
-                <th className="py-3 px-4">โจทย์ชิ้นงานที่เหมาะสม</th>
-                <th className="py-3 px-4">ข้อควรระวังหน้างาน</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-amber-300">💡 Backlight (ไฟส่องหลัง)</td>
-                <td className="py-3 px-4">ส่องจากหลังชิ้นงาน เกิดเงาดำ Silhouette 100% Contrast</td>
-                <td className="py-3 px-4 font-semibold text-white">วัดขนาดมิติ (Dimension), รูเจาะ, เกลียวน็อต, ขอบครีบ (Burr)</td>
-                <td className="py-3 px-4 text-slate-400">ต้องมีพื้นที่ติดตั้งไฟใต้สายพาน ตรวจพื้นผิวไม่ได้</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-cyan-300">🎯 Coaxial Light (ไฟร่วมแกน)</td>
-                <td className="py-3 px-4">แสงสะท้อนผ่านกระจก 45° ขนานแกนเลนส์ตกกระทบ 90°</td>
-                <td className="py-3 px-4 font-semibold text-white">ตรวจรอยขูดขีดบนแผ่นโลหะเงา, กระจก, ซิลิคอนเวเฟอร์</td>
-                <td className="py-3 px-4 text-slate-400">ระยะห่าง Working Distance ต้องคงที่ ห้ามวางเอียง</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-purple-300">🎪 Diffuse Dome Light (ไฟโดม)</td>
-                <td className="py-3 px-4">แสงกระจายสะท้อนจากโดมโค้งรอบทิศ 360° ไร้เงามืด</td>
-                <td className="py-3 px-4 font-semibold text-white">ชิ้นงานผิวโค้งมน, ท่อทองแดง, ฝากระป๋อง, แผง PCB นูนต่ำ</td>
-                <td className="py-3 px-4 text-slate-400">ตัวโดมมีขนาดใหญ่ ต้องเว้นช่องรูกล้องมองกลางโดม</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-emerald-300">🕶️ Polarizing Filter (CPL)</td>
-                <td className="py-3 px-4">กรองคลื่นแสงสะท้อนระนาบตรง ขจัดแสงวาบขาวน้ำมัน</td>
-                <td className="py-3 px-4 font-semibold text-white">ชิ้นงานปั๊มขึ้นรูปเคลือบน้ำมันหล่อเย็น, ขั้วแบตเตอรี่เงา</td>
-                <td className="py-3 px-4 text-slate-400">แสงโดยรวมจะดรอปลงประมาณ 1-2 Stop ต้องชดเชยเวลาชัตเตอร์</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-sky-300">⭕ Ring Light (ไฟวงแหวน)</td>
-                <td className="py-3 px-4">ติดตั้งล้อมรอบหน้าเลนส์ ส่องแสงกระจายตรงเข้าหาชิ้นงาน</td>
-                <td className="py-3 px-4 font-semibold text-white">ตรวจเช็คตัวอักษร OCR, โลโก้, บาร์โค้ดบนพื้นผิวด้านทั่วไป</td>
-                <td className="py-3 px-4 text-slate-400">ห้ามใช้กับชิ้นงานโลหะเงาวับ เพราะจะเกิดวงสะท้อนรูปโดนัทเข้ากล้อง</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-1.5">
+          <div className="sm:hidden text-[11px] text-slate-400 flex items-center justify-end gap-1.5 font-mono">
+            <span>เลื่อนแนวนอนเพื่อดูตารางเปรียบเทียบเต็ม</span>
+            <span className="text-cyan-400">↔</span>
+          </div>
+          <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-800">
+            <table className="w-full min-w-[700px] text-left text-xs text-slate-300 border-collapse">
+              <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
+                <tr>
+                  <th className="w-[24%] align-top py-3 px-4">ชนิดแสง (Lighting Type)</th>
+                  <th className="w-[26%] align-top py-3 px-4">ลักษณะการให้แสง</th>
+                  <th className="w-[28%] align-top py-3 px-4">โจทย์ชิ้นงานที่เหมาะสม</th>
+                  <th className="w-[22%] align-top py-3 px-4">ข้อควรระวังหน้างาน</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-amber-300">💡 Backlight (ไฟส่องหลัง)</td>
+                  <td className="align-top py-3 px-4 leading-relaxed">ส่องจากหลังชิ้นงาน เกิดเงาดำ Silhouette 100% Contrast</td>
+                  <td className="align-top py-3 px-4 font-semibold text-white leading-relaxed">วัดขนาดมิติ (Dimension), รูเจาะ, เกลียวน็อต, ขอบครีบ (Burr)</td>
+                  <td className="align-top py-3 px-4 text-slate-400 leading-relaxed">ต้องมีพื้นที่ติดตั้งไฟใต้สายพาน ตรวจพื้นผิวไม่ได้</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-cyan-300">🎯 Coaxial Light (ไฟร่วมแกน)</td>
+                  <td className="align-top py-3 px-4 leading-relaxed">แสงสะท้อนผ่านกระจก 45° ขนานแกนเลนส์ตกกระทบ 90°</td>
+                  <td className="align-top py-3 px-4 font-semibold text-white leading-relaxed">ตรวจรอยขูดขีดบนแผ่นโลหะเงา, กระจก, ซิลิคอนเวเฟอร์</td>
+                  <td className="align-top py-3 px-4 text-slate-400 leading-relaxed">ระยะห่าง Working Distance ต้องคงที่ ห้ามวางเอียง</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-purple-300">🎪 Diffuse Dome Light (ไฟโดม)</td>
+                  <td className="align-top py-3 px-4 leading-relaxed">แสงกระจายสะท้อนจากโดมโค้งรอบทิศ 360° ไร้เงามืด</td>
+                  <td className="align-top py-3 px-4 font-semibold text-white leading-relaxed">ชิ้นงานผิวโค้งมน, ท่อทองแดง, ฝากระป๋อง, แผง PCB นูนต่ำ</td>
+                  <td className="align-top py-3 px-4 text-slate-400 leading-relaxed">ตัวโดมมีขนาดใหญ่ ต้องเว้นช่องรูกล้องมองกลางโดม</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-emerald-300">🕶️ Polarizing Filter (CPL)</td>
+                  <td className="align-top py-3 px-4 leading-relaxed">กรองคลื่นแสงสะท้อนระนาบตรง ขจัดแสงวาบขาวน้ำมัน</td>
+                  <td className="align-top py-3 px-4 font-semibold text-white leading-relaxed">ชิ้นงานปั๊มขึ้นรูปเคลือบน้ำมันหล่อเย็น, ขั้วแบตเตอรี่เงา</td>
+                  <td className="align-top py-3 px-4 text-slate-400 leading-relaxed">แสงโดยรวมจะดรอปลงประมาณ 1-2 Stop ต้องชดเชยเวลาชัตเตอร์</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-sky-300">⭕ Ring Light (ไฟวงแหวน)</td>
+                  <td className="align-top py-3 px-4 leading-relaxed">ติดตั้งล้อมรอบหน้าเลนส์ ส่องแสงกระจายตรงเข้าหาชิ้นงาน</td>
+                  <td className="align-top py-3 px-4 font-semibold text-white leading-relaxed">ตรวจเช็คตัวอักษร OCR, โลโก้, บาร์โค้ดบนพื้นผิวด้านทั่วไป</td>
+                  <td className="align-top py-3 px-4 text-slate-400 leading-relaxed">ห้ามใช้กับชิ้นงานโลหะเงาวับ เพราะจะเกิดวงสะท้อนรูปโดนัทเข้ากล้อง</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -2208,48 +2220,54 @@ export function MachineVisionMod2() {
           <span className="w-7 h-7 rounded-lg bg-sky-600/30 text-sky-400 flex items-center justify-center text-sm font-black border border-sky-500/40">4</span>
           ตารางเปรียบเทียบพอร์ตเชื่อมต่อกล้องอุตสาหกรรม (Industrial Camera Interfaces Comparison)
         </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
-              <tr>
-                <th className="py-3 px-4">มาตรฐานพอร์ต (Interface)</th>
-                <th className="py-3 px-4">แบนด์วิดท์ (Bandwidth)</th>
-                <th className="py-3 px-4">ระยะสายสูงสุด (Max Cable Length)</th>
-                <th className="py-3 px-4">การ์ด Frame Grabber?</th>
-                <th className="py-3 px-4">ข้อดีในโรงงานอุตสาหกรรม</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-cyan-400">GigE Vision (1G / 10G)</td>
-                <td className="py-3 px-4 font-mono">1 Gbps &ndash; 10 Gbps</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">สูงสุด 100 เมตร (Cat6)</td>
-                <td className="py-3 px-4 text-emerald-400">ไม่ต้องใช้ (เสียบพอร์ต LAN)</td>
-                <td className="py-3 px-4 text-slate-300">สายยาว ลากข้ามตู้ควบคุมได้ไกล รองรับ PoE (จ่ายไฟผ่านสายแลนเส้นเดียว) นิยมที่สุดในโลก</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-blue-400">USB 3.0 Vision</td>
-                <td className="py-3 px-4 font-mono">~5 Gbps (USB 3.1 Gen1)</td>
-                <td className="py-3 px-4 font-mono text-amber-400">3 &ndash; 5 เมตร</td>
-                <td className="py-3 px-4 text-emerald-400">ไม่ต้องใช้ (Plug &amp; Play)</td>
-                <td className="py-3 px-4 text-slate-300">ติดตั้งง่าย ต้นทุนต่ำ เหมาะกับแท่นตรวจสอบขนาดกะทัดรัด (Standalone Testing Jig)</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-purple-400">CoaXPress (CXP-6 / CXP-12)</td>
-                <td className="py-3 px-4 font-mono text-emerald-400">6 Gbps &ndash; 50 Gbps</td>
-                <td className="py-3 px-4 font-mono">40 &ndash; 100 เมตร (Coaxial)</td>
-                <td className="py-3 px-4 text-rose-400 font-bold">ต้องใช้การ์ดเฉพาะทาง (PCIe)</td>
-                <td className="py-3 px-4 text-slate-300">ความเร็วสูงสุดระดับอัลตราสปีด เหมาะกับกล้อง Line Scan และงานตรวจจับแผ่นเวเฟอร์เซมิคอนดักเตอร์</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-slate-400">Camera Link</td>
-                <td className="py-3 px-4 font-mono">2 Gbps &ndash; 6.8 Gbps</td>
-                <td className="py-3 px-4 font-mono text-amber-400">10 เมตร</td>
-                <td className="py-3 px-4 text-rose-400 font-bold">ต้องใช้การ์ดเฉพาะทาง (PCIe)</td>
-                <td className="py-3 px-4 text-slate-300">Latency คงที่ในระดับไมโครวินาที (Deterministic Real-time) มีความเสถียรสูงสุด</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-1.5">
+          <div className="sm:hidden text-[11px] text-slate-400 flex items-center justify-end gap-1.5 font-mono">
+            <span>เลื่อนแนวนอนเพื่อดูตารางเปรียบเทียบเต็ม</span>
+            <span className="text-cyan-400">↔</span>
+          </div>
+          <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-800">
+            <table className="w-full min-w-[760px] text-left text-xs text-slate-300 border-collapse">
+              <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
+                <tr>
+                  <th className="w-[22%] align-top py-3 px-4">มาตรฐานพอร์ต (Interface)</th>
+                  <th className="w-[18%] align-top py-3 px-4">แบนด์วิดท์ (Bandwidth)</th>
+                  <th className="w-[18%] align-top py-3 px-4">ระยะสายสูงสุด (Max Cable Length)</th>
+                  <th className="w-[17%] align-top py-3 px-4">การ์ด Frame Grabber?</th>
+                  <th className="w-[25%] align-top py-3 px-4">ข้อดีในโรงงานอุตสาหกรรม</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-cyan-400">GigE Vision (1G / 10G)</td>
+                  <td className="align-top py-3 px-4 font-mono">1 Gbps &ndash; 10 Gbps</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400">สูงสุด 100 เมตร (Cat6)</td>
+                  <td className="align-top py-3 px-4 text-emerald-400">ไม่ต้องใช้ (เสียบพอร์ต LAN)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">สายยาว ลากข้ามตู้ควบคุมได้ไกล รองรับ PoE (จ่ายไฟผ่านสายแลนเส้นเดียว) นิยมที่สุดในโลก</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-blue-400">USB 3.0 Vision</td>
+                  <td className="align-top py-3 px-4 font-mono">~5 Gbps (USB 3.1 Gen1)</td>
+                  <td className="align-top py-3 px-4 font-mono text-amber-400">3 &ndash; 5 เมตร</td>
+                  <td className="align-top py-3 px-4 text-emerald-400">ไม่ต้องใช้ (Plug &amp; Play)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">ติดตั้งง่าย ต้นทุนต่ำ เหมาะกับแท่นตรวจสอบขนาดกะทัดรัด (Standalone Testing Jig)</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-purple-400">CoaXPress (CXP-6 / CXP-12)</td>
+                  <td className="align-top py-3 px-4 font-mono text-emerald-400">6 Gbps &ndash; 50 Gbps</td>
+                  <td className="align-top py-3 px-4 font-mono">40 &ndash; 100 เมตร (Coaxial)</td>
+                  <td className="align-top py-3 px-4 text-rose-400 font-bold">ต้องใช้การ์ดเฉพาะทาง (PCIe)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">ความเร็วสูงสุดระดับอัลตราสปีด เหมาะกับกล้อง Line Scan และงานตรวจจับแผ่นเวเฟอร์เซมิคอนดักเตอร์</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-slate-400">Camera Link</td>
+                  <td className="align-top py-3 px-4 font-mono">2 Gbps &ndash; 6.8 Gbps</td>
+                  <td className="align-top py-3 px-4 font-mono text-amber-400">10 เมตร</td>
+                  <td className="align-top py-3 px-4 text-rose-400 font-bold">ต้องใช้การ์ดเฉพาะทาง (PCIe)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">Latency คงที่ในระดับไมโครวินาที (Deterministic Real-time) มีความเสถียรสูงสุด</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>
@@ -2397,43 +2415,49 @@ export function MachineVisionMod4() {
           <span className="w-7 h-7 rounded-lg bg-rose-600/30 text-rose-400 flex items-center justify-center text-sm font-black border border-rose-500/40">2</span>
           ตารางวิเคราะห์ Confusion Matrix ในระบบควบคุมคุณภาพโรงงาน (Manufacturing Quality Matrix)
         </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
-              <tr>
-                <th className="py-3 px-4">สภาวะทางสถิติ</th>
-                <th className="py-3 px-4">การตัดสินของ Machine Vision</th>
-                <th className="py-3 px-4">สถานะชิ้นงานจริง</th>
-                <th className="py-3 px-4">ผลกระทบต่อสายการผลิตและต้นทุน</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-emerald-400">True Positive (TP)</td>
-                <td className="py-3 px-4 text-emerald-300">ตัดสินว่า "NG" (มีรอยตำหนิ)</td>
-                <td className="py-3 px-4 font-bold text-rose-400">ชิ้นงานเสียจริง (Defective)</td>
-                <td className="py-3 px-4 text-slate-300">ระบบคัดแยกเตะงานเสียลงราง Reject ได้ถูกต้อง ป้องกันของเสียหลุด 100%</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50">
-                <td className="py-3 px-4 font-bold text-emerald-400">True Negative (TN)</td>
-                <td className="py-3 px-4 text-emerald-300">ตัดสินว่า "PASS / OK"</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">ชิ้นงานดีจริง (Good Part)</td>
-                <td className="py-3 px-4 text-slate-300">ชิ้นงานไหลไปยังกระบวนการถัดไปได้อย่างราบรื่น ไม่สูญเสียเวลาการผลิต</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50 bg-amber-950/20">
-                <td className="py-3 px-4 font-bold text-amber-400">False Positive (FP) / Overkill</td>
-                <td className="py-3 px-4 text-rose-300">ตัดสินว่า "NG" (ผิดพลาด)</td>
-                <td className="py-3 px-4 font-bold text-emerald-400">ชิ้นงานดี (Good Part)</td>
-                <td className="py-3 px-4 text-amber-300">Yield การผลิตตก ต้องจ้างคนมาคัดกรองซ้ำ (Re-inspection Cost) คุมให้ &lt; 0.5%</td>
-              </tr>
-              <tr className="hover:bg-slate-850/50 bg-rose-950/30">
-                <td className="py-3 px-4 font-bold text-rose-400">False Negative (FN) / Escape</td>
-                <td className="py-3 px-4 text-emerald-300">ตัดสินว่า "PASS" (ผิดพลาด!)</td>
-                <td className="py-3 px-4 font-bold text-rose-400">ชิ้นงานเสีย (Defective!)</td>
-                <td className="py-3 px-4 text-rose-300 font-bold">ของเสียหลุดรอดสู่ลูกค้า! เสี่ยงถูก Reject ทั้งล็อต เคลมค่าเสียหายหลักล้าน (ต้อง 0 PPM)</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-1.5">
+          <div className="sm:hidden text-[11px] text-slate-400 flex items-center justify-end gap-1.5 font-mono">
+            <span>เลื่อนแนวนอนเพื่อดูตารางเปรียบเทียบเต็ม</span>
+            <span className="text-cyan-400">↔</span>
+          </div>
+          <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-800">
+            <table className="w-full min-w-[720px] text-left text-xs text-slate-300 border-collapse">
+              <thead className="bg-slate-950 text-slate-400 font-semibold uppercase text-[11px] border-b border-slate-800">
+                <tr>
+                  <th className="w-[22%] align-top py-3 px-4">สภาวะทางสถิติ</th>
+                  <th className="w-[22%] align-top py-3 px-4">การตัดสินของ Machine Vision</th>
+                  <th className="w-[22%] align-top py-3 px-4">สถานะชิ้นงานจริง</th>
+                  <th className="w-[34%] align-top py-3 px-4">ผลกระทบต่อสายการผลิตและต้นทุน</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400">True Positive (TP)</td>
+                  <td className="align-top py-3 px-4 text-emerald-300">ตัดสินว่า "NG" (มีรอยตำหนิ)</td>
+                  <td className="align-top py-3 px-4 font-bold text-rose-400">ชิ้นงานเสียจริง (Defective)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">ระบบคัดแยกเตะงานเสียลงราง Reject ได้ถูกต้อง ป้องกันของเสียหลุด 100%</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50">
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400">True Negative (TN)</td>
+                  <td className="align-top py-3 px-4 text-emerald-300">ตัดสินว่า "PASS / OK"</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400">ชิ้นงานดีจริง (Good Part)</td>
+                  <td className="align-top py-3 px-4 text-slate-300 leading-relaxed">ชิ้นงานไหลไปยังกระบวนการถัดไปได้อย่างราบรื่น ไม่สูญเสียเวลาการผลิต</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50 bg-amber-950/20">
+                  <td className="align-top py-3 px-4 font-bold text-amber-400">False Positive (FP) / Overkill</td>
+                  <td className="align-top py-3 px-4 text-rose-300">ตัดสินว่า "NG" (ผิดพลาด)</td>
+                  <td className="align-top py-3 px-4 font-bold text-emerald-400">ชิ้นงานดี (Good Part)</td>
+                  <td className="align-top py-3 px-4 text-amber-300 leading-relaxed">Yield การผลิตตก ต้องจ้างคนมาคัดกรองซ้ำ (Re-inspection Cost) คุมให้ &lt; 0.5%</td>
+                </tr>
+                <tr className="hover:bg-slate-850/50 bg-rose-950/30">
+                  <td className="align-top py-3 px-4 font-bold text-rose-400">False Negative (FN) / Escape</td>
+                  <td className="align-top py-3 px-4 text-emerald-300">ตัดสินว่า "PASS" (ผิดพลาด!)</td>
+                  <td className="align-top py-3 px-4 font-bold text-rose-400">ชิ้นงานเสีย (Defective!)</td>
+                  <td className="align-top py-3 px-4 text-rose-300 font-bold leading-relaxed">ของเสียหลุดรอดสู่ลูกค้า! เสี่ยงถูก Reject ทั้งล็อต เคลมค่าเสียหายหลักล้าน (ต้อง 0 PPM)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
