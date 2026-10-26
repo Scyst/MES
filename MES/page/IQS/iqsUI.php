@@ -62,24 +62,27 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
 
                         <!-- Top Cockpit Control Strip -->
                         <div class="cockpit-header-strip mb-3">
-                            <div class="row g-2 align-items-center">
-                                <div class="col-12 col-md-auto">
+                            <div class="cockpit-strip-inner">
+                                <!-- Left: Slot Pill -->
+                                <div class="cockpit-strip-left">
                                     <div class="cockpit-slot-pill" id="cockpitSlotPill">
                                         <span class="slot-live-dot"></span>
                                         <span id="cockpitSlotText">กำลังตรวจรอบปัจจุบัน (Auto-Round)</span>
                                     </div>
                                 </div>
-                                <div class="col-12 col-md d-flex align-items-center justify-content-between justify-content-md-end gap-2 flex-wrap flex-sm-nowrap">
-                                    <div class="text-end d-none d-lg-block me-1">
-                                        <div class="small text-muted fw-bold" style="font-size: 0.74rem;">ความคืบหน้าการตรวจวันนี้</div>
-                                        <strong class="text-primary small" id="cockpitProgressText">0 / 0 เครื่อง (0%)</strong>
+
+                                <!-- Right: Daily Progress & Action Buttons -->
+                                <div class="cockpit-strip-right">
+                                    <div class="cockpit-progress-box d-none d-lg-block">
+                                        <div class="cockpit-progress-label">ความคืบหน้าการตรวจวันนี้</div>
+                                        <strong class="cockpit-progress-val text-primary" id="cockpitProgressText">0 / 0 เครื่อง (0%)</strong>
                                     </div>
-                                    <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
-                                        <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0 d-flex align-items-center justify-content-center gap-1 cockpit-action-btn" data-bs-toggle="modal" data-bs-target="#modalScheduleTimeline" title="ดูตารางรอบเวลา 7 รอบประจำวัน">
+                                    <div class="cockpit-btn-group">
+                                        <button type="button" class="btn btn-outline-secondary cockpit-action-btn" data-bs-toggle="modal" data-bs-target="#modalScheduleTimeline" title="ดูตารางรอบเวลา 7 รอบประจำวัน">
                                             <i class="fas fa-calendar-alt text-primary"></i>
                                             <span>ตารางรอบมาตรฐาน</span>
                                         </button>
-                                        <button type="button" class="btn btn-outline-primary fw-bold flex-fill flex-md-grow-0 d-flex align-items-center justify-content-center gap-1 cockpit-action-btn" id="btnQuickAuditSheet" onclick="IQS.openCurrentAuditSheet()" title="เปิดใบสรุปผลการตรวจสำหรับออดิท">
+                                        <button type="button" class="btn btn-outline-primary fw-bold cockpit-action-btn" id="btnQuickAuditSheet" onclick="IQS.openCurrentAuditSheet()" title="เปิดใบสรุปผลการตรวจสำหรับออดิท">
                                             <i class="fas fa-print"></i>
                                             <span>ใบตรวจออดิท</span>
                                         </button>

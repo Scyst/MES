@@ -893,8 +893,55 @@ body {
     background: var(--iqs-card-bg);
     border: 1px solid var(--iqs-border);
     border-radius: 16px;
-    padding: 12px 18px;
+    padding: 10px 18px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cockpit-strip-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+}
+
+.cockpit-strip-left {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.cockpit-strip-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    flex-grow: 1;
+}
+
+.cockpit-progress-box {
+    text-align: right;
+    line-height: 1.25;
+}
+
+.cockpit-progress-label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--iqs-text-secondary);
+}
+
+.cockpit-progress-val {
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.cockpit-btn-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .cockpit-slot-pill {
@@ -924,8 +971,41 @@ body {
     height: 38px !important;
     font-size: 0.85rem !important;
     border-radius: 10px !important;
-    padding: 6px 12px !important;
+    padding: 6px 14px !important;
     white-space: nowrap !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+    .cockpit-strip-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .cockpit-strip-left {
+        width: 100%;
+    }
+    .cockpit-slot-pill {
+        width: 100%;
+        justify-content: center;
+    }
+    .cockpit-strip-right {
+        width: 100%;
+        justify-content: stretch;
+    }
+    .cockpit-btn-group {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+    }
+    .cockpit-btn-group .cockpit-action-btn {
+        flex: 1 1 0;
+        width: 50%;
+    }
 }
 
 /* Line Selector Tabs Bar (SPOT, BEND, PRESS) */
