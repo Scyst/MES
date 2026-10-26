@@ -388,24 +388,35 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
 
     <!-- Modal: Daily Standard 7-Slots Timeline Schedule -->
     <div class="modal fade" id="modalScheduleTimeline" tabindex="-1" aria-labelledby="modalScheduleTimelineLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow" style="border-radius: 20px; overflow: hidden;">
-                <div class="modal-header bg-light py-3 px-4">
-                    <h5 class="modal-title fw-bold mb-0 text-body" id="modalScheduleTimelineLabel">
-                        <i class="fas fa-clock text-primary me-2"></i>ตารางรอบเวลามาตรฐานประจำวัน (7 รอบ)
-                    </h5>
+        <div class="modal-dialog modal-dialog-centered modal-lg iqs-schedule-modal-dialog">
+            <div class="modal-content border-0 shadow-lg iqs-schedule-modal-content">
+                <div class="modal-header border-bottom py-3 px-4 bg-light bg-opacity-75">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="iqs-modal-icon-badge">
+                            <i class="fas fa-business-time"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0 text-body" id="modalScheduleTimelineLabel">
+                                ตารางรอบเวลามาตรฐานประจำวัน (7 รอบ)
+                            </h5>
+                            <div class="text-muted small">Daily Standard Inspection Schedule & Audit Compliance</div>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted small mb-3">
-                        ระบบจัดเวลาการตรวจสอบคุณภาพตามช่วงเวลามาตรฐานของโรงงาน พร้อมตรวจจับรอบที่ขาด (Missed Slots) อัตโนมัติ
-                    </p>
-                    <div class="schedule-timeline-grid" id="scheduleTimelineGrid">
-                        <!-- Populated dynamically -->
+                <div class="modal-body p-4" id="scheduleTimelineBody">
+                    <div id="scheduleTimelineContainer">
+                        <!-- Populated dynamically by IQS.renderDailyTimeline() -->
                     </div>
                 </div>
-                <div class="modal-footer bg-light px-4 py-3">
-                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">ปิด</button>
+                <div class="modal-footer border-top bg-light bg-opacity-75 px-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 text-muted small">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        <span><strong>ข้อกำหนด Audit:</strong> บันทึกผลตามเวลาจริง (Real-time) ณ ขณะตรวจสอบเท่านั้น ห้ามบันทึกย้อนหลัง</span>
+                    </div>
+                    <button type="button" class="btn btn-secondary px-4 rounded-pill fw-medium" data-bs-dismiss="modal">
+                        ปิดหน้าต่าง
+                    </button>
                 </div>
             </div>
         </div>

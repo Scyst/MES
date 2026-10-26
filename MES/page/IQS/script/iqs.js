@@ -134,42 +134,149 @@ const IQS = {
     },
 
     renderDailyTimeline() {
-        const grid = document.getElementById('scheduleTimelineGrid');
-        if (!grid || !this.slotStatuses || this.slotStatuses.length === 0) return;
+        const container = document.getElementById('scheduleTimelineContainer') || document.getElementById('scheduleTimelineGrid');
+        if (!container || !this.slotStatuses || this.slotStatuses.length === 0) return;
 
-        grid.innerHTML = '';
-        this.slotStatuses.forEach(slot => {
-            let cardClass = '';
-            let iconHtml = '';
+        const serverTime = this.slotSummary?.cur_server_time || '--:--';
+        const serverDate = this.slotSummary?.cur_server_date || '';
+
+        // Calculate KPI status counts
+        const completedCount = this.slotStatuses.filter(s => s.status === 'COMPLETED').length;
+        const dueCount = this.slotStatuses.filter(s => s.status === 'DUE_NOW').length;
+        const missedCount = this.slotStatuses.filter(s => s.status === 'MISSED').length;
+        const inProgCount = this.slotStatuses.filter(s => s.status === 'IN_PROGRESS').length;
+        const upcomingCount = this.slotStatuses.filter(s => s.status === 'UPCOMING').length;
+
+        // Separate slots into Day Shift vs. OT & Night Shift
+        const daySlots = this.slotStatuses.filter(s => s.shift === 'Day');
+        const otNightSlots = this.slotStatuses.filter(s => s.shift !== 'Day');
+
+        // Helper to generate a single card HTML
+        const renderCardHtml = (slot) => {
+            const cleanName = (slot.template_name || '').replace(/\s*\(\d{2}:\d{2}\)/, '').trim() || slot.template_name;
+
+            let cardClass = 'slot-card-upcoming';
+            let pillClass = 'pill-upcoming';
+            let statusIcon = '<i class="far fa-clock me-1"></i>';
+            let subInfoHtml = '<span class="text-muted"><i class="far fa-hourglass me-1"></i>ยังไม่ถึงรอบ</span>';
+
             if (slot.status === 'COMPLETED') {
-                cardClass = 'slot-completed';
-                iconHtml = '<i class="fas fa-check-circle me-1"></i>';
+                cardClass = 'slot-card-completed';
+                pillClass = 'pill-completed';
+                statusIcon = '<i class="fas fa-check-circle me-1"></i>';
+                subInfoHtml = '<span class="text-success"><i class="fas fa-check me-1"></i>บันทึกเรียบร้อย</span>';
             } else if (slot.status === 'IN_PROGRESS') {
-                cardClass = 'slot-in-progress';
-                iconHtml = '<i class="fas fa-spinner fa-spin me-1"></i>';
+                cardClass = 'slot-card-in-progress';
+                pillClass = 'pill-in-progress';
+                statusIcon = '<i class="fas fa-spinner fa-spin me-1"></i>';
+                subInfoHtml = '<span class="text-primary"><i class="fas fa-play me-1"></i>กำลังดำเนินการ</span>';
             } else if (slot.status === 'DUE_NOW') {
-                cardClass = 'slot-due';
-                iconHtml = '<i class="fas fa-exclamation-circle me-1"></i>';
+                cardClass = 'slot-card-due';
+                pillClass = 'pill-due iqs-pulse-badge';
+                statusIcon = '<i class="fas fa-exclamation-circle me-1"></i>';
+                subInfoHtml = '<span class="text-warning-emphasis fw-bold"><i class="fas fa-stopwatch me-1"></i>เปิดรับตรวจ</span>';
             } else if (slot.status === 'MISSED') {
-                cardClass = 'slot-missed';
-                iconHtml = '<i class="fas fa-times-circle me-1"></i>';
-            } else {
-                cardClass = 'slot-upcoming';
-                iconHtml = '<i class="fas fa-clock me-1"></i>';
+                cardClass = 'slot-card-missed';
+                pillClass = 'pill-missed';
+                statusIcon = '<i class="fas fa-times-circle me-1"></i>';
+                subInfoHtml = '<span class="text-danger"><i class="fas fa-lock me-1"></i>ปิดรับผล (เลยเวลา)</span>';
             }
 
-            grid.innerHTML += `
-            <div class="schedule-slot-item ${cardClass}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="slot-time">${slot.std_time}</span>
-                    <span class="slot-desc">กะ ${slot.shift}</span>
+            // Shift badge
+            let shiftBadgeClass = 'slot-shift-day';
+            let shiftIcon = '<i class="fas fa-sun text-warning me-1"></i>';
+            if (slot.shift === 'OT') {
+                shiftBadgeClass = 'slot-shift-ot';
+                shiftIcon = '<i class="fas fa-bolt text-purple me-1"></i>';
+            } else if (slot.shift === 'Night') {
+                shiftBadgeClass = 'slot-shift-night';
+                shiftIcon = '<i class="fas fa-moon text-primary me-1"></i>';
+            }
+
+            return `
+            <div class="col">
+                <div class="schedule-slot-card ${cardClass}">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="slot-shift-badge ${shiftBadgeClass}">
+                                ${shiftIcon}กะ ${slot.shift}
+                            </span>
+                            <span class="badge bg-light text-secondary border-0 small" style="font-size: 0.65rem;">
+                                ${slot.template_code || ''}
+                            </span>
+                        </div>
+                        <div class="slot-card-time">${slot.std_time}<span class="slot-card-unit">น.</span></div>
+                        <div class="slot-card-name" title="${slot.template_name}">${cleanName}</div>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-light-subtle">
+                        <div class="slot-status-pill-modern ${pillClass}">
+                            ${statusIcon}<span>${slot.status_label}</span>
+                        </div>
+                        <div class="slot-card-subinfo">
+                            ${subInfoHtml}
+                        </div>
+                    </div>
                 </div>
-                <span class="slot-desc text-truncate">${slot.template_name}</span>
-                <span class="slot-status-pill badge ${slot.badge_class}">
-                    ${iconHtml}${slot.status_label}
-                </span>
             </div>`;
-        });
+        };
+
+        let html = `
+        <!-- KPI Server Time & Summary Bar -->
+        <div class="timeline-kpi-bar">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="kpi-live-dot" title="Server Live Synced"></span>
+                    <div>
+                        <div class="small text-muted" style="font-size: 0.72rem; line-height: 1.1;">เวลาเซิร์ฟเวอร์ปัจจุบัน (Live Server Time)</div>
+                        <div class="d-flex align-items-baseline gap-2">
+                            <span class="kpi-server-time">${serverTime} น.</span>
+                            <span class="badge bg-secondary-subtle text-secondary small fw-normal">${serverDate}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-1 gap-md-2">
+                    <span class="kpi-badge kpi-badge-completed"><i class="fas fa-check-circle me-1"></i>ผ่าน ${completedCount}</span>
+                    ${inProgCount > 0 ? `<span class="kpi-badge kpi-badge-in-prog"><i class="fas fa-spinner fa-spin me-1"></i>กำลังตรวจ ${inProgCount}</span>` : ''}
+                    <span class="kpi-badge kpi-badge-due"><i class="fas fa-exclamation-circle me-1"></i>ถึงเวลา ${dueCount}</span>
+                    <span class="kpi-badge kpi-badge-missed"><i class="fas fa-times-circle me-1"></i>ขาดตรวจ ${missedCount}</span>
+                    <span class="kpi-badge kpi-badge-upcoming"><i class="far fa-clock me-1"></i>รอตรวจ ${upcomingCount}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group 1: กะกลางวัน (Day Shift - 4 Slots) -->
+        <div class="timeline-shift-group">
+            <div class="timeline-shift-header">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="shift-header-badge shift-header-day">
+                        <i class="fas fa-sun text-warning me-1"></i>กะกลางวัน (Day Shift)
+                    </span>
+                    <span class="text-muted small d-none d-sm-inline">ช่วงเวลาทำงาน 08:00 - 17:00 น.</span>
+                </div>
+                <span class="badge bg-light text-secondary border small">${daySlots.length} รอบมาตรฐาน</span>
+            </div>
+            <div class="row g-2 g-md-3 row-cols-2 row-cols-md-4">
+                ${daySlots.map(renderCardHtml).join('')}
+            </div>
+        </div>
+
+        <!-- Group 2: กะโอที & กะกลางคืน (OT & Night Shift - 3 Slots) -->
+        <div class="timeline-shift-group mt-4">
+            <div class="timeline-shift-header">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="shift-header-badge shift-header-ot-night">
+                        <i class="fas fa-moon text-primary me-1"></i>กะโอที & กะกลางคืน (OT & Night Shift)
+                    </span>
+                    <span class="text-muted small d-none d-sm-inline">ช่วงเวลาทำงานล่วงเวลาและกะดึก</span>
+                </div>
+                <span class="badge bg-light text-secondary border small">${otNightSlots.length} รอบมาตรฐาน</span>
+            </div>
+            <div class="row g-2 g-md-3 row-cols-1 row-cols-sm-3">
+                ${otNightSlots.map(renderCardHtml).join('')}
+            </div>
+        </div>`;
+
+        container.innerHTML = html;
     },
 
     renderAuditMissedAlert() {

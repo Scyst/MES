@@ -253,87 +253,324 @@ body {
     padding: 14px;
 }
 
-.schedule-timeline-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+/* ==========================================================================
+   Daily Standard Schedule Timeline Modal (7 Slots)
+   ========================================================================== */
+
+.iqs-schedule-modal-dialog {
+    max-width: 860px;
+    margin: 1.75rem auto;
 }
 
-@media (min-width: 576px) {
-    .schedule-timeline-grid {
-        grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
-    }
+.iqs-schedule-modal-content {
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--iqs-card-bg);
 }
 
-.schedule-slot-item {
+.iqs-modal-icon-badge {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 12px;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--iqs-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+/* KPI Server Time & Status Bar */
+.timeline-kpi-bar {
+    background: var(--iqs-input-bg);
+    border: 1px solid var(--iqs-border);
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+}
+
+.kpi-live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+    animation: liveDotPulse 2s infinite;
+}
+
+@keyframes liveDotPulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.kpi-server-time {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--iqs-text-primary);
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+
+.kpi-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid transparent;
+}
+
+.kpi-badge-completed {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.kpi-badge-in-prog {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    border-color: rgba(37, 99, 235, 0.25);
+}
+
+.kpi-badge-due {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.kpi-badge-missed {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.kpi-badge-upcoming {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--iqs-text-secondary);
+    border-color: rgba(148, 163, 184, 0.25);
+}
+
+/* Shift Group Headers */
+.timeline-shift-group {
+    margin-bottom: 20px;
+}
+
+.timeline-shift-group:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-shift-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--iqs-border-subtle);
+}
+
+.shift-header-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.shift-header-day {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.shift-header-ot-night {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338ca;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+/* Schedule Slot Cards */
+.schedule-slot-card {
     background: var(--iqs-card-bg);
     border: 1.5px solid var(--iqs-border);
-    border-radius: 12px;
-    padding: 8px 10px;
+    border-radius: 14px;
+    padding: 12px 12px 10px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    transition: all 0.2s ease;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 125px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.schedule-slot-item .slot-time {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--iqs-primary);
-    line-height: 1.2;
+.schedule-slot-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
-.schedule-slot-item .slot-desc {
+.slot-card-time {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.3px;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    color: var(--iqs-text-primary);
+}
+
+.slot-card-unit {
     font-size: 0.72rem;
+    font-weight: 500;
     color: var(--iqs-text-muted);
-    line-height: 1.2;
+    margin-left: 2px;
 }
 
-.schedule-slot-item.slot-completed {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.05);
-}
-
-.schedule-slot-item.slot-completed .slot-time {
-    color: #059669;
-}
-
-.schedule-slot-item.slot-due {
-    border-color: #f59e0b;
-    background: rgba(245, 158, 11, 0.08);
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
-}
-
-.schedule-slot-item.slot-due .slot-time {
-    color: #d97706;
-}
-
-.schedule-slot-item.slot-missed {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.06);
-}
-
-.schedule-slot-item.slot-missed .slot-time {
-    color: #dc2626;
-}
-
-.schedule-slot-item.slot-in-progress {
-    border-color: #2563eb;
-    background: rgba(37, 99, 235, 0.06);
-}
-
-.slot-status-pill {
-    font-size: 0.7rem;
+.slot-card-name {
+    font-size: 0.8rem;
     font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 6px;
+    color: var(--iqs-text-secondary);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.slot-shift-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    width: fit-content;
-    margin-top: 2px;
-    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.slot-shift-day {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.slot-shift-ot {
+    background: rgba(147, 51, 234, 0.1);
+    color: #7e22ce;
+    border: 1px solid rgba(147, 51, 234, 0.2);
+}
+
+.slot-shift-night {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Card Status Variations */
+.schedule-slot-card.slot-card-completed {
+    border-color: #10b981;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, var(--iqs-card-bg) 70%);
+}
+
+.schedule-slot-card.slot-card-completed .slot-card-time {
+    color: #047857;
+}
+
+.schedule-slot-card.slot-card-in-progress {
+    border-color: #3b82f6;
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, var(--iqs-card-bg) 70%);
+}
+
+.schedule-slot-card.slot-card-in-progress .slot-card-time {
+    color: #1d4ed8;
+}
+
+.schedule-slot-card.slot-card-due {
+    border-color: #f59e0b;
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, var(--iqs-card-bg) 70%);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.22);
+}
+
+.schedule-slot-card.slot-card-due .slot-card-time {
+    color: #b45309;
+}
+
+.schedule-slot-card.slot-card-missed {
+    border-color: #f43f5e;
+    background: linear-gradient(180deg, rgba(244, 63, 94, 0.08) 0%, var(--iqs-card-bg) 70%);
+}
+
+.schedule-slot-card.slot-card-missed .slot-card-time {
+    color: #e11d48;
+}
+
+.schedule-slot-card.slot-card-upcoming {
+    border-color: var(--iqs-border);
+    background: var(--iqs-card-bg);
+}
+
+.schedule-slot-card.slot-card-upcoming .slot-card-time {
+    color: var(--iqs-text-primary);
+}
+
+/* Modern Status Pill inside card */
+.slot-status-pill-modern {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+}
+
+.pill-completed {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.pill-in-progress {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.pill-due {
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.pill-missed {
+    background: rgba(244, 63, 94, 0.12);
+    color: #e11d48;
+    border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.pill-upcoming {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--iqs-text-secondary);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.slot-card-subinfo {
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin-top: 3px;
 }
 
 .iqs-pulse-badge {
