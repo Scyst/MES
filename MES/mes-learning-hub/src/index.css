@@ -1040,6 +1040,21 @@ body.theme-light {
   border-color: #f1f5f9 !important;
 }
 
+/* Dark Badges in Light Mode: convert to high-contrast pastel pills with crisp dark text */
+.theme-light .bg-emerald-950,
+.theme-light .bg-emerald-950\/80 {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.theme-light .bg-rose-950,
+.theme-light .bg-rose-950\/80 {
+  background-color: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border-color: #fda4af !important;
+}
+
 /* Headings in Light Mode: Eliminate White-on-White across both Learning Container and Course Viewer */
 .theme-light h1:not(.bg-clip-text):not([class*="bg-clip-text"]),
 .theme-light h2:not(.bg-clip-text):not([class*="bg-clip-text"]),

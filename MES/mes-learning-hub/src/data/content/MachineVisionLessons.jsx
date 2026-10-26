@@ -106,10 +106,10 @@ function OpticalLightingSimulator() {
             <FiSun className="w-3.5 h-3.5 text-amber-400" />
             <span>Interactive Optical Simulator &middot; เครื่องมือจำลองการจัดแสง</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white">
+          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
             ห้องทดลองเทคนิคแสงอุตสาหกรรมและการตัดแสงสะท้อน (Optical Glare Elimination)
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             คลิกเลือกชนิดของแสงด้านล่างเพื่อเปรียบเทียบภาพที่เซนเซอร์กล้องอุตสาหกรรมมองเห็นจริง
           </p>
         </div>
@@ -479,10 +479,10 @@ function ShutterComparisonSimulator() {
             <FiCamera className="w-3.5 h-3.5 text-indigo-400" />
             <span>Industrial Sensor Comparison &middot; การเลือกชัตเตอร์เซนเซอร์</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white">
+          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
             Global Shutter vs Rolling Shutter สำหรับชิ้นงานบนสายพานลำเลียง (Conveyor Motion)
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             เหตุผลสำคัญที่ห้ามใช้กล้องเว็บแคมหรือมือถือตรวจงานในโรงงาน: ผลกระทบของความเร็วสายพานต่อความแม่นยำเชิงมิติ
           </p>
         </div>
@@ -510,12 +510,12 @@ function ShutterComparisonSimulator() {
         
         {/* Global Shutter (Industrial Standard) */}
         <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center">✓</span>
-              <h4 className="font-black text-emerald-300 text-sm">Global Shutter (มาตรฐานโรงงานอุตสาหกรรม)</h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-xs flex items-center justify-center flex-shrink-0">✓</span>
+              <h4 className="font-bold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">Global Shutter (มาตรฐานโรงงานอุตสาหกรรม)</h4>
             </div>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/30">
+            <span className="self-start sm:self-auto text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/30 whitespace-nowrap">
               ทุกพิกเซลเปิดพร้อมกัน
             </span>
           </div>
@@ -554,12 +554,12 @@ function ShutterComparisonSimulator() {
 
         {/* Rolling Shutter (Consumer Grade) */}
         <div className="bg-slate-950 p-4 rounded-xl border border-rose-500/40 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 font-black text-xs flex items-center justify-center">✗</span>
-              <h4 className="font-black text-rose-300 text-sm">Rolling Shutter (กล้องมือถือ / เว็บแคม)</h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 h-5 rounded-md bg-rose-500/20 text-rose-600 dark:text-rose-400 font-black text-xs flex items-center justify-center flex-shrink-0">✗</span>
+              <h4 className="font-bold text-rose-700 dark:text-rose-300 text-xs sm:text-sm">Rolling Shutter (กล้องมือถือ / เว็บแคม)</h4>
             </div>
-            <span className="text-[10px] font-bold text-rose-400 bg-rose-950 px-2 py-0.5 rounded border border-rose-500/30">
+            <span className="self-start sm:self-auto text-[10px] font-bold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30 whitespace-nowrap">
               อ่านทีละแถวจากบนลงล่าง
             </span>
           </div>
@@ -680,10 +680,10 @@ function VisionLogicInspector() {
             <FiSliders className="w-3.5 h-3.5 text-violet-400" />
             <span>Inspection Algorithm Lab &middot; เปรียบเทียบตรรกะการตรวจจับ</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white">
+          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
             Rule-Based Vision vs AI Deep Learning: เลือกใช้เครื่องมือให้ถูกกับโจทย์โรงงาน
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             คลิกเลือกโจทย์หน้างานเพื่อดูตัวอย่าง ROI, Algorithm, และความเร็วในการประมวลผล
           </p>
         </div>
@@ -875,10 +875,10 @@ function ThresholdTuningLab() {
             <FiTarget className="w-3.5 h-3.5 text-rose-400" />
             <span>Quality Engineering Lab &middot; การปรับจูนค่าเกณฑ์ตัดสิน</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white">
+          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
             การปรับจูน Threshold: ป้องกัน Escape Defect (0 PPM) และควบคุม Overkill (&lt; 0.5%)
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             ทำความเข้าใจสมดุลระหว่างความปลอดภัยของลูกค้าและ Yield การผลิตในโรงงานจริง
           </p>
         </div>
@@ -1063,10 +1063,10 @@ function VisionHardwareArchitecture() {
             <FiZap className="w-3.5 h-3.5 text-blue-400" />
             <span>End-to-End System Integration &middot; สถาปัตยกรรมระบบรวม</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white">
+          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
             สถาปัตยกรรมฮาร์ดแวร์และการเชื่อมต่อระบบ MES ในสายการผลิตจริง
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             คลิกที่แต่ละขั้นตอนเพื่อดูการเชื่อมต่อสัญญาณ I/O และการไหลของข้อมูลคุณภาพ
           </p>
         </div>

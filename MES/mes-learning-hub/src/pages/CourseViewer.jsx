@@ -898,14 +898,14 @@ export default function CourseViewer() {
         </div>
       </div>
 
-      {/* Mobile Syllabus Bottom Sheet / Drawer Modal */}
+      {/* Mobile Syllabus Dropdown Menu / Floating Modal */}
       {isMobileSyllabusOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex flex-col justify-end animate-in fade-in duration-200">
+        <div className="md:hidden fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex flex-col pt-24 px-3 pb-6 animate-in fade-in duration-150">
           {/* Backdrop Tap to Close */}
-          <div className="flex-1" onClick={() => setIsMobileSyllabusOpen(false)} />
+          <div className="fixed inset-0" onClick={() => setIsMobileSyllabusOpen(false)} />
 
-          <div className={`border-t rounded-t-3xl max-h-[82vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-250 ${
-            isDark ? 'bg-slate-900 border-slate-750' : 'bg-white border-slate-200'
+          <div className={`relative max-w-md w-full mx-auto rounded-2xl border shadow-2xl flex flex-col max-h-[75vh] overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200 z-10 ${
+            isDark ? 'bg-slate-900 border-slate-750' : 'bg-white border-slate-200 shadow-xl'
           }`}>
             {/* Drawer Header */}
             <div className={`p-4 border-b flex items-center justify-between ${
@@ -1142,13 +1142,8 @@ export default function CourseViewer() {
                     🎯
                   </span>
                   <div>
-                    <h4 className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      <span>Checkpoint ท้ายบทเรียน (Active Recall)</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider border ${
-                        isDark ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-800 border-purple-200'
-                      }`}>
-                        W3Schools Style
-                      </span>
+                    <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      Checkpoint ท้ายบทเรียน (Active Recall)
                     </h4>
                     <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       ตอบคำถามวัดความเข้าใจสั้นๆ 1 ข้อด้านล่างให้ถูกต้องเพื่อปลดล็อกบทเรียนถัดไป
