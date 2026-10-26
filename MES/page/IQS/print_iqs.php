@@ -1031,7 +1031,9 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
   const PAGE_WIDTH_PX = 285 * 96 / 25.4;
   function applyScreenZoom() {
     const factor = Math.max(1, Math.min(1.6, (window.innerWidth - 32) / PAGE_WIDTH_PX));
-    document.querySelectorAll('.page, .no-print-toolbar').forEach(el => { el.style.zoom = factor; });
+    document.querySelector('.page').style.zoom = factor;
+    const toolbar = document.querySelector('.no-print-toolbar');
+    if (toolbar) toolbar.style.maxWidth = (PAGE_WIDTH_PX * factor) + 'px';
   }
   window.addEventListener('resize', applyScreenZoom);
   applyScreenZoom();
