@@ -649,6 +649,7 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
       display: none !important;
     }
     .page {
+      zoom: 1 !important;
       width: 100% !important;
       min-height: 0 !important;
       height: auto !important;
@@ -777,22 +778,22 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
        ======================================================= -->
   <table class="main-matrix">
     <colgroup>
-      <col style="width: 18px;"> <!-- No -->
-      <col style="width: 74px;"> <!-- Machine Code -->
+      <col style="width: 20px;"> <!-- No -->
+      <col style="width: 80px;"> <!-- Machine Code -->
       <col style="width: 66px;"> <!-- Machine Name -->
       <col style="width: 58px;"> <!-- Model SKU -->
-      <col style="width: 32px;"> <!-- Thickness -->
+      <col style="width: 46px;"> <!-- Thickness -->
       <?php foreach ($activeSlots as $slotKey => $slotDef): ?>
       <col style="width: auto;"> <!-- Time Slot -->
       <?php endforeach; ?>
     </colgroup>
     <thead>
       <tr class="th-primary">
-        <th rowspan="2" style="width: 18px;">#</th>
-        <th rowspan="2" style="width: 74px; white-space: nowrap;">รหัสเครื่อง<br>Machine No.</th>
+        <th rowspan="2" style="width: 20px;">#</th>
+        <th rowspan="2" style="width: 80px; white-space: nowrap;">รหัสเครื่อง<br>Machine No.</th>
         <th rowspan="2" style="width: 66px;">ชื่อเครื่องจักร<br>Machine Description</th>
         <th rowspan="2" style="width: 58px;">โมเดล<br>Model SKU</th>
-        <th rowspan="2" style="width: 32px; white-space: nowrap;">ความหนา<br>T (mm)</th>
+        <th rowspan="2" style="width: 46px; white-space: nowrap; font-size: 5.6pt; padding: 2px 1px;">ความหนา<br>T (mm)</th>
         <th colspan="<?php echo count($activeSlots); ?>">
           รอบเวลาการตรวจสอบตามมาตรฐานประจำวัน (Daily Standard Inspection Time Slots)
         </th>
@@ -1023,6 +1024,19 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
   </table>
 
 </div><!-- .page -->
+
+<script>
+// Screen-only fit-to-width zoom (1.0x - 1.6x). Print layout is unaffected (@media print forces zoom: 1).
+(function () {
+  const PAGE_WIDTH_PX = 285 * 96 / 25.4;
+  function applyScreenZoom() {
+    const factor = Math.max(1, Math.min(1.6, (window.innerWidth - 32) / PAGE_WIDTH_PX));
+    document.querySelectorAll('.page, .no-print-toolbar').forEach(el => { el.style.zoom = factor; });
+  }
+  window.addEventListener('resize', applyScreenZoom);
+  applyScreenZoom();
+})();
+</script>
 
 </body>
 </html>
