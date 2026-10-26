@@ -121,7 +121,12 @@ export default function CourseViewer() {
     const passed = status?.passed || status?.status === 'completed';
 
     setCourseStatus(status);
-    setCompletedModuleIds(modProgress);
+    setCompletedModuleIds(prev => {
+      if (prev.length === modProgress.length && prev.every((id, idx) => id === modProgress[idx])) {
+        return prev;
+      }
+      return modProgress;
+    });
     setIsCompleted(passed);
     setEarnedCertId(status?.certificateId || '');
 
@@ -158,34 +163,82 @@ export default function CourseViewer() {
   const passedCountInModule = checkpointList.filter((_, idx) => Boolean(passedCheckpointMap[idx])).length;
   const allCheckpointsPassed = totalCheckpointsInModule > 0 && passedCountInModule >= totalCheckpointsInModule;
 
-  // Synchronize Checkpoint state whenever activeModuleId or completedModuleIds change
+  // Helper to persist per-question checkpoint state within the session so background syncs never wipe progress
+  const getSavedCheckpointMap = (cId, mId) => {
+    if (!cId || !mId) return {};
+    try {
+      const raw = sessionStorage.getItem(`mes_learning_cp_${cId}_${mId}`);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const saveCheckpointMap = (cId, mId, mapObj) => {
+    if (!cId || !mId) return;
+    try {
+      sessionStorage.setItem(`mes_learning_cp_${cId}_${mId}`, JSON.stringify(mapObj));
+    } catch {
+      // Ignore storage quota errors
+    }
+  };
+
+  // Initialize Checkpoint state ONLY when switching course or lesson (activeModuleId)
   useEffect(() => {
     if (!course || !activeModuleId) return;
 
-    const alreadyDone = completedModuleIds.includes(activeModuleId) || isCompleted;
-    setActiveCheckpointIdx(0);
+    const modProgress = getUserModuleProgress(course.id);
+    const status = getUserCourseStatus(course.id);
+    const alreadyDone = modProgress.includes(activeModuleId) || isCompleted || status?.passed || status?.status === 'completed';
+
     if (alreadyDone) {
       const allPassed = {};
       checkpointList.forEach((_, idx) => {
         allPassed[idx] = true;
       });
       setPassedCheckpointMap(allPassed);
+      saveCheckpointMap(course.id, activeModuleId, allPassed);
+      setActiveCheckpointIdx(0);
       setCheckpointSelected(checkpointList[0]?.correctAnswer ?? 0);
       setCheckpointStatus('correct');
       setCheckpointShowHint(false);
     } else {
-      setPassedCheckpointMap({});
-      setCheckpointSelected(null);
-      setCheckpointStatus(null);
+      const savedMap = getSavedCheckpointMap(course.id, activeModuleId);
+      setPassedCheckpointMap(savedMap);
+      // Start at the first unanswered question (or 0 if none answered yet)
+      const firstUnansweredIdx = checkpointList.findIndex((_, idx) => !savedMap[idx]);
+      const startIdx = firstUnansweredIdx !== -1 ? firstUnansweredIdx : 0;
+      setActiveCheckpointIdx(startIdx);
+      if (savedMap[startIdx]) {
+        setCheckpointSelected(checkpointList[startIdx]?.correctAnswer ?? 0);
+        setCheckpointStatus('correct');
+      } else {
+        setCheckpointSelected(null);
+        setCheckpointStatus(null);
+      }
       setCheckpointShowHint(false);
     }
-  }, [courseId, activeModuleId, completedModuleIds, isCompleted, checkpointList]);
+  }, [courseId, activeModuleId, checkpointList]);
+
+  // If the entire course becomes completed (e.g. after passing final assessment), mark all checkpoints passed without resetting active question index
+  useEffect(() => {
+    if (!course || !activeModuleId || !isCompleted) return;
+    const allPassed = {};
+    checkpointList.forEach((_, idx) => {
+      allPassed[idx] = true;
+    });
+    setPassedCheckpointMap(allPassed);
+    saveCheckpointMap(course.id, activeModuleId, allPassed);
+    setCheckpointSelected(checkpointList[activeCheckpointIdx]?.correctAnswer ?? 0);
+    setCheckpointStatus('correct');
+    setCheckpointShowHint(false);
+  }, [isCompleted]);
 
   // Switch between checkpoint questions within the same module
   const handleSwitchCheckpointQuestion = (nextIdx) => {
     if (nextIdx < 0 || nextIdx >= checkpointList.length) return;
     setActiveCheckpointIdx(nextIdx);
-    if (passedCheckpointMap[nextIdx]) {
+    if (passedCheckpointMap[nextIdx] || completedModuleIds.includes(activeModuleId) || isCompleted) {
       setCheckpointSelected(checkpointList[nextIdx]?.correctAnswer ?? 0);
       setCheckpointStatus('correct');
       setCheckpointShowHint(false);
@@ -208,6 +261,7 @@ export default function CourseViewer() {
 
       const updatedMap = { ...passedCheckpointMap, [activeCheckpointIdx]: true };
       setPassedCheckpointMap(updatedMap);
+      saveCheckpointMap(course.id, activeModuleId, updatedMap);
 
       const allPassedNow = checkpointList.every((_, idx) => Boolean(updatedMap[idx]));
 
@@ -220,11 +274,6 @@ export default function CourseViewer() {
         });
         setCompletedModuleIds(res.completedModules);
         setCourseStatus(getUserCourseStatus(course.id));
-        try {
-          addExp(5, `ผ่าน Checkpoint: ${activeModule?.title || ''}`);
-        } catch (e) {
-          console.warn('Failed to add EXP:', e);
-        }
       }
     } else {
       setCheckpointStatus('incorrect');
@@ -1295,6 +1344,17 @@ export default function CourseViewer() {
 
               {/* Question */}
               <div className="mb-4">
+                {totalCheckpointsInModule > 1 && (
+                  <div className="mb-1.5">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${
+                      isDark
+                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                        : 'bg-purple-50 text-purple-800 border-purple-200'
+                    }`}>
+                      คำถามทบทวนข้อที่ {activeCheckpointIdx + 1} จาก {totalCheckpointsInModule}
+                    </span>
+                  </div>
+                )}
                 <p className={`text-sm font-semibold leading-relaxed ${isDark ? 'text-slate-100' : 'text-slate-900 font-bold'}`}>
                   {currentCheckpoint.question}
                 </p>
@@ -1424,14 +1484,35 @@ export default function CourseViewer() {
                       <span>{currentCheckpoint.explanation}</span>
                     </div>
                   )}
-                  {totalCheckpointsInModule > 1 && activeCheckpointIdx < totalCheckpointsInModule - 1 && (
+                  {totalCheckpointsInModule > 1 && !isCurrentModuleUnlocked && (() => {
+                    const nextUnansweredIdx = checkpointList.findIndex((_, idx) => !passedCheckpointMap[idx] && idx !== activeCheckpointIdx);
+                    const targetIdx = nextUnansweredIdx !== -1 ? nextUnansweredIdx : (activeCheckpointIdx + 1 < totalCheckpointsInModule ? activeCheckpointIdx + 1 : -1);
+                    if (targetIdx === -1) return null;
+                    return (
+                      <div className={`pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t ${
+                        isDark ? 'border-emerald-500/20' : 'border-emerald-200'
+                      }`}>
+                        <span className={`text-xs font-semibold ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                          👉 ยังเหลือคำถามทบทวนในบทนี้อีก {totalCheckpointsInModule - passedCountInModule} ข้อ จึงจะปลดล็อกบทเรียนถัดไป
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchCheckpointQuestion(targetIdx)}
+                          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>ไปทำข้อถัดไป (ข้อที่ {targetIdx + 1}/{totalCheckpointsInModule}) →</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                  {totalCheckpointsInModule > 1 && isCurrentModuleUnlocked && activeCheckpointIdx < totalCheckpointsInModule - 1 && (
                     <div className="pt-1 flex justify-end">
                       <button
                         type="button"
                         onClick={() => handleSwitchCheckpointQuestion(activeCheckpointIdx + 1)}
                         className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                       >
-                        <span>ทำข้อถัดไป (ข้อที่ {activeCheckpointIdx + 2}/{totalCheckpointsInModule}) →</span>
+                        <span>ดูข้อถัดไป (ข้อที่ {activeCheckpointIdx + 2}/{totalCheckpointsInModule}) →</span>
                       </button>
                     </div>
                   )}
