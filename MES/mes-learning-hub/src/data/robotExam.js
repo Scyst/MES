@@ -542,7 +542,33 @@ const BALANCED_ROBOT_EXAM = ROBOT_EXAM_SOURCE.map((item, idx) => {
   });
 });
 
-export const ROBOT_EXAM_QUESTIONS = BALANCED_ROBOT_EXAM;
+// 20 Essential Questions for Normal / Standard Mode (5 of each choice A, B, C, D)
+const STANDARD_ROBOT_QUESTION_IDS = [
+  'rob-q1',  // A: Base S Axis
+  'rob-q2',  // B: Controller
+  'rob-q3',  // C: Teach Pendant
+  'rob-q4',  // D: Bend B Axis
+  'rob-q5',  // A: Inductive Proximity
+  'rob-q6',  // B: Capacitive Proximity
+  'rob-q7',  // C: Tower Lamp Yellow (Wait/Idle)
+  'rob-q8',  // D: Emergency Stop NC Contacts
+  'rob-q9',  // A: 5/2-Way Valve Cylinder
+  'rob-q10', // B: Wait For Press Ready Handshake
+  'rob-q11', // C: Press TDC Safe Position
+  'rob-q12', // D: In Die Zone Signal
+  'rob-q13', // A: Dual-Robot Collision Zone Handshake
+  'rob-q14', // B: Right-Hand Rule (+X front, +Y left, +Z up)
+  'rob-q19', // C: MOVEL Straight-line Trajectory
+  'rob-q20', // D: Wrist Singularity (Axes 4 and 6 Collinear)
+  'rob-q25', // A: Tower Lamp Green (Running Auto)
+  'rob-q22', // B: Increment Counter A = A + 1
+  'rob-q31', // C: 3-Position Deadman Switch Center Position
+  'rob-q36'  // D: Lockout - Tagout (LOTO)
+];
+
+export const ROBOT_EXAM_EXPERT = BALANCED_ROBOT_EXAM;
+export const ROBOT_EXAM_STANDARD = BALANCED_ROBOT_EXAM.filter(q => STANDARD_ROBOT_QUESTION_IDS.includes(q.id));
+export const ROBOT_EXAM_QUESTIONS = ROBOT_EXAM_EXPERT;
 
 /**
  * 24 Active Recall Checkpoints for Course `c-robot-automation` (3 questions per lesson across 8 lessons).

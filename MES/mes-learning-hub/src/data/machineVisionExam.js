@@ -505,7 +505,9 @@ const MACHINE_VISION_EXAM_SOURCE = [
   }
 ];
 
-export const MACHINE_VISION_EXAM = MACHINE_VISION_EXAM_SOURCE.map(buildExamQuestion);
+export const MACHINE_VISION_EXAM_EXPERT = MACHINE_VISION_EXAM_SOURCE.map(buildExamQuestion);
+export const MACHINE_VISION_EXAM_STANDARD = MACHINE_VISION_EXAM_EXPERT.slice(0, 20); // First 20 questions (5 of each choice A, B, C, D)
+export const MACHINE_VISION_EXAM = MACHINE_VISION_EXAM_EXPERT;
 
 /**
  * 8-Lesson Active-Recall Checkpoints for `c-machine-vision` (3 non-leaking questions per lesson = 24 questions).

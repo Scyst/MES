@@ -8,7 +8,7 @@ import {
   recordFailedAssessment,
   getUserCourseStatus 
 } from '../data/trainingAuditStore';
-import { getCourseAssessment, getModuleCheckpoint } from '../data/assessmentBank';
+import { getCourseAssessment, getCourseAssessmentModes, getModuleCheckpoint } from '../data/assessmentBank';
 import { 
   FiArrowLeft, 
   FiCheckCircle, 
@@ -27,7 +27,9 @@ import {
   FiList,
   FiRefreshCw,
   FiLock,
-  FiBookOpen
+  FiBookOpen,
+  FiSearch,
+  FiZap
 } from 'react-icons/fi';
 import CourseContent from '../components/CourseContent';
 import DynamicCourseRenderer from '../components/DynamicCourseRenderer';
@@ -104,14 +106,21 @@ export default function CourseViewer() {
 
   // Assessment Modal States
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [assessmentMode, setAssessmentMode] = useState('standard'); // 'standard' (20Q) | 'expert' (40Q)
   const [userAnswers, setUserAnswers] = useState({});
-  const [assessmentReview, setAssessmentReview] = useState(null); // null or { failed: bool, score, total, percentage, answers, questions }
+  const [assessmentResult, setAssessmentResult] = useState(null); // { score, total, percentage, passed, mode, answers, questions }
+  const [showReviewAnswers, setShowReviewAnswers] = useState(false);
   const [assessmentError, setAssessmentError] = useState('');
 
-  // Assessment questions for this course
-  const assessmentQuestions = useMemo(() => {
-    return course ? getCourseAssessment(course) : [];
+  // Assessment modes available for this course (e.g. ['standard', 'expert'] for Robot & Vision)
+  const availableAssessmentModes = useMemo(() => {
+    return course ? getCourseAssessmentModes(course) : ['standard'];
   }, [course]);
+
+  // Assessment questions for this course based on mode
+  const assessmentQuestions = useMemo(() => {
+    return course ? getCourseAssessment(course, assessmentMode) : [];
+  }, [course, assessmentMode]);
 
   // Synchronize all course states when courseId / course changes OR when user session updates
   useEffect(() => {
@@ -349,8 +358,21 @@ export default function CourseViewer() {
     setLatestExamScore({
       score: correctCount,
       total: questions.length,
-      percentage: percentage
+      percentage: percentage,
+      mode: assessmentMode
     });
+
+    const resultObj = {
+      score: correctCount,
+      total: questions.length,
+      percentage: percentage,
+      passed: passed,
+      mode: assessmentMode,
+      answers: { ...userAnswers },
+      questions: [ ...questions ]
+    };
+    setAssessmentResult(resultObj);
+    setShowReviewAnswers(false);
 
     if (passed) {
       // Record course completion & certification
@@ -360,7 +382,8 @@ export default function CourseViewer() {
         totalModules: totalModules,
         moduleIds: allModuleIds,
         score: correctCount,
-        totalQuestions: questions.length
+        totalQuestions: questions.length,
+        examMode: assessmentMode
       });
 
       setCompletedModuleIds(allModuleIds);
@@ -369,33 +392,23 @@ export default function CourseViewer() {
       setCourseStatus(getUserCourseStatus(course.id));
       setUserGrading(getUserGrading());
       setCurrentUser(getCurrentUser());
-      setShowAssessmentModal(false);
-      setAssessmentReview(null);
-      setShowCelebrationModal(true);
     } else {
       // Record failed attempt for audit matrix tracking
       recordFailedAssessment({
         courseId: course.id,
         score: correctCount,
-        totalQuestions: questions.length
+        totalQuestions: questions.length,
+        examMode: assessmentMode
       });
       setCourseStatus(getUserCourseStatus(course.id));
-      // Show failure review with explanations
-      setAssessmentReview({
-        failed: true,
-        score: correctCount,
-        total: questions.length,
-        percentage: percentage,
-        answers: userAnswers,
-        questions: questions
-      });
     }
   };
 
   // Reset exam to try again
   const handleRetakeExam = () => {
     setUserAnswers({});
-    setAssessmentReview(null);
+    setAssessmentResult(null);
+    setShowReviewAnswers(false);
     setAssessmentError('');
   };
 
@@ -542,7 +555,11 @@ export default function CourseViewer() {
                 <h2 className={`text-lg sm:text-xl font-black ${
                   isDark ? 'text-white' : 'text-slate-900'
                 }`}>
-                  แบบทดสอบวัดผลประสิทธิผลการฝึกอบรม (Post-Test Assessment)
+                  {assessmentResult && !showReviewAnswers 
+                    ? 'ผลการประเมินวัดผลสัมฤทธิ์ (Post-Test Results)' 
+                    : showReviewAnswers 
+                    ? 'ตรวจคำตอบและคำอธิบายเฉลย (Answer Explanations)' 
+                    : 'แบบทดสอบวัดผลประสิทธิผลการฝึกอบรม (Post-Test Assessment)'}
                 </h2>
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   หลักสูตร: <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{course.title}</span>
@@ -550,7 +567,10 @@ export default function CourseViewer() {
               </div>
 
               <button
-                onClick={() => setShowAssessmentModal(false)}
+                onClick={() => {
+                  setShowAssessmentModal(false);
+                  setShowReviewAnswers(false);
+                }}
                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                   isDark ? 'text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200'
                 }`}
@@ -561,30 +581,81 @@ export default function CourseViewer() {
 
             {/* Assessment Content Body */}
             <div className="py-6 space-y-6 max-h-[60vh] overflow-y-auto pr-1">
-              {/* Failure Review Screen if failed */}
-              {assessmentReview?.failed ? (
-                <div className="space-y-6">
-                  {/* Failure Alert Banner */}
-                  <div className={`p-4 rounded-2xl border space-y-2 ${
-                    isDark ? 'bg-rose-500/15 border-rose-500/40 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900'
+              {/* VIEW 1: Official Score Result Screen (Tells score prominently!) */}
+              {assessmentResult && !showReviewAnswers ? (
+                <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+                  <div className={`p-6 rounded-3xl border-2 max-w-lg mx-auto ${
+                    assessmentResult.passed
+                      ? isDark ? 'bg-emerald-950/40 border-emerald-500/60 shadow-xl shadow-emerald-500/10' : 'bg-emerald-50 border-emerald-400 shadow-lg'
+                      : isDark ? 'bg-rose-950/40 border-rose-500/60 shadow-xl shadow-rose-500/10' : 'bg-rose-50 border-rose-400 shadow-lg'
                   }`}>
-                    <div className={`flex items-center gap-2 text-sm font-bold ${
-                      isDark ? 'text-rose-300' : 'text-rose-800'
+                    <div className={`w-24 h-24 rounded-full border-4 flex flex-col items-center justify-center mx-auto mb-4 ${
+                      assessmentResult.passed
+                        ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                        : 'border-rose-500 bg-rose-500/20 text-rose-400'
                     }`}>
-                      <FiAlertTriangle className="w-5 h-5 flex-shrink-0" />
-                      <span>ยังไม่ผ่านเกณฑ์การประเมิน (คะแนนที่ได้ {assessmentReview.score} / {assessmentReview.total} ข้อ หรือ {assessmentReview.percentage}%)</span>
+                      <span className="text-3xl font-black font-mono leading-none">{assessmentResult.percentage}%</span>
+                      <span className="text-[10px] font-bold uppercase mt-1">
+                        {assessmentResult.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่าน'}
+                      </span>
                     </div>
-                    <p className={`text-xs leading-relaxed pl-7 ${
-                      isDark ? 'text-slate-300' : 'text-slate-700'
+
+                    <span className={`inline-block text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full border mb-2 ${
+                      assessmentResult.passed
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                     }`}>
-                      ตามมาตรฐาน ISO 9001:2015 และข้อกำหนดฝ่ายผลิต กำหนดให้ผู้เข้ารับการฝึกอบรมต้องได้คะแนนไม่ต่ำกว่า <strong>80% (ตอบถูกอย่างน้อย 3 ใน 4 ข้อ)</strong> เพื่อยืนยันประสิทธิผลของการเรียนรู้ กรุณาตรวจสอบคำอธิบายข้อที่ตอบผิดด้านล่างและทำแบบทดสอบใหม่อีกครั้ง
+                      {assessmentResult.passed ? '🎉 ยินดีด้วย! สอบผ่านเกณฑ์มาตรฐาน' : '⚠️ ยังไม่ผ่านเกณฑ์การประเมิน'}
+                    </span>
+
+                    <h3 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      คะแนนที่ทำได้: {assessmentResult.score} / {assessmentResult.total} ข้อ
+                    </h3>
+
+                    <p className={`text-xs mt-2 max-w-md mx-auto leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {assessmentResult.passed
+                        ? `ยอดเยี่ยมมาก! คุณทำคะแนนได้ ${assessmentResult.percentage}% (เกณฑ์ผ่าน ≥ 80%) ผ่านการประเมินประสิทธิผลการฝึกอบรม ISO 9001:2015 Clause 7.2 พร้อมรับใบประกาศนียบัตร`
+                        : `คุณทำคะแนนได้ ${assessmentResult.percentage}% (เกณฑ์ผ่าน 80% ต้องตอบถูกอย่างน้อย ${Math.ceil(assessmentResult.total * 0.8)} ข้อ) ยังขาดอีก ${Math.max(1, Math.ceil(assessmentResult.total * 0.8) - assessmentResult.score)} ข้อ กรุณาตรวจเฉลยและทำแบบทดสอบใหม่อีกครั้ง`}
                     </p>
+
+                    {/* Metrics Breakdown Grid */}
+                    <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-slate-700/60 font-mono text-center">
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">โหมดข้อสอบ</span>
+                        <span className="text-xs font-bold text-amber-400">
+                          {assessmentResult.mode === 'expert' ? 'โหมดสายเทพ (40 ข้อ)' : 'โหมดปกติ (20 ข้อ)'}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">ตอบถูกต้อง</span>
+                        <span className="text-xs font-black text-emerald-400">{assessmentResult.score} ข้อ</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">ตอบผิด</span>
+                        <span className="text-xs font-black text-rose-400">{assessmentResult.total - assessmentResult.score} ข้อ</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : showReviewAnswers ? (
+                /* VIEW 2: Review of Questions with Detailed Explanations */
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">
+                      เฉลยคำตอบ ({assessmentResult.score}/{assessmentResult.total} ข้อ - {assessmentResult.percentage}%)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewAnswers(false)}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition"
+                    >
+                      ← กลับสู่หน้าสรุปคะแนน
+                    </button>
                   </div>
 
-                  {/* Review of Questions */}
                   <div className="space-y-5">
-                    {assessmentReview.questions.map((q, idx) => {
-                      const userChoice = assessmentReview.answers[idx];
+                    {assessmentResult.questions.map((q, idx) => {
+                      const userChoice = assessmentResult.answers[idx];
                       const isCorrect = userChoice === q.correctAnswer;
 
                       return (
@@ -609,7 +680,7 @@ export default function CourseViewer() {
                             <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold flex-shrink-0 flex items-center gap-1 ${
                               isCorrect 
                                 ? isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
-                                : isDark ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-rose-100 text-rose-800 border border-rose-300 font-bold'
+                                : isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-800 border border-rose-300 font-bold'
                             }`}>
                               {isCorrect ? <><FiCheck /> ถูกต้อง</> : <><FiX /> ตอบผิด</>}
                             </span>
@@ -650,11 +721,10 @@ export default function CourseViewer() {
                           </div>
 
                           {q.explanation && (
-                            <div className={`p-3 rounded-xl border text-xs leading-relaxed flex items-start gap-2 ${
-                              isDark ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-200' : 'bg-cyan-50 border-cyan-300 text-cyan-900'
+                            <div className={`p-3 rounded-xl text-xs leading-relaxed ${
+                              isDark ? 'bg-slate-900/80 text-slate-300 border border-slate-800' : 'bg-slate-100 text-slate-700 border border-slate-200'
                             }`}>
-                              <span className="font-bold flex-shrink-0">💡 คำอธิบายทางวิศวกรรม:</span>
-                              <span>{q.explanation}</span>
+                              <strong className="text-amber-400">คำอธิบายเชิงวิศวกรรม:</strong> {q.explanation}
                             </div>
                           )}
                         </div>
@@ -663,8 +733,76 @@ export default function CourseViewer() {
                   </div>
                 </div>
               ) : (
-                /* Standard Exam Form */
+                /* VIEW 3: Standard Exam Question Form (with Duolingo Mode Switcher) */
                 <div className="space-y-6">
+                  {/* Duolingo-Style Mode Switcher (if course has standard & expert banks) */}
+                  {availableAssessmentModes.length > 1 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+                        <span>เลือกระดับความยากของแบบทดสอบ (Exam Mode):</span>
+                        <span className="text-[11px] text-amber-400 font-mono">DUOLINGO STYLE</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Normal / Standard Mode */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (assessmentMode !== 'standard') {
+                              setAssessmentMode('standard');
+                              setUserAnswers({});
+                              setAssessmentError('');
+                            }
+                          }}
+                          className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                            assessmentMode === 'standard'
+                              ? 'bg-emerald-500/15 border-emerald-500 shadow-md shadow-emerald-500/20'
+                              : 'bg-slate-800/40 border-slate-700/60 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              🟢 โหมดปกติ (Standard)
+                            </span>
+                            <span className="text-xs font-mono font-bold text-emerald-400">20 ข้อ</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white mt-1">ระดับพนักงานและช่างเทคนิค</h4>
+                          <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                            เน้นความปลอดภัย สัญญาณ I/O และขั้นตอนการปฏิบัติงานหน้างานจริง (เกณฑ์ผ่าน 80% = ตอบถูก ≥ 16 ข้อ)
+                          </p>
+                        </button>
+
+                        {/* Expert Mode */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (assessmentMode !== 'expert') {
+                              setAssessmentMode('expert');
+                              setUserAnswers({});
+                              setAssessmentError('');
+                            }
+                          }}
+                          className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                            assessmentMode === 'expert'
+                              ? 'bg-amber-500/15 border-amber-500 shadow-md shadow-amber-500/20'
+                              : 'bg-slate-800/40 border-slate-700/60 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              🔥 โหมดสายเทพ (Expert)
+                            </span>
+                            <span className="text-xs font-mono font-bold text-amber-400">40 ข้อ</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white mt-1">ระดับวิศวกรและผู้เชี่ยวชาญ</h4>
+                          <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                            ข้อสอบเต็มชุด 40 ข้อ ครอบคลุมคณิตศาสตร์ Kinematics, Offset, Matrix Palletizing และความปลอดภัยสากล
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Progress & Info Bar */}
                   <div className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
                     isDark ? 'bg-slate-800/80 border-slate-750 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
                   }`}>
@@ -674,6 +812,7 @@ export default function CourseViewer() {
                     </span>
                   </div>
 
+                  {/* Questions List */}
                   {assessmentQuestions.map((q, qIdx) => {
                     const selectedOpt = userAnswers[qIdx];
 
@@ -696,7 +835,7 @@ export default function CourseViewer() {
                                 key={optIdx}
                                 type="button"
                                 onClick={() => handleSelectOption(qIdx, optIdx)}
-                                className={`w-full text-left p-3.5 rounded-xl border text-xs transition-all flex items-start gap-3 ${
+                                className={`w-full text-left p-3.5 rounded-xl border text-xs transition-all flex items-start gap-3 cursor-pointer ${
                                   isSelected
                                     ? isDark
                                       ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white font-medium shadow-sm ring-1 ring-fuchsia-500/40'
@@ -739,33 +878,61 @@ export default function CourseViewer() {
               </div>
             )}
 
-            {/* Footer Buttons */}
+            {/* Modal Footer Controls */}
             <div className={`pt-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 ${
               isDark ? 'border-slate-800' : 'border-slate-200'
             }`}>
-              {assessmentReview?.failed ? (
+              {assessmentResult && !showReviewAnswers ? (
                 <>
                   <button
-                    onClick={() => {
-                      setShowAssessmentModal(false);
-                      setActiveModuleId(course.modules[0].id);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => setShowReviewAnswers(true)}
                     className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-semibold border transition-colors flex items-center justify-center gap-2 ${
                       isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
                     }`}
                   >
-                    <FiBookOpen className="w-4 h-4" />
-                    <span>กลับไปทบทวนบทเรียน</span>
+                    <FiSearch className="w-4 h-4" />
+                    <span>ตรวจคำตอบและดูเฉลยละเอียด</span>
+                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      onClick={handleRetakeExam}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 transition flex items-center justify-center gap-1.5"
+                    >
+                      <FiRefreshCw className="w-4 h-4" />
+                      <span>สอบใหม่ (Retake)</span>
+                    </button>
+                    {assessmentResult.passed && (
+                      <button
+                        onClick={() => {
+                          setShowAssessmentModal(false);
+                          setIsCertificateModalOpen(true);
+                        }}
+                        className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                      >
+                        <FiAward className="w-4 h-4" />
+                        <span>รับใบประกาศฯ</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : showReviewAnswers ? (
+                <div className="w-full flex justify-between items-center">
+                  <button
+                    onClick={() => setShowReviewAnswers(false)}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    ← กลับสู่หน้าสรุปคะแนน
                   </button>
                   <button
                     onClick={handleRetakeExam}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2"
+                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                   >
                     <FiRefreshCw className="w-4 h-4" />
-                    <span>สอบใหม่อีกครั้ง (Retake Exam)</span>
+                    <span>สอบใหม่อีกครั้ง</span>
                   </button>
-                </>
+                </div>
               ) : (
                 <>
                   <button
@@ -778,7 +945,7 @@ export default function CourseViewer() {
                   </button>
                   <button
                     onClick={handleSubmitAssessment}
-                    className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                    className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:-translate-y-0.5 cursor-pointer"
                   >
                     <FiCheckCircle className="w-4 h-4" />
                     <span>ส่งคำตอบและประเมินผล (Submit Assessment)</span>
@@ -1204,10 +1371,17 @@ export default function CourseViewer() {
                       {earnedCertId || courseStatus?.certificateId || 'SNC-CERT'}
                     </span>
                   </div>
-                  <div className={`text-xs mt-0.5 ${
+                  <div className={`text-xs mt-0.5 flex flex-wrap items-center gap-2 ${
                     isDark ? 'text-slate-300' : 'text-slate-600 font-medium'
                   }`}>
-                    สมรรถนะได้รับการประเมินตาม ISO 9001 Clause 7.2 พร้อมรับการตรวจออดิท
+                    <span>สมรรถนะได้รับการประเมินตาม ISO 9001 Clause 7.2 พร้อมรับการตรวจออดิท</span>
+                    {latestExamScore && (
+                      <span className={`inline-flex items-center gap-1 font-mono font-bold px-2 py-0.5 rounded text-[11px] border ${
+                        isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      }`}>
+                        คะแนนสอบ: {latestExamScore.score}/{latestExamScore.total} ข้อ ({latestExamScore.percentage}%) · {latestExamScore.mode === 'expert' ? 'โหมดสายเทพ 🔥' : 'โหมดปกติ 🟢'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1575,7 +1749,8 @@ export default function CourseViewer() {
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => {
-                      setAssessmentReview(null);
+                      setAssessmentResult(null);
+                      setShowReviewAnswers(false);
                       setUserAnswers({});
                       setShowAssessmentModal(true);
                     }}
@@ -1599,7 +1774,8 @@ export default function CourseViewer() {
               ) : (
                 <button 
                   onClick={() => {
-                    setAssessmentReview(null);
+                    setAssessmentResult(null);
+                    setShowReviewAnswers(false);
                     setUserAnswers({});
                     setShowAssessmentModal(true);
                   }}
@@ -1629,6 +1805,9 @@ export default function CourseViewer() {
             ? new Date(courseStatus.completedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
             : new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
           scorePercentage: courseStatus?.quizPercentage || latestExamScore?.percentage || 100,
+          quizScore: courseStatus?.quizScore ?? latestExamScore?.score ?? null,
+          quizTotal: courseStatus?.quizTotal ?? latestExamScore?.total ?? null,
+          examMode: (courseStatus?.quizTotal >= 40 || latestExamScore?.total >= 40) ? 'expert' : 'standard',
           hours: course?.duration || '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
           instructorName: 'ณภัทร นุ่มทอง',
           instructorTitle: 'วิทยากรผู้เชี่ยวชาญด้านสถาปัตยกรรมดิจิทัลองค์กร (Lead Enterprise Architect)'

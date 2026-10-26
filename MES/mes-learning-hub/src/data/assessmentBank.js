@@ -2,8 +2,18 @@
 // Conforming to ISO 9001:2015 Clause 7.2 (Competency & Training Effectiveness Evaluation)
 // Enhanced with W3Schools-Style Active Recall Checkpoints for Every Module
 
-import { MACHINE_VISION_EXAM, MACHINE_VISION_CHECKPOINTS } from './machineVisionExam';
-import { ROBOT_EXAM_QUESTIONS, ROBOT_CHECKPOINTS } from './robotExam';
+import { 
+  MACHINE_VISION_EXAM, 
+  MACHINE_VISION_CHECKPOINTS,
+  MACHINE_VISION_EXAM_STANDARD,
+  MACHINE_VISION_EXAM_EXPERT
+} from './machineVisionExam';
+import { 
+  ROBOT_EXAM_QUESTIONS, 
+  ROBOT_CHECKPOINTS,
+  ROBOT_EXAM_STANDARD,
+  ROBOT_EXAM_EXPERT
+} from './robotExam';
 
 /**
  * MODULE_CHECKPOINTS
@@ -2513,7 +2523,47 @@ export function getModuleCheckpoint(course, module, moduleIndex = 0) {
  * Get assessment questions for any course.
  * Prioritizes custom course quizzes, falls back to MASTER_ASSESSMENTS, or generates standard questions.
  */
-export function getCourseAssessment(course) {
+export const MASTER_ASSESSMENTS_STANDARD = {
+  'c-robot-automation': ROBOT_EXAM_STANDARD,
+  'c-machine-vision': MACHINE_VISION_EXAM_STANDARD
+};
+
+export const MASTER_ASSESSMENTS_EXPERT = {
+  'c-robot-automation': ROBOT_EXAM_EXPERT,
+  'c-machine-vision': MACHINE_VISION_EXAM_EXPERT
+};
+
+/**
+ * Get available assessment modes for a course.
+ * Courses with dual banks (e.g. Robot, Vision) offer ['standard', 'expert'] like Duolingo.
+ */
+export function getCourseAssessmentModes(course) {
+  if (!course) return ['standard'];
+  if (MASTER_ASSESSMENTS_EXPERT[course.id] && MASTER_ASSESSMENTS_STANDARD[course.id]) {
+    return ['standard', 'expert'];
+  }
+  return ['standard'];
+}
+
+/**
+ * Get assessment questions for any course based on selected mode.
+ * Prioritizes custom course quizzes, falls back to MASTER_ASSESSMENTS, or generates standard questions.
+ */
+export function getCourseAssessment(course, mode = 'standard') {
+  if (!course) return [];
+
+  // 1. If custom course has defined quiz questions
+  if (course.quiz && Array.isArray(course.quiz) && course.quiz.length > 0) {
+    return course.quiz;
+  }
+
+  // 2. Mode-specific bank (standard 20Q vs expert 40Q)
+  if (mode === 'expert' && MASTER_ASSESSMENTS_EXPERT[course.id]) {
+    return MASTER_ASSESSMENTS_EXPERT[course.id];
+  }
+  if (mode === 'standard' && MASTER_ASSESSMENTS_STANDARD[course.id]) {
+    return MASTER_ASSESSMENTS_STANDARD[course.id];
+  }
   if (!course) return [];
 
   // 1. If custom course has defined quiz questions

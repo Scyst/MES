@@ -28,6 +28,9 @@ export default function CertificateModal({ isOpen, onClose, data }) {
     certificateId = 'SNC-CERT-2026-9901',
     completedDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
     scorePercentage = 100,
+    quizScore = null,
+    quizTotal = null,
+    examMode = 'standard',
     hours = '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
     instructorName = 'ณภัทร นุ่มทอง',
     instructorTitle = 'วิทยากรผู้เชี่ยวชาญและหัวหน้าฝ่ายวิศวกรรม (Lead Enterprise Architect)'
@@ -147,12 +150,12 @@ export default function CertificateModal({ isOpen, onClose, data }) {
                   <span>&bull;</span>
                   <span className="flex items-center gap-1.5">
                     <FiShield className="w-3.5 h-3.5 text-cyan-600" />
-                    <span>ระดับสมรรถนะ: <strong>Level 3 (Certified Specialist)</strong></span>
+                    <span>ระดับสมรรถนะ: <strong>{examMode === 'expert' || (quizTotal && quizTotal >= 40) ? 'Level 4 (Certified Industrial Robotics & Vision Expert)' : 'Level 3 (Certified Specialist)'}</strong></span>
                   </span>
                   <span>&bull;</span>
                   <span className="flex items-center gap-1.5">
                     <FiAward className="w-3.5 h-3.5 text-amber-600" />
-                    <span>ผลการประเมิน: <strong className="text-emerald-700">{scorePercentage}% (เกณฑ์ผ่าน &ge; 80%)</strong></span>
+                    <span>ผลการประเมิน: <strong className="text-emerald-700">{scorePercentage}%{quizScore !== null && quizTotal !== null ? ` (${quizScore}/${quizTotal} ข้อ)` : ''} (เกณฑ์ผ่าน &ge; 80%)</strong></span>
                   </span>
                 </div>
               </div>
