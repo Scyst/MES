@@ -6,6 +6,11 @@
  * line-adaptive criteria for SPOT, BEND, PRESS, inspector & QA sign-offs, and non-backdatable audit trail).
  */
 
+// Suppress system shutdown injection (auto_logout modal / devModeBanner) on printable audit document
+if (!defined('SYSTEM_INJECTION_LOADED')) {
+    define('SYSTEM_INJECTION_LOADED', true);
+}
+
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../db.php';
 
@@ -233,6 +238,19 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Suppress auto-logout and framework modals in audit check sheet */
+  #inactivityModal,
+  #sessionTimeoutModal,
+  #devModeBanner,
+  .modal,
+  .modal-backdrop,
+  #swal2-container {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
 
   body {
     font-family: 'TH Sarabun New', 'Sarabun', 'Segoe UI', Arial, sans-serif;
@@ -622,7 +640,9 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     }
     .no-print,
     .no-print-toolbar,
+    #inactivityModal,
     #sessionTimeoutModal,
+    #devModeBanner,
     .modal,
     .modal-backdrop,
     #swal2-container {
