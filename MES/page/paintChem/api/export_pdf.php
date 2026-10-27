@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: text/html; charset=utf-8');
 // page/paintChem/api/export_pdf.php
-// Renders printable HTML — browser-native print (same pattern as PE/generate_wo_pdf.php)
+// Renders printable HTML — browser-native print supporting Single & Batch Multi-Sheet modes.
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php';
 
@@ -9,36 +9,74 @@ $isBlank = !empty($_GET['blank']);
 $logDate = $_GET['date'] ?? date('Y-m-d');
 $shift   = $_GET['shift'] ?? 'DAY';
 
-$stmtH = $pdo->prepare("SELECT h.*, 
-           up.fullname AS prepared_by_name,
-           uc.fullname AS checked_by_name,
-           ua.fullname AS approved_by_name
-    FROM dbo.PAINT_CHEM_SHEET_HEADER h
-    LEFT JOIN dbo.USERS up ON up.id = h.prepared_by
-    LEFT JOIN dbo.USERS uc ON uc.id = h.checked_by
-    LEFT JOIN dbo.USERS ua ON ua.id = h.approved_by
-    WHERE h.log_date = ? AND h.shift = ?");
-if (!$isBlank) {
-    $stmtH->execute([$logDate, $shift]);
-    $header = $stmtH->fetch();
-} else {
-    $header = null;
-    $logDate = '';
-    
-}
+// Batch parameters
+$isBatch = !empty($_GET['batch']) || !empty($_GET['header_ids']) || !empty($_GET['start_date']);
+$headerIdsParam = trim($_GET['header_ids'] ?? '');
+$startDate = trim($_GET['start_date'] ?? '');
+$endDate   = trim($_GET['end_date'] ?? '');
+$batchShift = strtoupper(trim($_GET['shift'] ?? ''));
 
-$logs = [];
-if ($header) {
-    $stmtL = $pdo->prepare("SELECT time_slot, station_no, parameter_key, before_value, after_value, chemical_added_kg, is_overflow, note FROM dbo.PAINT_CHEM_LOG WHERE header_id = ?");
-    $stmtL->execute([$header['header_id']]);
-    while ($row = $stmtL->fetch()) {
-        $logs[$row['station_no']][$row['parameter_key']][$row['time_slot']] = $row;
+$headersList = [];
+
+if ($isBatch) {
+    if ($headerIdsParam !== '') {
+        $idArr = array_filter(array_map('intval', explode(',', $headerIdsParam)));
+        if (!empty($idArr)) {
+            $inPlaceholders = implode(',', array_fill(0, count($idArr), '?'));
+            $stmt = $pdo->prepare("SELECT h.*, 
+                       up.fullname AS prepared_by_name,
+                       uc.fullname AS checked_by_name,
+                       ua.fullname AS approved_by_name
+                FROM dbo.PAINT_CHEM_SHEET_HEADER h
+                LEFT JOIN dbo.USERS up ON up.id = h.prepared_by
+                LEFT JOIN dbo.USERS uc ON uc.id = h.checked_by
+                LEFT JOIN dbo.USERS ua ON ua.id = h.approved_by
+                WHERE h.header_id IN ($inPlaceholders)
+                ORDER BY h.log_date ASC, h.shift ASC");
+            $stmt->execute(array_values($idArr));
+            $headersList = $stmt->fetchAll();
+        }
+    } elseif ($startDate !== '' && $endDate !== '') {
+        $shiftSql = in_array($batchShift, ['DAY', 'NIGHT']) ? "AND h.shift = ?" : "";
+        $params = [$startDate, $endDate];
+        if (in_array($batchShift, ['DAY', 'NIGHT'])) $params[] = $batchShift;
+
+        $stmt = $pdo->prepare("SELECT h.*, 
+                   up.fullname AS prepared_by_name,
+                   uc.fullname AS checked_by_name,
+                   ua.fullname AS approved_by_name
+            FROM dbo.PAINT_CHEM_SHEET_HEADER h
+            LEFT JOIN dbo.USERS up ON up.id = h.prepared_by
+            LEFT JOIN dbo.USERS uc ON uc.id = h.checked_by
+            LEFT JOIN dbo.USERS ua ON ua.id = h.approved_by
+            WHERE h.log_date BETWEEN ? AND ? $shiftSql
+            ORDER BY h.log_date ASC, h.shift ASC");
+        $stmt->execute($params);
+        $headersList = $stmt->fetchAll();
+    }
+} else {
+    // Single sheet mode (existing behavior)
+    $stmtH = $pdo->prepare("SELECT h.*, 
+               up.fullname AS prepared_by_name,
+               uc.fullname AS checked_by_name,
+               ua.fullname AS approved_by_name
+        FROM dbo.PAINT_CHEM_SHEET_HEADER h
+        LEFT JOIN dbo.USERS up ON up.id = h.prepared_by
+        LEFT JOIN dbo.USERS uc ON uc.id = h.checked_by
+        LEFT JOIN dbo.USERS ua ON ua.id = h.approved_by
+        WHERE h.log_date = ? AND h.shift = ?");
+    if (!$isBlank) {
+        $stmtH->execute([$logDate, $shift]);
+        $singleH = $stmtH->fetch();
+        if ($singleH) {
+            $headersList = [$singleH];
+        } else {
+            $headersList = [];
+        }
+    } else {
+        $headersList = [null]; // Blank sheet template
     }
 }
-
-$timeSlots = $shift === 'DAY'
-    ? ['08:00-09:00','10:00-11:00','13:00-14:00','15:00-16:00','17:30-18:30','19:30-20:30']
-    : ['20:00-22:00','22:00-00:00','01:00-03:00','03:00-05:00','05:30-07:00','07:00-08:00'];
 
 $stations = [
     1 => ['name' => 'Degreasing 1<br>6.3 Kg/pt-up',    'chem' => 'FC-TS008', 'params' => [
@@ -75,7 +113,7 @@ $stations = [
     7 => ['name' => 'Water Rinse 3', 'chem' => 'DI Water Rinse', 'params' => [
         ['key' => 'Conta_WR3',      'label' => 'pH',         'std' => '-',            'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
-            ]],
+    ]],
     8 => ['name' => 'Water Rinse 4', 'chem' => 'DI Water Rinse', 'params' => [
         ['key' => 'Conta_WR4',      'label' => 'pH',         'std' => '-',            'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
@@ -88,30 +126,16 @@ $stations = [
     ]],
 ];
 
-$noteLines = [];
-$legacyNote = trim((string)($header['note'] ?? ''));
-if ($legacyNote !== '') $noteLines[] = $legacyNote;
-foreach ($timeSlots as $ts) {
-    $slotNote = trim((string)($logs[12]['SlotNote'][$ts]['note'] ?? ''));
-    if ($slotNote !== '') $noteLines[] = '[' . $ts . '] ' . $slotNote;
-}
-$noteText = implode("\n", $noteLines);
-$noteCount = count($noteLines);
-$noteLen = mb_strlen($noteText);
-$isMultiCol = ($noteCount >= 5 || $noteLen > 220);
-$noteFontSize = ($noteCount >= 7 || $noteLen > 300) ? '5.2pt' : (($noteCount >= 5 || $noteLen > 180) ? '5.8pt' : '6.5pt');
-$noteColStyle = $isMultiCol ? "column-count: 2; column-gap: 5mm; -webkit-column-count: 2; -webkit-column-gap: 5mm;" : "";
-$preparedBy = $header['prepared_by_name'] ?? '';
-$checkedBy  = $header['checked_by_name'] ?? '';
-$approvedBy = $header['approved_by_name'] ?? '';
-$shiftLabel = $shift === 'DAY' ? 'กลางวัน (DAY)' : 'กลางคืน (NIGHT)';
-$dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logDate));
+$totalSheets = count($headersList);
+$docTitle = $totalSheets > 1 
+    ? "Paint Chem Check Sheets — ชุดเอกสาร " . $totalSheets . " ใบ" 
+    : "Paint Chem Check Sheet — " . htmlspecialchars($logDate) . " " . htmlspecialchars($shift);
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Paint Chem Check Sheet — <?php echo htmlspecialchars($logDate); ?> <?php echo $shift; ?></title>
+<title><?php echo $docTitle; ?></title>
 <style>
   @media screen { html { zoom: 110%; } }
   @media print {
@@ -132,7 +156,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     font-size: 7.5pt;
     color: #000;
     background: #525659;   /* dark background = paper preview */
-    padding: 12px 0;
+    padding: 16px 0;
   }
 
   /* ===== PAPER CARD ===== */
@@ -140,7 +164,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     width: 287mm;         /* A4L = 297mm minus 5mm*2 = 287mm */
     height: 198mm;
     background: #fff;
-    margin: 0 auto 12px auto;
+    margin: 0 auto 18px auto;
     padding: 3mm 4mm;
     box-shadow: 0 4px 16px rgba(0,0,0,0.55);
     position: relative;
@@ -149,69 +173,84 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     overflow: hidden;
     page-break-inside: avoid;
     break-inside: avoid;
+    page-break-after: always;
+    break-after: page;
+  }
+  .page:last-child {
+    margin-bottom: 0;
   }
 
-  /* ===== PRINT BUTTON ===== */
-  .no-print {
+  /* ===== TOP ACTION BAR ===== */
+  .no-print-bar {
     position: fixed;
-    top: 14px;
+    top: 12px;
     right: 18px;
     z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
-  .no-print button {
-    padding: 8px 18px;
-    background: #1d4ed8;
+  .no-print-bar button {
+    background: #2563eb;
     color: #fff;
     border: none;
-    border-radius: 5px;
-    font-size: 11pt;
-    font-family: 'TH Sarabun New','Sarabun',Arial,sans-serif;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    transition: background 0.15s;
   }
-  .no-print button:hover { background: #1e40af; }
+  .no-print-bar button:hover {
+    background: #1d4ed8;
+  }
+  .no-print-badge {
+    background: rgba(15, 23, 42, 0.9);
+    color: #fff;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: sans-serif;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
 
-  /* ===== HEADER SECTION ===== */
-  .doc-header {
-    flex-shrink: 0;
+  /* ===== DOCUMENT HEADER ===== */
+  table.doc-header {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 2mm;
+    flex-shrink: 0;
   }
-  .doc-header td { vertical-align: middle; padding: 0 2mm; }
-  .company-name {
-    font-size: 16pt;
-    font-weight: 900;
-    color: #b91c1c;
-    letter-spacing: 1px;
+  table.doc-header td {
+    vertical-align: middle;
+    border: none;
+    padding: 0;
   }
   .doc-title {
-    text-align: center;
-    font-size: 12pt;
+    font-size: 14pt;
     font-weight: bold;
     color: #1e3a5f;
-    border-bottom: 2px solid #1e3a5f;
-    padding-bottom: 1px;
+    letter-spacing: 0.5px;
+    text-align: center;
   }
-  .doc-title span { font-weight: 900; color: #b91c1c; }
+  .doc-title span { color: #dc2626; }
   .doc-meta {
     text-align: right;
-    font-size: 8pt;
-    line-height: 1.6;
+    font-size: 7.5pt;
+    line-height: 1.4;
   }
-  .meta-label { color: #555; }
-  .meta-value { font-weight: bold; color: #000; }
+  .doc-meta .meta-label { color: #555; }
+  .doc-meta .meta-value { font-weight: bold; }
 
-  /* ===== MAIN DATA TABLE ===== */
+  /* ===== MAIN TABLE ===== */
   table.main {
-    flex-shrink: 0;
     width: 100%;
     border-collapse: collapse;
+    font-size: 6.2pt;
     table-layout: fixed;
-    font-size: 6pt;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    flex-shrink: 0;
   }
   table.main th,
   table.main td {
@@ -238,7 +277,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   .oor { background-color: #fee2e2; color: #b91c1c; font-weight: bold; }
   .align-left { text-align: left; }
 
-  /* ===== COLUMN WIDTHS (total 287mm - 8mm padding = 279mm) ===== */
+  /* ===== COLUMN WIDTHS ===== */
   col.c-no    { width: 7mm;  }
   col.c-proc  { width: 18mm; }
   col.c-chem  { width: 16mm; }
@@ -296,30 +335,34 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   @media print {
     html, body {
       width: 100% !important;
-      height: 100% !important;
+      height: auto !important;
       background: white !important;
       padding: 0 !important;
       margin: 0 !important;
-      overflow: hidden !important;
+      overflow: visible !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    .no-print { display: none !important; }
+    .no-print, .no-print-bar { display: none !important; }
     .page {
       width: 100% !important;
       max-width: 100% !important;
-      height: 100% !important;
-      max-height: 100% !important;
+      height: 198mm !important;
+      max-height: 198mm !important;
       margin: 0 !important;
       padding: 2mm 3mm !important;
       box-shadow: none !important;
       display: flex !important;
       flex-direction: column !important;
       overflow: hidden !important;
-      page-break-after: avoid !important;
+      page-break-after: always !important;
+      break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      break-after: avoid !important;
+    }
+    .page:last-child {
+      page-break-after: auto !important;
+      break-after: auto !important;
     }
     .doc-header {
       flex-shrink: 0 !important;
@@ -357,12 +400,56 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
 </head>
 <body>
 
-
-<div class="no-print">
-  <button onclick="window.print()">&nbsp; พิมพ์ / บันทึก PDF</button>
+<?php if ($totalSheets > 0): ?>
+<div class="no-print-bar">
+  <?php if ($totalSheets > 1): ?>
+  <span class="no-print-badge">เอกสารทั้งหมด <?php echo $totalSheets; ?> ใบ</span>
+  <button onclick="window.print()">🖨️ พิมพ์ทั้งหมด (Print All <?php echo $totalSheets; ?> Pages)</button>
+  <?php else: ?>
+  <button onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+  <?php endif; ?>
 </div>
+<?php endif; ?>
 
+<?php
+if ($totalSheets === 0) {
+    echo '<div style="max-width:500px; margin:80px auto; background:#fff; padding:32px; border-radius:12px; text-align:center; font-family:sans-serif; box-shadow:0 4px 16px rgba(0,0,0,0.2);">';
+    echo '<h3 style="color:#1e3a5f; margin-bottom:8px; font-size:18px;">ไม่พบข้อมูลเอกสารตามเงื่อนไขที่เลือก</h3>';
+    echo '<p style="color:#666; font-size:14px; margin-bottom:20px;">กรุณาตรวจสอบช่วงวันที่หรือเงื่อนไขการค้นหาอีกครั้ง</p>';
+    echo '<button onclick="window.close()" style="background:#e2e8f0; color:#334155; border:none; padding:8px 20px; border-radius:6px; font-weight:bold; cursor:pointer;">ปิดหน้าต่างนี้</button>';
+    echo '</div>';
+}
+
+function renderSheetPage($header, $logs, $shift, $logDate, $isBlank, $stations, $sheetIndex, $totalSheets) {
+    $timeSlots = $shift === 'DAY'
+        ? ['08:00-09:00','10:00-11:00','13:00-14:00','15:00-16:00','17:30-18:30','19:30-20:30']
+        : ['20:00-22:00','22:00-00:00','01:00-03:00','03:00-05:00','05:30-07:00','07:00-08:00'];
+
+    $noteLines = [];
+    $legacyNote = trim((string)($header['note'] ?? ''));
+    if ($legacyNote !== '') $noteLines[] = $legacyNote;
+    foreach ($timeSlots as $ts) {
+        $slotNote = trim((string)($logs[12]['SlotNote'][$ts]['note'] ?? ''));
+        if ($slotNote !== '') $noteLines[] = '[' . $ts . '] ' . $slotNote;
+    }
+    $noteText = implode("\n", $noteLines);
+    $noteCount = count($noteLines);
+    $noteLen = mb_strlen($noteText);
+    $isMultiCol = ($noteCount >= 5 || $noteLen > 220);
+    $noteFontSize = ($noteCount >= 7 || $noteLen > 300) ? '5.2pt' : (($noteCount >= 5 || $noteLen > 180) ? '5.8pt' : '6.5pt');
+    $noteColStyle = $isMultiCol ? "column-count: 2; column-gap: 5mm; -webkit-column-count: 2; -webkit-column-gap: 5mm;" : "";
+    $preparedBy = $header['prepared_by_name'] ?? '';
+    $checkedBy  = $header['checked_by_name'] ?? '';
+    $approvedBy = $header['approved_by_name'] ?? '';
+    $shiftLabel = $shift === 'DAY' ? 'กลางวัน (DAY)' : 'กลางคืน (NIGHT)';
+    $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logDate));
+?>
 <div class="page">
+  <?php if ($totalSheets > 1): ?>
+  <div class="no-print" style="position:absolute; top:2px; left:6px; font-size:10px; color:#6b7280; font-family:sans-serif;">
+    ใบที่ <?php echo $sheetIndex; ?> / <?php echo $totalSheets; ?> — <?php echo htmlspecialchars($logDate); ?> (<?php echo $shift; ?>)
+  </div>
+  <?php endif; ?>
 
   <!-- ===== DOCUMENT HEADER ===== -->
   <table class="doc-header">
@@ -450,7 +537,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
       </tr>
       <?php endforeach; ?>
     <?php endforeach; ?>
-            <tr>
+        <tr>
           <td colspan="3" style="text-align:right;font-weight:bold;background:#f8fafc;">Bake Oven Temp. (°C)</td>
           <td style="font-weight:bold;background:#f8fafc;">Standard</td>
           <td class="bg-std">175 – 220</td>
@@ -532,5 +619,24 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     </table>
   </div>
 </div><!-- .page -->
+<?php
+}
+
+$sheetIndex = 1;
+foreach ($headersList as $h) {
+    $curShift = $h ? $h['shift'] : ($shift ?: 'DAY');
+    $curDate  = $h ? $h['log_date'] : $logDate;
+    $curLogs  = [];
+    if ($h) {
+        $stmtL = $pdo->prepare("SELECT time_slot, station_no, parameter_key, before_value, after_value, chemical_added_kg, is_overflow, note FROM dbo.PAINT_CHEM_LOG WHERE header_id = ?");
+        $stmtL->execute([$h['header_id']]);
+        while ($row = $stmtL->fetch()) {
+            $curLogs[$row['station_no']][$row['parameter_key']][$row['time_slot']] = $row;
+        }
+    }
+    renderSheetPage($h, $curLogs, $curShift, $curDate, $isBlank, $stations, $sheetIndex++, $totalSheets);
+}
+?>
+
 </body>
 </html>

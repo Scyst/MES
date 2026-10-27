@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // MES/page/paintChem/api/get_history.php
 // Returns paginated list of sheet headers with OOR summary counts.
 
@@ -20,7 +20,7 @@ $dateFrom = $_GET['date_from'] ?? date('Y-m-d', strtotime('-30 days'));
 $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
 $shift    = strtoupper($_GET['shift'] ?? '');
 $page     = max(1, intval($_GET['page'] ?? 1));
-$pageSize = 20;
+$pageSize = min(100, max(1, intval($_GET['page_size'] ?? 20)));
 $offset   = ($page - 1) * $pageSize;
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {

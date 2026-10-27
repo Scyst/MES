@@ -1,6 +1,6 @@
 // SheetHeader.jsx — Top section: date picker, shift selector, time slot, painting condition (per slot), note (per slot)
 import { useState } from 'react';
-import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText, Unlock, LayoutGrid, TableProperties } from 'lucide-react';
+import { Sun, Moon, MoreVertical, History, Printer, CalendarDays, Clock3, Thermometer, Wind, FileText, Unlock, LayoutGrid, TableProperties, TrendingUp } from 'lucide-react';
 import { isOutOfRange } from '../paintChemConfig';
 
 const STATUS_COLORS = {
@@ -17,7 +17,7 @@ const STATUS_LABELS = {
 export default function SheetHeader({
   date, shift, slotExtras, previousNotes,
   onDateChange, onShiftChange, onExtraChange, onExtraBlur, onUnlockClick,
-  sheetStatus, disabled, isTimeLocked, canUnlock, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
+  sheetStatus, disabled, isTimeLocked, canUnlock, onHistoryClick, onAnalyticsClick, selectedSlot, onSlotChange, timeSlots,
   viewMode, onViewModeChange, isOnline = true,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
@@ -54,6 +54,9 @@ export default function SheetHeader({
             <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors">
               <Printer size={14} /><span>ฟอร์มเปล่า</span>
             </a>
+            <button type="button" onClick={onAnalyticsClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 hover:bg-blue-100 rounded-lg shadow-sm transition-colors">
+              <TrendingUp size={14} /><span>วิเคราะห์แนวโน้ม</span>
+            </button>
             <button type="button" onClick={onHistoryClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
               <History size={14} /><span>ประวัติย้อนหลัง</span>
             </button>
@@ -74,6 +77,9 @@ export default function SheetHeader({
                 <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700" onClick={() => setMenuOpen(false)}>
                   <Printer size={16} /> ฟอร์มเปล่า
                 </a>
+                <button type="button" onClick={() => { setMenuOpen(false); onAnalyticsClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-left border-b border-gray-100 dark:border-gray-700">
+                  <TrendingUp size={16} /> วิเคราะห์แนวโน้ม
+                </button>
                 <button type="button" onClick={() => { setMenuOpen(false); onHistoryClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
                   <History size={16} /> ประวัติย้อนหลัง
                 </button>

@@ -9,6 +9,7 @@ import { Save, SendHorizonal, Loader2, WifiOff, Wind, FileText } from 'lucide-re
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import SheetHeader from '../components/SheetHeader';
 import PaintChemHistoryDrawer from '../components/PaintChemHistoryDrawer';
+import PaintChemAnalyticsModal from '../components/PaintChemAnalyticsModal';
 import PaintChemTableView from '../components/PaintChemTableView';
 import StationCard from '../components/StationCard';
 import {
@@ -76,6 +77,7 @@ export default function PaintChemEntryPage() {
   const [extrasBySlot, setExtrasBySlot] = useState({});
   const [slotValues, setSlotVals] = useState(buildEmptySlotValues());
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [viewMode, setViewMode] = useState('card');
   const [header, setHeader]       = useState(null);
   const [allLogs, setAllLogs]     = useState([]);
@@ -307,6 +309,7 @@ export default function PaintChemEntryPage() {
 
       <SheetHeader
         onHistoryClick={() => setIsHistoryOpen(true)}
+        onAnalyticsClick={() => setIsAnalyticsOpen(true)}
         onUnlockClick={handleUnlock}
         date={date} shift={shift} sheetStatus={header?.status} isTimeLocked={isTimeLocked} canUnlock={canUnlock}
         slotExtras={slotExtras} previousNotes={previousNotes}
@@ -418,6 +421,10 @@ export default function PaintChemEntryPage() {
           setShift(selectedShift);
           setIsHistoryOpen(false);
         }}
+      />
+      <PaintChemAnalyticsModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
       />
     </div>
   );
