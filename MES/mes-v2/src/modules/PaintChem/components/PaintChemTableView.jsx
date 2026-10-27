@@ -35,7 +35,12 @@ function readLogValue(allLogs, slot, stationNo, paramKey, field) {
   if (field === 'before') return row.before_value ?? '';
   if (field === 'after') return row.after_value ?? '';
   if (field === 'kg') return row.chemical_added_kg ?? '';
-  if (field === 'isOverflow') return row.is_overflow === null || row.is_overflow === undefined ? '' : !!row.is_overflow;
+  if (field === 'isOverflow') {
+    if (row.is_overflow === null || row.is_overflow === undefined) return '';
+    if (row.is_overflow === true || row.is_overflow === 1 || row.is_overflow === '1') return true;
+    if (row.is_overflow === false || row.is_overflow === 0 || row.is_overflow === '0') return false;
+    return '';
+  }
   return '';
 }
 
@@ -77,9 +82,12 @@ function NumberCell({ isEditing, value, onValueChange, disabled, outOfRange = fa
 }
 
 function PassFailCell({ isEditing, value, onValueChange, disabled }) {
+  const isPass = value === true || value === 1 || value === '1';
+  const isFail = value === false || value === 0 || value === '0';
+
   if (!isEditing) {
-    if (value === true) return <span className="block text-center text-xs font-medium text-green-600 dark:text-green-400">ผ่าน ✓</span>;
-    if (value === false) return <span className="block text-center text-xs font-medium text-red-600 dark:text-red-400">ไม่ผ่าน ✗</span>;
+    if (isPass) return <span className="block text-center text-xs font-medium text-green-600 dark:text-green-400">ผ่าน ✓</span>;
+    if (isFail) return <span className="block text-center text-xs font-medium text-red-600 dark:text-red-400">ไม่ผ่าน ✗</span>;
     return <ReadOnlyValue value="" />;
   }
   const optionClass = (isActive, activeClass) =>
@@ -90,10 +98,22 @@ function PassFailCell({ isEditing, value, onValueChange, disabled }) {
     }`;
   return (
     <div className="flex gap-1">
-      <button type="button" disabled={disabled} onClick={() => onValueChange(true)}
-        className={optionClass(value === true, 'bg-green-600 border-green-600 text-white')}>ผ่าน ✓</button>
-      <button type="button" disabled={disabled} onClick={() => onValueChange(false)}
-        className={optionClass(value === false, 'bg-red-600 border-red-600 text-white')}>ไม่ผ่าน ✗</button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onValueChange(true)}
+        className={optionClass(isPass, 'bg-green-600 border-green-600 text-white')}
+      >
+        ผ่าน ✓
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onValueChange(false)}
+        className={optionClass(isFail, 'bg-red-600 border-red-600 text-white')}
+      >
+        ไม่ผ่าน ✗
+      </button>
     </div>
   );
 }
@@ -190,7 +210,7 @@ export default function PaintChemTableView({
                     <td className={`${CELL_BORDER} px-3 py-1.5 align-middle`}>
                       <p className="text-xs font-medium text-gray-700 dark:text-gray-200">{param.label}</p>
                       <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                        {param.isOverflowType ? '> Over flow' : rangeLabel(param.key)}
+                        {(param.isOverflow || param.isOverflowType) ? '> Over flow' : rangeLabel(param.key)}
                       </p>
                     </td>
                     {timeSlots.map((slot) => {
@@ -198,7 +218,7 @@ export default function PaintChemTableView({
                       const tint = isEditing ? 'bg-blue-50/60 dark:bg-blue-900/20' : 'bg-transparent';
                       const handleChange = (field) => (val) => onChange(station.no, param.key, field, val);
 
-                      if (param.isOverflowType) {
+                      if (param.isOverflow || param.isOverflowType) {
                         return (
                           <td key={slot} colSpan={3} className={`${CELL_BORDER} px-1.5 py-1.5 align-middle ${tint}`}>
                             <PassFailCell

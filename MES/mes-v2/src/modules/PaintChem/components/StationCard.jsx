@@ -1,4 +1,4 @@
-﻿// StationCard.jsx — Collapsible card for one Station
+// StationCard.jsx — Collapsible card for one Station
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import ParameterInputRow from './ParameterInputRow';
@@ -9,7 +9,7 @@ export default function StationCard({ station, slotValues, onChange, disabled })
 
   // Count OOR params for this station (using before_value)
   const oorCount = station.params.reduce((acc, p) => {
-    if (p.isOverflowType) return acc;
+    if (p.isOverflow || p.isOverflowType) return acc;
     const val = slotValues?.[p.key]?.before;
     return acc + (isOutOfRange(p.key, val) ? 1 : 0);
   }, 0);
@@ -52,7 +52,7 @@ export default function StationCard({ station, slotValues, onChange, disabled })
               paramKey={param.key}
               label={param.label}
               hasKg={param.hasKg}
-              isOverflowType={!!param.isOverflow}
+              isOverflowType={!!(param.isOverflow || param.isOverflowType)}
               value={slotValues?.[param.key]}
               onChange={(field, val) => onChange(station.no, param.key, field, val)}
               disabled={disabled}

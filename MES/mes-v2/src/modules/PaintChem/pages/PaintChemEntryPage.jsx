@@ -24,7 +24,7 @@ const EMPTY_EXTRAS = { note: '' };
 function buildEmptySlotValues() {
   return STATIONS.reduce((acc, station) => {
     acc[station.no] = station.params.reduce((pAcc, p) => {
-      pAcc[p.key] = { before: '', after: '', kg: '', isOverflow: false };
+      pAcc[p.key] = { before: '', after: '', kg: '', isOverflow: null };
       return pAcc;
     }, {});
     return acc;
@@ -42,7 +42,11 @@ function hydrateSlotValues(logs, selectedSlot) {
           before: l.before_value ?? '',
           after:  l.after_value  ?? '',
           kg:     l.chemical_added_kg ?? '',
-          isOverflow: !!l.is_overflow,
+          isOverflow: (l.is_overflow === true || l.is_overflow === 1 || l.is_overflow === '1')
+            ? true
+            : (l.is_overflow === false || l.is_overflow === 0 || l.is_overflow === '0')
+              ? false
+              : null,
         };
       }
     });
@@ -192,11 +196,11 @@ export default function PaintChemEntryPage() {
         for (const param of station.params) {
           const val = slotValues[station.no]?.[param.key];
           const formData = buildSlotFormData(station.no, param.key);
-          if (!param.isOverflow) {
+          if (!(param.isOverflow || param.isOverflowType)) {
             formData.append('before_value', val?.before ?? '');
             formData.append('after_value',  val?.after  ?? '');
             if (param.hasKg) formData.append('chemical_added_kg', val?.kg ?? '');
-          } else {
+          } else if (val?.isOverflow !== null && val?.isOverflow !== undefined) {
             formData.append('is_overflow', val?.isOverflow ? '1' : '0');
           }
           requests.push(axios.post(`${API_BASE}/save_slot.php`, formData));
