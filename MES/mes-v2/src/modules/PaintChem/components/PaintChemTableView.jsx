@@ -121,6 +121,25 @@ export default function PaintChemTableView({
     }
   };
 
+  const handleButtonKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      // Allow Enter to naturally click the button (do not prevent default)
+      return;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const parentRow = e.target.closest('tr');
+      if (!parentRow) return;
+      const buttons = Array.from(parentRow.querySelectorAll('button:not([disabled])'));
+      const idx = buttons.indexOf(e.target);
+      if (e.key === 'ArrowRight' && idx === 0 && buttons[1]) {
+        buttons[1].focus();
+      } else if (e.key === 'ArrowLeft' && idx === 1 && buttons[0]) {
+        buttons[0].focus();
+      }
+    }
+  };
+
   const getValue = (slot, stationNo, paramKey, field) =>
     slot === selectedSlot
       ? (field === 'isOverflow'
@@ -231,7 +250,7 @@ export default function PaintChemTableView({
                                 disabled={disabled}
                                 onClick={() => handleChange('isOverflow')(isPass ? null : true)}
                                 onFocus={handleCellFocus}
-                                onKeyDown={handleCellKeyDown}
+                                onKeyDown={handleButtonKeyDown}
                                 className={`w-full h-8 px-1 text-center text-xs font-medium rounded border transition-colors select-none ${
                                   isPass
                                     ? 'bg-green-600 border-green-600 text-white shadow-sm'
@@ -253,7 +272,7 @@ export default function PaintChemTableView({
                                 disabled={disabled}
                                 onClick={() => handleChange('isOverflow')(isFail ? null : false)}
                                 onFocus={handleCellFocus}
-                                onKeyDown={handleCellKeyDown}
+                                onKeyDown={handleButtonKeyDown}
                                 className={`w-full h-8 px-1 text-center text-xs font-medium rounded border transition-colors select-none ${
                                   isFail
                                     ? 'bg-red-600 border-red-600 text-white shadow-sm'
