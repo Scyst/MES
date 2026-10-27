@@ -1656,3 +1656,66 @@ body {
     font-weight: 600;
     color: var(--iqs-text-primary);
 }
+
+/* =======================================================
+   DESKTOP (PC >= 1200px) DEDICATED LAYOUT
+   Mobile styles above remain untouched.
+   ======================================================= */
+@media (min-width: 1200px) {
+    #main-content { padding: 20px 28px !important; }
+
+    /* Tab bars: compact, left-aligned controls instead of full-width stretched bars */
+    .iqs-segmented-bar {
+        display: inline-grid;
+        width: auto;
+        min-width: 560px;
+    }
+    .iqs-segment-btn { padding: 8px 28px; font-size: 0.95rem; }
+
+    .line-selector-bar { display: inline-block; width: auto; min-width: 560px; }
+    .line-tab-btn { flex: 0 0 auto; padding: 9px 26px; font-size: 0.95rem; }
+
+    /* Missed-slot alert: tighter, single readable block */
+    #auditMissedAlertBanner .alert { padding: 14px 20px !important; }
+    #auditMissedAlertBanner .alert strong { font-size: 1.02rem !important; }
+
+    /* Cockpit strip: larger, balanced */
+    .cockpit-header-strip { padding: 14px 24px; }
+    .cockpit-slot-pill { font-size: 0.95rem; padding: 8px 18px; }
+    .cockpit-progress-val { font-size: 1rem; }
+    .cockpit-action-btn { height: 42px !important; font-size: 0.92rem !important; padding: 6px 18px !important; }
+
+    /* Toolbar: search left, chips right on one row with comfortable sizing */
+    .iqs-toolbar-card { padding: 14px 20px; }
+    .iqs-toolbar-card .form-control { max-width: 460px; }
+    .iqs-filter-chip { font-size: 0.9rem; padding: 8px 18px; }
+
+    /* Machine grid: readable cards sized for desktop */
+    .interactive-machine-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 18px;
+    }
+    .interactive-machine-card {
+        padding: 18px 20px;
+        min-height: 140px;
+        border-radius: 18px;
+    }
+    .mach-card-code { font-size: 1.2rem; }
+    .mach-card-sub { font-size: 0.88rem; }
+    .interactive-machine-card .badge { font-size: 0.8rem !important; padding: 5px 10px !important; }
+    .interactive-machine-card .text-truncate.ms-2 { font-size: 0.82rem !important; max-width: 200px !important; }
+    .mach-action-cue { font-size: 0.88rem; }
+
+    /* Bottom bar aligns with content width */
+    .bottom-submit-bar { left: calc(70px + 28px); right: 28px; }
+
+    /* History tab: larger table typography and filter row */
+    .iqs-history-table thead th { font-size: 0.88rem !important; padding: 14px 18px !important; }
+    .iqs-history-table tbody td { font-size: 0.95rem !important; padding: 14px 18px !important; }
+    .badge-line, .badge-status, .badge-metric { font-size: 0.84rem !important; }
+    .history-btn-group .btn { font-size: 0.85rem !important; padding: 7px 14px !important; }
+}
+
+@media (min-width: 1700px) {
+    .interactive-machine-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+}
