@@ -1658,64 +1658,200 @@ body {
 }
 
 /* =======================================================
-   DESKTOP (PC >= 1200px) DEDICATED LAYOUT
-   Mobile styles above remain untouched.
+   DESKTOP (PC >= 1200px) — Compact industrial dashboard style
+   Flat, dense, thin borders. Mobile styles above are untouched.
    ======================================================= */
 @media (min-width: 1200px) {
-    #main-content { padding: 20px 28px !important; }
+    #main-content { padding: 14px 24px !important; }
 
-    /* Tab bars: compact, left-aligned controls instead of full-width stretched bars */
-    .iqs-segmented-bar {
-        display: inline-grid;
-        width: auto;
-        min-width: 560px;
+    /* ---- Page tabs: underline style instead of pill segmented control ---- */
+    .iqs-segmented-bar,
+    [data-bs-theme="dark"] .iqs-segmented-bar {
+        display: flex;
+        gap: 2px;
+        background: transparent;
+        box-shadow: none;
+        border: 0;
+        border-bottom: 1px solid var(--iqs-border);
+        border-radius: 0;
+        padding: 0;
+        overflow: visible;
+        margin-bottom: 12px !important;
     }
-    .iqs-segment-btn { padding: 8px 28px; font-size: 0.95rem; }
+    .iqs-segment-btn {
+        flex: 0 0 auto;
+        height: 36px;
+        min-height: 36px;
+        padding: 0 16px;
+        border-radius: 0;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+    }
+    .iqs-segment-btn.active,
+    [data-bs-theme="dark"] .iqs-segment-btn.active {
+        background: transparent;
+        box-shadow: none;
+        color: var(--iqs-primary);
+        border-bottom-color: var(--iqs-primary);
+        font-weight: 600;
+    }
 
-    .line-selector-bar { display: inline-block; width: auto; min-width: 560px; }
-    .line-tab-btn { flex: 0 0 auto; padding: 9px 26px; font-size: 0.95rem; }
+    /* ---- Missed-slot alert: slim notice bar ---- */
+    #auditMissedAlertBanner { margin-bottom: 10px !important; }
+    #auditMissedAlertBanner .alert {
+        padding: 8px 14px !important;
+        border-radius: 6px !important;
+        border-left-width: 3px !important;
+        gap: 10px !important;
+        align-items: center !important;
+        box-shadow: none !important;
+    }
+    #auditMissedAlertBanner .alert > div:first-child {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+    }
+    #auditMissedAlertBanner .alert > div:first-child i { font-size: 0.7rem !important; }
+    #auditMissedAlertBanner strong { font-size: 0.82rem !important; }
+    #auditMissedAlertBanner .small { font-size: 0.76rem !important; margin-top: 2px !important; }
+    #auditMissedAlertBanner .badge { font-size: 0.66rem !important; font-weight: 500; }
 
-    /* Missed-slot alert: tighter, single readable block */
-    #auditMissedAlertBanner .alert { padding: 14px 20px !important; }
-    #auditMissedAlertBanner .alert strong { font-size: 1.02rem !important; }
+    /* ---- Cockpit status strip ---- */
+    .cockpit-header-strip { padding: 6px 14px; border-radius: 8px; box-shadow: none; margin-bottom: 10px !important; }
+    .cockpit-slot-pill { padding: 3px 12px; font-size: 0.78rem; font-weight: 500; }
+    .cockpit-progress-label { font-size: 0.68rem; }
+    .cockpit-progress-val { font-size: 0.82rem; }
+    .cockpit-action-btn {
+        height: 30px !important;
+        font-size: 0.78rem !important;
+        padding: 3px 12px !important;
+        border-radius: 6px !important;
+        font-weight: 500;
+    }
 
-    /* Cockpit strip: larger, balanced */
-    .cockpit-header-strip { padding: 14px 24px; }
-    .cockpit-slot-pill { font-size: 0.95rem; padding: 8px 18px; }
-    .cockpit-progress-val { font-size: 1rem; }
-    .cockpit-action-btn { height: 42px !important; font-size: 0.92rem !important; padding: 6px 18px !important; }
+    /* ---- Line selector: small outlined buttons ---- */
+    .line-selector-bar {
+        display: inline-flex;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        border-radius: 0;
+        margin-bottom: 10px !important;
+    }
+    .line-tabs-wrapper { gap: 6px; }
+    .line-tab-btn {
+        flex: 0 0 auto;
+        padding: 5px 14px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        border: 1px solid var(--iqs-border);
+        background: var(--iqs-card-bg);
+    }
+    .line-tab-btn.active {
+        background: var(--iqs-primary);
+        border-color: var(--iqs-primary);
+        color: #ffffff;
+        box-shadow: none;
+    }
+    .line-count-badge { font-size: 0.66rem; padding: 0 6px; }
 
-    /* Toolbar: search left, chips right on one row with comfortable sizing */
-    .iqs-toolbar-card { padding: 14px 20px; }
-    .iqs-toolbar-card .form-control { max-width: 460px; }
-    .iqs-filter-chip { font-size: 0.9rem; padding: 8px 18px; }
+    /* ---- Search & filter toolbar ---- */
+    .iqs-toolbar-card { padding: 8px 12px; border-radius: 8px; box-shadow: none; margin-bottom: 10px !important; }
+    .iqs-toolbar-card .input-group { max-width: 340px; }
+    .iqs-toolbar-card .form-control {
+        height: 30px !important;
+        min-height: 30px !important;
+        font-size: 0.8rem !important;
+        padding: 2px 10px !important;
+        border-radius: 0 6px 6px 0 !important;
+    }
+    .iqs-toolbar-card .input-group-text { padding: 0 10px; font-size: 0.75rem; border-radius: 6px 0 0 6px; }
+    .iqs-filter-group { padding-bottom: 0; gap: 6px; }
+    .iqs-filter-chip {
+        height: 26px;
+        padding: 0 11px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        box-shadow: none !important;
+    }
 
-    /* Machine grid: readable cards sized for desktop */
+    /* ---- Machine grid: dense, flat cards with status edge ---- */
     .interactive-machine-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 18px;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 8px;
+        margin-bottom: 12px !important;
     }
-    .interactive-machine-card {
-        padding: 18px 20px;
-        min-height: 140px;
-        border-radius: 18px;
+    .interactive-machine-card,
+    .interactive-machine-card.state-ok,
+    .interactive-machine-card.state-ng,
+    .interactive-machine-card.state-skip {
+        padding: 9px 12px;
+        min-height: 78px;
+        border-radius: 6px;
+        border-width: 1px;
+        border-left-width: 3px;
+        box-shadow: none;
+        background: var(--iqs-card-bg);
     }
-    .mach-card-code { font-size: 1.2rem; }
-    .mach-card-sub { font-size: 0.88rem; }
-    .interactive-machine-card .badge { font-size: 0.8rem !important; padding: 5px 10px !important; }
-    .interactive-machine-card .text-truncate.ms-2 { font-size: 0.82rem !important; max-width: 200px !important; }
-    .mach-action-cue { font-size: 0.88rem; }
+    .interactive-machine-card { border-left-color: #f59e0b; }
+    .interactive-machine-card.state-ok { border-left-color: #10b981; }
+    .interactive-machine-card.state-ng { border-left-color: #ef4444; }
+    .interactive-machine-card.state-skip { border-left-color: #94a3b8; }
+    .interactive-machine-card:hover { transform: none; border-color: var(--iqs-primary); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); }
+    .interactive-machine-card:active { transform: none; }
+    .interactive-machine-card .fas { font-size: 0.78rem; }
+    .mach-card-code { font-size: 0.88rem; font-weight: 600; letter-spacing: 0; }
+    .mach-card-sub { font-size: 0.72rem; }
+    .interactive-machine-card .badge {
+        font-size: 0.64rem !important;
+        font-weight: 500;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+    }
+    .interactive-machine-card .mt-2 { margin-top: 6px !important; }
+    .interactive-machine-card .text-truncate.ms-2 { font-size: 0.7rem !important; }
+    .mach-action-cue { font-size: 0.72rem; font-weight: 500; }
+    .floor-map-subtle-hint { padding: 6px 12px !important; border-radius: 6px !important; margin-bottom: 8px !important; }
+    .floor-map-subtle-hint .fa-lg { font-size: 0.9rem; }
+    .floor-map-subtle-hint .small { font-size: 0.74rem !important; }
 
-    /* Bottom bar aligns with content width */
-    .bottom-submit-bar { left: calc(70px + 28px); right: 28px; }
+    /* ---- Form controls ---- */
+    .form-control, .form-select,
+    #formHistoryFilter .form-control,
+    #formHistoryFilter .form-select,
+    #formHistoryFilter .btn,
+    #btnSearchHistory {
+        height: 32px !important;
+        min-height: 32px !important;
+        font-size: 0.8rem !important;
+        padding: 3px 10px !important;
+        border-radius: 6px !important;
+    }
+    .form-label { font-size: 0.72rem !important; margin-bottom: 2px !important; }
 
-    /* History tab: larger table typography and filter row */
-    .iqs-history-table thead th { font-size: 0.88rem !important; padding: 14px 18px !important; }
-    .iqs-history-table tbody td { font-size: 0.95rem !important; padding: 14px 18px !important; }
-    .badge-line, .badge-status, .badge-metric { font-size: 0.84rem !important; }
-    .history-btn-group .btn { font-size: 0.85rem !important; padding: 7px 14px !important; }
+    /* ---- History tab ---- */
+    .iqs-history-card { border-radius: 8px; box-shadow: none; }
+    .iqs-history-table thead th {
+        font-size: 0.72rem !important;
+        padding: 8px 12px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.03em;
+    }
+    .iqs-history-table tbody td { font-size: 0.8rem !important; padding: 7px 12px !important; }
+    .badge-line, .badge-status { font-size: 0.68rem !important; padding: 2px 8px !important; }
+    .badge-metric { font-size: 0.66rem !important; padding: 1px 6px !important; }
+    .history-btn-group .btn { font-size: 0.72rem !important; padding: 4px 10px !important; }
+
+    /* ---- Bottom action bar ---- */
+    .bottom-submit-bar { left: calc(70px + 24px); right: 24px; bottom: 12px; border-radius: 10px; padding: 8px 14px; }
+    .btn-submit-round { min-height: 36px; font-size: 0.85rem; padding: 5px 18px; border-radius: 8px; box-shadow: none; }
 }
 
 @media (min-width: 1700px) {
-    .interactive-machine-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+    .interactive-machine-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 }
