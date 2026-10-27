@@ -75,8 +75,8 @@ export const STATIONS = [
     chemical: 'FC-TS008 (6.3 Kg/pt-up)',
     params: [
       { key: 'F_Al',       label: 'F.Al',        hasKg: true },
-      { key: 'Temperature',label: 'Temperature', hasKg: false },
-      { key: 'Pressure',   label: 'Pressure',    hasKg: false },
+      { key: 'Temperature',label: 'Temperature', hasKg: true },
+      { key: 'Pressure',   label: 'Pressure',    hasKg: true },
     ],
   },
   {
@@ -85,8 +85,8 @@ export const STATIONS = [
     chemical: 'FC-TS008 (12.4 Kg/pt-up)',
     params: [
       { key: 'F_Al',       label: 'F.Al',        hasKg: true },
-      { key: 'Temperature',label: 'Temperature', hasKg: false },
-      { key: 'Pressure',   label: 'Pressure',    hasKg: false },
+      { key: 'Temperature',label: 'Temperature', hasKg: true },
+      { key: 'Pressure',   label: 'Pressure',    hasKg: true },
     ],
   },
   {
@@ -94,8 +94,8 @@ export const STATIONS = [
     name: 'Water Rinse 1',
     chemical: 'Water Rinse 1',
     params: [
-      { key: 'Conta_WR1', label: 'Conta', hasKg: false },
-      { key: 'Pressure',  label: 'Pressure', hasKg: false },
+      { key: 'Conta_WR1', label: 'Conta', hasKg: true },
+      { key: 'Pressure',  label: 'Pressure', hasKg: true },
     ],
   },
   {
@@ -103,8 +103,8 @@ export const STATIONS = [
     name: 'Water Rinse 2',
     chemical: 'Water Rinse 2',
     params: [
-      { key: 'Conta_WR2',     label: 'Conta',        hasKg: false },
-      { key: 'Pressure',      label: 'Pressure',     hasKg: false },
+      { key: 'Conta_WR2',     label: 'Conta',        hasKg: true },
+      { key: 'Pressure',      label: 'Pressure',     hasKg: true },
       { key: 'WaterLevel_WR2', label: 'Water level', isOverflow: true, isOverflowType: true, hasKg: false },
     ],
   },
@@ -113,9 +113,9 @@ export const STATIONS = [
     name: 'Surface Cond.',
     chemical: 'NT-4055 / PL-XG / AD-4977 (0.2 Kg/day)',
     params: [
-      { key: 'pH',      label: 'pH',       hasKg: false },
-      { key: 'TC',      label: 'T.C',      hasKg: false },
-      { key: 'Pressure',label: 'Pressure', hasKg: false },
+      { key: 'pH',      label: 'pH',       hasKg: true },
+      { key: 'TC',      label: 'T.C',      hasKg: true },
+      { key: 'Pressure',label: 'Pressure', hasKg: true },
     ],
   },
   {
@@ -123,11 +123,11 @@ export const STATIONS = [
     name: 'Zinc Phosphase',
     chemical: 'NT-4055 / PB-LTS103 RF-1 / AC-131 / AJ-TB',
     params: [
-      { key: 'Temperature', label: 'Temperature', hasKg: false },
+      { key: 'Temperature', label: 'Temperature', hasKg: true },
       { key: 'FA',          label: 'F.A (Free Acid)',    hasKg: true },
       { key: 'TA',          label: 'T.A (Total Acidity)',hasKg: true },
       { key: 'AC',          label: 'A.C',          hasKg: true },
-      { key: 'Pressure',    label: 'Pressure',     hasKg: false },
+      { key: 'Pressure',    label: 'Pressure',     hasKg: true },
     ],
   },
   {
@@ -135,8 +135,8 @@ export const STATIONS = [
     name: 'Water Rinse 3',
     chemical: 'DI Water Rinse',
     params: [
-      { key: 'Conta_WR3',     label: 'Conta',       hasKg: false },
-      { key: 'Pressure',      label: 'Pressure',    hasKg: false },
+      { key: 'Conta_WR3',     label: 'Conta',       hasKg: true },
+      { key: 'Pressure',      label: 'Pressure',    hasKg: true },
           ],
   },
   {
@@ -144,8 +144,8 @@ export const STATIONS = [
     name: 'Water Rinse 4',
     chemical: 'DI Water Rinse',
     params: [
-      { key: 'Conta_WR4', label: 'Conta',    hasKg: false },
-      { key: 'Pressure',  label: 'Pressure', hasKg: false },
+      { key: 'Conta_WR4', label: 'Conta',    hasKg: true },
+      { key: 'Pressure',  label: 'Pressure', hasKg: true },
       { key: 'WaterLevel_WR4', label: 'Water level', isOverflow: true, isOverflowType: true, hasKg: false },
     ],
   },
@@ -154,8 +154,8 @@ export const STATIONS = [
     name: 'Deionized Water Rinse',
     chemical: 'DI Water Rinse',
     params: [
-      { key: 'EC',       label: 'EC',        hasKg: false },
-      { key: 'FlowRate', label: 'Flow rate', hasKg: false },
+      { key: 'EC',       label: 'EC',        hasKg: true },
+      { key: 'FlowRate', label: 'Flow rate', hasKg: true },
     ],
   },
   {

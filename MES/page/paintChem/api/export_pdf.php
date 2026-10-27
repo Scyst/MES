@@ -43,47 +43,47 @@ $timeSlots = $shift === 'DAY'
 $stations = [
     1 => ['name' => 'Degreasing 1<br>6.3 Kg/pt-up',    'chem' => 'FC-TS008', 'params' => [
         ['key' => 'F_Al',        'label' => 'F.Al',        'std' => '10-12 pt',    'min' => '10',  'max' => '12',  'hasKg' => true,  'isOvf' => false],
-        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     2 => ['name' => 'Degreasing 2<br>12.4 Kg/pt-up',   'chem' => 'FC-TS008', 'params' => [
         ['key' => 'F_Al',        'label' => 'F.Al',        'std' => '10-12 pt',    'min' => '10',  'max' => '12',  'hasKg' => true,  'isOvf' => false],
-        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Temperature', 'label' => 'Temperature', 'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     3 => ['name' => 'Water Rinse 1', 'chem' => 'Water Rinse 1', 'params' => [
-        ['key' => 'Conta_WR1',      'label' => 'Conta',      'std' => '< 8.0 pt',    'min' => '-',   'max' => '8.0', 'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Conta_WR1',      'label' => 'Conta',      'std' => '< 8.0 pt',    'min' => '-',   'max' => '8.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     4 => ['name' => 'Water Rinse 2', 'chem' => 'Water Rinse 2', 'params' => [
-        ['key' => 'Conta_WR2',      'label' => 'Conta',      'std' => '< 1.0 pt',    'min' => '-',   'max' => '1.0', 'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Conta_WR2',      'label' => 'Conta',      'std' => '< 1.0 pt',    'min' => '-',   'max' => '1.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
         ['key' => 'WaterLevel_WR2', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
     ]],
     5 => ['name' => 'Surface Cond.<br>0.2 Kg/day', 'chem' => 'NT-4055<br>PL-XG<br>AD-4977', 'params' => [
-        ['key' => 'pH',             'label' => 'pH',         'std' => '9.0-11.0',    'min' => '9.0', 'max' => '11.0','hasKg' => false, 'isOvf' => false],
-        ['key' => 'TC',             'label' => 'T.C',        'std' => '2.0-4.0 pt',  'min' => '2.0', 'max' => '4.0', 'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'pH',             'label' => 'pH',         'std' => '9.0-11.0',    'min' => '9.0', 'max' => '11.0','hasKg' => true, 'isOvf' => false],
+        ['key' => 'TC',             'label' => 'T.C',        'std' => '2.0-4.0 pt',  'min' => '2.0', 'max' => '4.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     6 => ['name' => 'Zinc Phosphate<br>1.1 Kg/pt-down<br>12.9 Kg/pt-up<br>1 Kg/pt-up', 'chem' => 'NT-4055<br>PB-LT5103 RF-1<br>AC-131<br>AJ-T6', 'params' => [
-        ['key' => 'Temperature',    'label' => 'Temperature',        'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Temperature',    'label' => 'Temperature',        'std' => '25-35 °C',    'min' => '25',  'max' => '35',  'hasKg' => true, 'isOvf' => false],
         ['key' => 'FA',             'label' => 'F.A.(Free Acid)',    'std' => '0.3-0.5 pt',  'min' => '0.3', 'max' => '0.5', 'hasKg' => true,  'isOvf' => false],
         ['key' => 'TA',             'label' => 'T.A.(Total Acidity)','std' => '23-25 pt',    'min' => '23',  'max' => '25',  'hasKg' => true,  'isOvf' => false],
         ['key' => 'AC',             'label' => 'A.C',                'std' => '2.0-4.0 pt',  'min' => '2.0', 'max' => '4.0', 'hasKg' => true,  'isOvf' => false],
-        ['key' => 'Pressure',       'label' => 'Pressure',           'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Pressure',       'label' => 'Pressure',           'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     7 => ['name' => 'Water Rinse 3', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'Conta_WR3',      'label' => 'Conta',      'std' => '< 5.0 pt',    'min' => '-',   'max' => '5.0', 'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Conta_WR3',      'label' => 'Conta',      'std' => '< 5.0 pt',    'min' => '-',   'max' => '5.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
             ]],
     8 => ['name' => 'Water Rinse 4', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'Conta_WR4',      'label' => 'Conta',      'std' => '< 0.5 pt',    'min' => '-',   'max' => '0.5', 'hasKg' => false, 'isOvf' => false],
-        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => false, 'isOvf' => false],
+        ['key' => 'Conta_WR4',      'label' => 'Conta',      'std' => '< 0.5 pt',    'min' => '-',   'max' => '0.5', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
         ['key' => 'WaterLevel_WR4', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
     ]],
     9 => ['name' => 'Deionized<br>Water Rinse', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => false, 'isOvf' => false],
-        ['key' => 'FlowRate',       'label' => 'Flow rate',  'std' => '> 1.5 m3/hr', 'min' => '1.5', 'max' => '-',   'hasKg' => false, 'isOvf' => false],
+        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => true, 'isOvf' => false],
+        ['key' => 'FlowRate',       'label' => 'Flow rate',  'std' => '> 1.5 m3/hr', 'min' => '1.5', 'max' => '-',   'hasKg' => true, 'isOvf' => false],
     ]],
 ];
 

@@ -18,7 +18,7 @@ export default function SheetHeader({
   date, shift, slotExtras, previousNotes,
   onDateChange, onShiftChange, onExtraChange, onExtraBlur, onUnlockClick,
   sheetStatus, disabled, isTimeLocked, canUnlock, onHistoryClick, selectedSlot, onSlotChange, timeSlots,
-  viewMode, onViewModeChange,
+  viewMode, onViewModeChange, isOnline = true,
 }) {
   const speedOutOfRange = isOutOfRange('ConveyorSpeed', slotExtras.conveyorSpeed);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -96,7 +96,7 @@ export default function SheetHeader({
               <input type="date" className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 w-full sm:w-44"
                 value={date}
                 onChange={(e) => onDateChange(e.target.value)}
-                disabled={disabled}
+                disabled={!isOnline}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -107,7 +107,7 @@ export default function SheetHeader({
                 <button
                   type="button"
                   onClick={() => onShiftChange('DAY')}
-                  disabled={disabled}
+                  disabled={!isOnline}
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
                     shift === 'DAY'
                       ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
@@ -119,7 +119,7 @@ export default function SheetHeader({
                 <button
                   type="button"
                   onClick={() => onShiftChange('NIGHT')}
-                  disabled={disabled}
+                  disabled={!isOnline}
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all whitespace-nowrap ${
                     shift === 'NIGHT'
                       ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'

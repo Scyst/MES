@@ -320,6 +320,7 @@ export default function PaintChemEntryPage() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         disabled={isReadOnly || !isOnline}
+        isOnline={isOnline}
       />
 
       {viewMode === 'card' ? (
@@ -333,6 +334,7 @@ export default function PaintChemEntryPage() {
             slotValues={slotValues[station.no]}
             onChange={handleValueChange}
             disabled={isReadOnly || !isOnline}
+        isOnline={isOnline}
           />
         ))}
         {/* Station 12: Note */}
@@ -376,6 +378,7 @@ export default function PaintChemEntryPage() {
           slotValues={slotValues}
           onChange={handleValueChange}
           disabled={isReadOnly || !isOnline}
+        isOnline={isOnline}
         />
       )}
 

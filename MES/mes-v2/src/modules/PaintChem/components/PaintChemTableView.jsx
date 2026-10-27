@@ -61,7 +61,16 @@ function ReadOnlyValue({ value, isOutOfRangeValue = false }) {
   );
 }
 
-function NumberCell({ isEditing, value, onValueChange, disabled, outOfRange = false, placeholder = '' }) {
+function NumberCell({
+  isEditing,
+  value,
+  onValueChange,
+  disabled,
+  outOfRange = false,
+  placeholder = '',
+  onFocus,
+  onKeyDown,
+}) {
   if (!isEditing) return <ReadOnlyValue value={value} isOutOfRangeValue={outOfRange} />;
   return (
     <input
@@ -76,6 +85,8 @@ function NumberCell({ isEditing, value, onValueChange, disabled, outOfRange = fa
       value={value}
       placeholder={placeholder}
       onChange={(event) => onValueChange(event.target.value)}
+      onFocus={onFocus}
+      onKeyDown={onKeyDown}
       disabled={disabled}
     />
   );
@@ -85,6 +96,31 @@ function NumberCell({ isEditing, value, onValueChange, disabled, outOfRange = fa
 export default function PaintChemTableView({
   timeSlots = [], selectedSlot, onSlotChange, allLogs = [], slotValues = {}, onChange, disabled,
 }) {
+  const handleCellFocus = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const bottomBarHeight = 90;
+    const topBarHeight = 140;
+    const viewportHeight = window.innerHeight;
+    if (rect.bottom > viewportHeight - bottomBarHeight || rect.top < topBarHeight) {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+  };
+
+  const handleCellKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const table = e.target.closest('table');
+      if (!table) return;
+      const focusables = Array.from(
+        table.querySelectorAll('input:not([disabled]), button:not([disabled])')
+      );
+      const currentIndex = focusables.indexOf(e.target);
+      if (currentIndex >= 0 && currentIndex < focusables.length - 1) {
+        focusables[currentIndex + 1].focus();
+      }
+    }
+  };
+
   const getValue = (slot, stationNo, paramKey, field) =>
     slot === selectedSlot
       ? (field === 'isOverflow'
@@ -194,6 +230,8 @@ export default function PaintChemTableView({
                                 type="button"
                                 disabled={disabled}
                                 onClick={() => handleChange('isOverflow')(isPass ? null : true)}
+                                onFocus={handleCellFocus}
+                                onKeyDown={handleCellKeyDown}
                                 className={`w-full h-8 px-1 text-center text-xs font-medium rounded border transition-colors select-none ${
                                   isPass
                                     ? 'bg-green-600 border-green-600 text-white shadow-sm'
@@ -214,6 +252,8 @@ export default function PaintChemTableView({
                                 type="button"
                                 disabled={disabled}
                                 onClick={() => handleChange('isOverflow')(isFail ? null : false)}
+                                onFocus={handleCellFocus}
+                                onKeyDown={handleCellKeyDown}
                                 className={`w-full h-8 px-1 text-center text-xs font-medium rounded border transition-colors select-none ${
                                   isFail
                                     ? 'bg-red-600 border-red-600 text-white shadow-sm'
@@ -241,16 +281,19 @@ export default function PaintChemTableView({
                       return [
                         <td key={`${slot}-b`} className={`border-r border-gray-100 dark:border-gray-800 px-1 py-1.5 ${tint}`}>
                           <NumberCell isEditing={isEditing} value={beforeValue} outOfRange={beforeOutOfRange}
-                            onValueChange={handleChange('before')} disabled={disabled} />
+                            onValueChange={handleChange('before')} disabled={disabled}
+                            onFocus={handleCellFocus} onKeyDown={handleCellKeyDown} />
                         </td>,
                         <td key={`${slot}-a`} className={`border-r border-gray-100 dark:border-gray-800 px-1 py-1.5 ${tint}`}>
                           <NumberCell isEditing={isEditing} value={afterValue}
-                            onValueChange={handleChange('after')} disabled={disabled} />
+                            onValueChange={handleChange('after')} disabled={disabled}
+                            onFocus={handleCellFocus} onKeyDown={handleCellKeyDown} />
                         </td>,
                         <td key={`${slot}-k`} className={`${CELL_BORDER} px-1 py-1.5 ${param.hasKg ? tint : 'bg-gray-50 dark:bg-gray-900/40'}`}>
                           {param.hasKg && (
                             <NumberCell isEditing={isEditing} value={kgValue}
-                              onValueChange={handleChange('kg')} disabled={disabled} placeholder="0.00" />
+                              onValueChange={handleChange('kg')} disabled={disabled} placeholder="0.00"
+                              onFocus={handleCellFocus} onKeyDown={handleCellKeyDown} />
                           )}
                         </td>,
                       ];
