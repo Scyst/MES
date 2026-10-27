@@ -137,8 +137,7 @@ export const STATIONS = [
     params: [
       { key: 'Conta_WR3',     label: 'Conta',       hasKg: false },
       { key: 'Pressure',      label: 'Pressure',    hasKg: false },
-      { key: 'WaterLevel_WR3',label: 'Water level', isOverflow: true, isOverflowType: true, hasKg: false },
-    ],
+          ],
   },
   {
     no: 8,
@@ -147,6 +146,7 @@ export const STATIONS = [
     params: [
       { key: 'Conta_WR4', label: 'Conta',    hasKg: false },
       { key: 'Pressure',  label: 'Pressure', hasKg: false },
+      { key: 'WaterLevel_WR4', label: 'Water level', isOverflow: true, isOverflowType: true, hasKg: false },
     ],
   },
   {

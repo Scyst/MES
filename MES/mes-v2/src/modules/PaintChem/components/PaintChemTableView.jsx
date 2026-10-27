@@ -81,42 +81,6 @@ function NumberCell({ isEditing, value, onValueChange, disabled, outOfRange = fa
   );
 }
 
-function PassFailCell({ isEditing, value, onValueChange, disabled }) {
-  const isPass = value === true || value === 1 || value === '1';
-  const isFail = value === false || value === 0 || value === '0';
-
-  if (!isEditing) {
-    if (isPass) return <span className="block text-center text-xs font-medium text-green-600 dark:text-green-400">ผ่าน ✓</span>;
-    if (isFail) return <span className="block text-center text-xs font-medium text-red-600 dark:text-red-400">ไม่ผ่าน ✗</span>;
-    return <ReadOnlyValue value="" />;
-  }
-  const optionClass = (isActive, activeClass) =>
-    `flex-1 h-8 text-xs font-medium rounded border transition-colors disabled:opacity-60 ${
-      isActive
-        ? activeClass
-        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400'
-    }`;
-  return (
-    <div className="flex gap-1">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onValueChange(true)}
-        className={optionClass(isPass, 'bg-green-600 border-green-600 text-white')}
-      >
-        ผ่าน ✓
-      </button>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onValueChange(false)}
-        className={optionClass(isFail, 'bg-red-600 border-red-600 text-white')}
-      >
-        ไม่ผ่าน ✗
-      </button>
-    </div>
-  );
-}
 
 export default function PaintChemTableView({
   timeSlots = [], selectedSlot, onSlotChange, allLogs = [], slotValues = {}, onChange, disabled,
@@ -219,16 +183,55 @@ export default function PaintChemTableView({
                       const handleChange = (field) => (val) => onChange(station.no, param.key, field, val);
 
                       if (param.isOverflow || param.isOverflowType) {
-                        return (
-                          <td key={slot} colSpan={3} className={`${CELL_BORDER} px-1.5 py-1.5 align-middle ${tint}`}>
-                            <PassFailCell
-                              isEditing={isEditing}
-                              value={getValue(slot, station.no, param.key, 'isOverflow')}
-                              onValueChange={handleChange('isOverflow')}
-                              disabled={disabled}
-                            />
-                          </td>
-                        );
+                        const overflowVal = getValue(slot, station.no, param.key, 'isOverflow');
+                        const isPass = overflowVal === true || overflowVal === 1 || overflowVal === '1';
+                        const isFail = overflowVal === false || overflowVal === 0 || overflowVal === '0';
+
+                        return [
+                          <td key={`${slot}-pass`} className={`border-r border-gray-100 dark:border-gray-800 px-1 py-1.5 ${tint}`}>
+                            {isEditing ? (
+                              <button
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => handleChange('isOverflow')(isPass ? null : true)}
+                                className={`w-full h-8 px-1 text-center text-xs font-medium rounded border transition-colors select-none ${
+                                  isPass
+                                    ? 'bg-green-600 border-green-600 text-white shadow-sm'
+                                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                ผ่าน ✓
+                              </button>
+                            ) : (
+                              <span className={`block text-center text-xs tabular-nums ${isPass ? 'font-semibold text-green-600 dark:text-green-400' : isFail ? 'font-semibold text-red-600 dark:text-red-400' : 'text-gray-300 dark:text-gray-600'}`}>
+                                {isPass ? 'ผ่าน ✓' : isFail ? 'ไม่ผ่าน ✗' : '–'}
+                              </span>
+                            )}
+                          </td>,
+                          <td key={`${slot}-fail`} className={`border-r border-gray-100 dark:border-gray-800 px-1 py-1.5 ${tint}`}>
+                            {isEditing ? (
+                              <button
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => handleChange('isOverflow')(isFail ? null : false)}
+                                className={`w-full h-8 px-1 text-center text-xs font-medium rounded border transition-colors select-none ${
+                                  isFail
+                                    ? 'bg-red-600 border-red-600 text-white shadow-sm'
+                                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                ไม่ผ่าน ✗
+                              </button>
+                            ) : (
+                              <span className="block text-center text-xs tabular-nums text-gray-300 dark:text-gray-600">
+                                –
+                              </span>
+                            )}
+                          </td>,
+                          <td key={`${slot}-k`} className={`${CELL_BORDER} px-1 py-1.5 bg-gray-50 dark:bg-gray-900/40`}>
+                            {/* Empty for overflow */}
+                          </td>,
+                        ];
                       }
 
                       const beforeValue = getValue(slot, station.no, param.key, 'before');

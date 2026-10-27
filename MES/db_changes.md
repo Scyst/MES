@@ -4,6 +4,20 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-10-27 — Paint Chem Water Level Station Realignment (WR3 -> WR4)
+
+**Agent:** Antigravity  
+**Feature:** ปรับย้ายพารามิเตอร์ Water Level จากสถานี 7 (Water Rinse 3) ไปยังสถานี 8 (Water Rinse 4) ให้ตรงตามเอกสารตรวจสอบจริง พร้อมย้ายประวัติข้อมูลที่เคยบันทึกไว้ใน dbo.PAINT_CHEM_LOG จาก WaterLevel_WR3 (station 7) ไปเป็น WaterLevel_WR4 (station 8) จำนวน 121 แถว
+
+### Data Migration
+```sql
+UPDATE dbo.PAINT_CHEM_LOG
+SET station_no = 8, parameter_key = 'WaterLevel_WR4'
+WHERE station_no = 7 AND parameter_key = 'WaterLevel_WR3';
+```
+
+---
+
 ## 2026-10-24 — IQS Multi-Line Expansion (SPOT, BEND, PRESS) & Adaptive Criteria
 
 **Agent:** Antigravity  
