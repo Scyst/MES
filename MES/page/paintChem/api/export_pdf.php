@@ -108,7 +108,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
 <meta charset="UTF-8">
 <title>Paint Chem Check Sheet — <?php echo htmlspecialchars($logDate); ?> <?php echo $shift; ?></title>
 <style>
-  @media screen { html { zoom: 120%; } }
+  @media screen { html { zoom: 110%; } }
   @media print {
     html { zoom: 100%; }
     .no-print { display: none !important; }
@@ -124,17 +124,17 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
 
   body {
     font-family: 'TH Sarabun New', 'Sarabun', 'Arial', sans-serif;
-    font-size: 7pt;
+    font-size: 7.5pt;
     color: #000;
     background: #525659;   /* dark background = paper preview */
-    padding: 15px 0;
+    padding: 12px 0;
   }
 
   /* ===== PAPER CARD ===== */
   .page {
     width: 287mm;         /* A4L = 297mm minus 5mm*2 = 287mm */
     background: #fff;
-    margin: 0 auto 15px auto;
+    margin: 0 auto 12px auto;
     padding: 3mm 4mm;
     box-shadow: 0 4px 16px rgba(0,0,0,0.55);
     position: relative;
@@ -178,7 +178,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   }
   .doc-title {
     text-align: center;
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: bold;
     color: #1e3a5f;
     border-bottom: 2px solid #1e3a5f;
@@ -187,8 +187,8 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   .doc-title span { font-weight: 900; color: #b91c1c; }
   .doc-meta {
     text-align: right;
-    font-size: 7.5pt;
-    line-height: 1.5;
+    font-size: 8pt;
+    line-height: 1.6;
   }
   .meta-label { color: #555; }
   .meta-value { font-weight: bold; color: #000; }
@@ -198,31 +198,31 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 5.75pt;
+    font-size: 6pt;
     page-break-inside: avoid;
     break-inside: avoid;
   }
   table.main th,
   table.main td {
     border: 1px solid #374151;
-    padding: 2.2px 1.5px;
+    padding: 3px 1.5px;
     text-align: center;
     vertical-align: middle;
     word-break: break-word;
     overflow: hidden;
-    line-height: 1.15;
+    line-height: 1.25;
   }
   .bg-header {
     background-color: #1e3a5f;
     color: #fff;
     font-weight: bold;
-    font-size: 5.8pt;
+    font-size: 6.2pt;
   }
   .bg-sub {
     background-color: #dbeafe;
     color: #1e3a5f;
     font-weight: bold;
-    font-size: 5.4pt;
+    font-size: 5.8pt;
   }
   .oor { background-color: #fee2e2; color: #b91c1c; font-weight: bold; }
   .align-left { text-align: left; }
@@ -243,14 +243,14 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   table.footer-tbl {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 1.5mm;
-    font-size: 6pt;
+    margin-top: 2.5mm;
+    font-size: 6.5pt;
     page-break-inside: avoid;
     break-inside: avoid;
   }
   table.footer-tbl td, table.footer-tbl th {
     border: 1px solid #374151;
-    padding: 1.5px 3px;
+    padding: 2.5px 4px;
     vertical-align: middle;
   }
   .bg-std { background-color: #dbeafe; font-weight: bold; text-align: center; }
@@ -282,17 +282,17 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
       break-after: avoid !important;
     }
     table.main {
-      font-size: 5.5pt !important;
+      font-size: 6pt !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
     table.main th,
     table.main td {
-      padding: 1.8px 1.5px !important;
-      line-height: 1.15 !important;
+      padding: 3px 1.5px !important;
+      line-height: 1.25 !important;
     }
     table.footer-tbl {
-      margin-top: 1mm !important;
+      margin-top: 2mm !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
@@ -369,11 +369,11 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
       <tr>
         <?php if ($isFirst): ?>
         <td rowspan="<?php echo $rowspan; ?>" style="font-weight:bold;"><?php echo $sNo; ?></td>
-        <td rowspan="<?php echo $rowspan; ?>" style="text-align:left;font-size:5.5pt;"><?php echo $st['name']; ?></td>
-        <td rowspan="<?php echo $rowspan; ?>" style="text-align:left;font-size:5.5pt;"><?php echo $st['chem']; ?></td>
+        <td rowspan="<?php echo $rowspan; ?>" style="text-align:left;font-size:5.8pt;"><?php echo $st['name']; ?></td>
+        <td rowspan="<?php echo $rowspan; ?>" style="text-align:left;font-size:5.8pt;"><?php echo $st['chem']; ?></td>
         <?php endif; ?>
-        <td class="align-left" style="font-size:5.5pt;"><?php echo htmlspecialchars($p['label']); ?></td>
-        <td style="font-size:5.5pt;"><?php echo $p['std']; ?></td>
+        <td class="align-left" style="font-size:5.8pt;"><?php echo htmlspecialchars($p['label']); ?></td>
+        <td style="font-size:5.8pt;"><?php echo $p['std']; ?></td>
         <td><?php echo $p['min']; ?></td>
         <td><?php echo $p['max']; ?></td>
         <?php foreach ($timeSlots as $ts):
@@ -436,29 +436,29 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   <!-- ===== FOOTER / SIGNATURE SECTION ===== -->
   <table class="footer-tbl">
     <tr>
-      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:3px 5px;">
-        <div style="font-weight:bold; margin-bottom:2px; color:#1e3a5f; font-size:6.5pt;">Note.</div>
-        <div style="font-weight:normal; font-size:6pt; min-height:28px; line-height:1.2;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
+      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:4px 6px;">
+        <div style="font-weight:bold; margin-bottom:2px; color:#1e3a5f; font-size:7pt;">Note.</div>
+        <div style="font-weight:normal; font-size:6.5pt; min-height:42px; line-height:1.25;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
       </td>
-      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:3px;" class="bg-remark">
-        <div style="font-weight:bold; color:#1e3a5f; font-size:6.5pt;">Remark</div>
+      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:4px;" class="bg-remark">
+        <div style="font-weight:bold; color:#1e3a5f; font-size:7pt;">Remark</div>
       </td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:16px; padding:2px;">Prepared by</td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:16px; padding:2px;">Checked by</td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:16px; padding:2px;">Approved by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:18px; padding:2px;">Prepared by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:18px; padding:2px;">Checked by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:18px; padding:2px;">Approved by</td>
     </tr>
     <tr>
-      <td style="height:32px; text-align:center; vertical-align:bottom; padding-bottom:2px;">
-        <div style="margin-bottom:1px; color:#444;">...................................</div>
-        <div style="font-size:5.8pt; min-height:8px;"><?php echo htmlspecialchars($preparedBy); ?></div>
+      <td style="height:46px; text-align:center; vertical-align:bottom; padding-bottom:3px;">
+        <div style="margin-bottom:2px; color:#444;">...................................</div>
+        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($preparedBy); ?></div>
       </td>
-      <td style="height:32px; text-align:center; vertical-align:bottom; padding-bottom:2px;">
-        <div style="margin-bottom:1px; color:#444;">...................................</div>
-        <div style="font-size:5.8pt; min-height:8px;"><?php echo htmlspecialchars($checkedBy); ?></div>
+      <td style="height:46px; text-align:center; vertical-align:bottom; padding-bottom:3px;">
+        <div style="margin-bottom:2px; color:#444;">...................................</div>
+        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($checkedBy); ?></div>
       </td>
-      <td style="height:32px; text-align:center; vertical-align:bottom; padding-bottom:2px;">
-        <div style="margin-bottom:1px; color:#444;">...................................</div>
-        <div style="font-size:5.8pt; min-height:8px;"><?php echo htmlspecialchars($approvedBy); ?></div>
+      <td style="height:46px; text-align:center; vertical-align:bottom; padding-bottom:3px;">
+        <div style="margin-bottom:2px; color:#444;">...................................</div>
+        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($approvedBy); ?></div>
       </td>
     </tr>
   </table>
