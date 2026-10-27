@@ -96,6 +96,11 @@ foreach ($timeSlots as $ts) {
     if ($slotNote !== '') $noteLines[] = '[' . $ts . '] ' . $slotNote;
 }
 $noteText = implode("\n", $noteLines);
+$noteCount = count($noteLines);
+$noteLen = mb_strlen($noteText);
+$isMultiCol = ($noteCount >= 5 || $noteLen > 220);
+$noteFontSize = ($noteCount >= 7 || $noteLen > 300) ? '5.2pt' : (($noteCount >= 5 || $noteLen > 180) ? '5.8pt' : '6.5pt');
+$noteColStyle = $isMultiCol ? "column-count: 2; column-gap: 5mm; -webkit-column-count: 2; -webkit-column-gap: 5mm;" : "";
 $preparedBy = $header['prepared_by_name'] ?? '';
 $checkedBy  = $header['checked_by_name'] ?? '';
 $approvedBy = $header['approved_by_name'] ?? '';
@@ -499,7 +504,15 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
       <tbody>
         <tr class="sig-row">
           <td class="note-cell">
-            <div style="font-size:6.5pt; line-height:1.25;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
+            <div style="font-size:<?php echo $noteFontSize; ?>; line-height:1.2; <?php echo $noteColStyle; ?>">
+              <?php if (empty($noteLines)): ?>
+                &nbsp;
+              <?php else: ?>
+                <?php foreach ($noteLines as $nl): ?>
+                  <div style="break-inside: avoid; -webkit-column-break-inside: avoid; margin-bottom: 2px;"><?php echo htmlspecialchars($nl); ?></div>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </div>
           </td>
           <td class="remark-cell bg-remark"></td>
           <td>
