@@ -13,7 +13,7 @@ export const courses = [
     subCategories: ["ทักษะวิชาชีพขั้นสูง","วิศวกรรมเครื่องจักรและแม่พิมพ์","มาตรฐานสากลและการตรวจประเมิน"],
     tags: ["PPAP","PFMEA","AIAG-VDA","Q-Points","Traceability","Maintenance","CTQ"],
     isFeatured: true,
-    featuredBadge: "🏆 CORE AUTOMOTIVE QUALITY",
+    featuredBadge: "⭐ หลักสูตรแนะนำ · AUTOMOTIVE QUALITY",
     level: "Level 3 (Certified Specialist)",
     isPublicEligible: true,
     modules: [
@@ -479,7 +479,7 @@ export const courses = [
     subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","ระบบอัตโนมัติและ AI","เปิดรับรองบุคคลภายนอก","การควบคุมคุณภาพ"],
     tags: ["Machine Vision","AI","YOLO","OpenCV","Smart Factory","Lighting","Optics"],
     isFeatured: true,
-    featuredBadge: "🚀 SMART FACTORY AI · 30 HOURS",
+    featuredBadge: "⭐ หลักสูตรแนะนำ · SMART FACTORY AI",
     level: "Level 4 (Certified Expert)",
     isPublicEligible: true,
     modules: [
@@ -725,7 +725,7 @@ export const courses = [
     subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","เปิดรับรองบุคคลภายนอก","คณิตศาสตร์และการคำนวณ"],
     tags: ["Robot","Kinematics","10 Skills","Palletizing","ISO 10218","Yaskawa","ABB"],
     isFeatured: true,
-    featuredBadge: "🌟 FLAGSHIP ROBOTICS · 10 SKILLS",
+    featuredBadge: "⭐ หลักสูตรแนะนำ · 10 SKILLS",
     level: "Level 4 (Certified Expert)",
     isPublicEligible: true,
     modules: [

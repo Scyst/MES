@@ -58,20 +58,22 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        {/* Brand / Logo */}
-        <Link 
-          to="/" 
-          className="flex items-center gap-2.5 text-fuchsia-400 font-black text-lg sm:text-xl hover:text-fuchsia-300 transition-colors flex-shrink-0"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-fuchsia-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-fuchsia-600/30">
-            <FiBook className="text-xl" />
-          </div>
-          <span className="hidden xs:inline tracking-tight">MES Learning Hub</span>
-        </Link>
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Left Side: Brand Logo + Navigation Tabs */}
+        <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 min-w-0">
+          {/* Brand / Logo */}
+          <Link 
+            to="/" 
+            className="flex items-center gap-2.5 text-fuchsia-400 font-black text-lg sm:text-xl hover:text-fuchsia-300 transition-colors flex-shrink-0"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-fuchsia-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-fuchsia-600/30">
+              <FiBook className="text-xl" />
+            </div>
+            <span className="hidden xs:inline tracking-tight font-sans">MES Learning Hub</span>
+          </Link>
 
-        {/* Center Navigation Tabs */}
-        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Navigation Tabs (Anchored to Left) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-1">
           <NavLink 
             to="/" 
             end
@@ -150,6 +152,7 @@ export default function Navbar() {
               <FiLock className="w-3 h-3 text-amber-500 opacity-80" title="เฉพาะพนักงานที่เข้าสู่ระบบ MES" />
             )}
           </NavLink>
+        </div>
         </div>
 
         {/* Right User Status & Actions */}

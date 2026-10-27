@@ -374,10 +374,12 @@ export default function Catalog() {
       }`}>
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30">
-              MES LEARNING & SKILL MATRIX
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30">
+              MES LEARNING HUB
             </span>
-            <span className="text-xs text-slate-500 font-mono">ISO 9001:2015 Clause 7.2</span>
+            <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              คลังบทเรียนและประเมินสมรรถนะ
+            </span>
           </div>
           <h1 className={`text-xl sm:text-2xl font-black tracking-tight ${
             isDark ? 'text-white' : 'text-slate-900'
@@ -423,10 +425,10 @@ export default function Catalog() {
             <h2 className={`text-xs font-bold uppercase tracking-wider ${
               isDark ? 'text-amber-400' : 'text-amber-600'
             }`}>
-              หลักสูตรเรือธงแนะนำพิเศษ (Flagship Masterclasses)
+              หลักสูตรแนะนำ (Recommended Courses)
             </h2>
           </div>
-          <span className="text-[11px] text-slate-400 font-mono">Level 4 Certified Ready</span>
+          <span className="text-[11px] text-slate-400 font-medium">ระดับช่างเทคนิค & วิศวกร (Level 4 Expert Ready)</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -464,7 +466,7 @@ export default function Catalog() {
                           : 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
                       }`}>
                         <FiStar className="w-3 h-3 text-amber-400" />
-                        <span>{course.featuredBadge || 'FLAGSHIP'}</span>
+                        <span>{course.featuredBadge || '⭐ แนะนำพิเศษ'}</span>
                       </span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                         isDark ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-white text-slate-700 border-slate-200'
