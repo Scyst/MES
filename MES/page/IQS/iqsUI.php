@@ -231,7 +231,7 @@ $canEdit = hasRole(['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc']);
                                             <th style="width: 140px;">ผู้ทดสอบ</th>
                                             <th style="width: 130px;">ผลสรุป</th>
                                             <th style="width: 110px;">สถานะ</th>
-                                            <th class="text-center" style="width: 190px;">เอกสาร Check Sheet</th>
+                                            <th class="text-center" style="width: 200px; min-width: 200px;">เอกสาร Check Sheet</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">

@@ -77,11 +77,10 @@ body {
 }
 
 .iqs-container {
-    max-width: 1200px;
+    max-width: 100% !important;
     width: 100%;
-    margin: 0 auto;
+    margin: 0;
     padding-bottom: 90px;
-    overflow-x: hidden !important;
     box-sizing: border-box !important;
 }
 
@@ -1061,8 +1060,8 @@ body {
     bottom: 16px;
     left: 16px;
     right: 16px;
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     z-index: 1000;
     background: var(--iqs-glass-bg);
     backdrop-filter: blur(16px);
@@ -1075,6 +1074,13 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+}
+
+@media (min-width: 1200px) {
+    .bottom-submit-bar {
+        left: calc(70px + 16px);
+        right: 16px;
+    }
 }
 
 @media (max-width: 576px) {
