@@ -258,9 +258,22 @@ export default function Catalog() {
 
         <div className="card-content p-4 sm:p-5 flex flex-col justify-between flex-1">
           <div>
-            {/* Sub-Category Tags (first 2) */}
+            <h3 className={`card-title text-base font-bold mb-2 line-clamp-2 min-h-[2.75rem] leading-snug transition-colors ${
+              isDark ? 'text-white group-hover:text-fuchsia-400' : 'text-slate-900 group-hover:text-fuchsia-600'
+            }`}>
+              {course.title}
+            </h3>
+            <p className={`card-desc text-xs line-clamp-2 mb-3 leading-relaxed ${
+              isDark ? 'text-slate-400' : 'text-slate-600'
+            }`}>
+              {course.description}
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Sub-Category Tags (moved to bottom above metadata) */}
             {course.subCategories && course.subCategories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {course.subCategories.slice(0, 2).map((sc, i) => (
                   <span 
                     key={i} 
@@ -284,20 +297,7 @@ export default function Catalog() {
               </div>
             )}
 
-            <h3 className={`card-title text-base font-bold mb-2 line-clamp-2 leading-snug transition-colors ${
-              isDark ? 'text-white group-hover:text-fuchsia-400' : 'text-slate-900 group-hover:text-fuchsia-600'
-            }`}>
-              {course.title}
-            </h3>
-            <p className={`card-desc text-xs line-clamp-2 mb-4 leading-relaxed ${
-              isDark ? 'text-slate-400' : 'text-slate-600'
-            }`}>
-              {course.description}
-            </p>
-          </div>
-
-          <div>
-            <div className={`card-meta flex items-center justify-between text-xs font-medium mb-3 ${
+            <div className={`card-meta flex items-center justify-between text-xs font-medium ${
               isDark ? 'text-slate-400' : 'text-slate-500'
             }`}>
               <span className="flex items-center gap-1 truncate max-w-[55%]">
