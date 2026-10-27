@@ -155,8 +155,8 @@ export const STATIONS = [
     name: 'Deionized Water Rinse',
     chemical: 'DI Water Rinse',
     params: [
-      { key: 'EC',       label: 'EC',        hasKg: true },
       { key: 'pH_DI',    label: 'pH',        hasKg: true },
+      { key: 'EC',       label: 'EC',        hasKg: true },
       { key: 'FlowRate', label: 'Flow rate', hasKg: true },
     ],
   },

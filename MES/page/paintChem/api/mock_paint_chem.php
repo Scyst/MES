@@ -74,7 +74,7 @@ $paramConfigs = [
     6 => ['Temperature' => [25, 35], 'FA' => [0.3, 0.5], 'TA' => [23, 25], 'AC' => [2, 4], 'Pressure' => [0.4, 0.8]],
     7 => ['Conta_WR3' => [6.0, 7.5], 'Pressure' => [0.4, 0.8]],
     8 => ['Conta_WR4' => [6.0, 7.5], 'Pressure' => [0.4, 0.8], 'WaterLevel_WR4' => ['OK', 'OK']],
-    9 => ['EC' => [1, 10], 'pH_DI' => [6.0, 7.5], 'FlowRate' => [1.5, 3]],
+    9 => ['pH_DI' => [6.0, 7.5], 'EC' => [1, 10], 'FlowRate' => [1.5, 3]],
     10=> ['BakeOvenTemp' => [175, 220], 'DryOvenTemp' => [140, 160], 'ConveyorSpeed' => [2.5, 5.0]]
 ];
 

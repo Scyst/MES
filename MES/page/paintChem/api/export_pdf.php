@@ -82,8 +82,8 @@ $stations = [
         ['key' => 'WaterLevel_WR4', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
     ]],
     9 => ['name' => 'Deionized<br>Water Rinse', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => true, 'isOvf' => false],
         ['key' => 'pH_DI',          'label' => 'pH',         'std' => '-',           'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
+        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => true, 'isOvf' => false],
         ['key' => 'FlowRate',       'label' => 'Flow rate',  'std' => '> 1.5 m3/hr', 'min' => '1.5', 'max' => '-',   'hasKg' => true, 'isOvf' => false],
     ]],
 ];
@@ -108,11 +108,17 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
 <meta charset="UTF-8">
 <title>Paint Chem Check Sheet — <?php echo htmlspecialchars($logDate); ?> <?php echo $shift; ?></title>
 <style>
-  @media screen { html { zoom: 122%; } }
-  @media print { html { zoom: 100%; } .no-print { display: none !important; } }
+  @media screen { html { zoom: 120%; } }
+  @media print {
+    html { zoom: 100%; }
+    .no-print { display: none !important; }
+  }
 
   /* ===== PAGE SETUP ===== */
-  @page { size: A4 landscape; margin: 8mm 7mm 8mm 7mm; }
+  @page {
+    size: A4 landscape;
+    margin: 4mm 5mm 4mm 5mm;
+  }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -121,18 +127,19 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     font-size: 7pt;
     color: #000;
     background: #525659;   /* dark background = paper preview */
-    padding: 20px 0;
+    padding: 15px 0;
   }
 
   /* ===== PAPER CARD ===== */
   .page {
-    width: 283mm;         /* A4L = 297mm, minus margins 7+7 = 283mm */
-    min-height: 200mm;
+    width: 287mm;         /* A4L = 297mm minus 5mm*2 = 287mm */
     background: #fff;
-    margin: 0 auto 20px auto;
-    padding: 5mm 5mm 5mm 5mm;
+    margin: 0 auto 15px auto;
+    padding: 3mm 4mm;
     box-shadow: 0 4px 16px rgba(0,0,0,0.55);
     position: relative;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   /* ===== PRINT BUTTON ===== */
@@ -143,12 +150,12 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     z-index: 9999;
   }
   .no-print button {
-    padding: 9px 20px;
+    padding: 8px 18px;
     background: #1d4ed8;
     color: #fff;
     border: none;
     border-radius: 5px;
-    font-size: 12pt;
+    font-size: 11pt;
     font-family: 'TH Sarabun New','Sarabun',Arial,sans-serif;
     font-weight: bold;
     cursor: pointer;
@@ -160,11 +167,11 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   .doc-header {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 3mm;
+    margin-bottom: 2mm;
   }
   .doc-header td { vertical-align: middle; padding: 0 2mm; }
   .company-name {
-    font-size: 18pt;
+    font-size: 16pt;
     font-weight: 900;
     color: #b91c1c;
     letter-spacing: 1px;
@@ -174,14 +181,14 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     font-size: 11pt;
     font-weight: bold;
     color: #1e3a5f;
-    border-bottom: 2.5px solid #1e3a5f;
-    padding-bottom: 2px;
+    border-bottom: 2px solid #1e3a5f;
+    padding-bottom: 1px;
   }
   .doc-title span { font-weight: 900; color: #b91c1c; }
   .doc-meta {
     text-align: right;
     font-size: 7.5pt;
-    line-height: 1.7;
+    line-height: 1.5;
   }
   .meta-label { color: #555; }
   .meta-value { font-weight: bold; color: #000; }
@@ -191,34 +198,36 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 6pt;
+    font-size: 5.75pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   table.main th,
   table.main td {
     border: 1px solid #374151;
-    padding: 3.5px 2px;
+    padding: 2.2px 1.5px;
     text-align: center;
     vertical-align: middle;
     word-break: break-word;
     overflow: hidden;
-    line-height: 1.25;
+    line-height: 1.15;
   }
   .bg-header {
     background-color: #1e3a5f;
     color: #fff;
     font-weight: bold;
-    font-size: 6pt;
+    font-size: 5.8pt;
   }
   .bg-sub {
     background-color: #dbeafe;
     color: #1e3a5f;
     font-weight: bold;
-    font-size: 5.5pt;
+    font-size: 5.4pt;
   }
   .oor { background-color: #fee2e2; color: #b91c1c; font-weight: bold; }
   .align-left { text-align: left; }
 
-  /* ===== COLUMN WIDTHS (total 283mm - 10mm padding = 273mm) ===== */
+  /* ===== COLUMN WIDTHS (total 287mm - 8mm padding = 279mm) ===== */
   col.c-no    { width: 7mm;  }
   col.c-proc  { width: 18mm; }
   col.c-chem  { width: 16mm; }
@@ -226,39 +235,67 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   col.c-std   { width: 13mm; }
   col.c-min   { width: 6mm;  }
   col.c-max   { width: 6mm;  }
-  /* remaining = 273 - 7-20-17-18-14-6-6 = 185mm / 18 sub-cols ≈ 10.3mm each */
-  col.c-bf    { width: 10.5mm; }
-  col.c-af    { width: 10.5mm; }
-  col.c-kg    { width: 10.5mm; }
+  col.c-bf    { width: 10.8mm; }
+  col.c-af    { width: 10.8mm; }
+  col.c-kg    { width: 10.8mm; }
 
   /* ===== OVEN / FOOTER SECTION ===== */
   table.footer-tbl {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 2mm;
-    font-size: 6.5pt;
+    margin-top: 1.5mm;
+    font-size: 6pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   table.footer-tbl td, table.footer-tbl th {
     border: 1px solid #374151;
-    padding: 2px 4px;
+    padding: 1.5px 3px;
     vertical-align: middle;
   }
-  .sig-line { height: 30px; }
   .bg-std { background-color: #dbeafe; font-weight: bold; text-align: center; }
   .bg-remark { background-color: #f0f9ff; font-weight: bold; text-align: center; }
 
   /* ===== PRINT OVERRIDES ===== */
   @media print {
-    body { background: white !important; padding: 0 !important; }
+    html, body {
+      width: 100% !important;
+      height: 100% !important;
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
     .no-print { display: none !important; }
     .page {
       width: 100% !important;
+      max-width: 100% !important;
       margin: 0 !important;
-      padding: 5mm !important;
+      padding: 2mm 3mm !important;
       box-shadow: none !important;
       min-height: auto !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      break-after: avoid !important;
     }
-    table.main { font-size: 5.5pt !important; }
+    table.main {
+      font-size: 5.5pt !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    table.main th,
+    table.main td {
+      padding: 1.8px 1.5px !important;
+      line-height: 1.15 !important;
+    }
+    table.footer-tbl {
+      margin-top: 1mm !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
   }
 </style>
 </head>
@@ -399,29 +436,29 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   <!-- ===== FOOTER / SIGNATURE SECTION ===== -->
   <table class="footer-tbl">
     <tr>
-      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:6px;">
-        <div style="font-weight:bold; margin-bottom:4px; color:#1e3a5f;">Note.</div>
-        <div style="font-weight:normal; font-size:6.5pt; min-height:55px;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
+      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:3px 5px;">
+        <div style="font-weight:bold; margin-bottom:2px; color:#1e3a5f; font-size:6.5pt;">Note.</div>
+        <div style="font-weight:normal; font-size:6pt; min-height:28px; line-height:1.2;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
       </td>
-      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:6px;" class="bg-remark">
-        <div style="font-weight:bold; color:#1e3a5f;">Remark</div>
+      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:3px;" class="bg-remark">
+        <div style="font-weight:bold; color:#1e3a5f; font-size:6.5pt;">Remark</div>
       </td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:25px;">Prepared by</td>
-      <td width="14%" style="text-align:center; font-weight:bold;">Checked by</td>
-      <td width="14%" style="text-align:center; font-weight:bold;">Approved by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:16px; padding:2px;">Prepared by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:16px; padding:2px;">Checked by</td>
+      <td width="14%" style="text-align:center; font-weight:bold; height:16px; padding:2px;">Approved by</td>
     </tr>
     <tr>
-      <td style="height:55px; text-align:center; vertical-align:bottom; padding-bottom:5px;">
-        <div style="margin-bottom:2px;">...................................</div>
-        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($preparedBy); ?></div>
+      <td style="height:32px; text-align:center; vertical-align:bottom; padding-bottom:2px;">
+        <div style="margin-bottom:1px; color:#444;">...................................</div>
+        <div style="font-size:5.8pt; min-height:8px;"><?php echo htmlspecialchars($preparedBy); ?></div>
       </td>
-      <td style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
-        <div style="margin-bottom:2px;">...................................</div>
-        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($checkedBy); ?></div>
+      <td style="height:32px; text-align:center; vertical-align:bottom; padding-bottom:2px;">
+        <div style="margin-bottom:1px; color:#444;">...................................</div>
+        <div style="font-size:5.8pt; min-height:8px;"><?php echo htmlspecialchars($checkedBy); ?></div>
       </td>
-      <td style="text-align:center; vertical-align:bottom; padding-bottom:5px;">
-        <div style="margin-bottom:2px;">...................................</div>
-        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($approvedBy); ?></div>
+      <td style="height:32px; text-align:center; vertical-align:bottom; padding-bottom:2px;">
+        <div style="margin-bottom:1px; color:#444;">...................................</div>
+        <div style="font-size:5.8pt; min-height:8px;"><?php echo htmlspecialchars($approvedBy); ?></div>
       </td>
     </tr>
   </table>
