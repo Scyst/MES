@@ -14,6 +14,19 @@ if (!defined('SYSTEM_INJECTION_LOADED')) {
 require_once __DIR__ . '/../../auth/check_auth.php';
 require_once __DIR__ . '/../db.php';
 
+// Strict Authentication & Authorization for Audit Check Sheet
+$currentUser = $_SESSION['user'] ?? null;
+$userId = (int)($currentUser['id'] ?? 0);
+$userRole = strtolower($currentUser['role'] ?? '');
+$authorizedRoles = ['creator', 'admin', 'supervisor', 'operator', 'qa', 'qc', 'manager', 'management', 'engineer'];
+
+if (empty($currentUser) || empty($userId) || !in_array($userRole, $authorizedRoles)) {
+    $current_url = $_SERVER['REQUEST_URI'];
+    $loginUrl = function_exists('getMesBaseUrl') ? getMesBaseUrl() . '/auth/login_form.php' : '/iot-toolbox/sandbox-b9/MES/MES/auth/login_form.php';
+    header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
+    exit;
+}
+
 // 1. Parameter extraction with fallback support
 $roundId = (int)($_GET['round_id'] ?? 0);
 $logDate = trim($_GET['date'] ?? '');

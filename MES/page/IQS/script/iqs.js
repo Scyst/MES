@@ -1002,7 +1002,7 @@ const IQS = {
             rounds.forEach(r => {
                 // Unified Status Badge (Soft, readable, rounded pill)
                 let statusBadge = '';
-                if (r.status === 'SUBMITTED') {
+                if (r.status === 'SUBMITTED' || r.status === 'COMPLETED') {
                     statusBadge = '<span class="badge-status badge-status-submitted"><i class="fas fa-check-circle me-1"></i>สมบูรณ์</span>';
                 } else if (r.status === 'COMPLETED_WITH_NG') {
                     statusBadge = '<span class="badge-status badge-status-ng"><i class="fas fa-exclamation-circle me-1"></i>พบ NG</span>';
