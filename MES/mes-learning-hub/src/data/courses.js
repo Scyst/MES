@@ -10,6 +10,12 @@ export const courses = [
     duration: '6 hours',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","วิศวกรรมเครื่องจักรและแม่พิมพ์","มาตรฐานสากลและการตรวจประเมิน"],
+    tags: ["PPAP","PFMEA","AIAG-VDA","Q-Points","Traceability","Maintenance","CTQ"],
+    isFeatured: true,
+    featuredBadge: "🏆 CORE AUTOMOTIVE QUALITY",
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -53,6 +59,11 @@ export const courses = [
     duration: '3.5 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
     image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
+    subCategories: ["มาตรฐานสากลและการตรวจประเมิน","เปิดรับรองบุคคลภายนอก"],
+    tags: ["ISO 9001","Quality Management","HLS","DCC","Risk Management","Audit"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -84,6 +95,11 @@ export const courses = [
     duration: '3 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
     image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
+    subCategories: ["มาตรฐานสากลและการตรวจประเมิน","สิ่งแวดล้อมและความปลอดภัย"],
+    tags: ["ISO 14001","Environment","Net Zero","Carbon Footprint","EMS"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -115,6 +131,11 @@ export const courses = [
     duration: '3 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
     image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
+    subCategories: ["มาตรฐานสากลและการตรวจประเมิน","สิ่งแวดล้อมและความปลอดภัย"],
+    tags: ["ISO 45001","OH&S","Safety","Hazard Assessment","Emergency"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -146,6 +167,11 @@ export const courses = [
     duration: '2.5 hours',
     category: 'ขั้นตอนการทำงานและระบบมาตรฐาน',
     image: CATEGORY_OFFLINE_IMAGES['ขั้นตอนการทำงานและระบบมาตรฐาน'],
+    subCategories: ["มาตรฐานสากลและการตรวจประเมิน","การสอบเทียบและห้องปฏิบัติการ"],
+    tags: ["ISO 17025","Laboratory","Calibration","Measurement Uncertainty"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -179,6 +205,11 @@ export const courses = [
     duration: '5.5 hours',
     category: 'การตรวจโรงงานและเอกสารลูกค้า',
     image: CATEGORY_OFFLINE_IMAGES['การตรวจโรงงานและเอกสารลูกค้า'],
+    subCategories: ["มาตรฐานสากลและการตรวจประเมิน","การตรวจรับรองลูกค้าสากล"],
+    tags: ["Customer Audit","ESG","Compliance","Audit Defense","Global Standards"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: false,
     modules: [
       {
         id: 'm1',
@@ -222,6 +253,11 @@ export const courses = [
     duration: '5 hours',
     category: 'กรณีศึกษาหน้างานจริง',
     image: CATEGORY_OFFLINE_IMAGES['กรณีศึกษาหน้างานจริง'],
+    subCategories: ["ปฏิบัติการหน้างานจริง","มาตรฐานสากลและการตรวจประเมิน"],
+    tags: ["Live QA","Shopfloor","Non-Conformance","CAPA","Problem Solving"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: false,
     modules: [
       {
         id: 'm1',
@@ -397,6 +433,11 @@ export const courses = [
     duration: '24 hours (4 days)',
     category: 'โปรแกรมและระบบดิจิทัล',
     image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    subCategories: ["ระบบอัตโนมัติและดิจิทัล","สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม"],
+    tags: ["MES","Full-Stack","UI/UX","API","IT-OT","Security"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -435,6 +476,12 @@ export const courses = [
     duration: '30 hours (5 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","ระบบอัตโนมัติและ AI","เปิดรับรองบุคคลภายนอก","การควบคุมคุณภาพ"],
+    tags: ["Machine Vision","AI","YOLO","OpenCV","Smart Factory","Lighting","Optics"],
+    isFeatured: true,
+    featuredBadge: "🚀 SMART FACTORY AI · 30 HOURS",
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -488,6 +535,11 @@ export const courses = [
     duration: '36 hours (6 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","วิศวกรรมเครื่องจักรและแม่พิมพ์","เปิดรับรองบุคคลภายนอก"],
+    tags: ["CAD","CAM","Mold & Die","Toolpath","CNC","G-code"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -531,6 +583,11 @@ export const courses = [
     duration: '30 hours (5 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","วิศวกรรมเครื่องจักรและแม่พิมพ์","ปฏิบัติการหน้างานจริง","เปิดรับรองบุคคลภายนอก"],
+    tags: ["CNC","Milling","Lathe","Industry 4.0","G-code"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -574,6 +631,11 @@ export const courses = [
     duration: '30 hours (5 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","ยานยนต์ไฟฟ้าและพลังงานสะอาด"],
+    tags: ["EV","Battery","BMS","Motor","Inverter","Clean Energy"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -612,6 +674,11 @@ export const courses = [
     duration: '24 hours (4 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","ปฏิบัติการหน้างานจริง","เปิดรับรองบุคคลภายนอก"],
+    tags: ["PLC","Ladder","Pneumatics","I/O","Automation","Troubleshooting"],
+    isFeatured: false,
+    level: "Level 3 (Certified Specialist)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -655,6 +722,12 @@ export const courses = [
     duration: '24 hours (3-4 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","เปิดรับรองบุคคลภายนอก","คณิตศาสตร์และการคำนวณ"],
+    tags: ["Robot","Kinematics","10 Skills","Palletizing","ISO 10218","Yaskawa","ABB"],
+    isFeatured: true,
+    featuredBadge: "🌟 FLAGSHIP ROBOTICS · 10 SKILLS",
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -697,5 +770,49 @@ export const courses = [
         content: 'robot-safety-maintenance'
       }
     ]
+  }
+];
+
+
+export const CURATED_TRACKS = [
+  {
+    id: 'advanced-skills',
+    title: 'หลักสูตรทักษะวิชาชีพขั้นสูง (Advanced Future Skills)',
+    subtitle: 'หลักสูตรเฉพาะทางเพื่อยกระดับทักษะบุคลากรตามมาตรฐานอุตสาหกรรม 4.0 และสิทธิประโยชน์พัฒนาทักษะ',
+    badge: '✨ High-Impact Track',
+    filterTag: 'ทักษะวิชาชีพขั้นสูง',
+    color: 'from-amber-500/20 via-orange-500/10 to-transparent',
+    borderColor: 'border-amber-500/30',
+    tagColor: 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+  },
+  {
+    id: 'robotics-automation',
+    title: 'ระบบอัตโนมัติ หุ่นยนต์ และ AI Vision (Robotics & Smart Factory)',
+    subtitle: 'การควบคุมแขนกล 6 แกน, การประมวลผลภาพอัจฉริยะ, PLC และระบบดิจิทัลสำหรับโรงงานอัจฉริยะ',
+    badge: '🤖 Smart Automation',
+    filterTag: 'ระบบอัตโนมัติและหุ่นยนต์',
+    color: 'from-fuchsia-500/20 via-violet-500/10 to-transparent',
+    borderColor: 'border-fuchsia-500/30',
+    tagColor: 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20'
+  },
+  {
+    id: 'manufacturing-tooling',
+    title: 'วิศวกรรมการผลิตและเทคโนโลยีเครื่องจักร (Manufacturing & Tooling)',
+    subtitle: 'กระบวนการ PPAP, การออกแบบแม่พิมพ์ CAD-CAM, เครื่องจักร CNC 4.0 และสถาปัตยกรรมยานยนต์ไฟฟ้า',
+    badge: '⚙️ Precision Tooling',
+    filterTag: 'วิศวกรรมเครื่องจักรและแม่พิมพ์',
+    color: 'from-cyan-500/20 via-blue-500/10 to-transparent',
+    borderColor: 'border-cyan-500/30',
+    tagColor: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
+  },
+  {
+    id: 'quality-iso-audits',
+    title: 'ระบบมาตรฐานสากลและการตรวจประเมินคุณภาพ (ISO & Global Compliance)',
+    subtitle: 'มาตรฐาน ISO 9001, 14001, 45001, 17025 และแนวทางการเตรียมความพร้อมรับการตรวจออดิทสากล',
+    badge: '📜 ISO & Audit Ready',
+    filterTag: 'มาตรฐานสากลและการตรวจประเมิน',
+    color: 'from-emerald-500/20 via-teal-500/10 to-transparent',
+    borderColor: 'border-emerald-500/30',
+    tagColor: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
   }
 ];
