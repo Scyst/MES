@@ -68,13 +68,13 @@ if (!$header) {
 $paramConfigs = [
     1 => ['F_Al' => [10, 12], 'Temperature' => [25, 35], 'Pressure' => [0.4, 0.8]],
     2 => ['F_Al' => [10, 12], 'Temperature' => [25, 35], 'Pressure' => [0.4, 0.8]],
-    3 => ['Conta_WR1' => [1, 8], 'Pressure' => [0.4, 0.8]],
-    4 => ['WaterLevel_WR2' => ['OK', 'OK'], 'Conta_WR2' => [0.1, 1], 'Pressure' => [0.4, 0.8]],
+    3 => ['Conta_WR1' => [6.0, 7.5], 'Pressure' => [0.4, 0.8]],
+    4 => ['WaterLevel_WR2' => ['OK', 'OK'], 'Conta_WR2' => [6.0, 7.5], 'Pressure' => [0.4, 0.8]],
     5 => ['pH' => [9, 11], 'TC' => [2, 4], 'Pressure' => [0.4, 0.8]],
     6 => ['Temperature' => [25, 35], 'FA' => [0.3, 0.5], 'TA' => [23, 25], 'AC' => [2, 4], 'Pressure' => [0.4, 0.8]],
-    7 => ['Conta_WR3' => [1, 5], 'Pressure' => [0.4, 0.8]],
-    8 => ['Conta_WR4' => [0.1, 0.5], 'Pressure' => [0.4, 0.8], 'WaterLevel_WR4' => ['OK', 'OK']],
-    9 => ['EC' => [1, 10], 'FlowRate' => [1.5, 3]],
+    7 => ['Conta_WR3' => [6.0, 7.5], 'Pressure' => [0.4, 0.8]],
+    8 => ['Conta_WR4' => [6.0, 7.5], 'Pressure' => [0.4, 0.8], 'WaterLevel_WR4' => ['OK', 'OK']],
+    9 => ['EC' => [1, 10], 'pH_DI' => [6.0, 7.5], 'FlowRate' => [1.5, 3]],
     10=> ['BakeOvenTemp' => [175, 220], 'DryOvenTemp' => [140, 160], 'ConveyorSpeed' => [2.5, 5.0]]
 ];
 

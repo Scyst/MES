@@ -52,11 +52,11 @@ $stations = [
         ['key' => 'Pressure',    'label' => 'Pressure',    'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     3 => ['name' => 'Water Rinse 1', 'chem' => 'Water Rinse 1', 'params' => [
-        ['key' => 'Conta_WR1',      'label' => 'Conta',      'std' => '< 8.0 pt',    'min' => '-',   'max' => '8.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Conta_WR1',      'label' => 'pH',         'std' => '-',            'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     4 => ['name' => 'Water Rinse 2', 'chem' => 'Water Rinse 2', 'params' => [
-        ['key' => 'Conta_WR2',      'label' => 'Conta',      'std' => '< 1.0 pt',    'min' => '-',   'max' => '1.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Conta_WR2',      'label' => 'pH',         'std' => '-',            'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
         ['key' => 'WaterLevel_WR2', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
     ]],
@@ -73,16 +73,17 @@ $stations = [
         ['key' => 'Pressure',       'label' => 'Pressure',           'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
     ]],
     7 => ['name' => 'Water Rinse 3', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'Conta_WR3',      'label' => 'Conta',      'std' => '< 5.0 pt',    'min' => '-',   'max' => '5.0', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Conta_WR3',      'label' => 'pH',         'std' => '-',            'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
             ]],
     8 => ['name' => 'Water Rinse 4', 'chem' => 'DI Water Rinse', 'params' => [
-        ['key' => 'Conta_WR4',      'label' => 'Conta',      'std' => '< 0.5 pt',    'min' => '-',   'max' => '0.5', 'hasKg' => true, 'isOvf' => false],
+        ['key' => 'Conta_WR4',      'label' => 'pH',         'std' => '-',            'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'Pressure',       'label' => 'Pressure',   'std' => '0.4-0.8 Bar', 'min' => '0.4', 'max' => '0.8', 'hasKg' => true, 'isOvf' => false],
         ['key' => 'WaterLevel_WR4', 'label' => 'Water level','std' => '> Overflow',  'min' => '-',   'max' => '-',   'hasKg' => false, 'isOvf' => true],
     ]],
     9 => ['name' => 'Deionized<br>Water Rinse', 'chem' => 'DI Water Rinse', 'params' => [
         ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => true, 'isOvf' => false],
+        ['key' => 'pH_DI',          'label' => 'pH',         'std' => '-',           'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
         ['key' => 'FlowRate',       'label' => 'Flow rate',  'std' => '> 1.5 m3/hr', 'min' => '1.5', 'max' => '-',   'hasKg' => true, 'isOvf' => false],
     ]],
 ];

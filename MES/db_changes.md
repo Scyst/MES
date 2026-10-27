@@ -4,6 +4,20 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-10-27 — Paint Chem Clear False Out-of-Range on Rinse Water pH (Conta_WR1..4)
+
+**Agent:** Antigravity  
+**Feature:** ปรับแก้ค่า is_out_of_range ใน dbo.PAINT_CHEM_LOG สำหรับพารามิเตอร์ Conta_WR1..4 ให้เป็น 0 เนื่องจากเดิมระบบตรวจสอบเทียบกับค่าการปนเปื้อน (pt) ทำให้ค่า pH ของน้ำล้าง (6-8) ถูกตรวจจับเป็นหลุดสเปก (OOR) โดยไม่ถูกต้อง รวม 85 รายการ พร้อมเพิ่มการรองรับ pH_DI สำหรับสถานี 9 (Deionized Water Rinse)
+
+### Data Migration
+```sql
+UPDATE dbo.PAINT_CHEM_LOG 
+SET is_out_of_range = 0 
+WHERE parameter_key IN ('Conta_WR1', 'Conta_WR2', 'Conta_WR3', 'Conta_WR4') AND is_out_of_range = 1;
+```
+
+---
+
 ## 2026-10-27 — Paint Chem Water Level Station Realignment (WR3 -> WR4)
 
 **Agent:** Antigravity  
