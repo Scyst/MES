@@ -90,6 +90,26 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(false);
 
+  const handleClose = () => {
+    setIsMaximized(false);
+    onClose();
+  };
+
+  // Keyboard shortcut: Escape key to minimize or close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        if (isMaximized) {
+          setIsMaximized(false);
+        } else {
+          handleClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isMaximized]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
@@ -244,13 +264,18 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
     : '0.0';
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all duration-200 ${
-      isMaximized ? 'p-0' : 'p-2 sm:p-4'
-    }`}>
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isMaximized) handleClose();
+      }}
+      className={`fixed top-16 md:left-16 right-0 bottom-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all duration-200 ${
+        isMaximized ? 'p-0' : 'p-3 sm:p-5'
+      }`}
+    >
       <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col transition-all duration-200 overflow-hidden ${
         isMaximized
-          ? 'w-full h-full rounded-none'
-          : 'w-full max-w-6xl max-h-[92vh] rounded-2xl'
+          ? 'w-full h-full rounded-none border-none'
+          : 'w-full max-w-6xl max-h-full rounded-2xl'
       }`}>
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/80 flex-shrink-0">
@@ -314,7 +339,7 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
 
             {/* Close Button */}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="ปิดหน้าต่าง"
             >
@@ -1067,7 +1092,7 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors"
           >
             ปิด
