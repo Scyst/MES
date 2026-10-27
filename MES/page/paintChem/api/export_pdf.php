@@ -117,7 +117,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   /* ===== PAGE SETUP ===== */
   @page {
     size: A4 landscape;
-    margin: 4mm 5mm 4mm 5mm;
+    margin: 5mm 5mm 5mm 5mm;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -133,11 +133,15 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   /* ===== PAPER CARD ===== */
   .page {
     width: 287mm;         /* A4L = 297mm minus 5mm*2 = 287mm */
+    height: 198mm;
     background: #fff;
     margin: 0 auto 12px auto;
     padding: 3mm 4mm;
     box-shadow: 0 4px 16px rgba(0,0,0,0.55);
     position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     page-break-inside: avoid;
     break-inside: avoid;
   }
@@ -165,6 +169,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
 
   /* ===== HEADER SECTION ===== */
   .doc-header {
+    flex-shrink: 0;
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 2mm;
@@ -195,6 +200,7 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
 
   /* ===== MAIN DATA TABLE ===== */
   table.main {
+    flex-shrink: 0;
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
@@ -239,19 +245,44 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
   col.c-af    { width: 10.8mm; }
   col.c-kg    { width: 10.8mm; }
 
-  /* ===== OVEN / FOOTER SECTION ===== */
+  /* ===== DYNAMIC FOOTER SECTION ===== */
+  .footer-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 2.5mm;
+  }
   table.footer-tbl {
     width: 100%;
+    height: 100%;
+    flex: 1;
     border-collapse: collapse;
-    margin-top: 2.5mm;
     font-size: 6.5pt;
-    page-break-inside: avoid;
-    break-inside: avoid;
   }
   table.footer-tbl td, table.footer-tbl th {
     border: 1px solid #374151;
-    padding: 2.5px 4px;
+    padding: 3px 5px;
     vertical-align: middle;
+  }
+  table.footer-tbl th {
+    height: 18px;
+    padding: 2px 4px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .sig-row td {
+    vertical-align: bottom !important;
+    text-align: center !important;
+    padding-bottom: 8px !important;
+  }
+  .note-cell {
+    vertical-align: top !important;
+    text-align: left !important;
+  }
+  .remark-cell {
+    vertical-align: top !important;
+    text-align: center !important;
   }
   .bg-std { background-color: #dbeafe; font-weight: bold; text-align: center; }
   .bg-remark { background-color: #f0f9ff; font-weight: bold; text-align: center; }
@@ -272,16 +303,25 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     .page {
       width: 100% !important;
       max-width: 100% !important;
+      height: 100% !important;
+      max-height: 100% !important;
       margin: 0 !important;
       padding: 2mm 3mm !important;
       box-shadow: none !important;
-      min-height: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
       page-break-after: avoid !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       break-after: avoid !important;
     }
+    .doc-header {
+      flex-shrink: 0 !important;
+      margin-bottom: 2mm !important;
+    }
     table.main {
+      flex-shrink: 0 !important;
       font-size: 6pt !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
@@ -291,8 +331,19 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
       padding: 3px 1.5px !important;
       line-height: 1.25 !important;
     }
-    table.footer-tbl {
+    .footer-container {
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
       margin-top: 2mm !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    table.footer-tbl {
+      width: 100% !important;
+      height: 100% !important;
+      flex: 1 !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
@@ -433,36 +484,40 @@ $dateLabel  = $isBlank ? '.....................' : date('d/m/Y', strtotime($logD
     </tbody>
   </table>
 
-  <!-- ===== FOOTER / SIGNATURE SECTION ===== -->
-  <table class="footer-tbl">
-    <tr>
-      <td rowspan="2" width="42%" style="vertical-align:top; text-align:left; padding:4px 6px;">
-        <div style="font-weight:bold; margin-bottom:2px; color:#1e3a5f; font-size:7pt;">Note.</div>
-        <div style="font-weight:normal; font-size:6.5pt; min-height:42px; line-height:1.25;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
-      </td>
-      <td rowspan="2" width="16%" style="vertical-align:top; text-align:center; padding:4px;" class="bg-remark">
-        <div style="font-weight:bold; color:#1e3a5f; font-size:7pt;">Remark</div>
-      </td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:18px; padding:2px;">Prepared by</td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:18px; padding:2px;">Checked by</td>
-      <td width="14%" style="text-align:center; font-weight:bold; height:18px; padding:2px;">Approved by</td>
-    </tr>
-    <tr>
-      <td style="height:46px; text-align:center; vertical-align:bottom; padding-bottom:3px;">
-        <div style="margin-bottom:2px; color:#444;">...................................</div>
-        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($preparedBy); ?></div>
-      </td>
-      <td style="height:46px; text-align:center; vertical-align:bottom; padding-bottom:3px;">
-        <div style="margin-bottom:2px; color:#444;">...................................</div>
-        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($checkedBy); ?></div>
-      </td>
-      <td style="height:46px; text-align:center; vertical-align:bottom; padding-bottom:3px;">
-        <div style="margin-bottom:2px; color:#444;">...................................</div>
-        <div style="font-size:6.5pt; min-height:10px;"><?php echo htmlspecialchars($approvedBy); ?></div>
-      </td>
-    </tr>
-  </table>
-
+  <!-- ===== DYNAMIC FOOTER / SIGNATURE SECTION ===== -->
+  <div class="footer-container">
+    <table class="footer-tbl">
+      <thead>
+        <tr>
+          <th width="42%" style="text-align:left; font-size:7pt; color:#1e3a5f;">Note.</th>
+          <th width="16%" class="bg-remark" style="font-size:7pt; color:#1e3a5f;">Remark</th>
+          <th width="14%">Prepared by</th>
+          <th width="14%">Checked by</th>
+          <th width="14%">Approved by</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="sig-row">
+          <td class="note-cell">
+            <div style="font-size:6.5pt; line-height:1.25;"><?php echo nl2br(htmlspecialchars($noteText)); ?></div>
+          </td>
+          <td class="remark-cell bg-remark"></td>
+          <td>
+            <div style="margin-bottom:6px; color:#555;">...................................</div>
+            <div style="font-size:6.5pt; font-weight:bold;"><?php echo htmlspecialchars($preparedBy); ?></div>
+          </td>
+          <td>
+            <div style="margin-bottom:6px; color:#555;">...................................</div>
+            <div style="font-size:6.5pt; font-weight:bold;"><?php echo htmlspecialchars($checkedBy); ?></div>
+          </td>
+          <td>
+            <div style="margin-bottom:6px; color:#555;">...................................</div>
+            <div style="font-size:6.5pt; font-weight:bold;"><?php echo htmlspecialchars($approvedBy); ?></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div><!-- .page -->
 </body>
 </html>
