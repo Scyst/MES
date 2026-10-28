@@ -331,17 +331,59 @@ const IQS = {
         this.applyGridFiltering();
     },
 
+    getMachineZoneKey(machine) {
+        const code = String(machine.machine_code || '');
+        const parts = code.split('-');
+        return parts.length > 1 ? parts.slice(0, -1).join('-') : (code || 'OTHER');
+    },
+
+    groupMachinesByZone(machines) {
+        const zones = new Map();
+        machines.forEach(machine => {
+            const zoneKey = this.getMachineZoneKey(machine);
+            if (!zones.has(zoneKey)) zones.set(zoneKey, []);
+            zones.get(zoneKey).push(machine);
+        });
+        return zones;
+    },
+
+    buildZoneHeaderHtml(zoneKey, zoneMachines) {
+        const inspectedCount = zoneMachines.filter(zm => this.todayRecordsMap[zm.machine_id]).length;
+        return `
+        <div class="machine-zone-header" data-zone="${zoneKey}">
+            <span class="machine-zone-title"><i class="fas fa-layer-group"></i>${zoneKey}</span>
+            <span class="machine-zone-line"></span>
+            <span class="machine-zone-meta">ตรวจแล้ว ${inspectedCount} / ${zoneMachines.length}</span>
+        </div>`;
+    },
+
+    syncZoneHeaderVisibility() {
+        const cards = Array.from(document.querySelectorAll('.interactive-machine-card'));
+        document.querySelectorAll('.machine-zone-header').forEach(header => {
+            const zoneKey = header.getAttribute('data-zone');
+            const hasVisibleCard = cards.some(card => card.getAttribute('data-zone') === zoneKey && card.style.display !== 'none');
+            header.style.display = hasVisibleCard ? 'flex' : 'none';
+        });
+    },
+
     renderInteractiveGrid() {
         const container = document.getElementById('interactiveMachineGrid');
         if (!container || !this.initialData?.machines) return;
 
-        const lineMachines = this.initialData.machines.filter(m => m.line_group === this.currentLine);
+        const zoneGroups = this.groupMachinesByZone(this.initialData.machines.filter(m => m.line_group === this.currentLine));
+        const lineMachines = Array.from(zoneGroups.values()).flat();
+        let activeZoneKey = null;
 
         let cntAll = 0, cntPending = 0, cntOk = 0, cntNg = 0, cntSkip = 0;
         let html = '';
 
         lineMachines.forEach(m => {
             cntAll++;
+            const zoneKey = this.getMachineZoneKey(m);
+            if (zoneKey !== activeZoneKey) {
+                activeZoneKey = zoneKey;
+                html += this.buildZoneHeaderHtml(zoneKey, zoneGroups.get(zoneKey));
+            }
             const rec = this.todayRecordsMap[m.machine_id] || null;
             let statusKey = 'pending';
             let cardStateClass = '';
@@ -422,7 +464,7 @@ const IQS = {
             }
 
             html += `
-            <div class="interactive-machine-card ${cardStateClass}" id="mCard_${m.machine_id}"
+            <div class="interactive-machine-card ${cardStateClass}" id="mCard_${m.machine_id}" data-zone="${zoneKey}"
                  data-status="${statusKey}" 
                  data-code="${(m.machine_code || '').toLowerCase()}" 
                  data-name="${(m.machine_name || '').toLowerCase()}"
@@ -461,6 +503,11 @@ const IQS = {
     },
 
     applyGridFiltering() {
+        this.filterMachineCards();
+        this.syncZoneHeaderVisibility();
+    },
+
+    filterMachineCards() {
         const cards = document.querySelectorAll('.interactive-machine-card');
         cards.forEach(card => {
             const status = card.getAttribute('data-status');
