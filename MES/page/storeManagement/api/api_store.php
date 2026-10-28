@@ -1626,7 +1626,7 @@ try {
                     $stmt->execute([$location_id, $userId]);
                     $session_id = $pdo->lastInsertId();
 
-                    // Snapshot all current tags in this location
+                    // Snapshot all currently AVAILABLE tags in this Store location (exclude WIP or issued tags)
                     $stmtInsert = $pdo->prepare("
                         INSERT INTO dbo.CYCLE_COUNT_DETAILS (session_id, tag_serial_no, item_id, system_qty, is_wrong_location)
                         SELECT 
@@ -1636,9 +1636,47 @@ try {
                             t.current_qty,
                             0
                         FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
-                        WHERE t.location_id = ? AND t.current_qty > 0 AND t.status != 'DELETED'
+                        WHERE t.location_id = ? AND t.current_qty > 0 AND t.status = 'AVAILABLE'
                     ");
                     $stmtInsert->execute([$session_id, $location_id]);
+                } else {
+                    // Reconcile existing active session with live warehouse state:
+                    // 1. Purge uncounted tags (actual_qty IS NULL) that have since been issued (status != 'AVAILABLE'),
+                    //    moved to another shelf (location_id != ?), deleted, or depleted (current_qty <= 0)
+                    $stmtPurge = $pdo->prepare("
+                        DELETE d
+                        FROM dbo.CYCLE_COUNT_DETAILS d
+                        LEFT JOIN dbo.RM_SERIAL_TAGS t WITH (NOLOCK) ON d.tag_serial_no = t.serial_no
+                        WHERE d.session_id = ?
+                          AND d.actual_qty IS NULL
+                          AND (
+                              t.serial_no IS NULL 
+                              OR t.location_id != ? 
+                              OR t.status != 'AVAILABLE' 
+                              OR t.current_qty <= 0
+                          )
+                    ");
+                    $stmtPurge->execute([$session_id, $location_id]);
+
+                    // 2. Add any newly received or transferred AVAILABLE tags that arrived in this location after session was created
+                    $stmtAddNew = $pdo->prepare("
+                        INSERT INTO dbo.CYCLE_COUNT_DETAILS (session_id, tag_serial_no, item_id, system_qty, is_wrong_location)
+                        SELECT 
+                            ?, 
+                            t.serial_no, 
+                            t.item_id, 
+                            t.current_qty,
+                            0
+                        FROM dbo.RM_SERIAL_TAGS t WITH (NOLOCK)
+                        WHERE t.location_id = ? 
+                          AND t.current_qty > 0 
+                          AND t.status = 'AVAILABLE'
+                          AND NOT EXISTS (
+                              SELECT 1 FROM dbo.CYCLE_COUNT_DETAILS d WITH (NOLOCK)
+                              WHERE d.session_id = ? AND d.tag_serial_no = t.serial_no
+                          )
+                    ");
+                    $stmtAddNew->execute([$session_id, $location_id, $session_id]);
                 }
                 $pdo->commit();
 
@@ -2015,10 +2053,13 @@ try {
                 }
                 $pdo->commit();
                 $response = ['success' => true, 'cancelled' => ($counted === 0)];
+                break;
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 throw $e;
             }
+            break;
+
         case 'cc_reset_session':
             $session_id = (int)($_POST['session_id'] ?? 0);
             $location_id = (int)($_POST['location_id'] ?? 0);
