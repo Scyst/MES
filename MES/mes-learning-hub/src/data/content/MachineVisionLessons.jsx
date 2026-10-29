@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { 
   FiEye, 
   FiCamera, 
@@ -434,147 +435,345 @@ function OpticalLightingSimulator() {
 /* 2. INTERACTIVE GLOBAL VS ROLLING SHUTTER COMPARISON                       */
 /* ========================================================================= */
 function ShutterComparisonSimulator() {
+  const { isDark } = useTheme();
   const [conveyorSpeed, setConveyorSpeed] = useState(45); // m/min (0, 30, 60, 90)
+  const [activeTab, setActiveTab] = useState('conveyor'); // 'conveyor' | 'real_photo'
+  const [photoCase, setPhotoCase] = useState('fan'); // 'fan' | 'barcode'
 
   const skewAngle = (conveyorSpeed / 90) * 24; // deg
   const measurementError = ((conveyorSpeed / 90) * 16.5).toFixed(1);
 
   return (
-    <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+    <div className={`border rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-indigo-500/30' : 'bg-white border-indigo-200 shadow-indigo-500/5'
+    }`}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold mb-1 border border-indigo-500/30">
-            <span>Industrial Sensor Comparison &middot; การเลือกชัตเตอร์เซนเซอร์</span>
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold mb-1 border border-indigo-500/30">
+            <span>Industrial Sensor Comparison · การเลือกชัตเตอร์เซนเซอร์</span>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
+          <h3 className={`text-base sm:text-lg font-black leading-snug tracking-tight mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
             Global Shutter vs Rolling Shutter สำหรับชิ้นงานบนสายพานลำเลียง (Conveyor Motion)
           </h3>
-          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-            เหตุผลสำคัญที่ห้ามใช้กล้องเว็บแคมหรือมือถือตรวจงานในโรงงาน: ผลกระทบของความเร็วสายพานต่อความแม่นยำเชิงมิติ
+          <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            เหตุผลสำคัญที่ห้ามใช้กล้องเว็บแคมหรือมือถือตรวจงานในโรงงาน: ผลกระทบของความเร็วสายพานต่อความแม่นยำเชิงมิติและอัลกอริทึม AI
           </p>
         </div>
 
-        {/* Speed Slider */}
-        <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center gap-3">
-          <span className="text-xs font-bold text-slate-300 whitespace-nowrap">ความเร็วสายพาน:</span>
-          <input 
-            type="range" 
-            min="0" 
-            max="90" 
-            step="15" 
-            value={conveyorSpeed} 
-            onChange={(e) => setConveyorSpeed(Number(e.target.value))}
-            className="w-24 sm:w-32 accent-indigo-400 cursor-pointer"
-          />
-          <span className="font-mono font-bold text-amber-300 text-xs bg-slate-800 px-2 py-0.5 rounded border border-slate-700 min-w-[70px] text-center">
-            {conveyorSpeed} m/min
-          </span>
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 self-start md:self-auto">
+          <button
+            onClick={() => setActiveTab('conveyor')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'conveyor'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FiBox className="w-3.5 h-3.5" />
+            <span>จำลองชิ้นงานสายพาน</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('real_photo')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'real_photo'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FiCamera className="w-3.5 h-3.5" />
+            <span>ภาพเปรียบเทียบหน้างานจริง</span>
+          </button>
         </div>
       </div>
 
-      {/* Side-by-Side Comparison */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Rolling Shutter */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-rose-500/40 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
-            <h4 className="font-bold text-rose-700 dark:text-rose-300 text-xs sm:text-sm">
-              Rolling Shutter (กล้องมือถือ / เว็บแคม)
-            </h4>
-            <span className="self-start sm:self-auto text-[10px] font-bold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30 whitespace-nowrap">
-              อ่านทีละแถวจากบนลงล่าง
-            </span>
+      {activeTab === 'conveyor' ? (
+        <>
+          {/* Speed Slider Control */}
+          <div className={`p-3 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>ความเร็วสายพานลำเลียง (Conveyor Speed):</span>
+              <input 
+                type="range" 
+                min="0" 
+                max="90" 
+                step="15" 
+                value={conveyorSpeed} 
+                onChange={(e) => setConveyorSpeed(Number(e.target.value))}
+                className="w-28 sm:w-40 accent-indigo-500 cursor-pointer"
+              />
+              <span className="font-mono font-bold text-amber-500 dark:text-amber-300 text-xs bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 min-w-[75px] text-center shadow-sm">
+                {conveyorSpeed} m/min
+              </span>
+            </div>
+            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {conveyorSpeed === 0 ? 'ชิ้นงานหยุดนิ่ง (Static Inspection)' : `ชิ้นงานเคลื่อนที่ด้วยความเร็ว ${(conveyorSpeed / 60).toFixed(2)} เมตร/วินาที`}
+            </div>
           </div>
 
-          <div className="aspect-[16/9] w-full bg-slate-900 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-            <div className="absolute top-2 left-2 text-[10px] font-mono text-slate-400">
-              Row Readout Delay: 15 ms
+          {/* Side-by-Side Conveyor Comparison */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Rolling Shutter */}
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-slate-950 border-rose-500/40' : 'bg-rose-50/50 border-rose-300'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
+                <h4 className="font-bold text-rose-700 dark:text-rose-300 text-xs sm:text-sm flex items-center gap-1.5">
+                  <FiAlertTriangle className="w-4 h-4 text-rose-500" />
+                  Rolling Shutter (กล้องมือถือ / เว็บแคม)
+                </h4>
+                <span className="self-start sm:self-auto text-[10px] font-bold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2.5 py-0.5 rounded-full border border-rose-300 dark:border-rose-500/30 whitespace-nowrap">
+                  อ่านทีละแถวจากบนลงล่าง (Row Scan)
+                </span>
+              </div>
+
+              <div className="aspect-[16/9] w-full bg-slate-900 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden shadow-inner">
+                <div className="absolute top-2 left-2 text-[10px] font-mono text-slate-400 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">
+                  Row Readout Delay: 15 ms
+                </div>
+
+                <div 
+                  className="w-28 h-28 bg-slate-700/90 border-2 border-rose-400 rounded-md relative flex items-center justify-center shadow-lg transition-all duration-300"
+                  style={{
+                    transform: `skewX(${skewAngle}deg)`
+                  }}
+                >
+                  <div 
+                    className="w-10 h-10 rounded-full border-2 border-rose-300 flex items-center justify-center text-[10px] font-mono font-bold text-rose-200 bg-rose-950/40"
+                    style={{
+                      transform: `scaleX(${1 + conveyorSpeed / 120})`
+                    }}
+                  >
+                    รีเบี้ยว
+                  </div>
+                  <span className="absolute -bottom-5 text-[10px] font-mono text-rose-300 font-bold whitespace-nowrap bg-slate-950/90 px-1.5 rounded">
+                    อ่านได้: {(50 + (Number(measurementError) * 0.5)).toFixed(2)} mm (เพี้ยน +{measurementError}%)
+                  </span>
+                </div>
+              </div>
+
+              <div className={`text-xs space-y-1.5 pt-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>อาการภาพบิดเบี้ยว (Jello Skew):</span>
+                  <strong className="text-rose-600 dark:text-rose-400 font-mono">+{measurementError}% (สี่เหลี่ยมกลายเป็นด้านขนาน)</strong>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>ความเสี่ยงหน้างานโรงงาน:</span>
+                  <strong className="text-rose-600 dark:text-rose-400 font-mono">ชิ้นงานดีถูกเตะทิ้ง (False Reject) สูงมาก</strong>
+                </div>
+                <p className={`text-[11px] leading-relaxed pt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  เซนเซอร์อ่านข้อมูลทีละแถวจากบนลงล่าง เมื่อชิ้นงานเคลื่อนที่ แถวล่างจะถูกบันทึกช้ากว่าแถวบน ส่งผลให้ชิ้นงานสี่เหลี่ยมกลายเป็นสี่เหลี่ยมด้านขนาน รูเจาะวงกลมกลายเป็นวงรี ระบบ AI วัดขนาดผิดพลาดทันที
+                </p>
+              </div>
             </div>
 
-            <div 
-              className="w-28 h-28 bg-slate-700/80 border-2 border-rose-400 rounded-md relative flex items-center justify-center shadow-lg transition-all duration-300"
-              style={{
-                transform: `skewX(${skewAngle}deg)`
-              }}
+            {/* Global Shutter */}
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-slate-950 border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-300'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
+                <h4 className="font-bold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm flex items-center gap-1.5">
+                  <FiCheckCircle className="w-4 h-4 text-emerald-500" />
+                  Global Shutter (มาตรฐานโรงงานอุตสาหกรรม)
+                </h4>
+                <span className="self-start sm:self-auto text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/30 whitespace-nowrap">
+                  ทุกพิกเซลเปิดพร้อมกัน (Snapshot)
+                </span>
+              </div>
+
+              <div className="aspect-[16/9] w-full bg-slate-900 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden shadow-inner">
+                <div className="absolute top-2 left-2 text-[10px] font-mono text-slate-400 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">
+                  Sensor Exposure: 50 μs
+                </div>
+
+                <div className="w-28 h-28 bg-slate-700 border-2 border-emerald-400 rounded-md relative flex items-center justify-center shadow-lg transition-transform">
+                  <div className="w-10 h-10 rounded-full border-2 border-emerald-300 flex items-center justify-center text-[10px] font-mono font-bold text-emerald-200 bg-emerald-950/40">
+                    Ø 20mm
+                  </div>
+                  <span className="absolute -bottom-5 text-[10px] font-mono text-emerald-300 font-bold whitespace-nowrap bg-slate-950/90 px-1.5 rounded">
+                    ขนาด 50.00 mm (Error 0.00%)
+                  </span>
+                </div>
+              </div>
+
+              <div className={`text-xs space-y-1.5 pt-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>อาการภาพบิดเบี้ยว (Distortion):</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-mono">0.00% (ไม่มีอาการเอียงแม้แต่น้อย)</strong>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>ความแม่นยำในการวัดมิติ:</span>
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-mono">±0.01 mm (มาตรฐานชิ้นส่วนยานยนต์)</strong>
+                </div>
+                <p className={`text-[11px] leading-relaxed pt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  ทุกพิกเซลในเซนเซอร์เปิดรับแสงพร้อมกันในเสี้ยววินาที ชัตเตอร์อิเล็กทรอนิกส์หยุดการเคลื่อนไหวของชิ้นงานได้ 100% แม้วัตถุจะวิ่งเร็วแค่ไหน มิติของภาพจะไม่บิดเบี้ยว ชิ้นงานดีผ่านการตรวจสอบ 100%
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Real Industrial Photo Comparison Mode */
+        <div className="space-y-4 animate-fadeIn">
+          {/* Case selector */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>เลือกกรณีศึกษาจากภาพจริง:</span>
+            <button
+              onClick={() => setPhotoCase('fan')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                photoCase === 'fan'
+                  ? 'bg-indigo-600 text-white'
+                  : isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+              }`}
             >
-              <div 
-                className="w-10 h-10 rounded-full border border-rose-300 flex items-center justify-center text-[10px] font-mono font-bold text-rose-200"
-                style={{
-                  transform: `scaleX(${1 + conveyorSpeed / 120})`
-                }}
-              >
-                รีเบี้ยว
+              🌀 กรณีที่ 1: มอเตอร์ใบพัดหมุนเร็ว (3,000 RPM)
+            </button>
+            <button
+              onClick={() => setPhotoCase('barcode')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                photoCase === 'barcode'
+                  ? 'bg-indigo-600 text-white'
+                  : isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              📦 กรณีที่ 2: บาร์โค้ด & แผงวงจรบนสายพาน 60 m/min
+            </button>
+          </div>
+
+          {photoCase === 'fan' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Rolling Fan */}
+              <div className={`p-4 rounded-xl border space-y-3 ${
+                isDark ? 'bg-slate-950 border-rose-500/40' : 'bg-rose-50/50 border-rose-300'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-rose-700 dark:text-rose-300">ภาพถ่ายจริงด้วย Rolling Shutter</span>
+                  <span className="text-[10px] font-bold text-rose-800 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-500/40">
+                    ❌ ใบพัดบิดเบี้ยวคล้ายหนวดกุ้ง
+                  </span>
+                </div>
+                {/* Visual Simulation of Fan with Jello Distortion */}
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
+                  <svg viewBox="0 0 200 120" className="w-48 h-32">
+                    {/* Center hub */}
+                    <circle cx="100" cy="60" r="14" fill="#475569" stroke="#ef4444" strokeWidth="2" />
+                    {/* Curved distorted blades (Jello effect) */}
+                    <path d="M 100 46 Q 130 30 160 38 Q 145 52 112 56 Z" fill="#ef4444" opacity="0.85" />
+                    <path d="M 112 64 Q 140 85 145 115 Q 125 105 102 74 Z" fill="#ef4444" opacity="0.85" />
+                    <path d="M 88 62 Q 60 85 35 75 Q 50 60 86 54 Z" fill="#ef4444" opacity="0.85" />
+                    <circle cx="100" cy="60" r="5" fill="#f87171" />
+                    <text x="100" y="112" textAnchor="middle" fill="#ef4444" fontSize="9" fontWeight="bold">Jello Distortion: Curved Blades</text>
+                  </svg>
+                </div>
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <strong>ผลกระทบหน้างาน:</strong> แม้จะตั้งความเร็วชัตเตอร์สั้นถึง 1/2000s แต่เนื่องจากเซนเซอร์อ่านค่าทีละบรรทัด (ใช้เวลาอ่านทั้งภาพ 15ms) ขณะที่เซนเซอร์อ่านบรรทัดล่าง ใบพัดได้หมุนเปลี่ยนตำแหน่งไปแล้ว ส่งผลให้ใบพัดที่ตรงกลายเป็นโค้งงอ ผิดเพี้ยนรูปทรงทางเรขาคณิต 100%
+                </p>
               </div>
-              <span className="absolute -bottom-5 text-[10px] font-mono text-rose-400 font-bold whitespace-nowrap">
-                อ่านได้: {(50 + (Number(measurementError) * 0.5)).toFixed(2)} mm (เพี้ยน +{measurementError}%)
-              </span>
-            </div>
-          </div>
 
-          <div className="text-xs text-slate-300 space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-              <span className="text-slate-400">อาการภาพบิดเบี้ยว (Jello Skew):</span>
-              <strong className="text-rose-400 font-mono">+{measurementError}% (สี่เหลี่ยมด้านขนาน)</strong>
-            </div>
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-              <span className="text-slate-400">ความเสี่ยงหน้างาน:</span>
-              <strong className="text-rose-400 font-mono">ชิ้นงานดีถูกเตะทิ้ง (False Reject) สูงมาก</strong>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
-              เซนเซอร์อ่านข้อมูลทีละแถวจากบนลงล่าง เมื่อชิ้นงานเคลื่อนที่ แถวล่างจะถูกบันทึกช้ากว่าแถวบน ส่งผลให้ชิ้นงานสี่เหลี่ยมกลายเป็นสี่เหลี่ยมด้านขนานทันที
-            </p>
-          </div>
-        </div>
-
-        {/* Global Shutter */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
-            <h4 className="font-bold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">
-              Global Shutter (มาตรฐานโรงงานอุตสาหกรรม)
-            </h4>
-            <span className="self-start sm:self-auto text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/30 whitespace-nowrap">
-              ทุกพิกเซลเปิดพร้อมกัน
-            </span>
-          </div>
-
-          <div className="aspect-[16/9] w-full bg-slate-900 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-            <div className="absolute top-2 left-2 text-[10px] font-mono text-slate-400">
-              Sensor Exposure: 50 &mu;s
-            </div>
-
-            <div className="w-28 h-28 bg-slate-700 border-2 border-emerald-400 rounded-md relative flex items-center justify-center shadow-lg transition-transform">
-              <div className="w-10 h-10 rounded-full border border-emerald-300 flex items-center justify-center text-[10px] font-mono font-bold text-emerald-200">
-                &Oslash; 20mm
+              {/* Global Fan */}
+              <div className={`p-4 rounded-xl border space-y-3 ${
+                isDark ? 'bg-slate-950 border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-300'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">ภาพถ่ายจริงด้วย Global Shutter (Industrial)</span>
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/40">
+                    ✅ หยุดนิ่ง คมกริบ 100%
+                  </span>
+                </div>
+                {/* Visual Simulation of Fan with Frozen Motion */}
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
+                  <svg viewBox="0 0 200 120" className="w-48 h-32">
+                    {/* Center hub */}
+                    <circle cx="100" cy="60" r="14" fill="#334155" stroke="#10b981" strokeWidth="2" />
+                    {/* Perfectly straight frozen blades */}
+                    <path d="M 100 46 L 155 18 L 150 35 L 110 52 Z" fill="#10b981" opacity="0.9" />
+                    <path d="M 112 64 L 140 115 L 122 118 L 96 73 Z" fill="#10b981" opacity="0.9" />
+                    <path d="M 88 58 L 35 55 L 40 38 L 92 48 Z" fill="#10b981" opacity="0.9" />
+                    <circle cx="100" cy="60" r="5" fill="#34d399" />
+                    <text x="100" y="112" textAnchor="middle" fill="#10b981" fontSize="9" fontWeight="bold">Frozen Motion: Straight Blades</text>
+                  </svg>
+                </div>
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <strong>ผลลัพธ์ในโรงงาน:</strong> พิกเซลทั้งเซนเซอร์เปิดรับแสงพร้อมกันในเสี้ยวเวลา 50 μs ใบพัดมอเตอร์ 3,000 RPM ถูกหยุดนิ่งสนิท รูปร่างใบพัดตรงสมบูรณ์แบบ สามารถตรวจเช็กรอยแตกร้าวและวัดมุมองศาของใบพัดได้อย่างแม่นยำระดับ 0.01 mm
+                </p>
               </div>
-              <span className="absolute -bottom-5 text-[10px] font-mono text-emerald-300 font-bold whitespace-nowrap">
-                ขนาด 50.00 mm (Error 0.00%)
-              </span>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Rolling Barcode */}
+              <div className={`p-4 rounded-xl border space-y-3 ${
+                isDark ? 'bg-slate-950 border-rose-500/40' : 'bg-rose-50/50 border-rose-300'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-rose-700 dark:text-rose-300">บาร์โค้ดบนสายพาน 60 m/min (Rolling)</span>
+                  <span className="text-[10px] font-bold text-rose-800 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-500/40">
+                    ❌ Decode Failed (บาร์โค้ดเฉียง)
+                  </span>
+                </div>
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
+                  <div className="p-3 bg-white rounded border border-slate-400 transform skew-x-12 shadow">
+                    <div className="font-mono text-xs text-rose-600 font-bold mb-1">SCAN FAIL: SKEW &gt; 7°</div>
+                    <div className="flex gap-1 h-10 items-center">
+                      <div className="w-1 h-full bg-black"></div>
+                      <div className="w-2 h-full bg-black"></div>
+                      <div className="w-0.5 h-full bg-black"></div>
+                      <div className="w-3 h-full bg-black"></div>
+                      <div className="w-1 h-full bg-black"></div>
+                      <div className="w-2 h-full bg-black"></div>
+                      <div className="w-1.5 h-full bg-black"></div>
+                    </div>
+                  </div>
+                </div>
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  เส้นบาร์โค้ดสี่เหลี่ยมผืนผ้าบิดเอียงเป็นสี่เหลี่ยมด้านขนาน รูสแกนเนอร์ไม่สามารถอ่านความกว้างของแท่งบาร์โค้ดได้ ส่งผลให้ระบบคัดแยกเตะสินค้าทิ้งเป็นของเสีย
+                </p>
+              </div>
 
-          <div className="text-xs text-slate-300 space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-              <span className="text-slate-400">อาการภาพบิดเบี้ยว (Distortion):</span>
-              <strong className="text-emerald-400 font-mono">0.00% (ไม่มีอาการเอียง)</strong>
+              {/* Global Barcode */}
+              <div className={`p-4 rounded-xl border space-y-3 ${
+                isDark ? 'bg-slate-950 border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-300'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">บาร์โค้ดบนสายพาน 60 m/min (Global)</span>
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/40">
+                    ✅ 100% Read Rate (ฉาก 90°)
+                  </span>
+                </div>
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
+                  <div className="p-3 bg-white rounded border border-emerald-500 shadow">
+                    <div className="font-mono text-xs text-emerald-700 font-bold mb-1">PASS: SNC-2026-X9</div>
+                    <div className="flex gap-1 h-10 items-center">
+                      <div className="w-1 h-full bg-black"></div>
+                      <div className="w-2 h-full bg-black"></div>
+                      <div className="w-0.5 h-full bg-black"></div>
+                      <div className="w-3 h-full bg-black"></div>
+                      <div className="w-1 h-full bg-black"></div>
+                      <div className="w-2 h-full bg-black"></div>
+                      <div className="w-1.5 h-full bg-black"></div>
+                    </div>
+                  </div>
+                </div>
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  เส้นบาร์โค้ดตรงขนานตั้งฉาก 90° สมบูรณ์แบบ สแกนเนอร์และโมเดล Vision อ่านค่าสำเร็จใน 1 มิลลิวินาที ไม่เกิดการติดขัดในกระบวนการผลิต
+                </p>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800">
-              <span className="text-slate-400">ความแม่นยำในการวัดมิติ:</span>
-              <strong className="text-emerald-400 font-mono">&plusmn;0.01 mm (มาตรฐานยานยนต์)</strong>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
-              ทุกพิกเซลในเซนเซอร์เปิดรับแสงพร้อมกันในเสี้ยววินาที ชัตเตอร์อิเล็กทรอนิกส์หยุดการเคลื่อนไหวของชิ้นงานได้ 100% แม้วัตถุจะวิ่งเร็วแค่ไหนก็ไม่เบี้ยว
-            </p>
-          </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Engineering Formula Callout */}
-      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-300">
+      <div className={`p-4 rounded-xl border text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+        isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+      }`}>
         <div>
-          <span className="text-indigo-400 font-bold block mb-0.5">สูตรคำนวณการเบลอจากการเคลื่อนที่ (Motion Blur Formula):</span>
-          <span>Blur (pixels) = [ความเร็วสายพาน (mm/s) &times; เวลาเปิดชัตเตอร์ (s)] / ความละเอียดออปติก (mm/pixel)</span>
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold block mb-0.5">สูตรคำนวณการเบลอจากการเคลื่อนที่ (Motion Blur Formula):</span>
+          <span>Blur (pixels) = [ความเร็วสายพาน (mm/s) × เวลาเปิดชัตเตอร์ (s)] / ความละเอียดออปติก (mm/pixel)</span>
         </div>
-        <div className="text-[11px] text-emerald-400 bg-slate-900 p-2 rounded border border-slate-800 whitespace-nowrap">
-          💡 กฎเหล็ก: คุม Blur ให้น้อยกว่า 1.0 Pixel เสมอ
+        <div className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-900 p-2 rounded-lg border border-emerald-300 dark:border-slate-800 whitespace-nowrap font-bold">
+          💡 กฎเหล็กอุตสาหกรรม: ควบคุม Blur ให้น้อยกว่า 1.0 Pixel เสมอ
         </div>
       </div>
     </div>
@@ -585,17 +784,18 @@ function ShutterComparisonSimulator() {
 /* 3. INTERACTIVE OPTICAL FORMULAS & 3-PIXEL RULE CALCULATOR                 */
 /* ========================================================================= */
 function OpticalFormulasCalculator() {
+  const { isDark } = useTheme();
   const [fovWidth, setFovWidth] = useState(100); // mm
   const [minDefect, setMinDefect] = useState(0.1); // mm
   const [workingDist, setWorkingDist] = useState(300); // mm
   const [sensorFormat, setSensorFormat] = useState('2_3'); // '1_3', '1_2', '1_18', '2_3', '1_inch'
 
   const sensorFormats = {
-    '1_3': { name: '1/3" Sensor', width: 4.8, height: 3.6, diag: 6.0 },
-    '1_2': { name: '1/2" Sensor', width: 6.4, height: 4.8, diag: 8.0 },
-    '1_18': { name: '1/1.8" Sensor', width: 7.2, height: 5.4, diag: 9.0 },
-    '2_3': { name: '2/3" Sensor', width: 8.8, height: 6.6, diag: 11.0 },
-    '1_inch': { name: '1" Sensor', width: 12.8, height: 9.6, diag: 16.0 }
+    '1_3': { name: '1/3" Sensor', width: 4.8, height: 3.6, diag: 6.0, desc: 'กล้องขนาดกะทัดรัด บาร์โค้ดทั่วไป' },
+    '1_2': { name: '1/2" Sensor', width: 6.4, height: 4.8, diag: 8.0, desc: 'กล้องมาตรฐานงานประกอบ' },
+    '1_18': { name: '1/1.8" Sensor', width: 7.2, height: 5.4, diag: 9.0, desc: 'เซนเซอร์ Sony Pregius ยอดนิยม' },
+    '2_3': { name: '2/3" Sensor', width: 8.8, height: 6.6, diag: 11.0, desc: 'ขนาดมาตรฐานอุตสาหกรรม (C-Mount)' },
+    '1_inch': { name: '1" Sensor', width: 12.8, height: 9.6, diag: 16.0, desc: 'เซนเซอร์ความละเอียดสูงพิเศษ 12-25 MP' }
   };
 
   const currSensor = sensorFormats[sensorFormat];
@@ -603,58 +803,163 @@ function OpticalFormulasCalculator() {
   // 3-Pixel Rule Calculations (Slide 7):
   // Optical Resolution (Horizontal Pixels) = (FOV Width / Defect Size) * 3 pixels
   const requiredPixelsH = Math.round((fovWidth / Math.max(0.01, minDefect)) * 3);
-  const requiredPixelsV = Math.round((requiredPixelsH * 3) / 4);
-  const totalMegaPixels = ((requiredPixelsH * requiredPixelsV) / 1000000).toFixed(1);
+  const requiredPixelsV = Math.round((requiredPixelsH * 3) / 4); // Standard 4:3 industrial aspect ratio
+  const rawMegaPixels = (requiredPixelsH * requiredPixelsV) / 1000000;
+  const totalMegaPixels = rawMegaPixels.toFixed(2);
 
   // Recommended Camera Resolution tier
   const getCameraTier = (mp) => {
-    if (mp <= 0.4) return 'VGA (0.4 MP) &middot; 640x480';
-    if (mp <= 1.3) return '1.3 MP &middot; 1280x1024';
-    if (mp <= 2.3) return '2.3 MP &middot; 1920x1200 (Full HD)';
-    if (mp <= 5.0) return '5.0 MP &middot; 2448x2048';
-    if (mp <= 9.0) return '9.0 MP &middot; 4096x2160';
-    if (mp <= 12.0) return '12.0 MP &middot; 4096x3000';
-    if (mp <= 20.0) return '20.0 MP &middot; 5472x3648';
+    if (mp <= 0.4) return 'VGA (0.4 MP) · 640x480';
+    if (mp <= 1.3) return '1.3 MP · 1280x1024';
+    if (mp <= 2.3) return '2.3 MP · 1920x1200 (Full HD)';
+    if (mp <= 5.0) return '5.0 MP · 2448x2048';
+    if (mp <= 9.0) return '9.0 MP · 4096x2160';
+    if (mp <= 12.0) return '12.0 MP · 4096x3000';
+    if (mp <= 20.0) return '20.0 MP · 5472x3648';
     return 'Line Scan Camera หรือ 25+ MP Multi-camera array';
   };
 
-  // Focal Length Formula (Slide 8):
+  // Focal Length Formula:
   // f = (Sensor Width * Working Distance) / FOV Width
   const calcFocalLength = ((currSensor.width * workingDist) / fovWidth).toFixed(1);
 
   // Optical Magnification: M = Sensor Width / FOV Width
   const magnification = (currSensor.width / fovWidth).toFixed(3);
 
-  // Standard C-Mount Lens Options
+  // Standard C-Mount Lens Options in industrial automation
   const standardLenses = [6, 8, 12, 16, 25, 35, 50, 75];
   const closestLens = standardLenses.reduce((prev, curr) => 
-    Math.abs(curr - calcFocalLength) < Math.abs(prev - calcFocalLength) ? curr : prev
+    Math.abs(curr - Number(calcFocalLength)) < Math.abs(prev - Number(calcFocalLength)) ? curr : prev
   );
 
   return (
-    <div className="bg-slate-900 border border-sky-500/30 rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-4 sm:space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-bold mb-1 border border-sky-500/30">
-            <FiTarget className="w-3.5 h-3.5 text-sky-400" />
-            <span>Industrial Optical Engineering &middot; กฎ 3 พิกเซล &amp; การคำนวณเลนส์</span>
+    <div className={`border rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xl space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-sky-500/30' : 'bg-white border-sky-200 shadow-sky-500/5'
+    }`}>
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold mb-1 border border-sky-500/30">
+          <FiTarget className="w-3.5 h-3.5 text-sky-500" />
+          <span>Industrial Optical Engineering · กฎ 3 พิกเซล & การคำนวณเลนส์</span>
+        </div>
+        <h3 className={`text-base sm:text-lg font-black leading-snug tracking-tight mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          ห้องคำนวณความละเอียดกล้อง (3-Pixel Rule) & ทางยาวโฟกัสเลนส์ (Focal Length Calculator)
+        </h3>
+        <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          สูตรคำนวณมาตรฐานวิศวกรรมสากลสำหรับจับคู่กล้อง (Camera Resolution) และทางยาวโฟกัสเลนส์ (Focal Length) ให้ตรงกับมิติของชิ้นงานในโรงงาน
+        </p>
+      </div>
+
+      {/* Educational Optical Geometry Diagram & Glossary */}
+      <div className={`p-4 sm:p-5 rounded-xl border space-y-4 ${
+        isDark ? 'bg-slate-950 border-slate-800' : 'bg-sky-50/50 border-sky-200'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-3">
+          <div className="flex items-center gap-2">
+            <FiInfo className="w-4 h-4 text-sky-500" />
+            <h4 className={`font-bold text-xs sm:text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              📐 แผนภาพเรขาคณิตระบบออปติก (Optical Geometry & 5 Core Parameters)
+            </h4>
           </div>
-          <h3 className="text-base sm:text-lg font-black text-white leading-snug tracking-tight mb-1">
-            ห้องคำนวณความละเอียดกล้อง (The 3-Pixel Rule) และทางยาวโฟกัสเลนส์ (Focal Length Calculator)
-          </h3>
-          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-            สูตรมาตรฐานจากหลักสูตรกลางวิศวกรรม Machine Vision เพื่อคัดเลือกกล้องและเลนส์ให้ตรงกับสเปกโรงงาน
-          </p>
+          <span className="text-[11px] text-sky-600 dark:text-sky-400 font-medium">
+            มาตรฐานวิศวกรรมการจัดวางกล้องและเลนส์อุตสาหกรรม
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+          {/* Optical Diagram Image */}
+          <div className="lg:col-span-5 flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <img 
+              src="./images/optical_geometry.jpg" 
+              alt="Industrial Camera Optical Geometry Setup"
+              className="max-h-64 object-contain rounded"
+              onError={(e) => {
+                // Fallback to direct absolute URL if base path differs
+                e.target.src = '/images/optical_geometry.jpg';
+              }}
+            />
+            <span className="text-[10px] text-slate-500 font-mono mt-2 text-center">
+              รูปที่ 1: ความสัมพันธ์เชิงเรขาคณิตระหว่าง Camera, Sensor, WD, FOV, DOF และ Resolution
+            </span>
+          </div>
+
+          {/* Core Terms Breakdown (Answers Booker's exact questions) */}
+          <div className="lg:col-span-7 space-y-2.5 text-xs">
+            {/* Term 1: Sensor Size */}
+            <div className={`p-2.5 rounded-lg border ${
+              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className="flex items-center justify-between font-bold mb-0.5">
+                <span className="text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  1. Sensor Size (ขนาดชิปเซนเซอร์):
+                </span>
+                <span className="text-[10px] text-slate-500">หน่วย: mm (มิลลิเมตร)</span>
+              </div>
+              <p className={`text-[11px] leading-relaxed m-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <strong>ที่มา:</strong> คือขนาดกว้าง × ยาวของแผ่นซิลิคอนชิปรับภาพภายในกล้อง (ไม่ใช่ขนาดตัวถังกล้องภายนอก) <strong>เปิดดูได้จาก Datasheet กล้อง</strong> เช่น เซนเซอร์ 2/3" กว้าง 8.8 mm, 1/1.8" กว้าง 7.2 mm
+              </p>
+            </div>
+
+            {/* Term 2: Working Distance (WD) */}
+            <div className={`p-2.5 rounded-lg border ${
+              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className="flex items-center justify-between font-bold mb-0.5">
+                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  2. Working Distance (WD):
+                </span>
+                <span className="text-[10px] text-slate-500">หน่วย: mm (มิลลิเมตร)</span>
+              </div>
+              <p className={`text-[11px] leading-relaxed m-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <strong>ที่มา:</strong> ย่อมาจาก <em>Working Distance</em> คือระยะห่างทางกายภาพ วัดจาก <strong>ขอบหน้าสุดของเลนส์ (Front of Lens) ถึงระนาบผิวชิ้นงาน</strong> วัดได้จริงด้วยตลับเมตร หรือดูจากแบบ CAD โครงสร้างเครื่องจักร
+              </p>
+            </div>
+
+            {/* Term 3: Field of View (FOV) */}
+            <div className={`p-2.5 rounded-lg border ${
+              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className="flex items-center justify-between font-bold mb-0.5">
+                <span className="text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                  3. Field of View (FOV):
+                </span>
+                <span className="text-[10px] text-slate-500">หน่วย: mm (มิลลิเมตร)</span>
+              </div>
+              <p className={`text-[11px] leading-relaxed m-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <strong>ที่มา:</strong> ขอบเขตพื้นที่ที่กล้องมองเห็นครอบคลุมชิ้นงาน คำนวณจาก (ขนาดชิ้นงานจริง + เผื่อระยะ Margin ขอบข้าง 10-20%)
+              </p>
+            </div>
+
+            {/* Term 4: Depth of Field (DOF) & Resolution */}
+            <div className={`p-2.5 rounded-lg border ${
+              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className="flex items-center justify-between font-bold mb-0.5">
+                <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  4. Depth of Field (DOF) & Resolution (ความละเอียด):
+                </span>
+                <span className="text-[10px] text-slate-500">หน่วย: mm / Pixels</span>
+              </div>
+              <p className={`text-[11px] leading-relaxed m-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <strong>DOF:</strong> ระยะความลึกหน้า-หลังที่ภาพยังคงโฟกัสชัด · <strong>Resolution:</strong> ขนาดตำหนิเล็กสุดที่ต้องตรวจจับ โดยต้องมีพิกเซลคลุมอย่างน้อย 3 พิกเซลเสมอ (3-Pixel Rule)
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Interactive Sliders Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl border text-xs ${
+        isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+      }`}>
         {/* FOV Width Slider */}
         <div className="space-y-1.5">
-          <div className="flex justify-between text-slate-300 font-bold">
-            <span>ขอบเขตภาพ (FOV Width):</span>
-            <span className="text-cyan-400 font-mono">{fovWidth} mm</span>
+          <div className="flex justify-between font-bold">
+            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ขอบเขตภาพ (FOV Width):</span>
+            <span className="text-cyan-600 dark:text-cyan-400 font-mono font-bold">{fovWidth} mm</span>
           </div>
           <input 
             type="range" 
@@ -663,16 +968,16 @@ function OpticalFormulasCalculator() {
             step="10" 
             value={fovWidth} 
             onChange={(e) => setFovWidth(Number(e.target.value))}
-            className="w-full accent-cyan-400 cursor-pointer"
+            className="w-full accent-cyan-500 cursor-pointer"
           />
           <div className="text-[10px] text-slate-500">ความกว้างพื้นที่ตรวจจับชิ้นงาน</div>
         </div>
 
         {/* Defect Size Slider */}
         <div className="space-y-1.5">
-          <div className="flex justify-between text-slate-300 font-bold">
-            <span>รอยตำหนิเล็กสุด (Defect):</span>
-            <span className="text-amber-400 font-mono">{minDefect} mm</span>
+          <div className="flex justify-between font-bold">
+            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>รอยตำหนิเล็กสุด (Defect):</span>
+            <span className="text-amber-600 dark:text-amber-400 font-mono font-bold">{minDefect} mm</span>
           </div>
           <input 
             type="range" 
@@ -681,16 +986,16 @@ function OpticalFormulasCalculator() {
             step="0.05" 
             value={minDefect} 
             onChange={(e) => setMinDefect(Number(e.target.value))}
-            className="w-full accent-amber-400 cursor-pointer"
+            className="w-full accent-amber-500 cursor-pointer"
           />
           <div className="text-[10px] text-slate-500">ขนาด Defect ที่ต้องมองเห็น</div>
         </div>
 
         {/* Working Distance Slider */}
         <div className="space-y-1.5">
-          <div className="flex justify-between text-slate-300 font-bold">
-            <span>ระยะห่างกล้อง (WD):</span>
-            <span className="text-emerald-400 font-mono">{workingDist} mm</span>
+          <div className="flex justify-between font-bold">
+            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ระยะห่างกล้อง (WD):</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">{workingDist} mm</span>
           </div>
           <input 
             type="range" 
@@ -699,110 +1004,163 @@ function OpticalFormulasCalculator() {
             step="20" 
             value={workingDist} 
             onChange={(e) => setWorkingDist(Number(e.target.value))}
-            className="w-full accent-emerald-400 cursor-pointer"
+            className="w-full accent-emerald-500 cursor-pointer"
           />
-          <div className="text-[10px] text-slate-500">ระยะจากหน้าเลนส์ถึงชิ้นงาน</div>
+          <div className="text-[10px] text-slate-500">ระยะจากหน้าเลนส์ถึงชิ้นงาน (วัดหน้างาน)</div>
         </div>
 
         {/* Sensor Format Select */}
         <div className="space-y-1.5">
-          <div className="flex justify-between text-slate-300 font-bold">
-            <span>ขนาดเซนเซอร์กล้อง:</span>
-            <span className="text-purple-400 font-mono">{currSensor.width} mm</span>
+          <div className="flex justify-between font-bold">
+            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ขนาดเซนเซอร์กล้อง (Sensor):</span>
+            <span className="text-purple-600 dark:text-purple-400 font-mono font-bold">{currSensor.width} mm</span>
           </div>
           <select 
             value={sensorFormat} 
             onChange={(e) => setSensorFormat(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-purple-400"
+            className={`w-full border rounded-lg p-1.5 text-xs focus:outline-none focus:border-purple-500 ${
+              isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+            }`}
           >
-            <option value="1_3">1/3" (4.8 x 3.6 mm)</option>
+            <option value="1_3">1/3" (4.8 x 3.6 mm) — ชิปขนาดเล็ก</option>
             <option value="1_2">1/2" (6.4 x 4.8 mm)</option>
-            <option value="1_18">1/1.8" (7.2 x 5.4 mm)</option>
-            <option value="2_3">2/3" (8.8 x 6.6 mm) &mdash; มาตรฐาน</option>
-            <option value="1_inch">1" (12.8 x 9.6 mm) &mdash; ความละเอียดสูง</option>
+            <option value="1_18">1/1.8" (7.2 x 5.4 mm) — Sony Pregius</option>
+            <option value="2_3">2/3" (8.8 x 6.6 mm) — มาตรฐานโรงงาน</option>
+            <option value="1_inch">1" (12.8 x 9.6 mm) — ความละเอียดสูง</option>
           </select>
-          <div className="text-[10px] text-slate-500">Image Sensor Optical Format</div>
+          <div className="text-[10px] text-slate-500">ดูจาก Datasheet ชิปเซนเซอร์กล้อง</div>
         </div>
       </div>
 
-      {/* Calculated Results Cards */}
+      {/* Calculated Results Cards with Step-by-Step Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: 3-Pixel Rule Resolution */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-sky-500/40 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-300">1. กฎ 3 พิกเซล (3-Pixel Rule)</span>
-            <span className="text-[10px] font-mono bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded border border-sky-500/30">
-              Noise Immunity
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black font-mono text-sky-400">{requiredPixelsH}</span>
-            <span className="text-xs text-slate-400">พิกเซลแนวนอน (H)</span>
-          </div>
-          <div className="text-[11px] text-slate-300 border-t border-slate-800 pt-2 space-y-1">
-            <div className="flex justify-between">
-              <span className="text-slate-400">ความละเอียดรวม:</span>
-              <strong className="text-white font-mono">{totalMegaPixels} MP</strong>
+        {/* Card 1: 3-Pixel Rule Resolution & MP Breakdown */}
+        <div className={`p-4 rounded-xl border space-y-2 flex flex-col justify-between ${
+          isDark ? 'bg-slate-950 border-sky-500/40' : 'bg-sky-50/70 border-sky-300 shadow-sm'
+        }`}>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>1. กฎ 3 พิกเซล (3-Pixel Rule)</span>
+              <span className="text-[10px] font-mono bg-sky-500/20 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/30">
+                Noise Immunity
+              </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">รุ่นกล้องที่แนะนำ:</span>
-              <strong className="text-emerald-400" dangerouslySetInnerHTML={{ __html: getCameraTier(Number(totalMegaPixels)) }}></strong>
+
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-2xl font-black font-mono text-sky-600 dark:text-sky-400">{requiredPixelsH}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">พิกเซลแนวนอน (H)</span>
+            </div>
+
+            <div className={`text-[11px] border-t border-slate-200 dark:border-slate-800 pt-2 space-y-1.5 ${
+              isDark ? 'text-slate-300' : 'text-slate-700'
+            }`}>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400">ความละเอียดรวม:</span>
+                <strong className="text-sky-600 dark:text-white font-mono text-sm">{totalMegaPixels} MP</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400">รุ่นกล้องที่แนะนำในตลาด:</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-bold" dangerouslySetInnerHTML={{ __html: getCameraTier(Number(totalMegaPixels)) }}></strong>
+              </div>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 italic pt-1">
-            สูตร: (FOV / Defect) &times; 3 px เพื่อป้องกันการเกิด False Trigger จาก Sensor Noise
-          </p>
+
+          {/* Explicit MP explanation box answering Booker */}
+          <div className={`p-2.5 rounded-lg border text-[10px] space-y-1 mt-2 ${
+            isDark ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+          }`}>
+            <div className="font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1">
+              <span>💡 ค่า MP หาจากไหน?</span>
+            </div>
+            <div>
+              <strong>สูตร:</strong> (Pixels_H × Pixels_V) / 1,000,000<br/>
+              = ({requiredPixelsH} × {requiredPixelsV}) / 1,000,000 = <strong>{totalMegaPixels} Megapixels (MP)</strong>
+            </div>
+            <div className="text-[9px] text-slate-500 italic">
+              *แนะนำรุ่นกล้องในตลาดที่ ≥ {totalMegaPixels} MP เพราะผู้ผลิตกล้องผลิตตามมาตรฐานชิป (1.3, 2.3, 5, 12 MP)
+            </div>
+          </div>
         </div>
 
-        {/* Card 2: Focal Length Calculation */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-amber-500/40 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-300">2. ทางยาวโฟกัส (Focal Length)</span>
-            <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
-              f = (Sensor &times; WD) / FOV
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black font-mono text-amber-400">{calcFocalLength}</span>
-            <span className="text-xs text-slate-400">มิลลิเมตร (mm)</span>
-          </div>
-          <div className="text-[11px] text-slate-300 border-t border-slate-800 pt-2 space-y-1">
-            <div className="flex justify-between">
-              <span className="text-slate-400">เลนส์มาตรฐาน C-Mount:</span>
-              <strong className="text-amber-300 font-mono text-sm">{closestLens} mm</strong>
+        {/* Card 2: Focal Length Calculation & WD / Sensor Source Breakdown */}
+        <div className={`p-4 rounded-xl border space-y-2 flex flex-col justify-between ${
+          isDark ? 'bg-slate-950 border-amber-500/40' : 'bg-amber-50/70 border-amber-300 shadow-sm'
+        }`}>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>2. ทางยาวโฟกัส (Focal Length)</span>
+              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+                f = (Sensor × WD) / FOV
+              </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">อัตราขยาย (Magnification):</span>
-              <strong className="text-white font-mono">{magnification}x</strong>
+
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-2xl font-black font-mono text-amber-600 dark:text-amber-400">{calcFocalLength}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">มิลลิเมตร (mm)</span>
+            </div>
+
+            <div className={`text-[11px] border-t border-slate-200 dark:border-slate-800 pt-2 space-y-1.5 ${
+              isDark ? 'text-slate-300' : 'text-slate-700'
+            }`}>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400">เลนส์มาตรฐาน C-Mount:</span>
+                <strong className="text-amber-600 dark:text-amber-300 font-mono text-sm font-black">{closestLens} mm</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400">อัตราขยาย (Magnification):</span>
+                <strong className="font-mono">{magnification}x</strong>
+              </div>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 italic pt-1">
-            หากค่าคำนวณอยู่กึ่งกลาง ให้เลือกเลนส์ขนาดใกล้เคียงแล้วปรับชดเชยที่ระยะ Working Distance
-          </p>
+
+          {/* Explicit Sensor & WD explanation box answering Booker */}
+          <div className={`p-2.5 rounded-lg border text-[10px] space-y-1 mt-2 ${
+            isDark ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+          }`}>
+            <div className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <span>💡 Sensor และ WD มาจากไหน?</span>
+            </div>
+            <div>
+              <strong>Sensor:</strong> {currSensor.width} mm (กว้างชิปเซนเซอร์ใน Datasheet กล้อง)<br/>
+              <strong>WD:</strong> {workingDist} mm (วัดจากหน้าเลนส์ถึงชิ้นงานด้วยตลับเมตร)<br/>
+              <strong>แทนค่า:</strong> ({currSensor.width} × {workingDist}) / {fovWidth} = <strong>{calcFocalLength} mm</strong>
+            </div>
+            <div className="text-[9px] text-slate-500 italic">
+              *เลือกเลนส์ขนาดใกล้เคียง ({closestLens} mm) แล้วปรับระยะติดตั้ง WD ชดเชยหน้างานเล็กน้อย
+            </div>
+          </div>
         </div>
 
         {/* Card 3: Sensor Coverage & Vignetting Warning */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-purple-500/40 space-y-2 flex flex-col justify-between">
+        <div className={`p-4 rounded-xl border space-y-2 flex flex-col justify-between ${
+          isDark ? 'bg-slate-950 border-purple-500/40' : 'bg-purple-50/70 border-purple-300 shadow-sm'
+        }`}>
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-slate-300">3. ขนาดเลนส์ vs เซนเซอร์</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>3. ขนาดเลนส์ vs เซนเซอร์</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 Vignetting Check
               </span>
             </div>
-            <div className="text-xs text-slate-300 space-y-1 pt-1">
-              <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
-                <span className="text-slate-400 block text-[10px]">กฎการจับคู่ Image Circle (Slide 9):</span>
-                <strong className="text-emerald-400">วงภาพเลนส์ &ge; ขนาดเซนเซอร์กล้อง เสมอ</strong>
+
+            <div className={`text-xs space-y-1.5 pt-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <div className={`p-2 rounded-lg border ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <span className="text-slate-500 dark:text-slate-400 block text-[10px]">กฎการจับคู่ Image Circle (Slide 9):</span>
+                <strong className="text-emerald-600 dark:text-emerald-400">วงภาพเลนส์ ≥ ขนาดเซนเซอร์กล้อง เสมอ</strong>
               </div>
-              <ul className="text-[11px] text-slate-300 space-y-1 pt-1 list-disc list-inside">
-                <li>เลนส์ 2/3" ใส่บนเซนเซอร์ 1/2" = <span className="text-emerald-400 font-bold">OK (ภาพสว่างเต็มเฟรม)</span></li>
-                <li>เลนส์ 1/2" ใส่บนเซนเซอร์ 2/3" = <span className="text-rose-400 font-bold">FAIL (เกิดขอบมืด Vignetting)</span></li>
+              <ul className="text-[11px] space-y-1 pt-1 list-disc list-inside">
+                <li>เลนส์ 2/3" บนเซนเซอร์ 1/2" = <span className="text-emerald-600 dark:text-emerald-400 font-bold">OK (ภาพสว่างเต็มเฟรม)</span></li>
+                <li>เลนส์ 1/2" บนเซนเซอร์ 2/3" = <span className="text-rose-600 dark:text-rose-400 font-bold">FAIL (เกิดขอบมืด Vignetting)</span></li>
               </ul>
             </div>
           </div>
-          <div className="text-[10px] text-slate-400 bg-purple-950/30 p-2 rounded border border-purple-500/20">
-            💡 <strong>Telecentric Lens:</strong> ทางเลือกพิเศษสำหรับงานวัดขนาด ลดความเพี้ยนเปอร์สเปกทีฟเป็น 0
+
+          <div className={`text-[10px] p-2 rounded-lg border ${
+            isDark ? 'text-slate-400 bg-purple-950/30 border-purple-500/20' : 'text-slate-700 bg-white border-purple-200'
+          }`}>
+            💡 <strong>Telecentric Lens:</strong> ทางเลือกพิเศษสำหรับงานวัดขนาดชิ้นงานโลหะ/พลาสติก ลดความเพี้ยนเปอร์สเปกทีฟเป็น 0 แม้ระยะวัตถุเลื่อน
           </div>
         </div>
       </div>

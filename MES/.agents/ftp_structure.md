@@ -17,6 +17,7 @@ Here is the complete list of all directories on the FTP server.
 /HERMES/uploads/crm
 /LearningHub
 /LearningHub/assets
+/LearningHub/images
 /MES
 /MES/MES
 /MES/MES/auth
