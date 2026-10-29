@@ -47,6 +47,9 @@
 - **FULL LIFECYCLE DURATION:** When registering or updating tasks in Team Planner (`TeamPlanner_Tasks`), NEVER log only the isolated 5-10 minutes of AI execution. Real tasks encompass user problem formulation, prompting, AI execution, and user testing/UAT.
 - **CHAIN-TO-PREVIOUS-TASK:** Ensure task times fit together without artificial gaps. Inspect the previous task's `EndTime` for the day and set `StartTime = previousTask.EndTime` (respecting standard lunch break 12:00-13:00 and fixed company events).
 - **CONSOLIDATE MICRO-TASKS:** Group consecutive small iterations into structured Milestone Blocks (e.g. 1.5 - 3 hours) and list granular changes under `Subtasks` rather than polluting the board with fragmented 5-minute entries.
+- **CROSS-MODULE PARALLELISM VS SAME-MODULE CHAINING:**
+  - **Cross-Module Concurrent Tasks:** If developing separate modules simultaneously (e.g. IQS + Learning Hub), tasks MAY overlap in time (maximum 2-3 concurrent lanes). The Team Planner Gantt chart will automatically stack them into sub-lanes.
+  - **Same-Module Sequential Chaining:** If tasks belong to the same module/feature, they MUST NOT overlap. Chain them sequentially (`StartTime = previousTask.EndTime`) or merge them into a single milestone block with subtasks.
 
 # POWERSHELL & SCRIPTING HAZARDS (CRITICAL)
 - **SINGLE-QUOTED HERE-STRINGS (`@' '@`):** When generating Python/Node.js scripts or writing files via PowerShell, ALWAYS use single-quoted here-strings (`@' '@`).

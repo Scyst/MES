@@ -81,3 +81,6 @@ Creates a new task in the planner.
    - NEVER log only the isolated 5-10 minutes of AI prompt execution. A real development task encompasses the **Full User Lifecycle**: user requirement analysis, prompt drafting, AI execution, and user UAT/testing on devices.
    - **Chain-to-Previous-Task:** When logging a task, inspect the user's latest task for the day. Set `startTime = previousTask.endTime` (skipping standard lunch 12:00-13:00 or company meetings) so the timeline is continuous and unbroken.
    - **Consolidate Micro-tasks:** Group small iterative fixes (e.g. 3-4 consecutive UI adjustments) into a single cohesive Milestone Block (e.g. 1.5 - 3 hours) and list the individual fixes under `subtasks`.
+5. **Cross-Module Parallelism vs Same-Module Chaining:**
+   - **Cross-Module (Parallel Allowed, Max 2-3 lanes):** When developing across distinct modules concurrently (e.g. IQS + Learning Hub), tasks MAY have overlapping start/end times. The Gantt chart automatically renders stacked sub-lanes.
+   - **Same-Module (Sequential Only):** For tasks within the same module/feature, chain them sequentially (`startTime = previousTask.endTime`) or merge them into a single milestone block to keep the timeline clean and realistic.
