@@ -8,6 +8,12 @@ import {
   MACHINE_VISION_EXAM_STANDARD,
   MACHINE_VISION_EXAM_EXPERT
 } from './machineVisionExam';
+import {
+  MACHINE_VISION_V2_EXAM,
+  MACHINE_VISION_V2_CHECKPOINTS,
+  MACHINE_VISION_V2_EXAM_STANDARD,
+  MACHINE_VISION_V2_EXAM_EXPERT
+} from './machineVisionV2Exam';
 import { 
   ROBOT_EXAM_QUESTIONS, 
   ROBOT_CHECKPOINTS,
@@ -790,6 +796,7 @@ export const MODULE_CHECKPOINTS = {
 
   // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories
   'c-machine-vision': MACHINE_VISION_CHECKPOINTS,
+  'c-machine-vision-v2': MACHINE_VISION_V2_CHECKPOINTS,
 
   // 3. CAD-CAM for Mold and Die Design and Manufacturing
   'c-cad-cam': {
@@ -2219,6 +2226,7 @@ export const MASTER_ASSESSMENTS = {
 
   // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories
   'c-machine-vision': MACHINE_VISION_EXAM,
+  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM,
 
   // 3. CAD-CAM for Mold and Die Design and Manufacturing
   'c-cad-cam': [
@@ -2525,12 +2533,14 @@ export function getModuleCheckpoint(course, module, moduleIndex = 0) {
  */
 export const MASTER_ASSESSMENTS_STANDARD = {
   'c-robot-automation': ROBOT_EXAM_STANDARD,
-  'c-machine-vision': MACHINE_VISION_EXAM_STANDARD
+  'c-machine-vision': MACHINE_VISION_EXAM_STANDARD,
+  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM_STANDARD
 };
 
 export const MASTER_ASSESSMENTS_EXPERT = {
   'c-robot-automation': ROBOT_EXAM_EXPERT,
-  'c-machine-vision': MACHINE_VISION_EXAM_EXPERT
+  'c-machine-vision': MACHINE_VISION_EXAM_EXPERT,
+  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM_EXPERT
 };
 
 /**

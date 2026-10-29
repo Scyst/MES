@@ -88,7 +88,7 @@ export default function Catalog() {
 
   // Featured flagship courses for Hero Spotlight
   const flagshipCourses = useMemo(() => {
-    return allCourses.filter(c => c.id === 'c-robot-automation' || c.id === 'c-machine-vision');
+    return allCourses.filter(c => c.id === 'c-robot-automation' || c.id === 'c-machine-vision' || c.id === 'c-machine-vision-v2');
   }, [allCourses]);
 
   // Helper to parse duration hours
@@ -160,8 +160,8 @@ export default function Catalog() {
       }
 
       // Default: 'featured' order (flagships & featured first)
-      const featScoreA = a.id === 'c-robot-automation' ? 100 : a.id === 'c-machine-vision' ? 90 : a.isFeatured ? 50 : 10;
-      const featScoreB = b.id === 'c-robot-automation' ? 100 : b.id === 'c-machine-vision' ? 90 : b.isFeatured ? 50 : 10;
+      const featScoreA = a.id === 'c-robot-automation' ? 100 : a.id === 'c-machine-vision-v2' ? 95 : a.id === 'c-machine-vision' ? 90 : a.isFeatured ? 50 : 10;
+      const featScoreB = b.id === 'c-robot-automation' ? 100 : b.id === 'c-machine-vision-v2' ? 95 : b.id === 'c-machine-vision' ? 90 : b.isFeatured ? 50 : 10;
       return featScoreB - featScoreA;
     });
 
@@ -431,9 +431,10 @@ export default function Catalog() {
           <span className="text-[11px] text-slate-400 font-medium">ระดับช่างเทคนิค & วิศวกร (Level 4 Expert Ready)</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {flagshipCourses.map(course => {
             const isRobot = course.id === 'c-robot-automation';
+            const isVisionV2 = course.id === 'c-machine-vision-v2';
             const userStatus = getUserCourseStatus(course.id);
             const isDone = userStatus.passed || userStatus.status === 'completed';
             const inProgress = !isDone && userStatus.progressPercent > 0;
@@ -446,15 +447,19 @@ export default function Catalog() {
                   isDark
                     ? isRobot 
                       ? 'bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-900 border-indigo-500/40 hover:border-indigo-400' 
-                      : 'bg-gradient-to-br from-fuchsia-950/80 via-slate-900 to-slate-900 border-fuchsia-500/40 hover:border-fuchsia-400'
+                      : isVisionV2
+                        ? 'bg-gradient-to-br from-cyan-950/80 via-slate-900 to-slate-900 border-cyan-500/40 hover:border-cyan-400'
+                        : 'bg-gradient-to-br from-fuchsia-950/80 via-slate-900 to-slate-900 border-fuchsia-500/40 hover:border-fuchsia-400'
                     : isRobot
                       ? 'bg-gradient-to-br from-indigo-50 via-white to-slate-50 border-indigo-200 hover:border-indigo-400 shadow-sm'
-                      : 'bg-gradient-to-br from-fuchsia-50 via-white to-slate-50 border-fuchsia-200 hover:border-fuchsia-400 shadow-sm'
+                      : isVisionV2
+                        ? 'bg-gradient-to-br from-cyan-50 via-white to-slate-50 border-cyan-200 hover:border-cyan-400 shadow-sm'
+                        : 'bg-gradient-to-br from-fuchsia-50 via-white to-slate-50 border-fuchsia-200 hover:border-fuchsia-400 shadow-sm'
                 }`}
               >
                 {/* Background decorative glow */}
                 <div className={`absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl pointer-events-none opacity-30 ${
-                  isRobot ? 'bg-indigo-500' : 'bg-fuchsia-500'
+                  isRobot ? 'bg-indigo-500' : isVisionV2 ? 'bg-cyan-500' : 'bg-fuchsia-500'
                 }`} />
 
                 <div className="relative z-10">
@@ -463,7 +468,9 @@ export default function Catalog() {
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
                         isRobot 
                           ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
-                          : 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
+                          : isVisionV2
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            : 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
                       }`}>
                         <FiStar className="w-3 h-3 text-amber-400" />
                         <span>{course.featuredBadge || '⭐ แนะนำพิเศษ'}</span>
@@ -492,7 +499,13 @@ export default function Catalog() {
                     )}
                   </div>
 
-                  <h3 className={`text-base sm:text-lg font-black leading-snug mb-2 group-hover:text-fuchsia-400 transition-colors ${
+                  <h3 className={`text-base sm:text-lg font-black leading-snug mb-2 transition-colors ${
+                    isRobot 
+                      ? 'group-hover:text-indigo-400' 
+                      : isVisionV2 
+                        ? 'group-hover:text-cyan-400' 
+                        : 'group-hover:text-fuchsia-400'
+                  } ${
                     isDark ? 'text-white' : 'text-slate-900'
                   }`}>
                     {course.title}
@@ -523,7 +536,9 @@ export default function Catalog() {
                   <div className={`inline-flex items-center gap-1.5 font-bold text-xs px-3 py-1.5 rounded-xl transition-all shadow-md ${
                     isRobot 
                       ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white' 
-                      : 'bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-500 hover:to-pink-500 text-white'
+                      : isVisionV2
+                        ? 'bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white'
+                        : 'bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-500 hover:to-pink-500 text-white'
                   }`}>
                     <span>{isDone ? 'ทบทวนวิชา' : inProgress ? 'เรียนต่อ' : 'เข้าสู่บทเรียน'}</span>
                     <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />

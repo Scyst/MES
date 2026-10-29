@@ -21,7 +21,9 @@ import {
   FiLock,
   FiUnlock,
   FiInfo,
-  FiMaximize2
+  FiMaximize2,
+  FiEye,
+  FiServer
 } from 'react-icons/fi';
 
 /* ========================================================================= */
