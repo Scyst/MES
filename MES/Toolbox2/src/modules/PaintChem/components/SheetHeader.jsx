@@ -51,7 +51,7 @@ export default function SheetHeader({
                 <Unlock size={14} /><span>ปลดล็อกแก้ไข</span>
               </button>
             )}
-            <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors">
+            <a href={`${import.meta.env.BASE_URL}api/paintChem/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors">
               <Printer size={14} /><span>ฟอร์มเปล่า</span>
             </a>
             <button type="button" onClick={onAnalyticsClick} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 hover:bg-blue-100 rounded-lg shadow-sm transition-colors">
@@ -74,7 +74,7 @@ export default function SheetHeader({
                     <Unlock size={16} /> ปลดล็อกแก้ไข
                   </button>
                 )}
-                <a href={`/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700" onClick={() => setMenuOpen(false)}>
+                <a href={`${import.meta.env.BASE_URL}api/paintChem/export_pdf.php?blank=1&shift=${shift}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700" onClick={() => setMenuOpen(false)}>
                   <Printer size={16} /> ฟอร์มเปล่า
                 </a>
                 <button type="button" onClick={() => { setMenuOpen(false); onAnalyticsClick(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-left border-b border-gray-100 dark:border-gray-700">

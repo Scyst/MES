@@ -6,7 +6,7 @@ import {
   Clock, FileText, Printer, CheckSquare, Square, Calendar, Eye, X
 } from 'lucide-react';
 
-const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
+const API_BASE = `${import.meta.env.BASE_URL}api/paintChem`.replace(/\/$/, '');
 
 function StatusBadge({ status }) {
   const map = {

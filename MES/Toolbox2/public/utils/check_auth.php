@@ -17,7 +17,7 @@ if (!defined('ALLOW_GUEST_ACCESS') && !isset($_SESSION['user'])) {
         exit;
     } else {
         $current_url = $_SERVER['REQUEST_URI'];
-        $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
+        $loginUrl = defined('BASE_URL') ? BASE_URL . '/#/login' : '/iot-toolbox/sandbox-b9/Toolbox2/#/login'; 
         header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
         exit;
     }
@@ -80,7 +80,7 @@ function requirePermission($permissions) {
             exit;
         } else {
             $current_url = $_SERVER['REQUEST_URI'];
-            $loginUrl = defined('BASE_URL') ? BASE_URL . '/auth/login_form.php' : '/MES/auth/login_form.php'; 
+            $loginUrl = defined('BASE_URL') ? BASE_URL . '/#/login' : '/iot-toolbox/sandbox-b9/Toolbox2/#/login'; 
             header("Location: " . $loginUrl . "?redirect=" . urlencode($current_url));
             exit;
         }
@@ -105,7 +105,7 @@ function requirePermission($permissions) {
             echo json_encode(['success' => false, 'message' => 'Access Denied: You lack the required permissions.']);
             exit;
         } else {
-            $homeUrl = defined('BASE_URL') ? BASE_URL . '/page/dailyLog/dailyLogUI.php' : '/MES/page/dailyLog/dailyLogUI.php';
+            $homeUrl = defined('BASE_URL') ? BASE_URL . '/#/' : '/iot-toolbox/sandbox-b9/Toolbox2/#/';
             die('
                 <!DOCTYPE html>
                 <html lang="th">

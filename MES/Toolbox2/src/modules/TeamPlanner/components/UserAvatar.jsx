@@ -36,7 +36,7 @@ const UserAvatar = ({ username, displayName, className = '', fallbackClass = 'bg
       {/* Real Image */}
       {!error && (
         <img 
-          src={`/iot-toolbox/sandbox-b9/Toolbox/planner/api/uploads/avatars/${encodeURIComponent(realUsername)}.jpg?t=${avatarTimestamp}`} 
+          src={`${import.meta.env.BASE_URL}api/planner/uploads/avatars/${encodeURIComponent(realUsername)}.jpg?t=${avatarTimestamp}`} 
           onError={() => setError(true)} 
           className="absolute inset-0 w-full h-full object-cover bg-white dark:bg-slate-800" 
           alt={safeUsername} 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/api/dailyLogManage.php';
+const API_URL = `${import.meta.env.BASE_URL}api/dailyLog/dailyLogManage.php`;
 
 // Configure defaults for this specific URL instead of creating a new instance
 // so that global interceptors from AuthContext will apply.

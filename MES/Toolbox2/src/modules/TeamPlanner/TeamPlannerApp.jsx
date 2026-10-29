@@ -355,7 +355,7 @@ function App() {
     if (toolboxLogout) {
       await toolboxLogout();
     } else {
-      window.location.href = '../../MES/MES/auth/login_form.php';
+      window.location.hash = '#/login';
     }
   };
 
@@ -568,11 +568,8 @@ function App() {
                       <FiUser className="text-[1.1rem]" /> ตั้งค่าโปรไฟล์
                     </button>
                     <Link to="/" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
-                      <FiHome className="text-[1.1rem]" /> Home (ระบบใหม่)
+                      <FiHome className="text-[1.1rem]" /> กลับหน้าหลัก (TOOLBOX OS)
                     </Link>
-                    <a href="/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
-                      <FiHome className="text-[1.1rem]" /> Home (ระบบเก่า)
-                    </a>
                     <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
                       <div className="flex items-center gap-3">
                         {isDarkMode ? <FiSun className="text-[1.1rem]" /> : <FiMoon className="text-[1.1rem]" />} 
@@ -705,11 +702,8 @@ function App() {
               )}
               <div className="p-2">
                 <Link to="/" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
-                  <FiHome className="text-base" /> Home (ระบบใหม่)
+                  <FiHome className="text-base" /> กลับหน้าหลัก (TOOLBOX OS)
                 </Link>
-                <a href="/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php" className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
-                  <FiHome className="text-base" /> Home (ระบบเก่า)
-                </a>
                 <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
                   <FiLogOut className="text-base" />
                   ออกจากระบบ

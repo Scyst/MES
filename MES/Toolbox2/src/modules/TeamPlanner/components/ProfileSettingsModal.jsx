@@ -35,7 +35,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentUser, onS
       setError(null);
       setAvatarError(false);
       if (currentUser?.username) {
-        setAvatarPreview(`/iot-toolbox/sandbox-b9/Toolbox/planner/api/uploads/avatars/${encodeURIComponent(currentUser.username)}.jpg?t=${Date.now()}`);
+        setAvatarPreview(`${import.meta.env.BASE_URL}api/planner/uploads/avatars/${encodeURIComponent(currentUser.username)}.jpg?t=${Date.now()}`);
       }
       // Fetch current AKA and Github Settings when modal opens
       axios.get('/api/profile.php')

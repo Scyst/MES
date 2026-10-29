@@ -169,8 +169,8 @@ define('EMAIL_CC_REPORT', getenv('EMAIL_CC_REPORT') ?: '');
 // SYSTEM CONFIG (Base URL)
 // =========================================================
 define('BASE_URL', IS_DEVELOPMENT 
-    ? 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/Clone/MES'
-    : 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/MES/MES'
+    ? 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/Clone/Toolbox2'
+    : 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox2'
 );
 
 define('SYSTEM_API_KEY', getenv('SYSTEM_API_KEY') ?: '');

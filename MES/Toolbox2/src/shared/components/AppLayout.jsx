@@ -14,13 +14,21 @@ import axios from 'axios';
 
 import { useAuth } from '../contexts/AuthContext';
 import DesktopSidebar from './DesktopSidebar';
+import AccountSettingsModal from './AccountSettingsModal';
 
 function resolveProfilePictureUrl(profilePicture) {
   if (!profilePicture) return null;
-  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://') || profilePicture.startsWith('/')) {
+  if (
+    profilePicture.startsWith('http://') ||
+    profilePicture.startsWith('https://') ||
+    profilePicture.startsWith('/')
+  ) {
     return profilePicture;
   }
-  return `/iot-toolbox/sandbox-b9/MES/MES/uploads/profiles/${profilePicture}`;
+  if (profilePicture.startsWith('uploads/')) {
+    return `${import.meta.env.BASE_URL}${profilePicture}`;
+  }
+  return `${import.meta.env.BASE_URL}uploads/profile_pictures/${profilePicture}`;
 }
 
 function getGradeBadgeStyle(grade) {
@@ -40,6 +48,7 @@ function getGradeBadgeStyle(grade) {
 
 export default function AppLayout() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -66,7 +75,7 @@ export default function AppLayout() {
     setAvatarError(false);
   }, [user?.profile_picture]);
 
-  // Real-time clock (updates every 1s like top_header.php)
+  // Real-time clock (updates every 1s)
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
@@ -74,7 +83,7 @@ export default function AppLayout() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch live employee performance & grading summary (matching top_header.php)
+  // Fetch live employee performance & grading summary from self-contained Toolbox2 API
   useEffect(() => {
     if (!canViewPerformance) return;
 
@@ -82,7 +91,7 @@ export default function AppLayout() {
     const fetchPerformance = async () => {
       try {
         const res = await axios.get(
-          '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/api/api_my_performance.php',
+          `${import.meta.env.BASE_URL}api/manpower/api_my_performance.php`,
           { withCredentials: true }
         );
         if (!cancelled && res.data && res.data.success && res.data.data) {
@@ -211,7 +220,7 @@ export default function AppLayout() {
 
         {/* Right: Live Clock/Date & Profile */}
         <div className="flex items-center gap-2">
-          {/* Date & Real-Time Clock Block (matching top_header.php) */}
+          {/* Date & Real-Time Clock Block */}
           <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2 md:pr-3 mr-1">
             <div
               className="flex items-center gap-2 px-2.5 md:px-3.5 py-1 md:py-1.5 bg-gray-50 dark:bg-gray-700/80 rounded-full text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200/70 dark:border-gray-600"
@@ -301,7 +310,7 @@ export default function AppLayout() {
                     </p>
                   </div>
 
-                  {/* Performance Summary (matches top_header.php) */}
+                  {/* Performance Summary */}
                   {canViewPerformance && (
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
                       <div className="flex justify-between items-center mb-1.5">
@@ -360,12 +369,16 @@ export default function AppLayout() {
                     </span>
                   </button>
 
-                  <a
-                    href="/iot-toolbox/sandbox-b9/MES/MES/page/profile/profileUI.php"
-                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      setIsAccountModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700 cursor-pointer"
                   >
                     <Settings size={16} /> <span>ตั้งค่าบัญชี</span>
-                  </a>
+                  </button>
 
                   <button
                     onClick={handleLogout}
@@ -396,6 +409,12 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* Native Self-Service Account Settings Modal */}
+      <AccountSettingsModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
     </div>
   );
 }

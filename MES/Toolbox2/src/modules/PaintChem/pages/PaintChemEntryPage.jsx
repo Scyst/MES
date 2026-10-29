@@ -18,7 +18,7 @@ import {
   detectCurrentShift, detectCurrentSlot,
 } from '../paintChemConfig';
 
-const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
+const API_BASE = `${import.meta.env.BASE_URL}api/paintChem`.replace(/\/$/, '');
 const EMPTY_EXTRAS = { note: '' };
 
 // Build empty slot values: { [stationNo]: { [paramKey]: { before, after, kg, isOverflow } } }

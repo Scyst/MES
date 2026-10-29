@@ -11,7 +11,7 @@ import {
   Table as TableIcon, Download, Search, Check, AlertCircle, FileText
 } from 'lucide-react';
 
-const API_BASE = '/iot-toolbox/sandbox-b9/MES/MES/page/paintChem/api';
+const API_BASE = `${import.meta.env.BASE_URL}api/paintChem`.replace(/\/$/, '');
 
 const TABS = [
   { id: 'degrease_sc', label: '1. ล้างไขมัน & ปรับผิว (Degreasing / SC)', icon: Activity },

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const PLANNER_BASE_URL = '/iot-toolbox/sandbox-b9/Toolbox/planner';
+export const PLANNER_API_DIR = `${import.meta.env.BASE_URL || '/'}api/planner`.replace(/\/$/, '');
 
 const PLANNER_ENDPOINTS = new Set([
   'tasks',
@@ -37,10 +37,10 @@ function isPlannerApiCall(url) {
 function rewriteUploadPathsInValue(val) {
   if (typeof val === 'string') {
     if (val.startsWith('api/uploads/')) {
-      return `${PLANNER_BASE_URL}/${val}`;
+      return `${PLANNER_API_DIR}/${val.slice(4)}`;
     }
     if (val.includes('"api/uploads/')) {
-      return val.replace(/"api\/uploads\//g, `"${PLANNER_BASE_URL}/api/uploads/`);
+      return val.replace(/"api\/uploads\//g, `"${PLANNER_API_DIR}/uploads/`);
     }
     return val;
   }
@@ -68,30 +68,32 @@ export function ensurePlannerInterceptors() {
     config.withCredentials = true;
 
     if (url.startsWith('api/')) {
-      config.url = `${PLANNER_BASE_URL}/${url}`;
+      // e.g. 'api/auth.php?action=me' -> '${PLANNER_API_DIR}/auth.php?action=me'
+      config.url = `${PLANNER_API_DIR}/${url.slice(4)}`;
       return config;
     }
 
     if (url.startsWith('/api/')) {
       const commentsMatch = url.match(/^\/api\/tasks\/([^/]+)\/comments$/);
       if (commentsMatch) {
-        config.url = `${PLANNER_BASE_URL}/api/comments.php?taskId=${commentsMatch[1]}`;
+        config.url = `${PLANNER_API_DIR}/comments.php?taskId=${commentsMatch[1]}`;
         return config;
       }
 
       const idMatch = url.match(/^\/api\/([a-zA-Z_]+)\/([^/?]+)$/);
       if (idMatch && !idMatch[1].endsWith('.php')) {
-        config.url = `${PLANNER_BASE_URL}/api/${idMatch[1]}.php?id=${idMatch[2]}`;
+        config.url = `${PLANNER_API_DIR}/${idMatch[1]}.php?id=${idMatch[2]}`;
         return config;
       }
 
       const baseMatch = url.match(/^\/api\/([a-zA-Z_]+)$/);
       if (baseMatch) {
-        config.url = `${PLANNER_BASE_URL}/api/${baseMatch[1]}.php`;
+        config.url = `${PLANNER_API_DIR}/${baseMatch[1]}.php`;
         return config;
       }
 
-      config.url = `${PLANNER_BASE_URL}/${url.substring(1)}`;
+      // e.g. '/api/tasks.php?...' -> '${PLANNER_API_DIR}/tasks.php?...'
+      config.url = `${PLANNER_API_DIR}/${url.slice(5)}`;
     }
     return config;
   });
@@ -99,7 +101,7 @@ export function ensurePlannerInterceptors() {
   axios.interceptors.response.use(
     (response) => {
       const reqUrl = response?.config?.url || '';
-      if (reqUrl.includes('/Toolbox/planner/api/') && response.data) {
+      if (reqUrl.includes('/api/planner/') && response.data) {
         response.data = rewriteUploadPathsInValue(response.data);
       }
       return response;

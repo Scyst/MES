@@ -38,7 +38,7 @@ export default function MemberWorkloadModal({ isOpen, onClose, user }) {
           <div className="flex items-center gap-3">
             <div className="relative w-10 h-10 shrink-0">
                 <img 
-                    src={`/iot-toolbox/sandbox-b9/Toolbox/planner/api/uploads/avatars/${encodeURIComponent(user.username)}.jpg?t=${Date.now()}`} 
+                    src={`${import.meta.env.BASE_URL}api/planner/uploads/avatars/${encodeURIComponent(user.username)}.jpg?t=${Date.now()}`} 
                     onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextElementSibling.style.display = 'flex';
