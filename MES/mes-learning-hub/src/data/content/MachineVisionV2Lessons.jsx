@@ -1056,6 +1056,121 @@ export function MachineVisionV2Mod2() {
             </tbody>
           </table>
         </div>
+
+        {/* Real Industrial High-Speed Photography Comparison Pair 1: Rotating Fan */}
+        <div className="pt-2">
+          <PhotoComparisonPair 
+            title="หลักฐานหน้างานจริง: ปรากฏการณ์ Jello Effect &amp; Skew บนใบพัดหมุนเร็ว 3,000 RPM (Real High-Speed Fan Comparison)"
+            badge="ROTATIONAL HIGH-SPEED BENCHMARK"
+            left={{
+              title: "1. ภาพถ่ายจริงด้วย Rolling Shutter (CMOS ทั่วไป)",
+              badge: "ROLLING SHUTTER",
+              badgeColor: "rose",
+              src: "./images/hardware/fan_rolling_shutter_distortion.jpg",
+              fallbackSrc: "/images/hardware/fan_rolling_shutter_distortion.jpg",
+              specs: [
+                { label: 'กลไกรับแสง', value: 'Row-by-Row Scan' },
+                { label: 'ผลลัพธ์เชิงรูปทรง', value: 'ใบพัดบิดเบี้ยวคล้ายเคียว / กล้วยหอม' },
+                { label: 'ความคลาดเคลื่อน', value: 'Geometric Error &gt; 35%' },
+                { label: 'ผลลัพธ์ต่อ AI', value: 'คำนวณขนาดและบาลานซ์พังทลาย' }
+              ],
+              desc: "ภาพถ่ายจริงจากกล้อง Rolling Shutter ในห้องแล็บวิศวกรรมขณะใบพัดระบายความร้อนหมุนด้วยความเร็ว 3,000 RPM แม้จะตั้งความเร็วชัตเตอร์สั้น แต่การกวาดอ่านค่าทีละแถวพิกเซลจากบนลงล่าง ทำให้ปลายใบพัดเคลื่อนที่เปลี่ยนตำแหน่งไปก่อนที่เซนเซอร์จะอ่านแถวล่างเสร็จ ส่งผลให้ใบพัดตรงถูกดึงย้วยโค้งงออย่างรุนแรง (Jello Effect)"
+            }}
+            right={{
+              title: "2. ภาพถ่ายจริงด้วย Global Shutter (Industrial Camera)",
+              badge: "GLOBAL SHUTTER",
+              badgeColor: "indigo",
+              src: "./images/hardware/fan_global_shutter_frozen.jpg",
+              fallbackSrc: "/images/hardware/fan_global_shutter_frozen.jpg",
+              specs: [
+                { label: 'กลไกรับแสง', value: 'Simultaneous 100%' },
+                { label: 'ผลลัพธ์เชิงรูปทรง', value: 'ใบพัดตรง 120° สมบูรณ์แบบ' },
+                { label: 'ความคลาดเคลื่อน', value: 'Geometric Distortion = 0%' },
+                { label: 'ผลลัพธ์ต่อ AI', value: 'วัดขนาดและตรวจรอยแตกได้ 100%' }
+              ],
+              desc: "ภาพถ่ายจริงจากกล้อง Global Shutter อุตสาหกรรมในจุดทดสอบเดียวกัน ทุกพิกเซลเปิดและปิดรับแสงพร้อมกันในพริบตาเดียว 100% ใบพัดหมุนเร็ว 3,000 RPM ถูกหยุดนิ่งสนิทในอากาศ ขอบโลหะคมกริบตรงระนาบ 120 องศาแท้ ไร้การบิดเบี้ยว สามารถวัดองศาและตรวจจับรอยแตกร้าวระดับ 0.01 มม. ได้อย่างแม่นยำ"
+            }}
+            conclusion="ความแตกต่างชัดเจน 100%: ในงานวัตถุเคลื่อนที่เร็ว Global Shutter คือมาตรฐานบังคับของระบบ Machine Vision อุตสาหกรรม ห้ามใช้กล้อง Rolling Shutter เด็ดขาด"
+          />
+        </div>
+
+        {/* Real Industrial High-Speed Photography Comparison Pair 2: Conveyor Skew & High-Speed Analysis */}
+        <div className="pt-2">
+          <PhotoComparisonPair 
+            title="การเปรียบเทียบชิ้นงานบนสายพานและวิดีโอความเร็วสูง (e-con Systems Benchmark &amp; High-Speed Footage)"
+            badge="CONVEYOR SKEW BENCHMARK"
+            left={{
+              title: "1. การบิดเบี้ยวบนสายพาน (e-con Systems Benchmark)",
+              badge: "SKEW ARTIFACT",
+              badgeColor: "amber",
+              src: "./images/hardware/global_vs_rolling_shutter_comparison.jpg",
+              fallbackSrc: "/images/hardware/global_vs_rolling_shutter_comparison.jpg",
+              specs: [
+                { label: 'ปรากฏการณ์', value: 'Parallelogram Skew' },
+                { label: 'ความเร็วสายพาน', value: '60 - 120 m/min' },
+                { label: 'การอ่านบาร์โค้ด', value: '2D DataMatrix บิดเบี้ยว อ่านไม่ติด' },
+                { label: 'ผลกระทบหุ่นยนต์', value: 'คำนวณมุมหยิบวัตถุเพี้ยน' }
+              ],
+              desc: "ภาพถ่ายเปรียบเทียบมาตรฐานจาก e-con Systems แสดงชิ้นส่วนและบาร์โค้ดที่เคลื่อนที่บนสายพานความเร็วสูง กล้อง Rolling Shutter ด้านซ้ายทำให้รูปทรงสี่เหลี่ยมผืนผ้าบิดเอียงเป็นสี่เหลี่ยมด้านขนาน (Skew Distortion) ขณะที่ Global Shutter ด้านขวารักษามุมฉาก 90 องศาได้อย่างเที่ยงตรงสมบูรณ์"
+            }}
+            right={{
+              title: "2. การวิเคราะห์ฟุตเทจความเร็วสูง (High-Speed Motion Analysis)",
+              badge: "HIGH-SPEED FOOTAGE",
+              badgeColor: "teal",
+              src: "./images/hardware/rolling_vs_global_footage_thumbnail.jpg",
+              fallbackSrc: "/images/hardware/rolling_vs_global_footage_thumbnail.jpg",
+              specs: [
+                { label: 'แหล่งอ้างอิง', value: 'High-Speed Motion Footage' },
+                { label: 'ปัญหาแสงแฟลช', value: 'เกิดแถบมืดคาดขวาง (Flash Banding)' },
+                { label: 'ความเข้ากันได้ AI', value: 'ไม่สามารถใช้กับโมเดล Deep Learning' },
+                { label: 'ข้อกำหนดโรงงาน', value: 'บังคับ Global Shutter 100%' }
+              ],
+              desc: "การวิเคราะห์เฟรมต่อเฟรมของวัตถุเคลื่อนที่เร็วและการยิงแฟลชสโตรบ กล้อง Rolling Shutter ไม่สามารถเปิดรับแสงพร้อมกับแฟลชความเร็ว 10 ไมโครวินาทีได้ ทำให้ภาพมีแสงติดเฉพาะครึ่งเฟรม ส่วน Global Shutter ให้แสงสว่างสม่ำเสมอทั่วทั้งภาพ 100%"
+            }}
+            conclusion="ข้อสรุปทางวิศวกรรม: การใช้ Rolling Shutter บนสายพานลำเลียงจะทำให้บาร์โค้ด 2D DataMatrix ถูกบิดเป็นรูปสี่เหลี่ยมขนมเปียกปูนจนสแกนเนอร์อ่านถอดรหัสล้มเหลว (Decode Failed 100%)"
+          />
+        </div>
+
+        {/* Deep Dive Engineering Callout: Why Modern AI Fails on Rolling Shutter */}
+        <div className={`p-4 sm:p-5 rounded-xl border space-y-3 ${
+          isDark ? 'bg-gradient-to-br from-rose-950/40 via-slate-900 to-indigo-950/30 border-rose-500/40' : 'bg-rose-50/70 border-rose-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <FiAlertTriangle className="w-4 h-4 text-rose-500" />
+            <h4 className={`text-xs sm:text-sm font-black uppercase tracking-wide ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              ทำไมความรู้พื้นฐาน "Global Shutter" จึงยิ่งทวีความสำคัญสูงสุดในหลักสูตร AI ยุคใหม่?
+            </h4>
+          </div>
+          <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            วิศวกรหลายท่านมักเข้าใจผิดว่า <em>"เมื่อเราใช้โมเดล Deep Learning ขั้นสูงระดับ YOLOv11 หรือ PatchCore แล้ว ชนิดของเซนเซอร์กล้องคงไม่สำคัญอีกต่อไป"</em> ซึ่งเป็นความเข้าใจที่อันตรายอย่างยิ่งในโรงงานอุตสาหกรรม! เพราะสถาปัตยกรรม AI ขั้นสูงมีความไวต่อเรขาคณิตของพิกเซลสูงสุด:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div className={`p-3 rounded-xl border space-y-1.5 ${
+              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+            }`}>
+              <strong className="text-amber-500 font-bold block text-xs">1. YOLO OBB (โมดูลที่ 3 พังทลาย):</strong>
+              <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                โมเดล OBB ต้องส่งค่ามุมองศา &theta; (Theta) เข้าข้อมือแขนกลหุ่นยนต์ เมื่อ Rolling Shutter ดึงชิ้นงานย้วยเป็นสี่เหลี่ยมด้านขนาน มุม &theta; จะเพี้ยนไป 15&deg; - 25&deg; แขนกลจะหมุนหน้าแปลนผิดมุมและกระแทกชิ้นงานหล่นเสียหาย
+              </p>
+            </div>
+            <div className={`p-3 rounded-xl border space-y-1.5 ${
+              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+            }`}>
+              <strong className="text-rose-500 font-bold block text-xs">2. PatchCore (โมดูลที่ 4 เตะของดีทิ้ง):</strong>
+              <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                PatchCore วัดระยะห่างยุคลิด L2 เทียบกับคลังของดี เมื่อขอบวัตถุเบี้ยวไปเพียง 2-3 พิกเซล เวกเตอร์ 1024-D จะกระโดดทะลุ Threshold ระบบจะตัดสินเป็น NG และสั่งกระบอกสูบลมเตะชิ้นงานดีทิ้ง 100% (False Overkill Catastrophe)
+              </p>
+            </div>
+            <div className={`p-3 rounded-xl border space-y-1.5 ${
+              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+            }`}>
+              <strong className="text-indigo-400 font-bold block text-xs">3. 3D Photometric (โมดูลที่ 2 เมทริกซ์ล้มเหลว):</strong>
+              <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                Photometric Stereo สลับยิงแฟลช 4 ทิศทางในเสี้ยววินาที (10 &mu;s) กล้อง Rolling Shutter ที่กวาดอ่าน 15 ms จะสว่างติดเฉพาะบางแถว เกิดแถบมืดคาดขวาง (Banding Noise) ทำให้สมการสกัด Surface Normal คำนวณความลึก 3 มิติไม่ได้เลย
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Section 2: Motion Blur Calculations & Liquid Lens Science */}

@@ -652,21 +652,20 @@ function ShutterComparisonSimulator() {
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-rose-700 dark:text-rose-300">ภาพถ่ายจริงด้วย Rolling Shutter</span>
                   <span className="text-[10px] font-bold text-rose-800 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-500/40">
-                    ❌ ใบพัดบิดเบี้ยวคล้ายหนวดกุ้ง
+                    ❌ ใบพัดบิดเบี้ยวคล้ายหนวดกุ้ง (Jello Effect)
                   </span>
                 </div>
-                {/* Visual Simulation of Fan with Jello Distortion */}
-                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-                  <svg viewBox="0 0 200 120" className="w-48 h-32">
-                    {/* Center hub */}
-                    <circle cx="100" cy="60" r="14" fill="#475569" stroke="#ef4444" strokeWidth="2" />
-                    {/* Curved distorted blades (Jello effect) */}
-                    <path d="M 100 46 Q 130 30 160 38 Q 145 52 112 56 Z" fill="#ef4444" opacity="0.85" />
-                    <path d="M 112 64 Q 140 85 145 115 Q 125 105 102 74 Z" fill="#ef4444" opacity="0.85" />
-                    <path d="M 88 62 Q 60 85 35 75 Q 50 60 86 54 Z" fill="#ef4444" opacity="0.85" />
-                    <circle cx="100" cy="60" r="5" fill="#f87171" />
-                    <text x="100" y="112" textAnchor="middle" fill="#ef4444" fontSize="9" fontWeight="bold">Jello Distortion: Curved Blades</text>
-                  </svg>
+                {/* Real Photo of Fan with Jello Distortion */}
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden group">
+                  <img
+                    src="./images/hardware/fan_rolling_shutter_distortion.jpg"
+                    alt="Rolling Shutter Fan Jello Distortion"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => { e.target.src = '/images/hardware/fan_rolling_shutter_distortion.jpg'; }}
+                  />
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-rose-400 font-mono rounded border border-rose-500/30">
+                    Rolling Distortion: Fan 3,000 RPM
+                  </div>
                 </div>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   <strong>ผลกระทบหน้างาน:</strong> แม้จะตั้งความเร็วชัตเตอร์สั้นถึง 1/2000s แต่เนื่องจากเซนเซอร์อ่านค่าทีละบรรทัด (ใช้เวลาอ่านทั้งภาพ 15ms) ขณะที่เซนเซอร์อ่านบรรทัดล่าง ใบพัดได้หมุนเปลี่ยนตำแหน่งไปแล้ว ส่งผลให้ใบพัดที่ตรงกลายเป็นโค้งงอ ผิดเพี้ยนรูปทรงทางเรขาคณิต 100%
@@ -680,21 +679,20 @@ function ShutterComparisonSimulator() {
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">ภาพถ่ายจริงด้วย Global Shutter (Industrial)</span>
                   <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/40">
-                    ✅ หยุดนิ่ง คมกริบ 100%
+                    ✅ หยุดนิ่ง คมกริบ 100% (Frozen Motion)
                   </span>
                 </div>
-                {/* Visual Simulation of Fan with Frozen Motion */}
-                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-                  <svg viewBox="0 0 200 120" className="w-48 h-32">
-                    {/* Center hub */}
-                    <circle cx="100" cy="60" r="14" fill="#334155" stroke="#10b981" strokeWidth="2" />
-                    {/* Perfectly straight frozen blades */}
-                    <path d="M 100 46 L 155 18 L 150 35 L 110 52 Z" fill="#10b981" opacity="0.9" />
-                    <path d="M 112 64 L 140 115 L 122 118 L 96 73 Z" fill="#10b981" opacity="0.9" />
-                    <path d="M 88 58 L 35 55 L 40 38 L 92 48 Z" fill="#10b981" opacity="0.9" />
-                    <circle cx="100" cy="60" r="5" fill="#34d399" />
-                    <text x="100" y="112" textAnchor="middle" fill="#10b981" fontSize="9" fontWeight="bold">Frozen Motion: Straight Blades</text>
-                  </svg>
+                {/* Real Photo of Fan with Frozen Motion */}
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden group">
+                  <img
+                    src="./images/hardware/fan_global_shutter_frozen.jpg"
+                    alt="Global Shutter Fan Frozen Motion"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => { e.target.src = '/images/hardware/fan_global_shutter_frozen.jpg'; }}
+                  />
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-emerald-400 font-mono rounded border border-emerald-500/30">
+                    Frozen Motion: True 120° Geometry
+                  </div>
                 </div>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   <strong>ผลลัพธ์ในโรงงาน:</strong> พิกเซลทั้งเซนเซอร์เปิดรับแสงพร้อมกันในเสี้ยวเวลา 50 μs ใบพัดมอเตอร์ 3,000 RPM ถูกหยุดนิ่งสนิท รูปร่างใบพัดตรงสมบูรณ์แบบ สามารถตรวจเช็กรอยแตกร้าวและวัดมุมองศาของใบพัดได้อย่างแม่นยำระดับ 0.01 mm
@@ -703,61 +701,55 @@ function ShutterComparisonSimulator() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Rolling Barcode */}
+              {/* Conveyor Skew Benchmark */}
               <div className={`p-4 rounded-xl border space-y-3 ${
                 isDark ? 'bg-slate-950 border-rose-500/40' : 'bg-rose-50/50 border-rose-300'
               }`}>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-rose-700 dark:text-rose-300">บาร์โค้ดบนสายพาน 60 m/min (Rolling)</span>
+                  <span className="text-xs font-bold text-rose-700 dark:text-rose-300">1. การบิดเบี้ยวบนสายพาน (e-con Systems Benchmark)</span>
                   <span className="text-[10px] font-bold text-rose-800 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-500/40">
-                    ❌ Decode Failed (บาร์โค้ดเฉียง)
+                    ❌ Parallelogram Skew
                   </span>
                 </div>
-                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-                  <div className="p-3 bg-white rounded border border-slate-400 transform skew-x-12 shadow">
-                    <div className="font-mono text-xs text-rose-600 font-bold mb-1">SCAN FAIL: SKEW &gt; 7°</div>
-                    <div className="flex gap-1 h-10 items-center">
-                      <div className="w-1 h-full bg-black"></div>
-                      <div className="w-2 h-full bg-black"></div>
-                      <div className="w-0.5 h-full bg-black"></div>
-                      <div className="w-3 h-full bg-black"></div>
-                      <div className="w-1 h-full bg-black"></div>
-                      <div className="w-2 h-full bg-black"></div>
-                      <div className="w-1.5 h-full bg-black"></div>
-                    </div>
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden group">
+                  <img
+                    src="./images/hardware/global_vs_rolling_shutter_comparison.jpg"
+                    alt="e-con Systems Conveyor Benchmark"
+                    className="w-full h-full object-contain bg-black transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => { e.target.src = '/images/hardware/global_vs_rolling_shutter_comparison.jpg'; }}
+                  />
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-amber-400 font-mono rounded border border-amber-500/30">
+                    Conveyor Skew vs Global Square
                   </div>
                 </div>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  เส้นบาร์โค้ดสี่เหลี่ยมผืนผ้าบิดเอียงเป็นสี่เหลี่ยมด้านขนาน รูสแกนเนอร์ไม่สามารถอ่านความกว้างของแท่งบาร์โค้ดได้ ส่งผลให้ระบบคัดแยกเตะสินค้าทิ้งเป็นของเสีย
+                  <strong>ผลกระทบหน้างาน:</strong> เมื่อชิ้นงานหรือบาร์โค้ดวิ่งผ่านกล้องด้วยความเร็ว 60–120 m/min กล้อง Rolling Shutter (ซ้าย) จะบันทึกภาพบิดเบี้ยวเป็นสี่เหลี่ยมด้านขนาน ทำให้บาร์โค้ด 2D DataMatrix เสียรูปทรงจนอ่านไม่ติด (Decode Failed) ขณะที่ Global Shutter (ขวา) รักษามุมฉาก 90° ได้ 100%
                 </p>
               </div>
 
-              {/* Global Barcode */}
+              {/* High-Speed Footage Analysis */}
               <div className={`p-4 rounded-xl border space-y-3 ${
                 isDark ? 'bg-slate-950 border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-300'
               }`}>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">บาร์โค้ดบนสายพาน 60 m/min (Global)</span>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">2. การวิเคราะห์ฟุตเทจความเร็วสูง (High-Speed Footage)</span>
                   <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/40">
-                    ✅ 100% Read Rate (ฉาก 90°)
+                    ✅ ซิงค์แสง Strobe สมบูรณ์แบบ
                   </span>
                 </div>
-                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative flex items-center justify-center overflow-hidden">
-                  <div className="p-3 bg-white rounded border border-emerald-500 shadow">
-                    <div className="font-mono text-xs text-emerald-700 font-bold mb-1">PASS: SNC-2026-X9</div>
-                    <div className="flex gap-1 h-10 items-center">
-                      <div className="w-1 h-full bg-black"></div>
-                      <div className="w-2 h-full bg-black"></div>
-                      <div className="w-0.5 h-full bg-black"></div>
-                      <div className="w-3 h-full bg-black"></div>
-                      <div className="w-1 h-full bg-black"></div>
-                      <div className="w-2 h-full bg-black"></div>
-                      <div className="w-1.5 h-full bg-black"></div>
-                    </div>
+                <div className="aspect-[16/9] w-full bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden group">
+                  <img
+                    src="./images/hardware/rolling_vs_global_footage_thumbnail.jpg"
+                    alt="High-Speed Motion Analysis Footage"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => { e.target.src = '/images/hardware/rolling_vs_global_footage_thumbnail.jpg'; }}
+                  />
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-teal-400 font-mono rounded border border-teal-500/30">
+                    High-Speed Footage Analysis
                   </div>
                 </div>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  เส้นบาร์โค้ดตรงขนานตั้งฉาก 90° สมบูรณ์แบบ สแกนเนอร์และโมเดล Vision อ่านค่าสำเร็จใน 1 มิลลิวินาที ไม่เกิดการติดขัดในกระบวนการผลิต
+                  <strong>การทำงานร่วมกับแฟลชสโตรบ:</strong> การยิงแฟลชสโตรบ 10 μs เพื่อหยุดวัตถุ กล้อง Rolling Shutter ไม่สามารถเปิดรับแสงพร้อมกันได้ ทำให้เกิดแถบมืดคาดขวาง (Flash Banding) ส่วน Global Shutter เปิดรับแสงพร้อมกันทั้งแผง ทำให้ได้รับแสงสว่างสม่ำเสมอเท่ากันทุกพิกเซล
                 </p>
               </div>
             </div>
