@@ -8,7 +8,7 @@
  *   returns: { ok:true, rows:[{model, timestamp, result, elapsed_s, image}, ...] }
  *
  * คอลัมน์ alias เป็นตัวเล็กให้ตรงกับที่ accessoriesInspection.js ใช้ (renderLogs)
- * รูป (image) เป็นชื่อไฟล์ที่หน้าเว็บเปิดจาก img/ บน web server เดียวกัน
+ * รูป (image) เป็นชื่อไฟล์ที่หน้าเว็บเปิดจาก ../../uploads/accessories_inspection/ บน web server เดียวกัน
  */
 
 require_once __DIR__ . '/../../../auth/check_auth.php';

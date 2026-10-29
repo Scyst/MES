@@ -19,6 +19,9 @@
      - `frontend_qa` (`mes-frontend-qa`)
      - `planner_agent_api` (`planner-agent-api`)
    - หากในเครื่องที่ทำงานมีสกิลเฉพาะของโปรเจ็ค MES เก็บไว้ที่ `C:\Users\<User>\.gemini\config\skills\` หรือในโฟลเดอร์อื่นที่ยังไม่ได้อยู่ใน `MES/.agents/skills/` กรุณาคัดลอกมาไว้ใน `MES/.agents/skills/` แล้ว Push ขึ้น Git เพื่อให้เครื่องที่บ้านดึงไปใช้งานได้ครบ 100%
+3. **ดึงโค้ดล่าสุดของ `AccessoriesInspection` จาก FTP มาเทียบ (เนื่องจากเพื่อนอัปขึ้น FTP โดยตรง):**
+   - เมื่อเชื่อมต่อ FTP ที่ทำงานได้แล้ว ให้ตรวจสอบไฟล์ใน `/MES/MES/page/AccessoriesInspection/` บน FTP เทียบกับใน Git เผื่อเพื่อนมีการอัปเดตโค้ดใหม่ขึ้น FTP โดยตรง
+   - **หมายเหตุ:** ตอนนี้ใน Git เราได้ปรับปรุง `upload_image.php` และ `script/accessoriesInspection.js` ให้ย้ายที่เก็บรูปจาก `MES/page/AccessoriesInspection/img/` ไปไว้ที่โฟลเดอร์กลาง **`MES/uploads/accessories_inspection/`** (เหมือนระบบอื่นๆ) พร้อม Fallback 3 ชั้นเรียบร้อยแล้ว เมื่อเทียบโค้ดของเพื่อนเสร็จแล้ว อย่าลืมคงส่วนที่ชี้ไป `../../uploads/accessories_inspection/` นี้ไว้ด้วย
 
 ---
 

@@ -509,13 +509,19 @@ function renderLogs(rows) {
 }
 
 function showImgModal(imgName) {
-    // รูปถูก upload มาเก็บที่ web server (img/) — โหลดจาก same-origin ก่อน
-    // ถ้าไม่เจอ (ยังไม่ถูก upload / upload ปิด) fallback ไปดึงผ่าน Python proxy
-    const local   = 'img/' + encodeURIComponent(imgName);
-    const proxied = _camUrl('/images/' + encodeURIComponent(imgName));
+    // มาตรฐานกลาง: โหลดจาก ../../uploads/accessories_inspection/ ก่อน
+    // Fallback ชั้นที่ 1: โฟลเดอร์เก่า img/ (เผื่อรูปเก่าที่ค้างบนเซิร์ฟเวอร์)
+    // Fallback ชั้นที่ 2: ดึงผ่าน Python proxy โดยตรง
+    const encoded   = encodeURIComponent(imgName);
+    const uploadUrl = '../../uploads/accessories_inspection/' + encoded;
+    const legacyUrl = 'img/' + encoded;
+    const proxied   = _camUrl('/images/' + encoded);
     const img = document.getElementById('imgModalImg');
-    img.onerror = function () { img.onerror = null; img.src = proxied; };
-    img.src = local;
+    img.onerror = function () {
+        img.onerror = function () { img.onerror = null; img.src = proxied; };
+        img.src = legacyUrl;
+    };
+    img.src = uploadUrl;
     document.getElementById('imgModalTitle').textContent = imgName;
     bootstrap.Modal.getOrCreateInstance(document.getElementById('imgModal')).show();
 }
