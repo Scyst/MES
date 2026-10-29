@@ -1,0 +1,353 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Clock, MapPin, BusFront, CheckCircle, QrCode, ArrowLeft, AlertTriangle, ScanLine } from 'lucide-react';
+import SurveyModal from '../../components/employee/SurveyModal';
+import ConfirmModal from '../../components/ConfirmModal';
+import { bookingsAPI, schedulesAPI, authAPI, masterAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { Html5Qrcode } from 'html5-qrcode';
+import Confetti from '../../components/ui/Confetti';
+
+const MyTicket = () => {
+  const { ticketId } = useParams();
+  const navigate = useNavigate();
+  const { passengerProfile } = useAuth();
+  
+  const [booking, setBooking] = useState(null);
+  const [schedule, setSchedule] = useState(null);
+  const [routeName, setRouteName] = useState('');
+  const [timeSlotName, setTimeSlotName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [scannerError, setScannerError] = useState('');
+
+  useEffect(() => {
+    const loadTicket = async () => {
+      setLoading(true);
+      try {
+        let me = null;
+        try {
+          me = await authAPI.getMe();
+        } catch(e) {}
+        
+        const empId = me?.username || passengerProfile?.empId || '';
+        
+        const [myBookings, ticketBookings, allSchedules, allRoutes, allTimeSlots] = await Promise.all([
+          bookingsAPI.getBookings(empId ? { empId } : {}),
+          bookingsAPI.getBookings({ id: ticketId }),
+          schedulesAPI.getSchedules(),
+          masterAPI.getRoutes(),
+          masterAPI.getTimeSlots()
+        ]);
+        
+        const foundBooking = ticketBookings.length > 0 ? ticketBookings[0] : myBookings.find(b => b.id === ticketId);
+        
+        if (foundBooking) {
+          setBooking(foundBooking);
+          const foundSchedule = allSchedules.find(s => s.id === foundBooking.scheduledTripId);
+          setSchedule(foundSchedule || null);
+          const foundRoute = allRoutes.find(r => r.id === foundBooking.routeId);
+          setRouteName(foundRoute ? foundRoute.name : '');
+          const foundTimeSlot = allTimeSlots.find(t => t.id === foundBooking.timeSlotId);
+          setTimeSlotName(foundTimeSlot ? foundTimeSlot.name : 'ไม่ระบุรอบเวลา');
+        }
+      } catch (err) {
+        // Booking not found or API error — handled by empty state below
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTicket();
+  }, [ticketId]);
+
+  // Clean up scanner on unmount
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
+  let html5QrCode = null;
+
+  const startScanner = async () => {
+    setIsScanning(true);
+    setScannerError('');
+    try {
+      html5QrCode = new Html5Qrcode("qr-reader");
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          // Success Callback
+          stopScanner();
+          handleBoarding(decodedText);
+        },
+        (errorMessage) => {
+          // Ignore general read errors (it fires constantly when searching)
+        }
+      );
+    } catch (err) {
+      setScannerError('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง');
+      setIsScanning(false);
+    }
+  };
+
+  const stopScanner = () => {
+    if (html5QrCode && html5QrCode.isScanning) {
+      html5QrCode.stop().then(() => {
+        html5QrCode.clear();
+      }).catch(err => console.log(err));
+    }
+    setIsScanning(false);
+  };
+
+  const handleBoarding = async (qrData) => {
+    setLoading(true);
+    try {
+      if (!qrData || qrData === 'SIMULATED_QR') {
+        if (schedule) {
+          await bookingsAPI.boardPassenger(ticketId);
+        } else {
+          alert("โหมดจำลอง: คุณต้องถูกจัดลงรถก่อนจึงจะเช็คอินด้วยปุ่มนี้ได้");
+          setLoading(false);
+          return;
+        }
+      } else {
+        let me = null;
+        try { me = await authAPI.getMe(); } catch(e) {}
+        const empId = me?.username || passengerProfile?.empId || '';
+        
+        await bookingsAPI.smartBoardPassenger({ 
+          scheduleId: qrData, 
+          empId,
+          name: passengerProfile?.name || '',
+          bu: passengerProfile?.bu || ''
+        });
+      }
+      setBooking(prev => ({ ...prev, status: 'BOARDED' }));
+      setShowConfetti(true);
+      setTimeout(() => setShowSurvey(true), 2500);
+    } catch (err) {
+      alert(err.message || "เกิดข้อผิดพลาดในการเช็คอิน");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Keep this for testing/fallback if camera fails
+  const handleSimulateScanBus = async () => {
+    handleBoarding('SIMULATED_QR');
+  };
+
+  const handleCancelBooking = async () => {
+    try {
+      await bookingsAPI.cancelBooking(ticketId);
+      navigate('/transport/booking');
+    } catch (err) {
+      // Error handled — navigate anyway so user isn't stuck
+      navigate('/transport/booking');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <div className="flex items-center justify-center p-4 mt-10">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+             <AlertTriangle className="text-gray-500 dark:text-gray-400" size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">ไม่พบตั๋วรถ</h2>
+          <p className="text-gray-500 dark:text-gray-400">ตั๋วที่คุณค้นหาไม่มีอยู่ในระบบหรือถูกยกเลิกไปแล้ว</p>
+          <button onClick={() => navigate('/transport/booking')} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">กลับหน้าแรก</button>
+        </div>
+      </div>
+    );
+  }
+
+  const isBoarded = booking.status === 'BOARDED';
+
+  return (
+    <div className="w-full">
+      
+      {/* Header */}
+      <div className="pt-6 pb-4 px-6 bg-white dark:bg-gray-800 rounded-b-3xl shadow-sm z-10 sticky top-0 mb-6 flex items-center justify-between">
+        <button 
+          onClick={() => navigate('/transport/booking')} 
+          className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-white">ตั๋วของฉัน</h1>
+        <div className="w-10"></div>
+      </div>
+
+      <div className="px-5 flex flex-col w-full mx-auto pb-10">
+        
+        {/* Booking Context */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">รอบรถของคุณ</p>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">{schedule ? schedule.route : routeName}</h2>
+            </div>
+            <div className="text-right">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase ${isBoarded ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                {isBoarded ? 'ขึ้นรถแล้ว' : 'จองแล้ว'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 text-sm font-bold text-gray-700 dark:text-gray-300">
+             <div className="flex items-center gap-1.5">
+               <Clock size={16} className="text-blue-500" />
+               {schedule && schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : timeSlotName}
+             </div>
+             <div className="flex items-center gap-1.5">
+               <BusFront size={16} className="text-blue-500" />
+               {schedule ? schedule.vehicleName : 'กำลังจัดรถ'}
+             </div>
+          </div>
+        </div>
+
+        {/* Scanner Area */}
+        <div className="relative drop-shadow-[0_10px_20px_rgba(0,0,0,0.05)] dark:drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] flex-1 flex flex-col">
+          
+          <div className={`rounded-3xl flex-1 flex flex-col items-center justify-center p-8 relative overflow-hidden border border-gray-200 dark:border-gray-700 ${isBoarded ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-gray-900'}`}>
+            
+            {!isBoarded ? (
+              <>
+                {!schedule && (
+                  <div className="text-center w-full mb-6 bg-blue-900/40 p-4 rounded-xl border border-blue-500/30">
+                    <h3 className="text-lg font-black text-blue-300 mb-1">รอการจัดรถ</h3>
+                    <p className="text-xs text-blue-200/70 font-bold">แอดมินกำลังจัดเตรียมรถ หรือคุณสามารถสแกน QR หน้ารถเพื่อจับคู่รถได้ทันที</p>
+                  </div>
+                )}
+                {!isScanning ? (
+                  <>
+                    {/* Idle State - Ready to Scan */}
+                    <div className="relative w-64 h-64 mb-8">
+                      <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-white/80 rounded-tl-xl"></div>
+                      <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-white/80 rounded-tr-xl"></div>
+                      <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-white/80 rounded-bl-xl"></div>
+                      <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-white/80 rounded-br-xl"></div>
+                      
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ScanLine size={48} className="text-white/30" />
+                      </div>
+                    </div>
+                    
+                    {scannerError && <p className="text-red-400 text-sm font-bold mb-4 text-center">{scannerError}</p>}
+                    
+                    <p className="text-white/80 font-medium text-center mb-6">
+                      เล็งกล้องไปที่ QR Code หน้ารถเพื่อเช็คอิน
+                    </p>
+
+                    <button 
+                      onClick={startScanner}
+                      className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-base transition-all shadow-sm active:scale-95"
+                    >
+                      <ScanLine size={22} />
+                      เปิดกล้องสแกน QR รถ
+                    </button>
+                    
+                    {/* Hidden fallback button for testing */}
+                    <button onClick={handleSimulateScanBus} className="text-gray-600 text-xs mt-4 underline opacity-50">จำลองการสแกน (Dev)</button>
+                  </>
+                ) : (
+                  <>
+                    {/* Active Scanner View */}
+                    <div className="w-full h-64 mb-8 rounded-2xl overflow-hidden relative shadow-lg">
+                      <div id="qr-reader" className="w-full h-full bg-black"></div>
+                      {/* Scan Line Overlay */}
+                      <div className="absolute inset-0 pointer-events-none z-10 flex flex-col">
+                         <div className="w-full h-1 bg-blue-500 shadow-[0_0_10px_3px_rgba(59,130,246,0.8)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-white/80 font-medium text-center mb-6 animate-pulse">
+                      กำลังค้นหา QR Code...
+                    </p>
+
+                    <button 
+                      onClick={stopScanner}
+                      className="w-full py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-base transition-all shadow-sm active:scale-95"
+                    >
+                      ยกเลิกการสแกน
+                    </button>
+                  </>
+                )}
+              </>
+              ) : (
+                <div className="text-center py-10 w-full h-full flex flex-col items-center justify-center relative">
+                  <div className="relative">
+                    <Confetti fire={showConfetti} duration={4000} />
+                    <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
+                    <CheckCircle size={80} className="text-emerald-500 dark:text-emerald-400 mx-auto mb-6 relative z-10 animate-[bounce_1s_ease-in-out]" />
+                  </div>
+                  <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-2">เช็คอินสำเร็จ</h3>
+                <p className="text-sm text-emerald-600 dark:text-emerald-500 font-bold mb-8">บันทึกข้อมูลการเดินทางของคุณแล้ว</p>
+                
+                <div className="w-full max-w-sm bg-white dark:bg-gray-800 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm text-left">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">รหัสการจอง</p>
+                  <p className="text-gray-900 dark:text-white font-mono font-bold">{booking.id}</p>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        {!isBoarded && (
+          <div className="mt-6 text-center">
+            <button 
+              onClick={() => setShowCancelConfirm(true)}
+              className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl font-bold transition-all text-sm"
+            >
+              ยกเลิกการจอง
+            </button>
+          </div>
+        )}
+      </div>
+
+      <SurveyModal isOpen={showSurvey} onClose={() => setShowSurvey(false)} />
+
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={handleCancelBooking}
+        title="ยกเลิกการจองที่นั่ง"
+        message="คุณกำลังจะยกเลิกการจองรถรอบนี้ ที่นั่งจะถูกคืนให้ผู้อื่นได้จองต่อ"
+        details={schedule ? [
+          { label: 'สายรถ', value: schedule.route },
+          { label: 'วันที่', value: schedule.departureTime ? schedule.departureTime.split(' ')[0] : '' },
+          { label: 'เวลา', value: schedule.departureTime ? schedule.departureTime.split(' ')[1].substring(0, 5) : '' },
+        ] : []}
+        variant="danger"
+        confirmText="ยืนยันยกเลิก"
+        cancelText="เก็บการจองไว้"
+      />
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes scan {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(256px); }
+          100% { transform: translateY(0); }
+        }
+      `}} />
+    </div>
+  );
+};
+
+export default MyTicket;

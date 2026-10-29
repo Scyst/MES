@@ -63,11 +63,11 @@
    - `MES/page/AccessoriesInspection/img/` (ลบเฉพาะไฟล์รูปภาพสำรอง 176 ไฟล์ ~58.8 MB ออกจาก Git และใส่ `.gitignore` แต่เก็บรักษาโค้ดทั้ง 7 ไฟล์ของระบบ `MES/page/AccessoriesInspection/` ไว้ครบ 100%)
    - `MES/page/managementCopy/`, `MES/page/salesCopy/`, `MES/page/maintenancePE/`, `MES/page/SAP_Sync/`, `MES/page/sap_db.php` (โมดูลสำเนา/ทดสอบที่เลิกใช้แล้ว พร้อมถอดลิงก์ออกจาก Navbar)
    - ไฟล์รายงานและ Log ชั่วคราว (`MES/Executive_Report_*.html`, `MES/timeline.json`, `mqtt_system_profile.json`, `recovery_plan.md`)
-4. **โมดูลที่เก็บรักษาไว้ตามคำสั่งผู้ใช้:**
+4. **โมดูลที่เก็บรักษาไว้และย้ายเข้าสถาปัตยกรรมใหม่ตามคำสั่งผู้ใช้:**
    - `MES/page/areaAccess/` (เก็บไว้ — โปรเจ็คตามคำสั่งผู้บริหาร)
    - `MES/mes-mobile-app/` (เก็บไว้ก่อนเพื่อความปลอดภัยของพนักงานหน้างาน)
-   - `MES/transport-system/` (เก็บไว้ — ระบบจองรถรับส่งพนักงาน เตรียมย้ายเข้า `mes-v2/src/modules/Transport`)
-   - `MES/mes-team-planner/` (ห้ามลบเด็ดขาด — เตรียมวางแผนรวมโครงสร้างเข้า `mes-v2/src/modules/TeamPlanner`)
+   - `MES/transport-system/` -> **ย้ายเข้าสู่ `MES/Toolbox2/src/modules/Transport/` และ `MES/Toolbox2/public/api/transport/` เรียบร้อยแล้ว** (Route: `#/transport/*`, เชื่อมต่อฐานข้อมูลกลาง `config.php` และลบโฟลเดอร์ `MES/transport-system` เดิมออกแล้ว)
+   - `MES/mes-team-planner/` (ห้ามลบเด็ดขาด — เตรียมวางแผนรวมโครงสร้างเข้า `MES/Toolbox2/src/modules/TeamPlanner`)
 
 ### ขั้นตอนการทำงานเมื่อเปลี่ยนจาก Argon เป็น Flash
 1. เมื่อสลับเป็น **Flash** ให้โมเดลอ่านไฟล์นี้ (`MES/.agents/WORKSTATION_SYNC_REQUEST.md`) และ `MES/.agents/sync_board/handoff.md` เป็นอันดับแรก

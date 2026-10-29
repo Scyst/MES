@@ -10,6 +10,7 @@ const MoodInsightDashboard = lazy(() => import('../modules/MoodInsight/pages/Moo
 const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
 const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
+const TransportApp = lazy(() => import('../modules/Transport/TransportApp'));
 
 
 
@@ -37,6 +38,13 @@ export default function App() {
           <Route path="/dashboard.html" element={<Navigate to="/" replace />} />
           <Route path="/app.html" element={<Navigate to="/" replace />} />
           
+          {/* Employee Shuttle / Transport System */}
+          <Route path="/transport/*" element={
+            <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">กำลังโหลดระบบรถรับส่งพนักงาน...</div>}>
+              <TransportApp />
+            </Suspense>
+          } />
+
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
             <Route index element={

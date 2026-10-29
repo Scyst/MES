@@ -1,0 +1,645 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Clock, Users, CheckCircle, XCircle, Download, Pencil } from 'lucide-react';
+import { schedulesAPI, bookingsAPI, masterAPI } from '../../services/api';
+import ScheduleFormModal from '../../components/admin/ScheduleFormModal';
+
+const ScheduleDetails = () => {
+  const { scheduleId } = useParams();
+  const navigate = useNavigate();
+  const [schedule, setSchedule] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [showAddPassengerModal, setShowAddPassengerModal] = useState(false);
+  const [newPassenger, setNewPassenger] = useState({ empId: '', name: '', bu: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [pendingBookings, setPendingBookings] = useState([]);
+  const [selectedPendingIds, setSelectedPendingIds] = useState([]);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Edit Schedule Modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [routes, setRoutes] = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [fleet, setFleet] = useState([]);
+
+  const [billing, setBilling] = useState(null);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      setLoading(true);
+      try {
+        const [allSchedules, scheduleBookings, fleetData, slotsData, routesData, billingData] = await Promise.all([
+          schedulesAPI.getSchedules(),
+          bookingsAPI.getBookings({ scheduleId }),
+          masterAPI.getFleet(),
+          masterAPI.getTimeSlots(),
+          masterAPI.getRoutes(),
+          schedulesAPI.getBilling(scheduleId).catch(() => null)
+        ]);
+
+        setFleet(fleetData || []);
+        setTimeSlots(slotsData || []);
+        setRoutes(routesData || []);
+        setBilling(billingData || null);
+
+        const foundSchedule = allSchedules.find(s => s.id === scheduleId);
+        if (foundSchedule) {
+          setSchedule(foundSchedule);
+          setBookings(scheduleBookings || []);
+
+          // Load Central Pool for this route and date
+          const pending = await bookingsAPI.getBookings({
+            routeId: foundSchedule.routeId,
+            targetDate: foundSchedule.date || foundSchedule.departureTime.split(' ')[0],
+            unassigned: true
+          });
+          setPendingBookings(pending || []);
+        } else {
+          setError("ไม่พบข้อมูลรอบรถ");
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDetails();
+  }, [scheduleId]);
+
+  const loadDetailsOnly = async () => {
+    try {
+      const scheduleBookings = await bookingsAPI.getBookings({ scheduleId });
+      setBookings(scheduleBookings || []);
+
+      if (schedule) {
+        const pending = await bookingsAPI.getBookings({
+          routeId: schedule.routeId,
+          targetDate: schedule.date || schedule.departureTime.split(' ')[0],
+          unassigned: true
+        });
+        setPendingBookings(pending || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500 font-bold">กำลังโหลด...</div>;
+  }
+  if (error) {
+    return <div className="p-8 text-center text-red-500 font-bold">เกิดข้อผิดพลาด: {error}</div>;
+  }
+  if (!schedule) {
+    return <div className="p-8 text-center text-gray-500 font-bold">ไม่พบข้อมูลรอบรถ</div>;
+  }
+
+  const handleExportCSV = () => {
+    if (bookings.length === 0) {
+      alert('ไม่มีรายชื่อผู้จองในรอบนี้');
+      return;
+    }
+
+    // Create CSV header
+    const header = 'รหัสพนักงาน,ชื่อ-นามสกุล,แผนก (BU),เวลาที่จอง,สถานะ\n';
+
+    // Map bookings to CSV rows
+    const rows = bookings.map(b => {
+      let statusStr = 'รอขึ้นรถ';
+      if (b.status === 'BOARDED') statusStr = 'ขึ้นรถแล้ว';
+      else if (b.status === 'NO_SHOW') statusStr = 'ไม่มาแสดงตัว';
+
+      const timeStr = new Date(b.bookedAt).toLocaleTimeString('th-TH');
+
+      // Escape commas in names if any
+      const safeName = (b.name || '').includes(',') ? `"${b.name}"` : (b.name || '');
+
+      return `${b.empId || ''},${safeName},${b.bu || ''},${timeStr},${statusStr}`;
+    }).join('\n');
+
+    const csvContent = header + rows;
+
+    // Add BOM for Excel UTF-8 compatibility
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+
+    const safeDate = schedule.date || new Date(schedule.departureTime).toISOString().split('T')[0];
+    const safeRoute = (schedule.route || 'Route').replace(/[/\\?%*:|"<>]/g, '-');
+    link.download = `PassengerManifest_${safeRoute}_${safeDate}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAddPassenger = async (e) => {
+    e.preventDefault();
+    if (!newPassenger.name || !newPassenger.bu) return;
+
+    setIsSubmitting(true);
+    try {
+      await bookingsAPI.addBooking({
+        scheduledTripId: scheduleId,
+        empId: newPassenger.empId,
+        name: newPassenger.name,
+        bu: newPassenger.bu,
+        isExtra: true
+      });
+      setShowAddPassengerModal(false);
+      setNewPassenger({ empId: '', name: '', bu: '' });
+      await loadDetailsOnly();
+    } catch (err) {
+      alert(err.message || 'เกิดข้อผิดพลาดในการเพิ่มผู้โดยสาร');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenAssignModal = async () => {
+    setShowAssignModal(true);
+    setShowAssignModal(true);
+    setSelectedPendingIds([]);
+    // We already loaded pendingBookings, no need to fetch again, but can refresh to be safe
+    try {
+      const pending = await bookingsAPI.getBookings({
+        routeId: schedule.routeId,
+        targetDate: schedule.date || schedule.departureTime.split(' ')[0],
+        unassigned: true
+      });
+      setPendingBookings(pending || []);
+    } catch (err) {
+      alert("โหลดรายชื่อที่รอจัดรถไม่สำเร็จ");
+    }
+  };
+
+  const toggleSelectPending = (id) => {
+    setSelectedPendingIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleAssignPending = async () => {
+    if (selectedPendingIds.length === 0) return;
+    setIsAssigning(true);
+    try {
+      await bookingsAPI.assignBookingsToSchedule(scheduleId, selectedPendingIds);
+      setShowAssignModal(false);
+      await loadDetailsOnly();
+    } catch (err) {
+      alert(err.message || "เกิดข้อผิดพลาดในการจัดรถ");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleEditSchedule = async (formData) => {
+    try {
+      const vehicle = fleet.find(v => v.id === formData.vehicleId);
+      const timeSlot = timeSlots.find(ts => ts.id === formData.timeSlotId);
+      if (!vehicle || !timeSlot) return;
+
+      const payload = {
+        id: scheduleId,
+        routeId: formData.routeId,
+        vehicleId: vehicle.id,
+        date: formData.date,
+        time: timeSlot.time,
+        baseCost: vehicle.type === 'VAN' ? 1500 : 3500 // example logic
+      };
+
+      await schedulesAPI.addSchedule(payload);
+
+      setShowEditModal(false);
+
+      // Reload schedule
+      const [allSchedules] = await Promise.all([
+        schedulesAPI.getSchedules()
+      ]);
+      const foundSchedule = allSchedules.find(s => s.id === scheduleId);
+      if (foundSchedule) setSchedule(foundSchedule);
+
+    } catch (err) {
+      alert(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+  };
+
+  const boardedCount = bookings.filter(b => b.status === 'BOARDED').length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate('/transport/admin/schedules')}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-600 dark:text-gray-400"
+        >
+          <ArrowLeft size={24} />
+        </button>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">รายละเอียดรอบรถล่วงหน้า</h2>
+          <p className="text-gray-500 dark:text-gray-400">เส้นทาง: {schedule.route}</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleOpenAssignModal}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            <Clock size={16} /> จัดคิวผู้โดยสาร
+          </button>
+          <button
+            onClick={() => setShowAddPassengerModal(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            <Users size={16} /> เพิ่มผู้โดยสาร
+          </button>
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            <Pencil size={16} /> แก้ไขรถ
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-xl font-bold text-sm transition-colors"
+          >
+            <Download size={16} /> ส่งออกรายชื่อ (CSV)
+          </button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg">
+            <Clock size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">เวลาออกเดินทาง</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">
+              {new Date(schedule.departureTime).toLocaleString('th-TH')}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-lg">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">รอจัดรถ (Central Pool)</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">
+              {pendingBookings.length} คน
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 rounded-lg">
+            <CheckCircle size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">ขึ้นรถแล้ว (Boarded)</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">
+              {boardedCount} คน
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Billing Summary Card */}
+      {billing && billing.total_cost > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/10">
+            <h3 className="font-bold text-emerald-800 dark:text-emerald-400">สรุปค่าใช้จ่ายประจำรอบ (Billing by BU)</h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ต้นทุนรอบรถ (Base Cost)</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">฿{Number(billing.total_cost).toLocaleString()}</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">คนขึ้นรถจริง (Total Boarded)</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">{billing.total_passengers} คน</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 col-span-2 sm:col-span-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ค่าใช้จ่ายต่อหัว (Cost per Head)</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">
+                  {billing.total_passengers > 0 ? `฿${(billing.total_cost / billing.total_passengers).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {billing.billing_by_bu && billing.billing_by_bu.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+                  <thead className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium">
+                    <tr>
+                      <th className="px-4 py-3 rounded-l-lg">แผนก (BU)</th>
+                      <th className="px-4 py-3 text-right">จำนวนคน (Pax)</th>
+                      <th className="px-4 py-3 text-right rounded-r-lg">ค่าใช้จ่ายที่ต้องเรียกเก็บ (Cost)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {billing.billing_by_bu.map((b, idx) => (
+                      <tr key={idx}>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{b.bu_id}</td>
+                        <td className="px-4 py-3 text-right">{b.passenger_count}</td>
+                        <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                          ฿{Number(b.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Grid Layout for Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Passengers List */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col h-full">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="font-bold text-gray-900 dark:text-white">รายชื่อผู้ที่จองตั๋ว</h3>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              ยังไม่มีผู้จองในรอบนี้
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+                <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white font-medium border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-6 py-4">รหัสพนักงาน</th>
+                    <th className="px-6 py-4">แผนก (BU)</th>
+                    <th className="px-6 py-4">เวลาที่จอง</th>
+                    <th className="px-6 py-4">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {bookings.map((booking) => (
+                    <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        {booking.empId}
+                      </td>
+                      <td className="px-6 py-4">
+                        {booking.bu}
+                      </td>
+                      <td className="px-6 py-4 text-gray-500">
+                        {new Date(booking.bookedAt).toLocaleTimeString('th-TH')}
+                      </td>
+                      <td className="px-6 py-4">
+                        {booking.status === 'BOARDED' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">
+                            <CheckCircle size={14} /> ขึ้นรถแล้ว
+                          </span>
+                        ) : booking.status === 'NO_SHOW' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                            <XCircle size={14} /> ไม่มาแสดงตัว
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+                            <Clock size={14} /> รอขึ้นรถ
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Central Pool List */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:gray-700 shadow-sm overflow-hidden flex flex-col h-full">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/10 flex justify-between items-center">
+            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="text-amber-500" size={20} />
+              รอจัดรถ (Central Pool)
+            </h3>
+            <span className="text-sm text-gray-500">สำหรับเส้นทางและวันที่เดียวกัน</span>
+          </div>
+
+          {pendingBookings.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              ไม่มีผู้โดยสารตกค้างในพูลกลาง
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+                <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white font-medium border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-6 py-4">รหัสพนักงาน</th>
+                    <th className="px-6 py-4">ชื่อ - นามสกุล</th>
+                    <th className="px-6 py-4">แผนก (BU)</th>
+                    <th className="px-6 py-4">เวลาที่จอง</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {pendingBookings.map((booking) => (
+                    <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        {booking.empId}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        {booking.name}
+                      </td>
+                      <td className="px-6 py-4">
+                        {booking.bu}
+                      </td>
+                      <td className="px-6 py-4 text-gray-500">
+                        {new Date(booking.bookedAt).toLocaleTimeString('th-TH')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showAddPassengerModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              เพิ่มผู้โดยสารด้วยตนเอง
+            </h3>
+            <form onSubmit={handleAddPassenger} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  รหัสพนักงาน (ถ้ามี)
+                </label>
+                <input
+                  type="text"
+                  value={newPassenger.empId}
+                  onChange={e => setNewPassenger({ ...newPassenger, empId: e.target.value })}
+                  placeholder="เช่น 1096902163"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ชื่อ - นามสกุล *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newPassenger.name}
+                  onChange={e => setNewPassenger({ ...newPassenger, name: e.target.value })}
+                  placeholder="เช่น สมชาย ใจดี"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  สังกัด (แผนก/ฝ่าย) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newPassenger.bu}
+                  onChange={e => setNewPassenger({ ...newPassenger, bu: e.target.value })}
+                  placeholder="เช่น OEM"
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPassengerModal(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? 'กำลังบันทึก...' : 'เพิ่มผู้โดยสาร'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              รายชื่อผู้โดยสารที่รอจัดรถ
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              เส้นทาง: {schedule.route} | วันที่: {schedule.date || schedule.departureTime.split(' ')[0]}
+            </p>
+
+            <div className="flex-1 overflow-auto border border-gray-200 dark:border-gray-700 rounded-xl mb-4">
+              {pendingBookings.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">ไม่มีผู้โดยสารที่รอจัดรถในเส้นทางและวันนี้</div>
+              ) : (
+                <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedPendingIds.length === pendingBookings.length && pendingBookings.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedPendingIds(pendingBookings.map(b => b.id));
+                            else setSelectedPendingIds([]);
+                          }}
+                          className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-4 py-3">รหัสพนักงาน</th>
+                      <th className="px-4 py-3">ชื่อ-นามสกุล</th>
+                      <th className="px-4 py-3">แผนก (BU)</th>
+                      <th className="px-4 py-3">เวลาที่จอง</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {pendingBookings.map(booking => (
+                      <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedPendingIds.includes(booking.id)}
+                            onChange={() => toggleSelectPending(booking.id)}
+                            className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{booking.empId || '-'}</td>
+                        <td className="px-4 py-3 text-gray-900 dark:text-white">{booking.name}</td>
+                        <td className="px-4 py-3">{booking.bu}</td>
+                        <td className="px-4 py-3 text-gray-500">{new Date(booking.bookedAt).toLocaleTimeString('th-TH')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-500">
+                เลือกแล้ว <span className="font-bold text-gray-900 dark:text-white">{selectedPendingIds.length}</span> คน
+                (จากความจุที่ว่าง {schedule.capacity - bookings.length} ที่นั่ง)
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleAssignPending}
+                  disabled={isAssigning || selectedPendingIds.length === 0}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium shadow-sm disabled:opacity-50"
+                >
+                  {isAssigning ? 'กำลังจัดสรร...' : 'จัดสรรลงรถรอบนี้'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Schedule Modal */}
+      <ScheduleFormModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={handleEditSchedule}
+        initialData={{
+          routeId: schedule.routeId,
+          date: schedule.date || schedule.departureTime.split(' ')[0],
+          timeSlotId: schedule.timeSlotId,
+          vehicleId: schedule.vehicleId
+        }}
+        routes={routes}
+        timeSlots={timeSlots}
+        fleet={fleet}
+      />
+    </div>
+  );
+};
+
+export default ScheduleDetails;

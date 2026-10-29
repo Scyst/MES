@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LineChart, ShoppingCart, Truck, FolderOpen, Boxes,
+  LineChart, ShoppingCart, Truck, Bus, FolderOpen, Boxes,
   Smartphone, ListOrdered, Barcode, Printer, Ban,
   Store, Warehouse, Package, MapPin, ShieldCheck,
   ShieldAlert, Wrench, HeartPulse, ChevronRight,
@@ -157,6 +157,7 @@ export default function HomeDashboard() {
     { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php' },
     { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟร์คลิฟต์', icon: Truck, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php' },
+    { title: 'Shuttle Bus', desc: 'ระบบจองรถรับ-ส่งพนักงาน', icon: Bus, colorClass: 'bg-gray-100 text-gray-700', to: '/transport' },
     { title: 'Document Center', desc: 'คู่มือและเอกสาร', icon: FolderOpen, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/documentCenter/documentCenterUI.php' },
   ];
 
@@ -210,9 +211,7 @@ export default function HomeDashboard() {
   ];
 
   const sandboxServices = [
-    { title: 'Plan Dashboard (Test)', desc: 'ระบบวางแผนการผลิต (ทดสอบ)', icon: LineChart, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/managementCopy/managementDashboard.php', roles: ['admin', 'creator'] },
     { title: 'Production (Test)', desc: 'ระบบบันทึกผลผลิต (ทดสอบ)', icon: Boxes, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/productionCopy/productionUI.php', roles: ['admin', 'creator'] },
-    { title: 'Sales Tracking (Test)', desc: 'ติดตามสถานะออเดอร์ (ทดสอบ)', icon: Truck, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/salesCopy/salesDashboard.php', roles: ['admin', 'creator'] },
   ];
 
   const prototypeServices = [
