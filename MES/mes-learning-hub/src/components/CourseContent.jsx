@@ -284,7 +284,7 @@ export default function CourseContent({ courseId, moduleContent }) {
     'robot-m11-industrial-fieldbus-mes': <RobotMod11 />,
     'robot-m12-ai-vision-binpicking': <RobotMod12 />,
 
-    // Next-Gen AI Machine Vision & Edge Intelligence (2026 Edition)
+    // Advanced AI Machine Vision & Industrial Edge Computing
     'vision-v2-m1-architecture': <MachineVisionV2Mod1 />,
     'vision-v2-m2-smart-optics-3d': <MachineVisionV2Mod2 />,
     'vision-v2-m3-yolo-obb': <MachineVisionV2Mod3 />,

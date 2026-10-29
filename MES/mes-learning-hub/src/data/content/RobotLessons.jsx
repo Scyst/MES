@@ -2669,7 +2669,7 @@ export function RobotMod9() {
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           หุ่นยนต์ร่วมปฏิบัติการ (Cobots), Direct Teaching &amp; มาตรฐานแรงปะทะ ISO/TS 15066
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ศึกษาวิวัฒนาการการปฏิวัติจากการกักขังหุ่นยนต์ในกรงตาข่ายเหล็ก สู่การทำงานเคียงบ่าเคียงไหล่กับมนุษย์แบบไร้รั้วกั้น (Fenceless Operation), 
           4 รูปแบบการทำงานร่วมกันตามมาตรฐาน ISO 10218 และ ISO/TS 15066, การคำนวณขีดจำกัดแรงกดทางชีวกลศาสตร์ (Biomechanical Thresholds 140 N), 
           และกลไกชดเชยแรงโน้มถ่วงแบบแอกทีฟสำหรับการจูงสอนด้วยมือเปล่า (Zero-Gravity Direct Teaching)
@@ -2866,7 +2866,7 @@ export function RobotMod10() {
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           Digital Twin &amp; โปรแกรมหุ่นยนต์ออฟไลน์ (Offline Programming - OLP)
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           การจำลองสายการผลิตเสมือนจริงด้วยซอฟต์แวร์ OLP (RoboDK / Siemens Process Simulate), การวิเคราะห์เชิงคณิตศาสตร์เพื่อขจัด 3 จุดวิกฤต Singularity 
           (Wrist, Shoulder, Elbow), การตรวจสอบการชนของเครื่องมือกับจิ๊กจับยึด (Clash Detection), 
           และการปรับแต่งรัศมีโค้ง Zone Blending เพื่อตัดลดเวลา Cycle Time ลงได้มากกว่า 25%
@@ -3036,7 +3036,7 @@ export function RobotMod11() {
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           การเชื่อมต่อโครงข่ายอุตสาหกรรม (Fieldbus) &amp; ระบบ MES ยุค Industry 4.0
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ก้าวข้ามการเดินสายรีเลย์ 24V แบบเก่า สู่การสื่อสารดิจิทัลแบบ Real-Time ด้วย PROFINET IRT, EtherCAT, และมาตรฐานกลาง OPC UA Robotics Companion Specification (VDMA 40010), 
           ลำดับสัญญาณดิจิทัล Handshake ระดับมิลลิวินาที, โครงสร้างข้อมูลคำนวณ OEE (Availability, Performance, Quality), 
           และการแจ้งเตือนซ่อมบำรุงเชิงคาดการณ์ (Predictive Maintenance)
@@ -3151,7 +3151,7 @@ export function RobotMod12() {
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           ระบบนำทางด้วยภาพ 3 มิติ (3D Vision Guidance) &amp; AI Bin Picking 6-DoF
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           การบูรณาการเทคโนโลยีระดับสูงสุดของระบบอัตโนมัติ: การสแกนกลุ่มจุดพิกัด 3 มิติ (3D Point Cloud), 
           อัลกอริทึม AI ค้นหาพิกัดและมุมเอียง 6 องศาอิสระ (6-DoF Pose Estimation), การวางแผนเส้นทางหลบการชนขอบกระบะ (Collision-Free Motion Planning), 
           และการใช้เซนเซอร์วัดแรงข้อมือหุ่นยนต์เพื่อสวมประกอบชิ้นงานแบบยืดหยุ่น (Active Compliance)

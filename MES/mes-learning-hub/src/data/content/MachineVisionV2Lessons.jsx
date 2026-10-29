@@ -597,10 +597,10 @@ export function VisionV2PatchCoreAnomalySimulator() {
 }
 
 /* ========================================================================= */
-/* MODULE 1: NEXT-GEN AI MACHINE VISION ARCHITECTURE                         */
+/* MODULE 1: ADVANCED AI MACHINE VISION ARCHITECTURE                         */
 /* ========================================================================= */
 /* ========================================================================= */
-/* MODULE 1: NEXT-GEN AI MACHINE VISION ARCHITECTURE & EDGE COMPUTING       */
+/* MODULE 1: ADVANCED AI MACHINE VISION ARCHITECTURE & EDGE COMPUTING       */
 /* ========================================================================= */
 export function MachineVisionV2Mod1() {
   const { isDark } = useTheme();
@@ -613,12 +613,12 @@ export function MachineVisionV2Mod1() {
           : 'bg-gradient-to-r from-emerald-50 via-white to-teal-50 border-emerald-300 shadow-emerald-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
-          <FiCpu className="w-4 h-4" /> โมดูลที่ 1 (Module 1 of 7 - 2026 Masterclass Edition)
+          <FiCpu className="w-4 h-4" /> โมดูลที่ 1 (Module 1 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          สถาปัตยกรรม Next-Gen AI Machine Vision ยุคปี 2026 &amp; Edge Computing
+          สถาปัตยกรรมระบบ AI Machine Vision ขั้นสูง &amp; การประมวลผล Edge Computing
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ศึกษาวิวัฒนาการการปฏิวัติจากระบบคอมพิวเตอร์วิทัศน์แบบตั้งเกณฑ์ดั้งเดิม (Classical Rule-Based) สู่สถาปัตยกรรม Edge NPU อัจฉริยะ 
           การประมวลผลแบบไร้คลาวด์ (Zero-Cloud Latency), การคำนวณงบประมาณเวลาไปป์ไลน์ระดับไมโครวินาที (Microsecond Latency Budget) 
           และการรับประกันการทำงานแบบ Deterministic ร่วมกับระบบควบคุมอัตโนมัติ PLC และฐานข้อมูล MES
@@ -635,7 +635,7 @@ export function MachineVisionV2Mod1() {
         </h2>
         <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ในอดีตการตรวจสอบด้วยกล้องอุตสาหกรรมอาศัยฟังก์ชันทางคณิตศาสตร์เชิงเส้น (Morphology, Sobel Filter, Blob Analysis) ซึ่งมีความเปราะบางอย่างยิ่งเมื่อสภาพแสงหน้างานเปลี่ยนไป 
-          แม้กระทั่งการนำ AI ยุคแรกมารันผ่าน Cloud API ก็ก่อให้เกิดปัญหาความหน่วงเวลาและข้อมูลความลับรั่วไหล ยุคปี 2026 จึงเป็นยุคของ <strong>On-Premises Edge NPU</strong> อย่างแท้จริง:
+          แม้กระทั่งการนำ AI ยุคแรกมารันผ่าน Cloud API ก็ก่อให้เกิดปัญหาความหน่วงเวลาและข้อมูลความลับรั่วไหล ยุคปัจจุบันจึงเป็นยุคของ <strong>On-Premises Edge NPU</strong> อย่างแท้จริง:
         </p>
 
         <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
@@ -647,7 +647,7 @@ export function MachineVisionV2Mod1() {
                 <th className="py-3 px-4 w-[22%]">เกณฑ์การประเมิน (Criteria)</th>
                 <th className="py-3 px-4 w-[26%] text-amber-600 dark:text-amber-300">ยุค 1: Classical Rule-Based</th>
                 <th className="py-3 px-4 w-[26%] text-rose-600 dark:text-rose-300">ยุค 2: Cloud-Based AI</th>
-                <th className="py-3 px-4 w-[26%] text-emerald-600 dark:text-emerald-400 font-bold">ยุค 3: 2026 Edge NPU Native</th>
+                <th className="py-3 px-4 w-[26%] text-emerald-600 dark:text-emerald-400 font-bold">ยุค 3: Industrial Edge NPU Native</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-800'}`}>
@@ -860,12 +860,12 @@ export function MachineVisionV2Mod2() {
           : 'bg-gradient-to-r from-indigo-50 via-white to-blue-50 border-indigo-300 shadow-indigo-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs font-bold mb-3 border border-indigo-500/30">
-          <FiEye className="w-4 h-4" /> โมดูลที่ 2 (Module 2 of 7 - 2026 Masterclass Edition)
+          <FiEye className="w-4 h-4" /> โมดูลที่ 2 (Module 2 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           เทคโนโลยีเซนเซอร์ภาพความเร็วสูง, เลนส์ Smart Optics &amp; 3D Photometric Stereo
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           เจาะลึกสถาปัตยกรรมเซนเซอร์ภาพ Global Shutter CMOS ความเร็วสูง, เทคโนโลยีเลนส์ของเหลว (Liquid Lenses) ปรับโฟกัสระดับมิลลิวินาที, 
           สมการคำนวณป้องกันภาพเบลอจากการเคลื่อนที่ (Motion Blur Equation), และเทคนิค 3D Photometric Stereo สกัดแผนที่เวกเตอร์พื้นผิว 4 ทิศทาง
         </p>
@@ -881,7 +881,7 @@ export function MachineVisionV2Mod2() {
         </h2>
         <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ในงานตรวจจับชิ้นงานบนสายพานลำเลียง ชนิดของชัตเตอร์คือปัจจัยชี้ชะตาระหว่างภาพคมชัดระดับไมครอนกับภาพบิดเบี้ยวจนระบบตัดสินผิดพลาด 
-          กล้องเกรดผู้บริโภคทั่วไปใช้ Rolling Shutter ซึ่งอ่านค่าทีละแถว ทำให้เกิดเอฟเฟกต์ภาพเอียง (Jello Effect) ขณะที่เซนเซอร์อุตสาหกรรมยุคปี 2026 ใช้ Global Shutter Pregius S:
+          กล้องเกรดผู้บริโภคทั่วไปใช้ Rolling Shutter ซึ่งอ่านค่าทีละแถว ทำให้เกิดเอฟเฟกต์ภาพเอียง (Jello Effect) ขณะที่เซนเซอร์อุตสาหกรรมขั้นสูงใช้ Global Shutter Pregius S:
         </p>
 
         <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
@@ -1093,12 +1093,12 @@ export function MachineVisionV2Mod3() {
           : 'bg-gradient-to-r from-amber-50 via-white to-orange-50 border-amber-300 shadow-amber-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 text-xs font-bold mb-3 border border-amber-500/30">
-          <FiTarget className="w-4 h-4" /> โมดูลที่ 3 (Module 3 of 7 - 2026 Masterclass Edition)
+          <FiTarget className="w-4 h-4" /> โมดูลที่ 3 (Module 3 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           สถาปัตยกรรม Anchor-Free YOLOv8/v11 &amp; Oriented Bounding Boxes (OBB)
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ยกระดับการตรวจจับวัตถุจากการตีกรอบสี่เหลี่ยมแนวดิ่งแบบดั้งเดิม สู่การหมุนกรอบแนบสนิทตามองศาชิ้นงานจริง (OBB), 
           การคำนวณพิกัดมุม 5 พารามิเตอร์และ 8 พิกัดรูปหลายเหลี่ยม, การแก้ปัญหาการกระโดดของมุม (Angle Boundary Loss), 
           และการแปลงพิกัดภาพส่งต่อให้แขนกลหุ่นยนต์หยิบจับได้อย่างแม่นยำระดับเสี้ยวองศา
@@ -1272,12 +1272,12 @@ export function MachineVisionV2Mod4() {
           : 'bg-gradient-to-r from-rose-50 via-white to-red-50 border-rose-300 shadow-rose-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold mb-3 border border-rose-500/30">
-          <FiAlertTriangle className="w-4 h-4" /> โมดูลที่ 4 (Module 4 of 7 - 2026 Masterclass Edition)
+          <FiAlertTriangle className="w-4 h-4" /> โมดูลที่ 4 (Module 4 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           การตรวจจับของเสียแบบไม่ต้องใช้ภาพ NG (Unsupervised Anomaly Detection: PatchCore &amp; Anomalib)
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           แก้ปัญหาคลาสสิกของโรงงานอุตสาหกรรม: การขาดแคลนข้อมูลภาพของเสียในสายการผลิตจริง ด้วยอัลกอริทึม Unsupervised Anomaly Detection 
           การเรียนรู้เฉพาะโครงสร้างชิ้นงานดี (Normal OK Only), การสร้าง Memory Bank ด้วย Coreset Subsampling, 
           และการตรวจจับข้อบกพร่องที่ไม่เคยพบมาก่อน (Zero-Shot Anomaly Detection) ได้อย่างสมบูรณ์แบบ
@@ -1451,12 +1451,12 @@ export function MachineVisionV2Mod5() {
           : 'bg-gradient-to-r from-cyan-50 via-white to-teal-50 border-cyan-300 shadow-cyan-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-xs font-bold mb-3 border border-cyan-500/30">
-          <FiLayers className="w-4 h-4" /> โมดูลที่ 5 (Module 5 of 7 - 2026 Masterclass Edition)
+          <FiLayers className="w-4 h-4" /> โมดูลที่ 5 (Module 5 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           Vision Transformers (ViT) &amp; Segment Anything Model (SAM 2) ในงานอุตสาหกรรม
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           การเปลี่ยนผ่านครั้งประวัติศาสตร์ของวงการคอมพิวเตอร์วิทัศน์: จากเคอร์เนลคอนโวลูชันขนาดเล็ก (CNNs) สู่กลไกการทำความเข้าใจภาพแบบองค์รวม (Global Self-Attention), 
           การนำโมเดลรากฐาน (Foundation Models) เช่น Meta SAM 2 มาสร้างหน้ากากแบ่งส่วนชิ้นงานระดับพิกเซล, 
           และการกลั่นความรู้ (Knowledge Distillation) บีบอัดลง Edge NPU ความเร็วสูง
@@ -1587,12 +1587,12 @@ export function MachineVisionV2Mod6() {
           : 'bg-gradient-to-r from-emerald-50 via-white to-green-50 border-emerald-300 shadow-emerald-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
-          <FiCpu className="w-4 h-4" /> โมดูลที่ 6 (Module 6 of 7 - 2026 Masterclass Edition)
+          <FiCpu className="w-4 h-4" /> โมดูลที่ 6 (Module 6 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           การปรับปรุงประสิทธิภาพโมเดล AI (Model Optimization) &amp; TensorRT INT8
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           ขั้นตอนวิศวกรรมการแปลงโมเดลจาก PyTorch สู่ ONNX และคอมไพล์เป็น TensorRT Engine ระดับไบนารี, 
           การบีบอัดค่าน้ำหนักสู่ระบบจำนวนเต็ม 8 บิต (Post-Training Quantization - PTQ) ด้วย KL Divergence Calibrator, 
           การรวมเลเยอร์ (Layer Fusion), และการเขียน C++ CUDA Zero-Copy Runtime สำหรับงานความเร็วสูงระดับไมโครวินาที
@@ -1742,12 +1742,12 @@ export function MachineVisionV2Mod7() {
           : 'bg-gradient-to-r from-rose-50 via-white to-indigo-50 border-rose-300 shadow-rose-500/5'
       }`}>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold mb-3 border border-rose-500/30">
-          <FiServer className="w-4 h-4" /> โมดูลที่ 7 (Module 7 of 7 - 2026 Masterclass Edition)
+          <FiServer className="w-4 h-4" /> โมดูลที่ 7 (Module 7 of 7 - Advanced Masterclass)
         </div>
         <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           ระบบขับดันของเสียความเร็วสูง (High-Speed Reject), PROFINET IRT &amp; MES
         </h1>
-        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p className={`text-sm md:text-base leading-relaxed w-full ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           การบูรณาการระบบวิชันเข้ากับกลไกทางกายภาพ: การคำนวณติดตามตำแหน่งชิ้นงานด้วย Rotary Encoder &amp; PLC Shift Register, 
           การควบคุมโซลินอยด์วาล์วยิงลมเตะของเสีย (Air Jet Rejector), การสื่อสาร Real-Time Fieldbus ระดับไมโครวินาที (PROFINET IRT / EtherCAT), 
           และการส่งถ่ายสถิติ Defect Pareto Chart เข้าสู่ระบบ MES ตามมาตรฐานอุตสาหกรรมยานยนต์ IATF 16949

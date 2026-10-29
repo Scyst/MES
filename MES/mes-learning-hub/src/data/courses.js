@@ -793,22 +793,22 @@ export const courses = [
   },
   {
     id: 'c-machine-vision-v2',
-    title: 'Next-Gen AI Machine Vision & Edge Intelligence (2026 Edition)',
-    description: 'หลักสูตรแมชชีนวิชันและปัญญาประดิษฐ์ยุคใหม่ (ฉบับอัปเกรด 2026): สถาปัตยกรรม Edge NPU, เทคโนโลยีเซนเซอร์ 3D Photometric Stereo & High-Speed CMOS, โมเดลตรวจสอบชิ้นงาน Anchor-Free YOLOv8/v11 & Oriented Bounding Box (OBB), การตรวจจับรอยตำหนิแบบไม่ใช้ข้อมูล NG (Unsupervised Anomaly Detection - PatchCore/FastFlow), Vision Transformers (ViT) & Segment Anything (SAM 2), การแปลงโมเดลด้วย TensorRT INT8 Quantization บน Jetson Orin / Hailo NPU, และการส่งข้อมูล Reject ความเร็วสูงเชื่อมต่อ PROFINET & MES',
+    title: 'Advanced AI Machine Vision & Industrial Edge Computing',
+    description: 'หลักสูตรวิศวกรรมปัญญาประดิษฐ์แมชชีนวิชันและการประมวลผล Edge Computing ขั้นสูงสำหรับโรงงานอัจฉริยะ: สถาปัตยกรรม Edge NPU, เทคโนโลยีเซนเซอร์ 3D Photometric Stereo & High-Speed CMOS, โมเดลตรวจสอบชิ้นงาน Anchor-Free YOLOv8/v11 & Oriented Bounding Box (OBB), การตรวจจับรอยตำหนิแบบไม่ใช้ข้อมูล NG (Unsupervised Anomaly Detection - PatchCore/FastFlow), Vision Transformers (ViT) & Segment Anything (SAM 2), การแปลงโมเดลด้วย TensorRT INT8 Quantization บน Jetson Orin / Hailo NPU, และการส่งข้อมูล Reject ความเร็วสูงเชื่อมต่อ PROFINET & MES',
     instructor: 'ทีมวิศวกรรมปัญญาประดิษฐ์และระบบอัตโนมัติ (AI & Smart Vision Group)',
     duration: '36 hours (5-6 days)',
     category: 'เครื่องจักรและวิศวกรรมการผลิต',
     image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
     subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","ระบบอัตโนมัติและ AI","เปิดรับรองบุคคลภายนอก","การควบคุมคุณภาพ"],
-    tags: ["Machine Vision 2.0","Edge AI","YOLOv11","PatchCore","TensorRT","3D Vision","NPU"],
+    tags: ["Machine Vision","Edge AI","YOLO OBB","PatchCore","TensorRT","3D Vision","NPU"],
     isFeatured: true,
-    featuredBadge: "🚀 อัปเกรด 2026 · NEXT-GEN AI",
+    featuredBadge: "⚡ ADVANCED AI & EDGE NPU",
     level: "Level 4 (Certified Expert)",
     isPublicEligible: true,
     modules: [
       {
         id: 'm1',
-        title: '1. สถาปัตยกรรม Next-Gen AI Machine Vision ยุคปี 2026 & Edge Computing',
+        title: '1. สถาปัตยกรรมระบบ AI Machine Vision ขั้นสูง & การประมวลผล Edge Computing',
         content: 'vision-v2-m1-architecture'
       },
       {

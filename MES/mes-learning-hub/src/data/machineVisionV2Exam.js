@@ -1,6 +1,6 @@
 /**
  * Final assessment bank for course `c-machine-vision-v2` (40 questions, pass mark 80%).
- * Next-Gen AI Machine Vision & Edge Intelligence (2026 Edition)
+ * Advanced AI Machine Vision & Industrial Edge Computing
  *
  * Conforming to ISO 9001:2015 Clause 7.2 (Competency Evaluation)
  * Dual Examination Modes:
@@ -29,7 +29,7 @@ function buildExamQuestion({ id, question, correct, wrong, correctIndex, explana
 }
 
 export const MACHINE_VISION_V2_EXAM_SOURCE = [
-  // --- Group 1: Next-Gen AI Architecture & Edge Computing (Q1 - Q6) ---
+  // --- Group 1: Advanced AI Architecture & Edge Computing (Q1 - Q6) ---
   {
     id: 'vis2-q1',
     question: 'สถาปัตยกรรม Edge NPU (เช่น NVIDIA Jetson Orin หรือ Hailo-8) มีข้อได้เปรียบสำคัญที่สุดประการใดเหนือระบบ Cloud AI ในสายการผลิตอัตโนมัติ?',
@@ -462,7 +462,7 @@ export const MACHINE_VISION_V2_EXAM_SOURCE = [
   },
   {
     id: 'vis2-q39',
-    question: 'ตามมาตรฐาน IATF 16949 / ISO 9001 ข้อมูลชุดใดที่ระบบ Next-Gen Machine Vision ต้องส่งบันทึกลงในระบบ MES สำหรับชิ้นงานแต่ละชิ้น?',
+    question: 'ตามมาตรฐาน IATF 16949 / ISO 9001 ข้อมูลชุดใดที่ระบบ AI Machine Vision ต้องส่งบันทึกลงในระบบ MES สำหรับชิ้นงานแต่ละชิ้น?',
     correct: 'รหัสประจำตัวชิ้นงาน (UID/Serial), ผลการตัดสิน (OK/NG), ค่าพารามิเตอร์ที่วัดได้, ภาพถ่ายหลักฐาน และวันเวลาที่ตรวจ (Timestamp)',
     wrong: [
       'เฉพาะจำนวนยอดผลิตรวมของวันนั้นโดยไม่ต้องระบุรายละเอียดของชิ้นงานรายชิ้น',
@@ -787,7 +787,7 @@ export const MACHINE_VISION_V2_CHECKPOINTS = {
     },
     {
       id: 'cp-vis2-m7-3',
-      question: 'ข้อมูลชุดใดที่ระบบ Next-Gen Vision ต้องส่งบันทึกลงในระบบ MES เพื่อรองรับการสืบย้อนกลับระดับชิ้นงาน (Item Traceability)?',
+      question: 'ข้อมูลชุดใดที่ระบบ AI Machine Vision ต้องส่งบันทึกลงในระบบ MES เพื่อรองรับการสืบย้อนกลับระดับชิ้นงาน (Item Traceability)?',
       options: [
         'A: เฉพาะเวลารวมที่เครื่องจักรเปิดทำงานในวันนั้น',
         'B: รหัสชิ้นงาน (UID/Serial), ผลตัดสิน OK/NG, ค่าขนาดที่วัดได้, ภาพถ่ายหลักฐาน และเวลาที่ตรวจ (Timestamp)',
