@@ -37,9 +37,9 @@
 เพื่อรองรับการสลับโมเดลระหว่าง **Gemini 4 Argon** (วางแผน/วิเคราะห์เชิงลึก) และ **Flash** (ลงมือ Refactor จำนวนมากอย่างรวดเร็วเมื่อโควต้า Argon ใกล้หมด) ให้ยึดแนวทางดังนี้:
 
 ### เป้าหมายสถาปัตยกรรมใหม่ (Target System Architecture)
-- **Unified Modular Frontend (`MES/mes-v2` -> เป้าหมายเปลี่ยนชื่อเป็น `MES/Toolbox2` ให้ตรงกับ FTP):**
-  - ใช้ React 18 + Vite + TailwindCSS + HashRouter (`#/`) โครงสร้าง `src/modules/<ModuleName>/` และ `src/shared/`
-  - ค่อยๆ พอร์ตโมดูลจาก Legacy PHP (`MES/page/*`) และรวมโปรเจ็คย่อย (`MES/transport-system`, `MES/mes-team-planner`) เข้ามาไว้ใน `mes-v2` เป็นหนึ่งเดียว
+- **Unified Modular Frontend (`MES/Toolbox2` — เปลี่ยนชื่อจาก `MES/mes-v2` ให้ตรงกับพาร์ทจริงบน FTP `/Toolbox2` แบบ 1:1):**
+  - ใช้ React 18+ + Vite + TailwindCSS + HashRouter (`#/`) โครงสร้าง `src/modules/<ModuleName>/` และ `src/shared/`
+  - ค่อยๆ พอร์ตโมดูลจาก Legacy PHP (`MES/page/*`) และรวมโปรเจ็คย่อย (`MES/transport-system`, `MES/mes-team-planner`) เข้ามาไว้ใน `MES/Toolbox2` เป็นหนึ่งเดียว
 - **Single Source of Truth Backend API (`MES/page/<module>/api/*.php`):**
   - เลิกคัดลอกไฟล์ API แยกไปไว้ในหลายโฟลเดอร์ ให้ทุก Frontend เรียกใช้ REST/JSON API ที่ `MES/page/<module>/api/` ร่วมกัน โดยใช้ Session & PBAC Permission (`check_auth.php`) ชุดเดียวกัน
 - **Zero-Disruption Guarantee (ห้ามกระทบงานกลางวัน):**

@@ -13,7 +13,7 @@ async function uploadDir() {
         });
         
         console.log("Connected to FTP");
-        const localDir = path.join('E:', 'MES', 'MES', 'MES', 'mes-v2', 'dist');
+        const localDir = path.join(__dirname, 'dist');
         const remoteDir = '/Toolbox2'; 
         
         await client.ensureDir(remoteDir);

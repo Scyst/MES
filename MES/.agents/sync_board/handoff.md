@@ -52,15 +52,16 @@
 - [x] ตรวจสอบยืนยันว่า `MES/page/storeManagement/api/api_store.php` (72 actions) เป็น Superset 100% ของ `MES/mes-toolbox/public/api/v1/inventory.php` (50 actions) และลบ `MES/mes-toolbox/` ออกอย่างปลอดภัย
 - [x] ลบโฟลเดอร์และไฟล์ที่ไม่ได้ใช้แล้วรวม 2,376 ไฟล์ (~213.4 MB): `MES_TEST/`, `MES/Toolbox2/` (โฟลเดอร์เก็บ build เก่า), `MES/estate-crm/`, `MES/mes-toolbox/`, `MES/page/AccessoriesInspection/img/` (ลบเฉพาะรูปสำรอง 176 รูป แต่เก็บโค้ดระบบไว้ครบ), `MES/page/managementCopy/`, `MES/page/salesCopy/`, `MES/page/maintenancePE/`, `MES/page/SAP_Sync/`, `MES/page/sap_db.php` และไฟล์รายงานชั่วคราว พร้อมถอดลิงก์ที่ตายแล้วออกจาก `nav_dropdown.php`
 
+- [x] เปลี่ยนชื่อโฟลเดอร์ `MES/mes-v2` เป็น `MES/Toolbox2` (`git mv MES/mes-v2 MES/Toolbox2`) เพื่อให้ตรงกับพาร์ทจริงบน FTP (`/Toolbox2`) แบบ 1:1 และปรับ `upload.cjs` ให้ใช้ `path.join(__dirname, 'dist')`
+
 ## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:** อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (หากไม่มีข้อมูลลับ หรือแยกเข้า `.env` แล้ว) และคัดลอก Global Skills อื่นๆ (ถ้ามี) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git
 - [ ] **[สำหรับกะกลางคืน Argon / Flash]:**
-  - **Step 1:** เปลี่ยนชื่อโฟลเดอร์ `MES/mes-v2` เป็น `MES/Toolbox2` เพื่อให้ชื่อโฟลเดอร์ในโปรเจ็คตรงกับพาร์ทจริงบน FTP (`/Toolbox2`) ตามที่ระบุใน `MES/.agents/ftp_structure.md`
-  - **Step 2:** ย้ายระบบจองรถรับส่งพนักงาน (`MES/transport-system`) เข้าไปเป็นโมดูล `src/modules/Transport` ใน `MES/Toolbox2` (`mes-v2`)
-  - **Step 3:** วางโครงสร้างรองรับการย้าย `MES/mes-team-planner` เข้าสู่ `src/modules/TeamPlanner` ใน `MES/Toolbox2` (`mes-v2`)
+  - **Step 1:** ย้ายระบบจองรถรับส่งพนักงาน (`MES/transport-system`) เข้าไปเป็นโมดูล `src/modules/Transport` ใน `MES/Toolbox2`
+  - **Step 2:** วางโครงสร้างรองรับการย้าย `MES/mes-team-planner` เข้าสู่ `src/modules/TeamPlanner` ใน `MES/Toolbox2`
 
 ## Exact Files to Modify / Reference
 - `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และบันทึกการลบ/รวมศูนย์ API)
 - `MES/.agents/ftp_structure.md` (โครงสร้างพาร์ทบน FTP Server)
-- `MES/mes-v2/ARCHITECTURE.md` (สถาปัตยกรรมเป้าหมายของ React SPA)
+- `MES/Toolbox2/ARCHITECTURE.md` (สถาปัตยกรรมเป้าหมายของ React SPA)
 - `MES/page/storeManagement/api/api_store.php` (Single Source of Truth API ของระบบคลังสินค้า)
