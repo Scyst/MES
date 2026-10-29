@@ -255,3 +255,4 @@
     { "from": "hw_electric_mqtt", "to": "mod_page_utility_exec", "label": "คำนวณต้นทุนค่าไฟ/ค่าแก๊สรายวันเข้า Daily P&L" }
   ]
 }
+
