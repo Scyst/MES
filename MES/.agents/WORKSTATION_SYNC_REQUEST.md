@@ -67,7 +67,7 @@
    - `MES/page/areaAccess/` (เก็บไว้ — โปรเจ็คตามคำสั่งผู้บริหาร)
    - `MES/mes-mobile-app/` (เก็บไว้ก่อนเพื่อความปลอดภัยของพนักงานหน้างาน)
    - `MES/transport-system/` -> **ย้ายเข้าสู่ `MES/Toolbox2/src/modules/Transport/` และ `MES/Toolbox2/public/api/transport/` เรียบร้อยแล้ว** (Route: `#/transport/*`, เชื่อมต่อฐานข้อมูลกลาง `config.php` และลบโฟลเดอร์ `MES/transport-system` เดิมออกแล้ว)
-   - `MES/mes-team-planner/` (ห้ามลบเด็ดขาด — เตรียมวางแผนรวมโครงสร้างเข้า `MES/Toolbox2/src/modules/TeamPlanner`)
+   - `MES/mes-team-planner/` (ห้ามลบโฟลเดอร์เดิมเด็ดขาด — **พอร์ตเข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner/` เรียบร้อยแล้ว** ภายใต้ Route `#/planner/*` โดยชี้ API และ `uploads/` ไปที่ `/iot-toolbox/sandbox-b9/Toolbox/planner/api/` และผ่านการทดสอบ Puppeteer E2E ครบทุกแท็บ 100%)
 
 ### ขั้นตอนการทำงานเมื่อเปลี่ยนจาก Argon เป็น Flash
 1. เมื่อสลับเป็น **Flash** ให้โมเดลอ่านไฟล์นี้ (`MES/.agents/WORKSTATION_SYNC_REQUEST.md`) และ `MES/.agents/sync_board/handoff.md` เป็นอันดับแรก

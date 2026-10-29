@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Home, Activity, ShoppingCart, Truck, Bus, FolderOpen, 
+  Home, Activity, ShoppingCart, Truck, Bus, Calendar, FolderOpen, 
   ChevronDown, ChevronRight, Package, Smartphone, ListOrdered, 
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox, 
   Camera, Settings, Users, MonitorPlay, Zap, Heart, Search, FileText, FlaskConical, History
@@ -17,6 +17,7 @@ const MENU_DATA = [
       { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
       { name: 'Forklift Booking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php', external: true },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
+      { name: 'Team Planner (แผนงานทีม)', icon: Calendar, to: '/planner' },
       { name: 'Document Center', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/documentCenter/documentCenterUI.php', external: true },
     ]
   },

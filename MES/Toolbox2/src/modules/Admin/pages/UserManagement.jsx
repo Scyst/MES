@@ -23,7 +23,7 @@ export default function UserManagement() {
     try {
       const result = await userManageApi.getUsers();
       if (result.success) {
-        setUsers(result.data);
+        setUsers(Array.isArray(result.data) ? result.data : []);
       }
     } catch (error) {
       console.error('Failed to load users:', error);

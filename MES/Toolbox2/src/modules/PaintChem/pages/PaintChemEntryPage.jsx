@@ -33,9 +33,9 @@ function buildEmptySlotValues() {
 }
 
 // Hydrate slot values from API logs array for a specific time_slot
-function hydrateSlotValues(logs, selectedSlot) {
+function hydrateSlotValues(logs = [], selectedSlot) {
   const hydrated = buildEmptySlotValues();
-  logs
+  (Array.isArray(logs) ? logs : [])
     .filter((l) => l.time_slot === selectedSlot)
     .forEach((l) => {
       if (hydrated[l.station_no]?.[l.parameter_key] !== undefined) {
@@ -55,9 +55,9 @@ function hydrateSlotValues(logs, selectedSlot) {
 }
 
 // Collect per-slot extras (conveyor speed + note): { [timeSlot]: { conveyorSpeed, note } }
-function buildExtrasBySlot(logs) {
+function buildExtrasBySlot(logs = []) {
   const bySlot = {};
-  logs
+  (Array.isArray(logs) ? logs : [])
     .filter((l) => Number(l.station_no) === SLOT_EXTRAS_STATION_NO)
     .forEach((l) => {
       const entry = bySlot[l.time_slot] ?? { ...EMPTY_EXTRAS };
@@ -112,10 +112,11 @@ export default function PaintChemEntryPage() {
     try {
       const res = await axios.get(`${API_BASE}/get_sheet.php`, { params: { date, shift } });
       if (res.data.success) {
-        setHeader(res.data.data.header);
-        setAllLogs(res.data.data.logs);
-        setExtrasBySlot(buildExtrasBySlot(res.data.data.logs));
-        setSlotVals(hydrateSlotValues(res.data.data.logs, selectedSlot));
+        const safeLogs = Array.isArray(res.data.data?.logs) ? res.data.data.logs : [];
+        setHeader(res.data.data?.header || null);
+        setAllLogs(safeLogs);
+        setExtrasBySlot(buildExtrasBySlot(safeLogs));
+        setSlotVals(hydrateSlotValues(safeLogs, selectedSlot));
       }
     } catch {
       showToast('error', 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่');

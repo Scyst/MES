@@ -36,13 +36,13 @@ const AdminDashboard = () => {
     if (animate) setIsRefreshing(true);
     try {
       const data = await reportsAPI.getDashboard(selectedDate);
-      setDashboardData(data || {
-        trips: [],
-        totalBookingsToday: 0,
-        totalScansToday: 0,
-        unscannedBookings: [],
-        pendingAssignmentBookings: [],
-        billingData: []
+      setDashboardData({
+        trips: Array.isArray(data?.trips) ? data.trips : [],
+        totalBookingsToday: Number(data?.totalBookingsToday) || 0,
+        totalScansToday: Number(data?.totalScansToday) || 0,
+        unscannedBookings: Array.isArray(data?.unscannedBookings) ? data.unscannedBookings : [],
+        pendingAssignmentBookings: Array.isArray(data?.pendingAssignmentBookings) ? data.pendingAssignmentBookings : [],
+        billingData: Array.isArray(data?.billingData) ? data.billingData : []
       });
       setLastUpdated(new Date());
     } catch (err) {
@@ -74,7 +74,7 @@ const AdminDashboard = () => {
     return () => observer.disconnect();
   }, []);
 
-  const { trips: todayTrips, totalBookingsToday, totalScansToday, unscannedBookings, pendingAssignmentBookings, billingData } = dashboardData;
+  const { trips: todayTrips = [], totalBookingsToday = 0, totalScansToday = 0, unscannedBookings = [], pendingAssignmentBookings = [], billingData = [] } = dashboardData || {};
 
   // ─── Export CSV ───────────────────────────────────────────────────────────────
   const handleExportCSV = () => {

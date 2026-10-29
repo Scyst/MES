@@ -54,13 +54,14 @@
 
 - [x] เปลี่ยนชื่อโฟลเดอร์ `MES/mes-v2` เป็น `MES/Toolbox2` (`git mv MES/mes-v2 MES/Toolbox2`) เพื่อให้ตรงกับพาร์ทจริงบน FTP (`/Toolbox2`) แบบ 1:1 และปรับ `upload.cjs` ให้ใช้ `path.join(__dirname, 'dist')`
 - [x] ย้ายระบบจองรถรับส่งพนักงาน (`MES/transport-system`) เข้าสู่ `MES/Toolbox2/src/modules/Transport/` และ API ไปที่ `MES/Toolbox2/public/api/transport/` พร้อมเชื่อมเมนูใน `DesktopSidebar.jsx` & `HomeDashboard.jsx` และรัน `vite build` ผ่าน 100%
+- [x] พอร์ตระบบ `MES/mes-team-planner` เข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner/` (Route `#/planner/*`) โดยคงโฟลเดอร์ `MES/mes-team-planner` เดิมไว้ 100% พร้อมแก้บั๊ก `require('react-router-dom').useLocation()` ใน `App.jsx`, เพิ่ม `ErrorBoundary.jsx`, และรันบอท Puppeteer ทดสอบครบ 20 หน้า/แท็บย่อย ยืนยัน `0 errors` ไร้จอขาว 100%
 
 ## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:**
   1. อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (หากไม่มีข้อมูลลับ หรือแยกเข้า `.env` แล้ว) และคัดลอก Global Skills อื่นๆ (ถ้ามี) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git
   2. ดึงไฟล์ใน `/MES/MES/page/AccessoriesInspection/` จาก FTP ลงมาเทียบกับใน Git (เผื่อเพื่อนอัปเดตโค้ดขึ้น FTP โดยตรง) โดยคงส่วนที่เก็บรูปใน `../../uploads/accessories_inspection/` เอาไว้
 - [ ] **[สำหรับกะกลางคืน Argon / Flash]:**
-  - **Next Step:** วางโครงสร้างและพอร์ตระบบ `MES/mes-team-planner` เข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner` (โดยเก็บโฟลเดอร์ `MES/mes-team-planner` เดิมไว้ตามคำสั่ง)
+  - **Next Step:** เตรียมแผนพอร์ตโมดูลถัดไปจาก `MES/page/*` เข้าสู่ `MES/Toolbox2/src/modules/` ตามลำดับความสำคัญ
 
 ## Exact Files to Modify / Reference
 - `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และบันทึกการลบ/รวมศูนย์ API)

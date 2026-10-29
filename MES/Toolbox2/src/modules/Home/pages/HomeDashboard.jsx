@@ -217,7 +217,7 @@ export default function HomeDashboard() {
   const prototypeServices = [
     { title: 'New MES Toolbox (SPA)', desc: 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', icon: Rocket, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/Toolbox2/#/' },
     { title: 'Learning Hub', desc: 'ศูนย์การเรียนรู้และคู่มือออนไลน์', icon: FolderOpen, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/LearningHub/index.html' },
-    { title: 'Team Planner', desc: 'กระดานแผนงานและปฏิทินทีม (New)', icon: Calendar, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/Toolbox/planner/index.html' },
+    { title: 'Team Planner', desc: 'กระดานแผนงานและปฏิทินทีม (New)', icon: Calendar, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/planner' },
   ];
 
   const role = user?.role || 'guest';
