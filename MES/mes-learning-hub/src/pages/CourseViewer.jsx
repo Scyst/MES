@@ -123,21 +123,12 @@ export default function CourseViewer() {
     return course ? getCourseAssessment(course, assessmentMode) : [];
   }, [course, assessmentMode]);
 
-  // Progressive mastery lock: module is unlocked if course is passed, or it is the 1st module, or previous module was completed
-  const isModuleUnlocked = (index) => {
-    if (isCompleted) return true;
-    if (index === 0) return true;
-    const prevModule = course?.modules?.[index - 1];
-    return prevModule ? completedModuleIds.includes(prevModule.id) : false;
+  // Free exploration mode: unlocked across all lessons for review and previewing
+  const isModuleUnlocked = (_index) => {
+    return true;
   };
 
-  const handleSelectModule = (module, index) => {
-    if (!isModuleUnlocked(index)) {
-      const prevModule = course?.modules?.[index - 1];
-      setLockWarning(`บทเรียนที่ ${index + 1} ยังไม่ปลดล็อก: กรุณาเรียนและตอบคำถามท้ายบท (Checkpoint) ใน "${prevModule?.title || `บทเรียนที่ ${index}`}" ให้ผ่านก่อน`);
-      setTimeout(() => setLockWarning(''), 4000);
-      return;
-    }
+  const handleSelectModule = (module, _index) => {
     setActiveModuleId(module.id);
     setIsMobileSyllabusOpen(false);
   };
@@ -1059,7 +1050,9 @@ export default function CourseViewer() {
               </button>
             </div>
           </div>
-          <h3>{course.title}</h3>
+          <h3 className="text-base sm:text-lg font-bold leading-snug tracking-tight break-words">
+            {course.title}
+          </h3>
           <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             {totalModules} บทเรียน · {course.duration}
           </div>
@@ -1215,11 +1208,11 @@ export default function CourseViewer() {
           </button>
           <button
             onClick={handleNextLesson}
-            disabled={currentIndex >= totalModules - 1 || !isCurrentModuleUnlocked}
+            disabled={currentIndex >= totalModules - 1}
             className={`p-2 rounded-xl border transition-colors ${
-              currentIndex >= totalModules - 1 || !isCurrentModuleUnlocked
+              currentIndex >= totalModules - 1
                 ? 'opacity-35 cursor-not-allowed border-transparent text-slate-600'
-                : 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-fuchsia-500 shadow-sm'
+                : 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-fuchsia-500 shadow-sm cursor-pointer'
             }`}
             title="บทถัดไป"
           >
@@ -1765,39 +1758,15 @@ export default function CourseViewer() {
             ) : <div className="hidden sm:block"></div>}
             
             {currentIndex < totalModules - 1 ? (
-              !isCurrentModuleUnlocked ? (
-                <button 
-                  disabled
-                  className={`w-full sm:w-auto px-6 py-2.5 rounded-lg font-bold border cursor-not-allowed flex items-center justify-center gap-2 opacity-60 ${
-                    isDark ? 'bg-slate-800/80 text-slate-500 border-slate-700/60' : 'bg-slate-100 text-slate-400 border-slate-200'
-                  }`}
-                  title="ตอบ Checkpoint ท้ายบทเรียนให้ถูกต้องเพื่อปลดล็อก"
-                >
-                  <FiLock className="w-4 h-4 text-amber-500" />
-                  <span>Next Lesson → (ตอบ Checkpoint เพื่อปลดล็อก)</span>
-                </button>
-              ) : (
-                <button 
-                  onClick={handleNextLesson}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-fuchsia-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                >
-                  <span>Next Lesson →</span>
-                </button>
-              )
+              <button 
+                onClick={handleNextLesson}
+                className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-fuchsia-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 cursor-pointer"
+              >
+                <span>Next Lesson →</span>
+              </button>
             ) : (
-              /* Final Lesson: Must pass assessment to complete */
-              !isCurrentModuleUnlocked ? (
-                <button 
-                  disabled
-                  className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold border cursor-not-allowed flex items-center justify-center gap-2 opacity-60 ${
-                    isDark ? 'bg-slate-800/80 text-slate-500 border-slate-700/60' : 'bg-slate-100 text-slate-400 border-slate-200'
-                  }`}
-                  title="ตอบ Checkpoint ท้ายบทเรียนให้ถูกต้องเพื่อปลดล็อก"
-                >
-                  <FiLock className="w-4 h-4 text-amber-500" />
-                  <span>เข้าสู่แบบทดสอบ (ตอบ Checkpoint เพื่อปลดล็อก)</span>
-                </button>
-              ) : isCompleted ? (
+              /* Final Lesson: Take assessment or view certificate */
+              isCompleted ? (
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => {
@@ -1831,7 +1800,7 @@ export default function CourseViewer() {
                     setUserAnswers({});
                     setShowAssessmentModal(true);
                   }}
-                  className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-emerald-600 hover:from-fuchsia-500 hover:to-emerald-500 text-white rounded-xl font-black text-sm transition-all shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2.5 hover:-translate-y-0.5 animate-pulse"
+                  className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-emerald-600 hover:from-fuchsia-500 hover:to-emerald-500 text-white rounded-xl font-black text-sm transition-all shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2.5 hover:-translate-y-0.5 animate-pulse cursor-pointer"
                 >
                   <FiHelpCircle className="w-5 h-5 text-amber-300" />
                   <span>เข้าสู่แบบทดสอบวัดผลท้ายหลักสูตร (Take Final Assessment)</span>
