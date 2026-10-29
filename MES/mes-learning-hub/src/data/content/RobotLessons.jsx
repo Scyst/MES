@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { 
   FiWifi,
   FiCpu, 
@@ -1885,6 +1886,7 @@ export function RobotMod8() {
 /* SIMULATOR 9: COBOT DIRECT TEACHING & FORCE-LIMITING LAB (Module 9)        */
 /* ========================================================================= */
 export function RobotCobotDirectTeachingSimulator() {
+  const { isDark } = useTheme();
   const [mode, setMode] = useState('cobot'); // 'caged' | 'cobot'
   const [handGuiding, setHandGuiding] = useState(false);
   const [speedLimit, setSpeedLimit] = useState(250); // mm/s
@@ -1893,42 +1895,56 @@ export function RobotCobotDirectTeachingSimulator() {
 
   // Safety status evaluation based on ISO/TS 15066
   let safetyStatus = 'NORMAL_OPERATION';
-  let statusColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+  let statusColor = isDark 
+    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' 
+    : 'text-emerald-900 bg-emerald-50 border-emerald-300 font-bold';
   let statusText = 'ทำงานปกติ (Normal Collaborative Mode)';
 
   if (impactForce > 140) {
     safetyStatus = 'FORCE_EXCEEDED_STOP';
-    statusColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+    statusColor = isDark 
+      ? 'text-rose-400 bg-rose-500/10 border-rose-500/30' 
+      : 'text-rose-900 bg-rose-50 border-rose-300 font-bold';
     statusText = 'หยุดฉุกเฉิน (Protective Stop - แรงปะทะเกินเกณฑ์ ISO 15066 >140N)';
   } else if (distanceToHuman < 0.5 && speedLimit > 150) {
     safetyStatus = 'SEPARATION_VIOLATION';
-    statusColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+    statusColor = isDark 
+      ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' 
+      : 'text-amber-900 bg-amber-50 border-amber-300 font-bold';
     statusText = 'เตือนระยะปลอดภัย (Speed & Separation Monitoring: ลดความเร็วอัตโนมัติ)';
   } else if (handGuiding) {
     safetyStatus = 'HAND_GUIDING_ACTIVE';
-    statusColor = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
+    statusColor = isDark 
+      ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30' 
+      : 'text-cyan-900 bg-cyan-50 border-cyan-300 font-bold';
     statusText = 'กำลังสอนด้วยมือ (Direct Hand Guiding Active)';
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <FiShield className="w-5 h-5 text-teal-400" />
+          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <FiShield className="w-5 h-5 text-teal-500" />
             ห้องแล็บจำลอง Cobot Direct Teaching & Safety PFL (ISO/TS 15066)
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ทดสอบการทำงานของหุ่นยนต์ร่วมปฏิบัติการ (Cobot) เปรียบเทียบกับหุ่นยนต์กรงเหล็ก พร้อมระบบจำกัดแรงและเซนเซอร์ความปลอดภัย
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => { setMode('caged'); setSpeedLimit(1500); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               mode === 'caged'
-                ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20'
+                : isDark 
+                  ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
             Industrial Caged Robot
@@ -1937,8 +1953,10 @@ export function RobotCobotDirectTeachingSimulator() {
             onClick={() => { setMode('cobot'); setSpeedLimit(250); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               mode === 'cobot'
-                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/20'
+                : isDark 
+                  ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
             Collaborative Robot (Cobot)
@@ -1948,17 +1966,21 @@ export function RobotCobotDirectTeachingSimulator() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Controls Column */}
-        <div className="space-y-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <FiSliders className="w-4 h-4 text-teal-400" /> ตั้งค่าพารามิเตอร์จำลอง
+        <div className={`space-y-4 p-4 rounded-xl border ${
+          isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+            isDark ? 'text-slate-300' : 'text-slate-800'
+          }`}>
+            <FiSliders className="w-4 h-4 text-teal-500" /> ตั้งค่าพารามิเตอร์จำลอง
           </h4>
 
           {mode === 'cobot' ? (
             <>
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">โหมดจูงสอน (Hand Guiding):</span>
-                  <span className={handGuiding ? 'text-cyan-400 font-bold' : 'text-slate-500'}>
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>โหมดจูงสอน (Hand Guiding):</span>
+                  <span className={handGuiding ? 'text-cyan-600 font-bold' : isDark ? 'text-slate-500' : 'text-slate-400'}>
                     {handGuiding ? 'เปิดใช้งาน (Free Drive)' : 'ปิด (Program Running)'}
                   </span>
                 </div>
@@ -1966,8 +1988,12 @@ export function RobotCobotDirectTeachingSimulator() {
                   onClick={() => setHandGuiding(!handGuiding)}
                   className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
                     handGuiding
-                      ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
-                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                      ? isDark 
+                        ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300' 
+                        : 'bg-cyan-50 border-cyan-400 text-cyan-950 font-bold'
+                      : isDark 
+                        ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' 
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
                   <FiCrosshair className="w-4 h-4" />
@@ -1977,8 +2003,8 @@ export function RobotCobotDirectTeachingSimulator() {
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">ขีดจำกัดความเร็วร่วม (Speed Limit):</span>
-                  <span className="text-teal-400 font-mono font-bold">{speedLimit} mm/s</span>
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>ขีดจำกัดความเร็วร่วม (Speed Limit):</span>
+                  <span className="text-teal-500 font-mono font-bold">{speedLimit} mm/s</span>
                 </div>
                 <input
                   type="range"
@@ -1989,13 +2015,13 @@ export function RobotCobotDirectTeachingSimulator() {
                   onChange={(e) => setSpeedLimit(Number(e.target.value))}
                   className="w-full accent-teal-500 cursor-pointer"
                 />
-                <span className="text-[10px] text-slate-500">มาตรฐาน ISO/TS 15066 แนะนำ Collaborative Speed ≤ 250 mm/s</span>
+                <span className={`text-[10px] block mt-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>มาตรฐาน ISO/TS 15066 แนะนำ Collaborative Speed ≤ 250 mm/s</span>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">แรงกด/ปะทะตรวจจับได้ (Joint Force):</span>
-                  <span className="text-amber-400 font-mono font-bold">{impactForce} N</span>
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>แรงกด/ปะทะตรวจจับได้ (Joint Force):</span>
+                  <span className="text-amber-500 font-mono font-bold">{impactForce} N</span>
                 </div>
                 <input
                   type="range"
@@ -2006,13 +2032,13 @@ export function RobotCobotDirectTeachingSimulator() {
                   onChange={(e) => setImpactForce(Number(e.target.value))}
                   className="w-full accent-amber-500 cursor-pointer"
                 />
-                <span className="text-[10px] text-slate-500">เกณฑ์ความปลอดภัยขอบเขตแรงกระทบร่างกาย: Max 140-150 N</span>
+                <span className={`text-[10px] block mt-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>เกณฑ์ความปลอดภัยขอบเขตแรงกระทบร่างกาย: Max 140-150 N</span>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">ระยะห่างคนงานกับแขนกล:</span>
-                  <span className="text-blue-400 font-mono font-bold">{distanceToHuman.toFixed(1)} m</span>
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>ระยะห่างคนงานกับแขนกล:</span>
+                  <span className="text-blue-500 font-mono font-bold">{distanceToHuman.toFixed(1)} m</span>
                 </div>
                 <input
                   type="range"
@@ -2026,8 +2052,10 @@ export function RobotCobotDirectTeachingSimulator() {
               </div>
             </>
           ) : (
-            <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 space-y-2">
-              <div className="font-bold flex items-center gap-1.5 text-rose-400">
+            <div className={`p-4 rounded-lg border text-xs space-y-2 ${
+              isDark ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-950'
+            }`}>
+              <div className="font-bold flex items-center gap-1.5 text-rose-600">
                 <FiAlertTriangle className="w-4 h-4" /> ข้อจำกัดหุ่นยนต์อุตสาหกรรมดั้งเดิม
               </div>
               <p>หุ่นยนต์ดั้งเดิมไม่มี Joint Torque Sensor และไม่มีฟังก์ชัน Power and Force Limiting (PFL)</p>
@@ -2046,52 +2074,58 @@ export function RobotCobotDirectTeachingSimulator() {
             </div>
           </div>
 
-          <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <FiEye className="w-4 h-4 text-teal-400" />
+          <div className={`p-5 rounded-xl border space-y-4 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'
+          }`}>
+            <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+              isDark ? 'text-slate-300' : 'text-slate-800'
+            }`}>
+              <FiEye className="w-4 h-4 text-teal-500" />
               การแสดงผลสถานะระบบความปลอดภัยตามข้อกำหนด ISO/TS 15066
             </h4>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
-                <div className="text-[10px] text-slate-400">Safety Function</div>
-                <div className="text-xs font-bold text-teal-300 mt-1">PFL (Power & Force)</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Torque Limits</div>
+              <div className={`p-3 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                <div className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Safety Function</div>
+                <div className="text-xs font-bold text-teal-600 mt-1">PFL (Power & Force)</div>
+                <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Torque Limits</div>
               </div>
-              <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
-                <div className="text-[10px] text-slate-400">Speed Status</div>
-                <div className={`text-xs font-bold mt-1 ${speedLimit <= 250 ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <div className={`p-3 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                <div className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Speed Status</div>
+                <div className={`text-xs font-bold mt-1 ${speedLimit <= 250 ? 'text-emerald-500' : 'text-amber-600'}`}>
                   {speedLimit} mm/s
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
+                <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                   {speedLimit <= 250 ? 'Compliant' : 'High Speed Risk'}
                 </div>
               </div>
-              <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
-                <div className="text-[10px] text-slate-400">Force Rating</div>
-                <div className={`text-xs font-bold mt-1 ${impactForce <= 140 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <div className={`p-3 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                <div className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Force Rating</div>
+                <div className={`text-xs font-bold mt-1 ${impactForce <= 140 ? 'text-emerald-500' : 'text-rose-600'}`}>
                   {impactForce} N / 140 N
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
+                <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                   {impactForce <= 140 ? 'Safe Contact' : 'Hazard Stop'}
                 </div>
               </div>
-              <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
-                <div className="text-[10px] text-slate-400">Teach Method</div>
-                <div className="text-xs font-bold text-cyan-400 mt-1">
+              <div className={`p-3 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                <div className={`text-[10px] uppercase font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Teach Method</div>
+                <div className="text-xs font-bold text-cyan-600 mt-1">
                   {mode === 'cobot' ? 'Lead-Through' : 'Teach Pendant'}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
+                <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                   {mode === 'cobot' ? 'Zero-Gravity' : 'Jog Buttons'}
                 </div>
               </div>
             </div>
 
-            <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800/80 text-xs text-slate-300 space-y-2">
-              <div className="font-bold text-teal-300 flex items-center gap-1.5">
+            <div className={`p-4 rounded-lg border text-xs space-y-2 ${
+              isDark ? 'bg-slate-900/60 border-slate-800/80 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
+            }`}>
+              <div className={`font-bold flex items-center gap-1.5 ${isDark ? 'text-teal-300' : 'text-teal-800'}`}>
                 <FiInfo className="w-4 h-4" /> สรุปข้อได้เปรียบของการประยุกต์ใช้ Cobot ในสายการผลิตยุคใหม่
               </div>
-              <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <ul className={`list-disc list-inside space-y-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 <li>ลดพื้นที่ติดตั้งโรงงาน (Footprint) ได้กว่า 40-60% จากการไม่ต้องมีกรงตาข่ายเหล็กล้อมรอบ</li>
                 <li>สอนงานจุดใหม่ได้รวดเร็วภายใน 5-10 นาที ด้วยโหมดจูงแขน (Zero-Gravity Hand Guiding) แทนการกดปุ่มทีละแกน</li>
                 <li>ปลอดภัยต่อผู้ปฏิบัติงานด้วยเซนเซอร์วัดแรงบิดทุกข้อต่อ (Dual Joint Torque Sensors) ป้องกันการหนีบหรือกระแทก</li>
@@ -2108,6 +2142,7 @@ export function RobotCobotDirectTeachingSimulator() {
 /* SIMULATOR 10: DIGITAL TWIN & OFFLINE PROGRAMMING (OLP) LAB (Module 10)    */
 /* ========================================================================= */
 export function RobotOfflineSimulationLab() {
+  const { isDark } = useTheme();
   const [motionType, setMotionType] = useState('PTP'); // 'PTP' | 'LIN_BLENDED'
   const [singularityWarning, setSingularityWarning] = useState(false);
   const [tcpOffset, setTcpOffset] = useState(120); // mm
@@ -2116,24 +2151,30 @@ export function RobotOfflineSimulationLab() {
   const cycleTime = motionType === 'PTP' ? 8.4 : 6.1; // seconds
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <FiLayers className="w-5 h-5 text-indigo-400" />
+          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <FiLayers className="w-5 h-5 text-indigo-500" />
             ห้องแล็บจำลอง Digital Twin & OLP (RoboDK / Process Simulate)
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             จำลองวิถีการเคลื่อนที่ ตรวจจับจุดวิกฤตทางกลศาสตร์ (Singularity) และปรับปรุง Cycle Time ก่อนโหลดโค้ดลงแขนกลจริง
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => { setMotionType('PTP'); setSingularityWarning(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               motionType === 'PTP'
-                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                : isDark 
+                  ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
             Point-to-Point (PTP Stop)
@@ -2142,8 +2183,10 @@ export function RobotOfflineSimulationLab() {
             onClick={() => { setMotionType('LIN_BLENDED'); setSingularityWarning(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               motionType === 'LIN_BLENDED'
-                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/20'
+                : isDark 
+                  ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
             Continuous Path (Zone Blending)
@@ -2152,15 +2195,19 @@ export function RobotOfflineSimulationLab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <FiSliders className="w-4 h-4 text-indigo-400" /> ตัวแปรการจำลอง OLP
+        <div className={`space-y-4 p-4 rounded-xl border ${
+          isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+            isDark ? 'text-slate-300' : 'text-slate-800'
+          }`}>
+            <FiSliders className="w-4 h-4 text-indigo-500" /> ตัวแปรการจำลอง OLP
           </h4>
 
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-400">Tool Center Point (TCP Z-Offset):</span>
-              <span className="text-indigo-400 font-mono font-bold">{tcpOffset} mm</span>
+              <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Tool Center Point (TCP Z-Offset):</span>
+              <span className="text-indigo-500 font-mono font-bold">{tcpOffset} mm</span>
             </div>
             <input
               type="range"
@@ -2178,8 +2225,8 @@ export function RobotOfflineSimulationLab() {
               onClick={() => setSingularityWarning(!singularityWarning)}
               className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
                 singularityWarning
-                  ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                  ? isDark ? 'bg-rose-500/20 border-rose-500/40 text-rose-300' : 'bg-rose-50 border-rose-400 text-rose-950 font-bold'
+                  : isDark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <FiAlertTriangle className="w-4 h-4" />
@@ -2192,8 +2239,8 @@ export function RobotOfflineSimulationLab() {
               onClick={() => setCollisionDetected(!collisionDetected)}
               className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
                 collisionDetected
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                  ? isDark ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-amber-50 border-amber-400 text-amber-950 font-bold'
+                  : isDark ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <FiBox className="w-4 h-4" />
@@ -2204,21 +2251,21 @@ export function RobotOfflineSimulationLab() {
 
         <div className="lg:col-span-2 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Simulated Cycle Time</div>
-              <div className="text-2xl font-black text-teal-400 font-mono mt-1">{cycleTime} s</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
+            <div className={`p-4 rounded-xl border text-center ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'}`}>
+              <div className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Simulated Cycle Time</div>
+              <div className="text-2xl font-black text-teal-500 font-mono mt-1">{cycleTime} s</div>
+              <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                 {motionType === 'LIN_BLENDED' ? 'เร็วกว่า 27.3% (Smooth Trajectory)' : 'มาตรฐาน PTP หยุดทุกมุม'}
               </div>
             </div>
 
             <div className={`p-4 rounded-xl border text-center transition-all ${
               singularityWarning
-                ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-                : 'bg-slate-950 border-slate-800 text-slate-300'
+                ? isDark ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-950 font-bold'
+                : isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700 shadow-xs'
             }`}>
-              <div className="text-[10px] uppercase tracking-wider">Singularity Status</div>
-              <div className={`text-base font-bold mt-1 ${singularityWarning ? 'text-rose-400' : 'text-emerald-400'}`}>
+              <div className="text-[10px] uppercase tracking-wider font-bold">Singularity Status</div>
+              <div className={`text-base font-bold mt-1 ${singularityWarning ? 'text-rose-500' : 'text-emerald-500'}`}>
                 {singularityWarning ? 'Wrist Singularity Error!' : 'Kinematics OK'}
               </div>
               <div className="text-[10px] mt-0.5 opacity-75">
@@ -2228,11 +2275,11 @@ export function RobotOfflineSimulationLab() {
 
             <div className={`p-4 rounded-xl border text-center transition-all ${
               collisionDetected
-                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                : 'bg-slate-950 border-slate-800 text-slate-300'
+                ? isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-950 font-bold'
+                : isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700 shadow-xs'
             }`}>
-              <div className="text-[10px] uppercase tracking-wider">Mesh Clash Detection</div>
-              <div className={`text-base font-bold mt-1 ${collisionDetected ? 'text-amber-400' : 'text-emerald-400'}`}>
+              <div className="text-[10px] uppercase tracking-wider font-bold">Mesh Clash Detection</div>
+              <div className={`text-base font-bold mt-1 ${collisionDetected ? 'text-amber-600' : 'text-emerald-500'}`}>
                 {collisionDetected ? 'Clash With Fixture!' : 'Clearance > 25 mm'}
               </div>
               <div className="text-[10px] mt-0.5 opacity-75">
@@ -2241,20 +2288,28 @@ export function RobotOfflineSimulationLab() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <FiActivity className="w-4 h-4 text-indigo-400" /> การเปรียบเทียบ Zero-Downtime Deployment
+          <div className={`p-4 rounded-xl border space-y-3 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'
+          }`}>
+            <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+              isDark ? 'text-slate-300' : 'text-slate-800'
+            }`}>
+              <FiActivity className="w-4 h-4 text-indigo-500" /> การเปรียบเทียบ Zero-Downtime Deployment
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                <span className="font-bold text-slate-200">วิธีเดิม (Manual Online Teaching):</span>
-                <p className="text-slate-400 mt-1 leading-relaxed">
+              <div className={`p-3 rounded-lg border ${
+                isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
+              }`}>
+                <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>วิธีเดิม (Manual Online Teaching):</span>
+                <p className={`mt-1 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   ต้องหยุดไลน์ผลิต (Line Stop) 8-16 ชั่วโมงเพื่อกดสอนทีละจุด เสี่ยงแขนกลชนจิ๊กและคำนวณ Cycle Time พลาด
                 </p>
               </div>
-              <div className="p-3 rounded-lg bg-teal-500/10 border border-teal-500/30">
-                <span className="font-bold text-teal-300">วิธี OLP &amp; Digital Twin (ยุคใหม่):</span>
-                <p className="text-slate-300 mt-1 leading-relaxed">
+              <div className={`p-3 rounded-lg border ${
+                isDark ? 'bg-teal-500/10 border-teal-500/30 text-teal-300' : 'bg-teal-50 border-teal-200 text-teal-950'
+              }`}>
+                <span className="font-bold text-teal-600">วิธี OLP &amp; Digital Twin (ยุคใหม่):</span>
+                <p className="mt-1 leading-relaxed">
                   เขียนโปรแกรมบนคอมพิวเตอร์ 100% ตรวจสอบชนและ Singularity ล่วงหน้า โหลดเข้าหุ่นยนต์จริงใช้เวลา Setup หน้างานเพียง 15 นาที
                 </p>
               </div>
@@ -2270,6 +2325,7 @@ export function RobotOfflineSimulationLab() {
 /* SIMULATOR 11: INDUSTRIAL FIELDBUS & MES PROTOCOL LAB (Module 11)          */
 /* ========================================================================= */
 export function RobotIndustrialFieldbusLab() {
+  const { isDark } = useTheme();
   const [protocol, setProtocol] = useState('PROFINET'); // 'PROFINET' | 'ETHERCAT' | 'OPC_UA'
   const [handshakeStep, setHandshakeStep] = useState(0);
 
@@ -2281,26 +2337,32 @@ export function RobotIndustrialFieldbusLab() {
   ];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <FiServer className="w-5 h-5 text-emerald-400" />
+          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <FiServer className="w-5 h-5 text-emerald-500" />
             ห้องแล็บ Industrial Fieldbus (Profinet/EtherCAT) &amp; MES Handshake
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             ทำความเข้าใจการเชื่อมต่อแขนกลเข้ากับ PLC และ MES ด้วยโปรโตคอลความเร็วสูงระดับมิลลิวินาทีแทนการเดินสายรีเลย์ 24V แบบเก่า
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {['PROFINET', 'ETHERCAT', 'OPC_UA'].map((p) => (
             <button
               key={p}
               onClick={() => setProtocol(p)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 protocol === p
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                  : isDark 
+                    ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
               }`}
             >
               {p}
@@ -2310,66 +2372,70 @@ export function RobotIndustrialFieldbusLab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <FiWifi className="w-4 h-4 text-emerald-400" /> คุณสมบัติของ {protocol}
+        <div className={`space-y-4 p-4 rounded-xl border ${
+          isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+            isDark ? 'text-slate-300' : 'text-slate-800'
+          }`}>
+            <FiWifi className="w-4 h-4 text-emerald-500" /> คุณสมบัติของ {protocol}
           </h4>
 
           {protocol === 'PROFINET' && (
-            <div className="text-xs text-slate-300 space-y-2">
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Class:</span>
-                <span className="font-mono text-emerald-400 font-bold">PROFINET IRT (Isochronous Real-Time)</span>
+            <div className={`text-xs space-y-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Class:</span>
+                <span className="font-mono text-emerald-600 font-bold">PROFINET IRT (Isochronous Real-Time)</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Cycle Time:</span>
-                <span className="font-mono text-emerald-400 font-bold">&lt; 1.0 ms (Jitter &lt; 1 µs)</span>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Cycle Time:</span>
+                <span className="font-mono text-emerald-600 font-bold">&lt; 1.0 ms (Jitter &lt; 1 µs)</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Safety Extension:</span>
-                <span className="font-mono text-emerald-400 font-bold">PROFIsafe over Ethernet</span>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Safety Extension:</span>
+                <span className="font-mono text-emerald-600 font-bold">PROFIsafe over Ethernet</span>
               </div>
-              <p className="text-slate-400 text-[11px] pt-1">
+              <p className={`text-[11px] pt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 มาตรฐานยอดนิยมสูงสุดสำหรับแขนกลในอุตสาหกรรมยานยนต์ ใช้สายแลนเส้นเดียวส่งทั้ง Safety, Data, และ Motion
               </p>
             </div>
           )}
 
           {protocol === 'ETHERCAT' && (
-            <div className="text-xs text-slate-300 space-y-2">
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Technology:</span>
-                <span className="font-mono text-cyan-400 font-bold">Processing On the Fly</span>
+            <div className={`text-xs space-y-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Technology:</span>
+                <span className="font-mono text-cyan-600 font-bold">Processing On the Fly</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Cycle Time:</span>
-                <span className="font-mono text-cyan-400 font-bold">250 µs - 1.0 ms</span>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Cycle Time:</span>
+                <span className="font-mono text-cyan-600 font-bold">250 µs - 1.0 ms</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Safety Extension:</span>
-                <span className="font-mono text-cyan-400 font-bold">FailSafe over EtherCAT (FSoE)</span>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Safety Extension:</span>
+                <span className="font-mono text-cyan-600 font-bold">FailSafe over EtherCAT (FSoE)</span>
               </div>
-              <p className="text-slate-400 text-[11px] pt-1">
+              <p className={`text-[11px] pt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 ความเร็วตอบสนองสูงพิเศษ เหมาะอย่างยิ่งสำหรับหุ่นยนต์ Delta และงาน Synchronization แขนกลหลายตัวพร้อมกัน
               </p>
             </div>
           )}
 
           {protocol === 'OPC_UA' && (
-            <div className="text-xs text-slate-300 space-y-2">
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Architecture:</span>
-                <span className="font-mono text-amber-400 font-bold">OPC UA Companion Spec for Robotics</span>
+            <div className={`text-xs space-y-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Architecture:</span>
+                <span className="font-mono text-amber-600 font-bold">OPC UA Companion Spec for Robotics</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Role:</span>
-                <span className="font-mono text-amber-400 font-bold">IT/OT Gateway to MES / Cloud</span>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Role:</span>
+                <span className="font-mono text-amber-600 font-bold">IT/OT Gateway to MES / Cloud</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-400">Security:</span>
-                <span className="font-mono text-amber-400 font-bold">X.509 Certificate &amp; Encryption</span>
+              <div className={`flex justify-between py-1 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Security:</span>
+                <span className="font-mono text-amber-600 font-bold">X.509 Certificate &amp; Encryption</span>
               </div>
-              <p className="text-slate-400 text-[11px] pt-1">
+              <p className={`text-[11px] pt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 มาตรฐานกลางเปิดข้ามแบรนด์ (Vendor-Agnostic) ดึงข้อมูลสถานะแขนกล KUKA, ABB, Fanuc, Yaskawa เข้า MES โดยไม่ต้องแปลงโปรโตคอล
               </p>
             </div>
@@ -2377,15 +2443,23 @@ export function RobotIndustrialFieldbusLab() {
         </div>
 
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <FiRepeat className="w-4 h-4 text-emerald-400" />
+          <div className={`p-4 rounded-xl border space-y-3 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+                isDark ? 'text-slate-300' : 'text-slate-800'
+              }`}>
+                <FiRepeat className="w-4 h-4 text-emerald-500" />
                 ลำดับสัญญาณดิจิทัล Handshake (PLC ↔ Robot ↔ MES)
               </h4>
               <button
                 onClick={() => setHandshakeStep((prev) => (prev + 1) % steps.length)}
-                className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-500/30 transition-all"
+                className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  isDark 
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30' 
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                }`}
               >
                 <FiPlay className="w-3.5 h-3.5" /> ลำดับถัดไป (Step Forward)
               </button>
@@ -2397,8 +2471,12 @@ export function RobotIndustrialFieldbusLab() {
                   key={idx}
                   className={`p-3 rounded-lg border text-xs transition-all ${
                     handshakeStep === idx
-                      ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
-                      : 'bg-slate-900 border-slate-800 text-slate-400'
+                      ? isDark 
+                        ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/10' 
+                        : 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
+                      : isDark 
+                        ? 'bg-slate-900 border-slate-800 text-slate-400' 
+                        : 'bg-white border-slate-200 text-slate-600'
                   }`}
                 >
                   <div className="font-bold">{st.title}</div>
@@ -2407,14 +2485,16 @@ export function RobotIndustrialFieldbusLab() {
               ))}
             </div>
 
-            <div className="p-3 bg-slate-900/80 rounded-lg border border-slate-800 text-xs text-slate-300 flex items-center justify-between">
+            <div className={`p-3 rounded-lg border text-xs flex items-center justify-between ${
+              isDark ? 'bg-slate-900/80 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-xs'
+            }`}>
               <div>
-                <span className="text-slate-400">สถานะ Handshake: </span>
-                <span className="font-mono text-emerald-400 font-bold">{steps[handshakeStep].title}</span>
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>สถานะ Handshake: </span>
+                <span className="font-mono text-emerald-600 font-bold">{steps[handshakeStep].title}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[11px] text-emerald-400 font-mono">LINK OK</span>
+                <span className="text-[11px] text-emerald-600 font-mono font-bold">LINK OK</span>
               </div>
             </div>
           </div>
@@ -2428,6 +2508,7 @@ export function RobotIndustrialFieldbusLab() {
 /* SIMULATOR 12: 3D VISION & AI BIN PICKING LAB (Module 12)                  */
 /* ========================================================================= */
 export function RobotAiVisionBinPickingSimulator() {
+  const { isDark } = useTheme();
   const [cameraType, setCameraType] = useState('STRUCTURED_LIGHT'); // 'STRUCTURED_LIGHT' | 'TIME_OF_FLIGHT'
   const [surfaceReflectivity, setSurfaceReflectivity] = useState('METALLIC'); // 'METALLIC' | 'MATTE'
   const [detectionConfidence, setDetectionConfidence] = useState(94.2);
@@ -2435,24 +2516,30 @@ export function RobotAiVisionBinPickingSimulator() {
   const fps = cameraType === 'STRUCTURED_LIGHT' ? '5 - 15 FPS (ความละเอียดสูง 0.05 mm)' : '30 - 60 FPS (ความละเอียด 1.5 mm)';
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <FiEye className="w-5 h-5 text-cyan-400" />
+          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <FiEye className="w-5 h-5 text-cyan-500" />
             ห้องแล็บจำลอง 3D Vision Guidance &amp; AI Bin Picking
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             จำลองการหยิบชิ้นงานที่วางซ้อนทับกันแบบไม่เป็นระเบียบ (Random Bin Picking) ด้วยกล้อง 3D Point Cloud และ AI Pose Estimation 6-DoF
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => { setCameraType('STRUCTURED_LIGHT'); setDetectionConfidence(94.2); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               cameraType === 'STRUCTURED_LIGHT'
-                ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/20'
+                : isDark 
+                  ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
             Structured Light 3D
@@ -2461,8 +2548,10 @@ export function RobotAiVisionBinPickingSimulator() {
             onClick={() => { setCameraType('TIME_OF_FLIGHT'); setDetectionConfidence(86.5); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               cameraType === 'TIME_OF_FLIGHT'
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                : isDark 
+                  ? 'bg-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
             Time-of-Flight (ToF) 3D
@@ -2471,20 +2560,24 @@ export function RobotAiVisionBinPickingSimulator() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <FiSliders className="w-4 h-4 text-cyan-400" /> พารามิเตอร์ระบบ 3D Vision
+        <div className={`space-y-4 p-4 rounded-xl border ${
+          isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+            isDark ? 'text-slate-300' : 'text-slate-800'
+          }`}>
+            <FiSliders className="w-4 h-4 text-cyan-500" /> พารามิเตอร์ระบบ 3D Vision
           </h4>
 
           <div>
-            <div className="text-xs text-slate-400 mb-2">ชนิดผิวชิ้นงานในกระบะ:</div>
+            <div className={`text-xs mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>ชนิดผิวชิ้นงานในกระบะ:</div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setSurfaceReflectivity('METALLIC')}
                 className={`p-2 rounded-lg text-xs font-bold border transition-all ${
                   surfaceReflectivity === 'METALLIC'
-                    ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                    ? isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-50 border-amber-400 text-amber-950 font-bold'
+                    : isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 โลหะสะท้อนแสงสูง
@@ -2493,8 +2586,8 @@ export function RobotAiVisionBinPickingSimulator() {
                 onClick={() => setSurfaceReflectivity('MATTE')}
                 className={`p-2 rounded-lg text-xs font-bold border transition-all ${
                   surfaceReflectivity === 'MATTE'
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                    ? isDark ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+                    : isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 ผิวด้านไม่สะท้อน
@@ -2502,42 +2595,46 @@ export function RobotAiVisionBinPickingSimulator() {
             </div>
           </div>
 
-          <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 text-xs space-y-1">
-            <div className="text-slate-400">ข้อจำกัดของกล้อง:</div>
-            <div className="font-bold text-slate-200">{fps}</div>
+          <div className={`p-3 rounded-lg border text-xs space-y-1 ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+          }`}>
+            <div className={isDark ? 'text-slate-400' : 'text-slate-600'}>ข้อจำกัดของกล้อง:</div>
+            <div className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{fps}</div>
           </div>
         </div>
 
         <div className="lg:col-span-2 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider">AI Pose Estimation</div>
-              <div className="text-2xl font-black text-cyan-400 font-mono mt-1">6-DoF</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">X, Y, Z, Roll, Pitch, Yaw</div>
+            <div className={`p-4 rounded-xl border text-center ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'}`}>
+              <div className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>AI Pose Estimation</div>
+              <div className="text-2xl font-black text-cyan-500 font-mono mt-1">6-DoF</div>
+              <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>X, Y, Z, Roll, Pitch, Yaw</div>
             </div>
 
-            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Grasp Confidence</div>
-              <div className="text-2xl font-black text-emerald-400 font-mono mt-1">
+            <div className={`p-4 rounded-xl border text-center ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'}`}>
+              <div className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Grasp Confidence</div>
+              <div className="text-2xl font-black text-emerald-500 font-mono mt-1">
                 {surfaceReflectivity === 'METALLIC' ? (detectionConfidence - 6.5).toFixed(1) : detectionConfidence.toFixed(1)}%
               </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
+              <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                 {surfaceReflectivity === 'METALLIC' ? 'ลดลงเล็กน้อยจากแสงสะท้อน (Anti-Glare On)' : 'ความมั่นใจในการเข้าจับสูง'}
               </div>
             </div>
 
-            <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Collision Free Path</div>
-              <div className="text-base font-bold text-teal-400 mt-1">100% Calculated</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">ตรวจขอบกระบะ Bin ขวาง Gripper</div>
+            <div className={`p-4 rounded-xl border text-center ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'}`}>
+              <div className={`text-[10px] uppercase tracking-wider font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Collision Free Path</div>
+              <div className="text-base font-bold text-teal-600 mt-1">100% Calculated</div>
+              <div className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>ตรวจขอบกระบะ Bin ขวาง Gripper</div>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs text-slate-300">
-            <h4 className="font-bold text-cyan-300 flex items-center gap-1.5">
+          <div className={`p-4 rounded-xl border space-y-2 text-xs ${
+            isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h4 className={`font-bold flex items-center gap-1.5 ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>
               <FiCheckCircle className="w-4 h-4" /> ขั้นตอนการทำงานจริงของระบบ AI Bin Picking ในโรงงาน
             </h4>
-            <ol className="list-decimal list-inside space-y-1 text-slate-400 leading-relaxed">
+            <ol className={`list-decimal list-inside space-y-1 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               <li><strong>3D Point Cloud Acquisition:</strong> กล้องด้านบนกระบะยิงแสง Structured Light ฉายลายเส้น เพื่อกวาดจุดพิกัด 3 มิตินับล้านจุด</li>
               <li><strong>AI Part Segmentation &amp; CAD Matching:</strong> โมเดล AI แยกแยะชิ้นงานแต่ละชิ้นที่กองทับกัน และเทียบกับ 3D CAD model เพื่อหาตำแหน่งมุมเอียง 6 แกน</li>
               <li><strong>Grasp Planning &amp; Collision Avoidance:</strong> เลือกชิ้นที่อยู่บนสุดซึ่งไม่มีชิ้นอื่นทับ และวางแผนเส้นทางแขนกลไม่ให้หัว Gripper ชนขอบกระบะเหล็ก</li>
@@ -2554,49 +2651,60 @@ export function RobotAiVisionBinPickingSimulator() {
 /* MODULE 9 LESSON COMPONENT: COBOTS & DIRECT TEACHING                       */
 /* ========================================================================= */
 export function RobotMod9() {
+  const { isDark } = useTheme();
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="border-b border-slate-800 pb-5">
-        <div className="flex items-center gap-2 text-teal-400 text-xs font-bold uppercase tracking-wider mb-2">
+      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-2 text-teal-500 text-xs font-bold uppercase tracking-wider mb-2">
           <FiShield className="w-4 h-4" /> บทที่ 9 (Module 9)
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
           หุ่นยนต์ร่วมปฏิบัติการ (Cobots) &amp; ระบบจูงสอน Direct Teaching (ISO/TS 15066)
         </h1>
-        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
           ศึกษาวิวัฒนาการจากหุ่นยนต์อุตสาหกรรมในกรงสู่หุ่นยนต์ร่วมปฏิบัติการกับมนุษย์ เทคโนโลยี Joint Torque Sensor, ระบบจำกัดแรงปะทะ (PFL), และการสอนจุดพิกัดด้วยมือเปล่า
         </p>
       </div>
 
       <RobotCobotDirectTeachingSimulator />
 
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">1</span>
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-500 flex items-center justify-center text-sm font-black border border-teal-500/40">1</span>
           4 วิธีการทำงานร่วมกันระหว่างมนุษย์และหุ่นยนต์ตามมาตรฐาน ISO 10218 / ISO/TS 15066
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-teal-300 text-sm">1. Safety-Rated Monitored Stop (SMS)</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-teal-600 text-sm">1. Safety-Rated Monitored Stop (SMS)</h3>
+            <p className="leading-relaxed">
               หุ่นยนต์ทำงานด้วยความเร็วปกติ แต่เมื่อมนุษย์ก้าวเข้าสู่พื้นที่ปฏิบัติการ (ตรวจจับผ่าน Scanner หรือ Light Curtain) มอเตอร์จะหยุดหมุนโดยไม่ต้องตัดไฟเลี้ยง (Drive stays energized) และทำงานต่ออัตโนมัติเมื่อมนุษย์เดินออก
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-cyan-300 text-sm">2. Hand Guiding (Direct Teaching)</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-cyan-600 text-sm">2. Hand Guiding (Direct Teaching)</h3>
+            <p className="leading-relaxed">
               ผู้สอนสามารถจับแขนกลขยับได้อย่างอิสระ โดยมีปุ่ม Enabling Switch หรือปุ่ม Free-Drive บนมือจับ แขนกลจะปรับน้ำหนักตัวเองให้ลอยไร้น้ำหนัก (Zero Gravity Payload Compensation) เพื่อบันทึกจุดทางเดินได้อย่างรวดเร็ว
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-amber-300 text-sm">3. Speed &amp; Separation Monitoring (SSM)</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-amber-600 text-sm">3. Speed &amp; Separation Monitoring (SSM)</h3>
+            <p className="leading-relaxed">
               ใช้เซนเซอร์ความปลอดภัย (Safety Radar / Laser Scanner 2D-3D) วัดระยะห่างระหว่างคนกับแขนกล หากคนเข้าใกล้ แขนกลจะลดความเร็วลงแบบไดนามิก และหากเข้าใกล้เกินระยะปลอดภัยวิกฤตจะหยุดสนิททันที
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-rose-300 text-sm">4. Power and Force Limiting (PFL)</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-rose-600 text-sm">4. Power and Force Limiting (PFL)</h3>
+            <p className="leading-relaxed">
               หัวใจสำคัญของ Cobot ทุกตัว มอเตอร์ทุกข้อต่อมี Torque Sensor คอยวัดแรงบิดอย่างต่อเนื่อง หากเกิดการกระทบกับคนเกินเกณฑ์ไบโอเมคานิกส์ (Bio-mechanical threshold ~140N) ระบบจะหยุดการเคลื่อนที่ในเสี้ยววินาทีและคลายแรงออก
             </p>
           </div>
@@ -2610,44 +2718,53 @@ export function RobotMod9() {
 /* MODULE 10 LESSON COMPONENT: DIGITAL TWIN & OFFLINE PROGRAMMING (OLP)      */
 /* ========================================================================= */
 export function RobotMod10() {
+  const { isDark } = useTheme();
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="border-b border-slate-800 pb-5">
-        <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">
+      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-2 text-indigo-500 text-xs font-bold uppercase tracking-wider mb-2">
           <FiLayers className="w-4 h-4" /> บทที่ 10 (Module 10)
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
           Digital Twin &amp; โปรแกรมหุ่นยนต์ออฟไลน์ (Offline Programming - OLP)
         </h1>
-        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-          เทคโนโลยีการสร้างแบบจำลองเสมือนจริงของสถานีงาน (Workcell Simulation) ด้วย RoboDK, Siemens Process Simulate, และ Visual Components เพื่อคำนวณวงรอบการผลิต ตรวจสอบ Singularity และป้องกันการชนล่วงหน้า 100%
+        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          การจำลองสายการผลิตเสมือนจริงด้วยซอฟต์แวร์ OLP (RoboDK / Siemens Process Simulate) การวางแผนเส้นทางเชื่อมและหยิบชิ้นงานบน 3D CAD, การตรวจสอบการชน (Clash Detection), และการขจัดจุดวิกฤต Singularity
         </p>
       </div>
 
       <RobotOfflineSimulationLab />
 
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">1</span>
-          หลักการสำคัญในการทำ OLP สู่สายการผลิตจริง
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-500 flex items-center justify-center text-sm font-black border border-indigo-500/40">1</span>
+          3 จุดวิกฤตทางกลศาสตร์ (Singularities) ที่ต้องหลีกเลี่ยงในงานจำลอง
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-indigo-300 text-sm">1. Accurate Workcell Calibration</h3>
-            <p className="text-slate-300 leading-relaxed">
-              การจับคู่ระหว่างพิกัดในโปรแกรมจำลองกับหน้างานจริงต้องวัดพิกัดฐานหุ่นยนต์ (Base Frame) และอุปกรณ์จับยึด (User Frame) ด้วยเลเซอร์วัดพิกัด (Laser Tracker) เพื่อลดความคลาดเคลื่อนเหลือน้อยกว่า 0.2 มม.
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-rose-600 text-sm">Wrist Singularity (แกน 4 และ 6 ขนานกัน)</h3>
+            <p className="leading-relaxed">
+              เกิดขึ้นเมื่อแกนที่ 5 พับตรงเป็นมุม 0° ทำให้แกน 4 และแกน 6 เรียงตัวอยู่ในแนวเส้นตรงเดียวกัน คอนโทรลเลอร์ไม่สามารถคำนวณทิศทางการหมุนได้ ส่งผลให้มอเตอร์แกน 4 หมุนด้วยความเร็วสูงผิดปกติจนเกิด Error ทันที
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-teal-300 text-sm">2. Singularity Avoidance Algorithms</h3>
-            <p className="text-slate-300 leading-relaxed">
-              ในขั้นตอนสร้าง Trajectory ซอฟต์แวร์ OLP จะตรวจจับจุดวิกฤตทางคณิตศาสตร์ 3 แบบ: Wrist Singularity (แกน 4 และ 6 ขนานกัน), Shoulder Singularity, และ Elbow Singularity เพื่อปรับมุม Orientation หลบเลี่ยงความเร็วหมุนไม่จำกัด
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-amber-600 text-sm">Shoulder Singularity (ข้อมือตัดแกน 1)</h3>
+            <p className="leading-relaxed">
+              เกิดขึ้นเมื่อจุดตัดของข้อมือ (Center of Wrist) เคลื่อนที่มาตัดกับแนวแกนหมุนของแกนที่ 1 (Base Joint) แขนกลต้องสะบัดฐาน 180° ในทันทีเพื่อรักษาความเร็วแนวราบ ทำให้โครงสร้างสั่นกระพือ
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-amber-300 text-sm">3. Post-Processor Code Generation</h3>
-            <p className="text-slate-300 leading-relaxed">
-              แปลงเส้นทางเคลื่อนที่จากการจำลองออกมาเป็นภาษาเฉพาะของแต่ละแบรนด์อัตโนมัติ เช่น KUKA KRL, ABB RAPID, Fanuc TP/KAREL, และ Yaskawa INFORM โดยไม่ต้องเขียนโค้ดด้วยมือ
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-teal-600 text-sm">Elbow Singularity (แขนเหยียดสุดขอบ)</h3>
+            <p className="leading-relaxed">
+              เกิดขึ้นเมื่อข้อศอก (แกน 3) เหยียดตรง 180° แขนกลสูญเสียองศาอิสระในการเคลื่อนที่แนวเหยียดออก (Limit Reach) ต้องจัดวางตำแหน่งฐานหุ่นยนต์ใหม่ในขั้นตอน Simulation ก่อนสร้างแท่นจริง
             </p>
           </div>
         </div>
@@ -2657,46 +2774,55 @@ export function RobotMod10() {
 }
 
 /* ========================================================================= */
-/* MODULE 11 LESSON COMPONENT: INDUSTRIAL FIELDBUS & MES INTEGRATION         */
+/* MODULE 11 LESSON COMPONENT: INDUSTRIAL FIELDBUS & MES INTEGRATION        */
 /* ========================================================================= */
 export function RobotMod11() {
+  const { isDark } = useTheme();
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="border-b border-slate-800 pb-5">
-        <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold uppercase tracking-wider mb-2">
           <FiServer className="w-4 h-4" /> บทที่ 11 (Module 11)
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
           การเชื่อมต่อโครงข่ายอุตสาหกรรม (Fieldbus) &amp; ระบบ MES ยุค Industry 4.0
         </h1>
-        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
           ก้าวข้ามการเดินสายรีเลย์ 24V แบบเก่า สู่การสื่อสารดิจิทัลแบบ Real-Time ด้วย PROFINET, EtherCAT, และมาตรฐานกลาง OPC UA Robotics Companion Specification สำหรับส่งถ่ายข้อมูล OEE, Alarm, และ Traceability ตรงเข้า MES
         </p>
       </div>
 
       <RobotIndustrialFieldbusLab />
 
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-sm font-black border border-emerald-500/40">1</span>
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-500 flex items-center justify-center text-sm font-black border border-emerald-500/40">1</span>
           โครงสร้างชุดข้อมูลที่หุ่นยนต์ส่งเข้า MES เพื่อคำนวณ OEE และ Predictive Maintenance
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-emerald-300 text-sm">Availability &amp; Alarms</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-emerald-600 text-sm">Availability &amp; Alarms</h3>
+            <p className="leading-relaxed">
               รหัสข้อผิดพลาดเฉพาะจุด (Specific Error Code), สถานะ E-Stop, ประวัติเวลาหยุดเครื่อง (Downtime Reason) แยกเป็น Mechanical, Electrical, หรือ Part Starvation ส่งให้ MES ทันที
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-teal-300 text-sm">Performance &amp; Cycle Time</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-teal-600 text-sm">Performance &amp; Cycle Time</h3>
+            <p className="leading-relaxed">
               เวลาทำงานต่อชิ้น (Actual Cycle Time เทียบกับ Target Ideal Cycle Time), สัญญาณความเร็ว Joint Speed เพื่อตรวจจับการสึกหรอของกระปุกเกียร์ Harmonic/RV Reducer
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-cyan-300 text-sm">Quality &amp; Process Data</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-cyan-600 text-sm">Quality &amp; Process Data</h3>
+            <p className="leading-relaxed">
               ค่าแรงกด Press Fit, ข้อมูลอุณหภูมิหัวเชื่อม, ความหนาของเส้นกาว (Dispensing Volume), และบาร์โค้ดชิ้นงานผูกเข้ากับ Work Order เพื่อการตรวจสอบย้อนกลับระดับ Serial No.
             </p>
           </div>
@@ -2710,37 +2836,44 @@ export function RobotMod11() {
 /* MODULE 12 LESSON COMPONENT: 3D VISION & AI BIN-PICKING                    */
 /* ========================================================================= */
 export function RobotMod12() {
+  const { isDark } = useTheme();
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="border-b border-slate-800 pb-5">
-        <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider mb-2">
+      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="flex items-center gap-2 text-cyan-500 text-xs font-bold uppercase tracking-wider mb-2">
           <FiEye className="w-4 h-4" /> บทที่ 12 (Module 12)
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
           ระบบนำทางด้วยภาพ 3 มิติ (3D Vision Guidance) &amp; AI Bin Picking
         </h1>
-        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
           การบูรณาการเทคโนโลยีกล้อง 3D Point Cloud, อัลกอริทึม AI ค้นหาตำแหน่งวัตถุใน 6 มิติ (6-DoF Pose Estimation), และการวางแผนเส้นทางหลบการชน (Collision-Free Motion Planning) เพื่อหยิบชิ้นงานที่กองระเกะระกะในกระบะ
         </p>
       </div>
 
       <RobotAiVisionBinPickingSimulator />
 
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">1</span>
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-500 flex items-center justify-center text-sm font-black border border-cyan-500/40">1</span>
           สถาปัตยกรรมระบบจับชิ้นงานอัจฉริยะ (Intelligent Gripping &amp; Tactile Feedback)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-cyan-300 text-sm">Electric Smart Gripper with Force Control</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-cyan-600 text-sm">Electric Smart Gripper with Force Control</h3>
+            <p className="leading-relaxed">
               กริปเปอร์ไฟฟ้าระบบเซอร์โวมอเตอร์ สามารถตั้งค่าแรงจับยึด (Grip Force 5N - 200N) และวัดขนาดชิ้นงานได้แบบเรียลไทม์ (Part Dimension Verification) เพื่อยืนยันว่าหยิบชิ้นงานถูกชนิดก่อนนำไปประกอบ
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-teal-300 text-sm">Force/Torque Sensor (ข้อมือหุ่นยนต์)</h3>
-            <p className="text-slate-300 leading-relaxed">
+          <div className={`p-4 rounded-xl border space-y-2 ${
+            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <h3 className="font-bold text-teal-600 text-sm">Force/Torque Sensor (ข้อมือหุ่นยนต์)</h3>
+            <p className="leading-relaxed">
               เมื่อนำชิ้นงานลงสวมประกอบ เซนเซอร์วัดแรง 6 แกน Fx, Fy, Fz จะปรับมุมข้อมือแบบยืดหยุ่น (Active Compliance) ระดับไมครอน ป้องกันชิ้นงานติดขัดหรือเกิดรอยขูดขีดบนชิ้นงานอย่างสมบูรณ์แบบ
             </p>
           </div>

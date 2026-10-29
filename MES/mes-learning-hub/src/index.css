@@ -1063,29 +1063,37 @@ body.theme-light {
 
 /* Primary Cards and Containers: Dark Slates -> Crisp White */
 .theme-light .bg-slate-950,
+.theme-light .bg-slate-950\/95,
+.theme-light .bg-slate-950\/90,
 .theme-light .bg-slate-900,
 .theme-light .bg-slate-900\/95,
 .theme-light .bg-slate-900\/90,
-.theme-light .bg-slate-900\/80,
-.theme-light .bg-slate-900\/70,
-.theme-light .bg-slate-900\/60,
-.theme-light .bg-slate-900\/50,
-.theme-light .bg-slate-900\/40,
 .theme-light .bg-slate-850,
 .theme-light .bg-slate-800,
 .theme-light .bg-slate-800\/95,
-.theme-light .bg-slate-800\/90,
-.theme-light .bg-slate-800\/80,
-.theme-light .bg-slate-800\/60,
-.theme-light .bg-slate-800\/50,
-.theme-light .bg-slate-800\/40,
-.theme-light .bg-slate-800\/30 {
+.theme-light .bg-slate-800\/90 {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
 }
 
 /* Secondary Inner Containers & Soft Panels -> Soft Gray/Slate */
+.theme-light .bg-slate-950\/80,
+.theme-light .bg-slate-950\/70,
+.theme-light .bg-slate-950\/60,
+.theme-light .bg-slate-950\/50,
+.theme-light .bg-slate-950\/40,
+.theme-light .bg-slate-900\/80,
+.theme-light .bg-slate-900\/70,
+.theme-light .bg-slate-900\/60,
+.theme-light .bg-slate-900\/50,
+.theme-light .bg-slate-900\/40,
+.theme-light .bg-slate-800\/80,
+.theme-light .bg-slate-800\/70,
+.theme-light .bg-slate-800\/60,
+.theme-light .bg-slate-800\/50,
+.theme-light .bg-slate-800\/40,
+.theme-light .bg-slate-800\/30,
 .theme-light .bg-slate-750,
 .theme-light .bg-slate-750\/70,
 .theme-light .bg-slate-750\/50,

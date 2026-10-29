@@ -111,6 +111,7 @@ export default function CourseViewer() {
   const [assessmentResult, setAssessmentResult] = useState(null); // { score, total, percentage, passed, mode, answers, questions }
   const [showReviewAnswers, setShowReviewAnswers] = useState(false);
   const [assessmentError, setAssessmentError] = useState('');
+  const [lockWarning, setLockWarning] = useState('');
 
   // Assessment modes available for this course (e.g. ['standard', 'expert'] for Robot & Vision)
   const availableAssessmentModes = useMemo(() => {
@@ -121,6 +122,25 @@ export default function CourseViewer() {
   const assessmentQuestions = useMemo(() => {
     return course ? getCourseAssessment(course, assessmentMode) : [];
   }, [course, assessmentMode]);
+
+  // Progressive mastery lock: module is unlocked if course is passed, or it is the 1st module, or previous module was completed
+  const isModuleUnlocked = (index) => {
+    if (isCompleted) return true;
+    if (index === 0) return true;
+    const prevModule = course?.modules?.[index - 1];
+    return prevModule ? completedModuleIds.includes(prevModule.id) : false;
+  };
+
+  const handleSelectModule = (module, index) => {
+    if (!isModuleUnlocked(index)) {
+      const prevModule = course?.modules?.[index - 1];
+      setLockWarning(`บทเรียนที่ ${index + 1} ยังไม่ปลดล็อก: กรุณาเรียนและตอบคำถามท้ายบท (Checkpoint) ใน "${prevModule?.title || `บทเรียนที่ ${index}`}" ให้ผ่านก่อน`);
+      setTimeout(() => setLockWarning(''), 4000);
+      return;
+    }
+    setActiveModuleId(module.id);
+    setIsMobileSyllabusOpen(false);
+  };
 
   // Synchronize all course states when courseId / course changes OR when user session updates
   useEffect(() => {
@@ -414,6 +434,17 @@ export default function CourseViewer() {
 
   return (
     <div className="course-viewer">
+      {/* Floating Progressive Mastery Lock Warning */}
+      {lockWarning && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[92%] sm:w-auto px-4 py-2.5 rounded-xl shadow-2xl border flex items-center gap-2.5 text-xs font-bold animate-bounce backdrop-blur-md bg-amber-500/95 text-slate-950 border-amber-400 shadow-amber-500/30">
+          <FiLock className="w-4 h-4 flex-shrink-0 text-slate-950" />
+          <span className="flex-1 leading-snug">{lockWarning}</span>
+          <button onClick={() => setLockWarning('')} className="p-1 hover:bg-black/10 rounded transition-colors flex-shrink-0">
+            <FiX className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* 1. Celebratory Modal when course completed successfully */}
       {showCelebrationModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1068,18 +1099,20 @@ export default function CourseViewer() {
           {course.modules?.map((module, index) => {
             const isSelected = activeModule?.id === module.id;
             const isDone = completedModuleIds.includes(module.id) || isCompleted;
+            const unlocked = isModuleUnlocked(index);
 
             return (
               <div 
                 key={module.id} 
-                className={`module-item ${isSelected ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveModuleId(module.id);
-                }}
+                className={`module-item ${isSelected ? 'active' : ''} ${!unlocked ? 'opacity-50 cursor-not-allowed select-none' : 'cursor-pointer'}`}
+                onClick={() => handleSelectModule(module, index)}
+                title={!unlocked ? `ล็อก: ต้องผ่าน Checkpoint ในบทเรียนก่อนหน้าก่อน` : undefined}
               >
                 <div className="module-icon">
                   {isDone ? (
                     <FiCheckCircle className="text-emerald-500 w-4 h-4" />
+                  ) : !unlocked ? (
+                    <FiLock className={isDark ? 'text-slate-500 w-4 h-4' : 'text-slate-400 w-4 h-4'} />
                   ) : isSelected ? (
                     <FiCircle className={isDark ? 'text-fuchsia-400 w-4 h-4' : 'text-fuchsia-600 w-4 h-4'} />
                   ) : (
@@ -1089,15 +1122,21 @@ export default function CourseViewer() {
                 <div className="module-info">
                   <span className="module-number flex items-center justify-between">
                     <span>Lesson {index + 1}</span>
-                    {isDone && (
+                    {isDone ? (
                       <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
                         isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-800 bg-emerald-50 border border-emerald-200'
                       }`}>
                         ผ่าน
                       </span>
-                    )}
+                    ) : !unlocked ? (
+                      <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
+                        isDark ? 'text-slate-500' : 'text-slate-400'
+                      }`}>
+                        <FiLock className="w-2.5 h-2.5" /> ล็อก
+                      </span>
+                    ) : null}
                   </span>
-                  <span className={`module-title ${isDone ? (isDark ? 'text-slate-200' : 'text-slate-900 font-semibold') : ''}`}>
+                  <span className={`module-title ${isDone ? (isDark ? 'text-slate-200' : 'text-slate-900 font-semibold') : !unlocked ? (isDark ? 'text-slate-500' : 'text-slate-400') : ''}`}>
                     {module.title}
                   </span>
                 </div>
@@ -1267,31 +1306,39 @@ export default function CourseViewer() {
               {course.modules?.map((module, index) => {
                 const isSelected = activeModule?.id === module.id;
                 const isDone = completedModuleIds.includes(module.id) || isCompleted;
+                const unlocked = isModuleUnlocked(index);
 
                 return (
                   <div
                     key={module.id}
-                    onClick={() => {
-                      setActiveModuleId(module.id);
-                      setIsMobileSyllabusOpen(false);
-                    }}
-                    className={`p-3 rounded-2xl border flex items-center gap-3 transition-all cursor-pointer ${
-                      isSelected
-                        ? isDark
-                          ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white ring-1 ring-fuchsia-500/50 shadow-sm'
-                          : 'bg-fuchsia-50 border-fuchsia-500 text-fuchsia-950 ring-1 ring-fuchsia-500/50 shadow-sm'
-                        : isDone
+                    onClick={() => handleSelectModule(module, index)}
+                    className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${
+                      !unlocked 
+                        ? isDark 
+                          ? 'bg-slate-900/60 border-slate-800/80 text-slate-500 opacity-60 cursor-not-allowed select-none'
+                          : 'bg-slate-100/80 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed select-none'
+                        : isSelected
                           ? isDark
-                            ? 'bg-slate-850/80 border-emerald-500/30 text-slate-200 hover:border-emerald-500/50'
-                            : 'bg-white border-emerald-200 text-slate-800 hover:border-emerald-400'
-                          : isDark
-                            ? 'bg-slate-850 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white ring-1 ring-fuchsia-500/50 shadow-sm cursor-pointer'
+                            : 'bg-fuchsia-50 border-fuchsia-500 text-fuchsia-950 ring-1 ring-fuchsia-500/50 shadow-sm cursor-pointer'
+                          : isDone
+                            ? isDark
+                              ? 'bg-slate-850/80 border-emerald-500/30 text-slate-200 hover:border-emerald-500/50 cursor-pointer'
+                              : 'bg-white border-emerald-200 text-slate-800 hover:border-emerald-400 cursor-pointer'
+                            : isDark
+                              ? 'bg-slate-850 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200 cursor-pointer'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
                     }`}
                   >
                     <div className="flex-shrink-0">
                       {isDone ? (
                         <FiCheckCircle className="text-emerald-500 w-5 h-5" />
+                      ) : !unlocked ? (
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                          isDark ? 'border-slate-800 text-slate-500' : 'border-slate-300 text-slate-400'
+                        }`}>
+                          <FiLock className="w-2.5 h-2.5" />
+                        </div>
                       ) : isSelected ? (
                         <div className="w-5 h-5 rounded-full border-2 border-fuchsia-500 flex items-center justify-center">
                           <div className="w-2 h-2 rounded-full bg-fuchsia-500" />
@@ -1310,25 +1357,30 @@ export default function CourseViewer() {
                         <span className={`font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                           บทเรียนที่ {index + 1}
                         </span>
-                        {isDone && (
+                        {isDone ? (
                           <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
                             isDark ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-800 bg-emerald-50 border-emerald-200'
                           }`}>
                             ผ่านแล้ว
                           </span>
-                        )}
-                        {isSelected && !isDone && (
+                        ) : !unlocked ? (
+                          <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                            <FiLock className="w-2.5 h-2.5" /> ล็อก
+                          </span>
+                        ) : isSelected ? (
                           <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
                             isDark ? 'text-fuchsia-300 bg-fuchsia-500/20' : 'text-fuchsia-800 bg-fuchsia-100'
                           }`}>
                             กำลังเรียน
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <div className={`text-xs font-bold leading-snug line-clamp-2 ${
                         isSelected 
-                          ? isDark ? 'text-white' : 'text-fuchsia-950'
-                          : isDark ? 'text-slate-300' : 'text-slate-800'
+                          ? isDark ? 'text-white' : 'text-fuchsia-950 font-black'
+                          : !unlocked 
+                            ? isDark ? 'text-slate-600' : 'text-slate-400'
+                            : isDark ? 'text-slate-300' : 'text-slate-800'
                       }`}>
                         {module.title}
                       </div>
