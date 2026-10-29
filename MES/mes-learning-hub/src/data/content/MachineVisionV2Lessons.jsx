@@ -739,6 +739,94 @@ export function MachineVisionV2Mod1() {
             </div>
           </div>
         </div>
+
+        {/* Master Variable & Constant Breakdown Table */}
+        <div className={`p-4 rounded-xl border space-y-3 ${
+          isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <FiInfo className="w-4 h-4 text-emerald-500" />
+            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              ตารางแจกแจงที่มาและหน่วยของตัวแปรทั้งหมดในสมการไปป์ไลน์ (Pipeline Variables &amp; Units Origin)
+            </h4>
+          </div>
+          <div className="overflow-x-auto pb-1 scrollbar-thin">
+            <table className="w-full min-w-[620px] text-left text-xs border-collapse">
+              <thead className={`font-mono text-[10px] uppercase border-b ${
+                isDark ? 'text-slate-400 border-slate-800 bg-slate-900/60' : 'text-slate-600 border-slate-200 bg-slate-100'
+              }`}>
+                <tr>
+                  <th className="py-2 px-3 w-[16%]">ตัวแปร / ค่าคงที่</th>
+                  <th className="py-2 px-3 w-[14%]">หน่วย (Unit)</th>
+                  <th className="py-2 px-3 w-[35%]">ความหมายทางวิศวกรรม</th>
+                  <th className="py-2 px-3 w-[35%]">ที่มาของตัวเลขหน้างานจริง</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_trig</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาตอบสนองการตรวจจับชิ้นงานหน้ากล้อง</td>
+                  <td>เซนเซอร์ลำแสง Photoelectric + วงจรแยกสัญญาณ Optocoupler (~0.05 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_exp</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาเปิดรับแสงของชัตเตอร์เซนเซอร์ภาพ</td>
+                  <td>คำนวณจากกฎป้องกันภาพเบลอ: T_exp &le; Pixel_Size / V_conveyor (~0.5 - 2.0 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_readout</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาอ่านค่า ADC พิกเซลและส่งผ่านสาย GigE</td>
+                  <td>ความเร็วแบนด์วิดท์สายแลน GigE 1,000 Mbps หรือ USB3 Vision (~8 - 15 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_pre</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาเตรียมสเกลภาพบน GPU/NPU</td>
+                  <td>ฟังก์ชัน Letterbox Resize, Normalization, Transpose HWC &rarr; CHW (~0.8 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_infer</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาประมวลผลคำนวณโมเดลโครงข่ายประสาทเทียม</td>
+                  <td>พลังประมวลผลของชิป AI (NPU/GPU) ที่บีบอัด INT8 (~3.0 - 5.0 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_post</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาประมวลผลผลลัพธ์และกรองกล่องซ้ำซ้อน</td>
+                  <td>อัลกอริทึม Rotated NMS, Bounding Box Coordinate Remap (~0.4 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-500">T_fieldbus</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เวลาส่งบิตคำสั่ง OK/NG ไปยัง PLC เครื่องจักร</td>
+                  <td>รอบเวลาสแกนเครือข่ายอุตสาหกรรม PROFINET IRT / EtherCAT Cycle (~0.25 ms)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-cyan-500">D_reject</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิเมตร (mm)</td>
+                  <td>ระยะทางจากจุดถ่ายรูปถึงหัวเตะของเสีย</td>
+                  <td>วัดจริงหน้างานด้วยตลับเมตรตามแนวสายพานลำเลียง (Conveyor Machine Layout)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-cyan-500">V_conveyor</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มม./วิ (mm/s)</td>
+                  <td>ความเร็วการเคลื่อนที่เชิงเส้นของสายพาน</td>
+                  <td>อ่านค่าความถี่จาก Rotary Encoder หรือความเร็วรอบมอเตอร์อินเวอร์เตอร์ (VFD)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-amber-500">T_max</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิวินาที (ms)</td>
+                  <td>เดดไลน์เวลาสูงสุดที่ชิ้นงานจะเคลื่อนที่เลยหัวเตะ</td>
+                  <td>คำนวณจาก T_max = (D_reject / V_conveyor) &times; 1,000</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       {/* Simulator 1 Embed */}
@@ -1056,6 +1144,58 @@ export function MachineVisionV2Mod2() {
               </ul>
             </div>
           </div>
+
+          {/* Master Photometric Variable Breakdown Table */}
+          <div className={`p-4 rounded-xl border space-y-3 mt-3 ${
+            isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <FiInfo className="w-4 h-4 text-indigo-500" />
+              <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                ตารางแจกแจงที่มาและหน่วยของสมการ 3D Photometric Stereo
+              </h4>
+            </div>
+            <div className="overflow-x-auto pb-1 scrollbar-thin">
+              <table className="w-full min-w-[620px] text-left text-xs border-collapse">
+                <thead className={`font-mono text-[10px] uppercase border-b ${
+                  isDark ? 'text-slate-400 border-slate-800 bg-slate-900/60' : 'text-slate-600 border-slate-200 bg-slate-100'
+                }`}>
+                  <tr>
+                    <th className="py-2 px-3 w-[15%]">สัญลักษณ์</th>
+                    <th className="py-2 px-3 w-[18%]">หน่วย (Unit)</th>
+                    <th className="py-2 px-3 w-[33%]">ความหมายเชิงฟิสิกส์</th>
+                    <th className="py-2 px-3 w-[34%]">ที่มาและการคำนวณ</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                  <tr>
+                    <td className="py-2 px-3 font-mono font-bold text-indigo-400">I_1 .. I_4</td>
+                    <td className="py-2 px-3 font-mono text-[11px]">เกรย์สเกล (0 - 255 DN)</td>
+                    <td>ค่าความสว่างของพิกเซลเมื่อยิงไฟแต่ละทิศทาง</td>
+                    <td>อ่านได้จากพิกเซลภาพถ่ายจริงทั้ง 4 ภาพ (North, East, South, West)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-mono font-bold text-indigo-400">&rho; (Albedo)</td>
+                    <td className="py-2 px-3 font-mono text-[11px]">สัมประสิทธิ์ (0.00 - 1.00)</td>
+                    <td>ค่าสัมประสิทธิ์การสะท้อนแสงจำเพาะของเนื้อวัสดุ</td>
+                    <td>คุณสมบัติการสะท้อนแสงตามธรรมชาติของผิวชิ้นงาน เช่น โลหะขัดเงา, พลาสติก</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-mono font-bold text-indigo-400">S (Light Matrix)</td>
+                    <td className="py-2 px-3 font-mono text-[11px]">มิติ 4 &times; 3 (เวกเตอร์หนึ่งหน่วย)</td>
+                    <td>พิกัดมุมองศาเชิงพื้นที่ของหลอดไฟ LED แต่ละดวง</td>
+                    <td>ได้จากการคาลิเบรตมุมโคมไฟด้วยลูกทรงกลมสะท้อนแสง (Specular Chrome Ball)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-mono font-bold text-indigo-400">N (Normal Vector)</td>
+                    <td className="py-2 px-3 font-mono text-[11px]">[n_x, n_y, n_z] (Unit Vector)</td>
+                    <td>เวกเตอร์ตั้งฉากกับระนาบผิว ณ จุดพิกัดนั้นๆ</td>
+                    <td>แก้สมการด้วย Moore-Penrose Pseudo-Inverse: N = (S^T S)^(-1) S^T (I / &rho;)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* Real Hardware Spotlight: 4-Way Photometric Stereo Rig */}
@@ -1267,6 +1407,58 @@ export function MachineVisionV2Mod3() {
             </p>
           </div>
         </div>
+
+        {/* Master OBB Variable Breakdown Table */}
+        <div className={`p-4 rounded-xl border space-y-3 mt-3 ${
+          isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <FiInfo className="w-4 h-4 text-amber-500" />
+            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              ตารางแจกแจงที่มาและหน่วยของพารามิเตอร์ Oriented Bounding Box (OBB 5-Parameters)
+            </h4>
+          </div>
+          <div className="overflow-x-auto pb-1 scrollbar-thin">
+            <table className="w-full min-w-[620px] text-left text-xs border-collapse">
+              <thead className={`font-mono text-[10px] uppercase border-b ${
+                isDark ? 'text-slate-400 border-slate-800 bg-slate-900/60' : 'text-slate-600 border-slate-200 bg-slate-100'
+              }`}>
+                <tr>
+                  <th className="py-2 px-3 w-[16%]">พารามิเตอร์</th>
+                  <th className="py-2 px-3 w-[14%]">หน่วย (Unit)</th>
+                  <th className="py-2 px-3 w-[35%]">ความหมายเชิงเรขาคณิต</th>
+                  <th className="py-2 px-3 w-[35%]">การแปลงสู่หุ่นยนต์ / เครื่องจักร</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-amber-500">x_c, y_c</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">พิกเซล (Pixels)</td>
+                  <td>จุดกึ่งกลางมวลของวัตถุ (Object Centroid)</td>
+                  <td>แปลงเป็นมิลลิเมตร (X_mm, Y_mm) ด้วยกล้องคาลิเบรต ส่งให้แขนกลเล็งพิกัดลงแตะ</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-amber-500">w, h</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">พิกเซล (Pixels)</td>
+                  <td>ความกว้างและความยาวตามแกนขนานตัวชิ้นงาน</td>
+                  <td>ใช้ตรวจสอบขนาด Dimension Tolerance และสั่งกางระยะปากคีบ (Gripper Stroke)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-amber-500">&theta; (Theta)</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">องศา (&deg;) / เรเดียน</td>
+                  <td>มุมเอียงของแกนยาวชิ้นงานเทียบกับแนวนอน</td>
+                  <td>ส่งตรงเข้าแกนที่ 6 ของแขนกล (Wrist Roll Yaw) ให้หมุนมือจับมารอที่มุมนี้ล่วงหน้า</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-teal-500">T_cam^base</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">เมทริกซ์ 4 &times; 4</td>
+                  <td>เมทริกซ์การแปลงพิกัดกล้องสู่ฐานหุ่นยนต์</td>
+                  <td>ได้จากการทำ Hand-Eye Calibration (AX = XB) รับประกันความแม่นยำ &plusmn;0.1 มม.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       {/* Simulator 3 Embed */}
@@ -1466,6 +1658,58 @@ export function MachineVisionV2Mod4() {
               เชื่อมต่อกับกล้อง GigE Vision และประมวลผลผ่าน OpenVINO / TensorRT พร้อมส่งออก Anomaly Heatmap ระดับพิกเซล 
               บันทึกภาพของเสียลง NAS และแจ้งพิกัดข้อบกพร่องให้ระบบ MES ทันที
             </p>
+          </div>
+        </div>
+
+        {/* Master PatchCore Variable Breakdown Table */}
+        <div className={`p-4 rounded-xl border space-y-3 mt-3 ${
+          isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <FiInfo className="w-4 h-4 text-rose-500" />
+            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              ตารางแจกแจงที่มาและหน่วยของสมการ PatchCore Anomaly Detection
+            </h4>
+          </div>
+          <div className="overflow-x-auto pb-1 scrollbar-thin">
+            <table className="w-full min-w-[620px] text-left text-xs border-collapse">
+              <thead className={`font-mono text-[10px] uppercase border-b ${
+                isDark ? 'text-slate-400 border-slate-800 bg-slate-900/60' : 'text-slate-600 border-slate-200 bg-slate-100'
+              }`}>
+                <tr>
+                  <th className="py-2 px-3 w-[16%]">สัญลักษณ์</th>
+                  <th className="py-2 px-3 w-[16%]">หน่วย (Unit)</th>
+                  <th className="py-2 px-3 w-[34%]">ความหมายทางอัลกอริทึม</th>
+                  <th className="py-2 px-3 w-[34%]">ที่มาและการแปลผลในโรงงาน</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">&phi;(x_i)</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">เวกเตอร์ 1024 มิติ (1024-D)</td>
+                  <td>เวกเตอร์ลักษณะเด่นของแพทช์ภาพตำแหน่ง i</td>
+                  <td>สกัดจาก Intermediate Layers 2 &amp; 3 ของเครือข่าย WideResNet-50</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">M_C</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">คลังเวกเตอร์ (Memory Bank)</td>
+                  <td>ฐานข้อมูลเวกเตอร์ชิ้นงานดีที่ผ่านการคัดสรร Coreset</td>
+                  <td>ใช้ภาพชิ้นงานดี (OK) 30-50 ภาพ แล้วบีบอัดเหลือ 1-10% ด้วย Minimax Facility Location</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">|| &phi;(x_i) - m ||_2</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">ระยะยุคลิด L2 Norm</td>
+                  <td>ระยะห่างระหว่างจุดภาพทดสอบกับชิ้นงานดีที่ใกล้ที่สุด</td>
+                  <td>คำนวณระยะห่าง: &radic;(&sum; (&phi;_k - m_k)&sup2;) ยิ่งห่างมาก ยิ่งมีโอกาสเป็นรอยตำหนิ</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">s(x_i) / S_image</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">คะแนนความผิดปกติ (0.00 - 1.00)</td>
+                  <td>Anomaly Score ระดับพิกเซล และคะแนนรวมสูงสุดของภาพ</td>
+                  <td>สร้างเป็นแถบสี Heatmap (แดง/เหลือง) บนจอควบคุม หากเกิน 0.5 ตีเป็น NG ส่งเตะทิ้ง</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -1862,6 +2106,58 @@ export function MachineVisionV2Mod6() {
           </div>
         </div>
 
+        {/* Master INT8 Quantization Breakdown Table */}
+        <div className={`p-4 rounded-xl border space-y-3 mt-3 ${
+          isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <FiInfo className="w-4 h-4 text-emerald-500" />
+            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              ตารางแจกแจงที่มาและหน่วยของสมการ TensorRT INT8 Quantization
+            </h4>
+          </div>
+          <div className="overflow-x-auto pb-1 scrollbar-thin">
+            <table className="w-full min-w-[620px] text-left text-xs border-collapse">
+              <thead className={`font-mono text-[10px] uppercase border-b ${
+                isDark ? 'text-slate-400 border-slate-800 bg-slate-900/60' : 'text-slate-600 border-slate-200 bg-slate-100'
+              }`}>
+                <tr>
+                  <th className="py-2 px-3 w-[16%]">สัญลักษณ์</th>
+                  <th className="py-2 px-3 w-[16%]">ประเภทข้อมูล / หน่วย</th>
+                  <th className="py-2 px-3 w-[34%]">ความหมายทางสถาปัตยกรรม</th>
+                  <th className="py-2 px-3 w-[34%]">ที่มาของตัวเลข / ทฤษฎี</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-400">x</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">FP32 (ทศนิยม 32 บิต)</td>
+                  <td>ค่าน้ำหนัก (Weights) ดั้งเดิมจากตอนเทรนใน PyTorch</td>
+                  <td>จัดเก็บ 4 ไบต์ต่อค่า (กินแรมและแบนด์วิดท์ VRAM มหาศาล)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-400">q</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">INT8 (-128 ถึง +127)</td>
+                  <td>ตัวเลขจำนวนเต็ม 8 บิตแบบมีเครื่องหมาย (Signed)</td>
+                  <td>มาตรฐาน Two's Complement: 2^8 = 256 ระดับ (ประหยัดแรมลง 4 เท่า เหลือ 1 ไบต์)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-emerald-400">S (Scale)</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">อัตราส่วนทศนิยม (Scalar)</td>
+                  <td>ตัวคูณสเกลสำหรับแปลงช่วงตัวเลขระหว่าง FP32 กับ INT8</td>
+                  <td>S = max(|x|) / 127 เพื่อแมปค่าสูงสุดของเลเยอร์เข้ากับขอบเขต 127</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-teal-400">D_KL(P || Q)</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">Relative Entropy (เอนโทรปี)</td>
+                  <td>การวัดความสูญเสียข้อมูลระหว่าง FP32 กับ INT8</td>
+                  <td>ทฤษฎี Kullback-Leibler เพื่อตัดส่วนหางที่ไม่จำเป็น (Outlier Clipping) รักษาระดับ mAP สูงสุด</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Real Hardware Showcase: NVIDIA Jetson vs Hailo-8 NPU */}
         <div className="pt-2">
           <PhotoComparisonPair 
@@ -2028,6 +2324,64 @@ export function MachineVisionV2Mod7() {
           <div>Target_Pulse = Trigger_Camera_Pulse + (Distance_Reject &times; PPM)</div>
           <div className="text-[11px] text-slate-600 dark:text-slate-400 font-sans">
             โดย PPM คือ Pulses Per Millimeter, ไม่ว่าสายพานจะหยุด ชะลอ หรือเร่งความเร็ว หัวเตะจะยิงลมที่ตำแหน่งเดิมเสมอ 100%
+          </div>
+        </div>
+
+        {/* Master Encoder Variable Breakdown Table */}
+        <div className={`p-4 rounded-xl border space-y-3 mt-3 ${
+          isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <FiInfo className="w-4 h-4 text-rose-500" />
+            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              ตารางแจกแจงที่มาและหน่วยของสมการติดตามตำแหน่งด้วยเอ็นโค้เดอร์ (Encoder Tracking Variables)
+            </h4>
+          </div>
+          <div className="overflow-x-auto pb-1 scrollbar-thin">
+            <table className="w-full min-w-[620px] text-left text-xs border-collapse">
+              <thead className={`font-mono text-[10px] uppercase border-b ${
+                isDark ? 'text-slate-400 border-slate-800 bg-slate-900/60' : 'text-slate-600 border-slate-200 bg-slate-100'
+              }`}>
+                <tr>
+                  <th className="py-2 px-3 w-[16%]">ตัวแปร / ตัวเลข</th>
+                  <th className="py-2 px-3 w-[16%]">หน่วย (Unit)</th>
+                  <th className="py-2 px-3 w-[34%]">ความหมายทางกลและไฟฟ้า</th>
+                  <th className="py-2 px-3 w-[34%]">ที่มาของตัวเลขหน้างานจริง</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-700'}`}>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">PPM (Encoder)</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">พัลส์/มม. (pulses/mm)</td>
+                  <td>ความละเอียดของพัลส์ต่อระยะทางการเคลื่อนที่ 1 มม.</td>
+                  <td>คำนวณจาก: (Encoder_PPR &times; 4) / (&pi; &times; Wheel_Diameter)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">Encoder_PPR</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">พัลส์ต่อรอบ (PPR)</td>
+                  <td>ความละเอียดเชิงแสงของแผ่นดิสก์ในตัวเอ็นโค้เดอร์</td>
+                  <td>ดูจาก Nameplate ฉลากบนตัว Rotary Encoder เช่น 1,024 หรือ 2,048 PPR</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">&times; 4 (ตัวเลข 4)</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">ตัวคูณถอดรหัส (เท่า)</td>
+                  <td>การนับแบบ Quadrature 4x Decoding ในการ์ดเคาน์เตอร์ PLC</td>
+                  <td>นับ 2 ขอบ (ขาขึ้น+ขาลง) ของ Phase A และ 2 ขอบของ Phase B (2 + 2 = 4)</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-rose-400">&pi; &times; Wheel_Diameter</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">มิลลิเมตร (mm)</td>
+                  <td>เส้นรอบวง (Circumference) ของลูกกลิ้งวัดระยะทาง</td>
+                  <td>วัดเส้นผ่านศูนย์กลาง (D) ของลูกกลิ้งยางที่แนบกับสายพานด้วยเวอร์เนีย</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-mono font-bold text-teal-400">Target_Pulse</td>
+                  <td className="py-2 px-3 font-mono text-[11px]">จำนวนเต็มพัลส์ (Int32)</td>
+                  <td>ค่าเคาน์เตอร์สะสมใน PLC ที่จะส่งสัญญาณยิงลมเตะ</td>
+                  <td>เมื่อค่า High-Speed Counter นับถึงค่านี้ PLC จะยิงคำสั่งฮาร์ดแวร์ทันที</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>

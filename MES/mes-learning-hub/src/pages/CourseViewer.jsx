@@ -37,6 +37,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import { useTheme } from '../context/ThemeContext';
 import CertificateModal from '../components/CertificateModal';
 import TrainerGuideModal from '../components/TrainerGuideModal';
+import IndustrialGlossaryModal from '../components/IndustrialGlossaryModal';
 
 export default function CourseViewer() {
   const { courseId } = useParams();
@@ -64,6 +65,7 @@ export default function CourseViewer() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
   const [isTrainerGuideOpen, setIsTrainerGuideOpen] = useState(false);
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [latestExamScore, setLatestExamScore] = useState(null);
   const [userGrading, setUserGrading] = useState(() => getUserGrading());
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
@@ -1016,6 +1018,17 @@ export default function CourseViewer() {
             </button>
             <div className="flex items-center gap-1.5">
               <button
+                onClick={() => setIsGlossaryOpen(true)}
+                className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
+                  isDark
+                    ? 'bg-cyan-950/70 hover:bg-cyan-900/90 text-cyan-200 border-cyan-500/40 hover:border-cyan-400'
+                    : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border-cyan-300'
+                }`}
+                title="คลังคำย่อ สูตรคำนวณ และที่มาของตัวเลขทางวิศวกรรม (Engineering Glossary & Formulas)"
+              >
+                <FiZap className="w-4 h-4 text-cyan-400 dark:text-cyan-300" />
+              </button>
+              <button
                 onClick={() => setIsTrainerGuideOpen(true)}
                 className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
                   isDark
@@ -1276,10 +1289,19 @@ export default function CourseViewer() {
                   style={{ width: `${progressPercent}%` }}
                 ></div>
               </div>
-              <div className="flex items-center justify-between mt-2 text-xs">
-                <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  ผ่านแล้ว {completedModuleIds.length}/{totalModules} บท ({course.duration})
-                </span>
+              <div className="flex items-center justify-between mt-2 text-xs gap-2">
+                <button
+                  onClick={() => {
+                    setIsMobileSyllabusOpen(false);
+                    setIsGlossaryOpen(true);
+                  }}
+                  className={`font-bold flex items-center gap-1 ${
+                    isDark ? 'text-cyan-300 hover:text-cyan-200' : 'text-cyan-700 hover:text-cyan-900'
+                  }`}
+                >
+                  <FiZap className="w-3.5 h-3.5" />
+                  <span>คลังคำย่อ/สูตร</span>
+                </button>
                 <button
                   onClick={() => {
                     setIsMobileSyllabusOpen(false);
@@ -1289,7 +1311,7 @@ export default function CourseViewer() {
                     isDark ? 'text-purple-300 hover:text-purple-200' : 'text-purple-700 hover:text-purple-900'
                   }`}
                 >
-                  <span>📘 แผนการสอน 3 วัน</span>
+                  <span>📘 แผน 3 วัน</span>
                 </button>
               </div>
             </div>
@@ -1451,6 +1473,29 @@ export default function CourseViewer() {
               </div>
             </div>
           )}
+
+          {/* Quick-Access Engineering Glossary Pill Button */}
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <button
+              onClick={() => setIsGlossaryOpen(true)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 shadow-xs group cursor-pointer ${
+                isDark
+                  ? 'bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 border-cyan-500/30 hover:border-cyan-400'
+                  : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-200'
+              }`}
+              title="เปิดคลังคำย่อ สูตรคำนวณ และที่มาของตัวเลขทางวิศวกรรม"
+            >
+              <span className="p-1 rounded-md bg-cyan-500/20 text-cyan-400 group-hover:scale-110 transition-transform">
+                <FiBookOpen className="w-3.5 h-3.5" />
+              </span>
+              <span>📖 คลังคำย่อและสูตรวิศวกรรม (Engineering Glossary &amp; Formulas)</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                isDark ? 'bg-cyan-500/20 text-cyan-200' : 'bg-cyan-100 text-cyan-800'
+              }`}>
+                WD · FOV · MP · NPU · INT8 · OBB · PPM
+              </span>
+            </button>
+          </div>
 
           {activeModule && (
             <ErrorBoundary key={activeModule.id} moduleName={activeModule.title}>
@@ -1840,6 +1885,12 @@ export default function CourseViewer() {
         isOpen={isTrainerGuideOpen}
         onClose={() => setIsTrainerGuideOpen(false)}
         courseId={course?.id}
+      />
+
+      {/* Engineering Glossary & Formulas Reference Modal */}
+      <IndustrialGlossaryModal
+        isOpen={isGlossaryOpen}
+        onClose={() => setIsGlossaryOpen(false)}
       />
     </div>
   );

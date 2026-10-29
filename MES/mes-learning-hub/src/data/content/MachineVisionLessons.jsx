@@ -1043,8 +1043,11 @@ function OpticalFormulasCalculator() {
             <div className="flex items-center justify-between mb-1.5">
               <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>1. กฎ 3 พิกเซล (3-Pixel Rule)</span>
               <span className="text-[10px] font-mono bg-sky-500/20 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/30">
-                Noise Immunity
+                Nyquist 2px + 1px Guardband
               </span>
+            </div>
+            <div className="text-[10px] text-slate-500 mb-1 leading-tight">
+              ที่มาของเลข 3: ทฤษฎี Nyquist ต้องการอย่างน้อย 2 พิกเซลเพื่อจับขอบคอนทราสต์ + เผื่อ 1 พิกเซลกันฝุ่น/สั่นสะเทือน
             </div>
 
             <div className="flex items-baseline gap-2 mb-2">
@@ -2014,7 +2017,10 @@ function ThresholdTuningLab() {
               <span className={`text-3xl font-black font-mono ${escapePPM === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {escapePPM}
               </span>
-              <span className="text-xs text-slate-400">PPM (ของเสียหลุดรอดต่อชิ้นงานเสีย 1 ล้านชิ้น)</span>
+              <span className="text-xs text-slate-400">PPM (Parts Per Million: ของเสียหลุดรอดต่อการผลิต 1 ล้านชิ้น)</span>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono">
+              *สูตร: (จำนวนชิ้นงาน NG ที่หลุดรอด / จำนวนที่ผลิตทั้งหมด) &times; 1,000,000 (อย่าสับสนกับ Pulses Per Millimeter ของ Encoder)
             </div>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed border-t border-slate-800 pt-2 m-0">
