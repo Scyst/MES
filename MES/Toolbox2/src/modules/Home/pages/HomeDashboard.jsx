@@ -197,7 +197,7 @@ export default function HomeDashboard() {
     { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/planning/daily_meeting.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/manpowerUI.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/employeeGrading.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-green-100 text-green-600', to: '/mood-insight', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/moodReport.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyPL/pl_entry.php', roles: ['admin', 'creator'] },
     { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/autoInvoice/finance_dashboard.php', roles: ['admin', 'creator', 'manager'] },
     { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-green-100 text-green-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', roles: ['admin', 'creator', 'manager'] },
@@ -207,7 +207,7 @@ export default function HomeDashboard() {
 
   const systemAdminServices = [
     { title: 'System Settings', desc: 'ตั้งค่าระบบหลัก', icon: Settings, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php', roles: ['admin', 'creator'] },
-    { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/admin/users', roles: ['admin', 'creator'] },
+    { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php', roles: ['admin', 'creator'] },
   ];
 
   const sandboxServices = [

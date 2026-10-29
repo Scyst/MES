@@ -7,9 +7,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -22,12 +20,13 @@ $password = $input['password'] ?? '';
 
 if (empty($username) || empty($password)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Username and password are required.']);
+    echo json_encode(['success' => false, 'message' => 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน']);
     exit;
 }
 
 try {
-    $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, u.fullname, u.team_group, m.position 
+    $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, u.fullname, u.team_group,
+                   u.profile_picture, u.theme_preference, u.preferred_lang, m.position 
             FROM " . USERS_TABLE . " u
             LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " m ON u.emp_id = m.emp_id
             WHERE u.username = ? AND u.is_active = 1";
@@ -53,22 +52,30 @@ try {
         $permissions = array_values(array_unique(array_merge($rolePermissions, $userPermissions)));
 
         $_SESSION['user'] = [
-            'id' => $user['id'],
-            'username' => $user['username'],
-            'fullname' => $displayName,
-            'role' => $user['role'],       
-            'position' => $displayPosition, 
-            'line' => $user['line'],
-            'emp_id' => $user['emp_id'],
-            'team_group' => $user['team_group'],
-            'permissions' => $permissions
+            'id'               => $user['id'],
+            'username'         => $user['username'],
+            'fullname'         => $displayName,
+            'role'             => $user['role'],       
+            'position'         => $displayPosition, 
+            'line'             => $user['line'],
+            'emp_id'           => $user['emp_id'],
+            'team_group'       => $user['team_group'],
+            'profile_picture'  => $user['profile_picture'] ?? null,
+            'theme_preference' => $user['theme_preference'] ?? 'light',
+            'preferred_lang'   => $user['preferred_lang']   ?? 'th',
+            'permissions'      => $permissions
         ];
 
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         
         try {
-            $logStmt = $pdo->prepare("INSERT INTO dbo.SYSTEM_LOGS (username, role, action, module, ref_id, ip_address, user_agent, created_at) VALUES (?, ?, 'LOGIN', 'MES_V2', ?, ?, ?, GETDATE())");
-            $logStmt->execute([$user['username'], $user['role'], $user['id'], $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']]);
+            $logStmt = $pdo->prepare("INSERT INTO dbo.SYSTEM_LOGS (username, role, action, module, ref_id, ip_address, user_agent, created_at) VALUES (?, ?, 'LOGIN', 'AUTH', ?, ?, ?, GETDATE())");
+            $logStmt->execute([$user['username'], $user['role'], $user['id'], $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN', $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN']);
+
+            if (defined('DB_DATABASE')) {
+                $lastLoginStmt = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='UPDATE_LAST_LOGIN', @UserId=?, @ActionBy=?");
+                $lastLoginStmt->execute([$user['id'], $user['username']]);
+            }
         } catch (Exception $e) {}
 
         echo json_encode([
@@ -80,7 +87,7 @@ try {
     } else {
         usleep(500000); 
         http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Invalid username/password or account disabled.']);
+        echo json_encode(['success' => false, 'message' => 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง หรือบัญชีถูกระงับการใช้งาน']);
     }
 
 } catch (Exception $e) {

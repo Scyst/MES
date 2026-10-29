@@ -55,6 +55,7 @@
 - [x] เปลี่ยนชื่อโฟลเดอร์ `MES/mes-v2` เป็น `MES/Toolbox2` (`git mv MES/mes-v2 MES/Toolbox2`) เพื่อให้ตรงกับพาร์ทจริงบน FTP (`/Toolbox2`) แบบ 1:1 และปรับ `upload.cjs` ให้ใช้ `path.join(__dirname, 'dist')`
 - [x] ย้ายระบบจองรถรับส่งพนักงาน (`MES/transport-system`) เข้าสู่ `MES/Toolbox2/src/modules/Transport/` และ API ไปที่ `MES/Toolbox2/public/api/transport/` พร้อมเชื่อมเมนูใน `DesktopSidebar.jsx` & `HomeDashboard.jsx` และรัน `vite build` ผ่าน 100%
 - [x] พอร์ตระบบ `MES/mes-team-planner` เข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner/` (Route `#/planner/*`) โดยคงโฟลเดอร์ `MES/mes-team-planner` เดิมไว้ 100% พร้อมแก้บั๊ก `require('react-router-dom').useLocation()` ใน `App.jsx`, เพิ่ม `ErrorBoundary.jsx`, และรันบอท Puppeteer ทดสอบครบ 20 หน้า/แท็บย่อย ยืนยัน `0 errors` ไร้จอขาว 100%
+- [x] ลบโมดูลจำลองที่ไม่สมบูรณ์ (`QMS`, `MoodInsight`) ใน `MES/Toolbox2` และชี้ลิงก์ใน `HomeDashboard.jsx` กลับไปที่ `MES/page` พร้อมอัปเกรดโครงสร้างพื้นฐาน (`AuthContext.jsx`, `InactivityTimeoutModal.jsx`, `AppLayout.jsx`, `DesktopSidebar.jsx`, `login.php`, `check.php`, `logout.php`) ให้รองรับ Cross-Tab Logout/Login Sync (`mes_auth_channel`), Inactivity Auto-Logout (60m + 30s countdown), Live Session Heartbeat (45s), และ Live Header Performance (`api_my_performance.php`) ทดสอบผ่านด้วย Puppeteer Multi-Tab E2E 100%
 
 ## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:**

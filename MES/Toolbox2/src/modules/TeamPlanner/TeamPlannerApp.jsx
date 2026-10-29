@@ -64,7 +64,7 @@ const mainNav = [
 function App() {
   const [activeTab, setActiveTab] = useState('gantt');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user: toolboxUser } = useAuth() || {};
+  const { user: toolboxUser, logout: toolboxLogout } = useAuth() || {};
   const [currentUser, setCurrentUser] = useState(() => toolboxUser || null);
   const [userLoading, setUserLoading] = useState(true);
 
@@ -346,12 +346,17 @@ function App() {
       .catch(err => console.error('Failed to fetch user:', err));
   }, []);
 
-  const handleLogout = () => {
-    axios.post('api/auth.php?action=logout').then(() => {
+  const handleLogout = async () => {
+    try {
+      await axios.post('api/auth.php?action=logout');
+    } catch (e) {
+      // ignore
+    }
+    if (toolboxLogout) {
+      await toolboxLogout();
+    } else {
       window.location.href = '../../MES/MES/auth/login_form.php';
-    }).catch(() => {
-      window.location.href = '../../MES/MES/auth/login_form.php';
-    });
+    }
   };
 
   // ══════════ Computed Nav ══════════

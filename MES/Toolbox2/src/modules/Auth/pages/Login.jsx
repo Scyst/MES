@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { LogIn, AlertCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -8,73 +8,112 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, login, checkAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname + (location.state?.from?.search || '') + (location.state?.from?.hash || '') || '/';
+  const from =
+    (location.state?.from?.pathname
+      ? location.state.from.pathname +
+        (location.state.from.search || '') +
+        (location.state.from.hash || '')
+      : null) || '/';
+
+  // Redirect automatically when `user` becomes authenticated (including via Cross-Tab Login Sync)
+  useEffect(() => {
+    if (user) {
+      navigate(from === '/login' ? '/' : from, { replace: true });
+    }
+  }, [user, navigate, from]);
+
+  // Also re-verify session if user switches back to this login tab after logging in elsewhere
+  useEffect(() => {
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === 'visible' && checkAuth) {
+        checkAuth({ silent: true });
+      }
+    };
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
+  }, [checkAuth]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
+
     const result = await login(username, password);
     if (result.success) {
-      navigate(from, { replace: true });
+      navigate(from === '/login' ? '/' : from, { replace: true });
     } else {
-      setError(result.message || 'รหัสผ่านไม่ถูกต้อง');
+      setError(result.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200/80 dark:border-slate-800">
         {/* Header Section */}
         <div className="bg-slate-900 p-8 text-center text-white">
-          <img src={`${import.meta.env.BASE_URL}assets/logo.webp`} alt="SNC Logo" className="h-12 mx-auto mb-4 object-contain" />
-          <h1 className="text-2xl font-bold">MES Core v2</h1>
-          <p className="text-slate-400 mt-2">เข้าสู่ระบบเพื่อใช้งาน</p>
+          <img
+            src={`${import.meta.env.BASE_URL}assets/logo.webp`}
+            alt="SNC Logo"
+            className="h-12 mx-auto mb-4 object-contain"
+          />
+          <h1 className="text-2xl font-bold tracking-tight">TOOLBOX OS</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)
+          </p>
         </div>
-        
+
         {/* Form Section */}
         <div className="p-8">
           {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 flex items-start gap-3">
+            <div className="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 p-4 rounded-lg mb-6 flex items-start gap-3 text-sm">
               <AlertCircle size={20} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">ชื่อผู้ใช้งาน (Username)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                ชื่อผู้ใช้งาน (Username)
+              </label>
               <input
                 type="text"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="กรอกชื่อผู้ใช้งาน"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">รหัสผ่าน (Password)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                รหัสผ่าน (Password)
+              </label>
               <input
                 type="password"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="กรอกรหัสผ่าน"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                isLoading ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

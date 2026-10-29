@@ -6,8 +6,6 @@ import { AuthProvider, useAuth } from '../shared/contexts/AuthContext';
 
 // 🚀 Lazy Loading โมดูลต่างๆ
 const HomeDashboard = lazy(() => import('../modules/Home/pages/HomeDashboard'));
-const QmsDashboard = lazy(() => import('../modules/QMS/pages/QmsDashboard'));
-const MoodInsightDashboard = lazy(() => import('../modules/MoodInsight/pages/MoodInsightDashboard'));
 const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
 const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
@@ -69,20 +67,6 @@ export default function App() {
                 </ErrorBoundary>
               } />
               
-              <Route path="qms/*" element={
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูล QMS...</div>}>
-                    <QmsDashboard />
-                  </Suspense>
-                </ErrorBoundary>
-              } />
-              <Route path="mood-insight/*" element={
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูล Mood Insight...</div>}>
-                    <MoodInsightDashboard />
-                  </Suspense>
-                </ErrorBoundary>
-              } />
               <Route path="admin/users" element={
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูล User Management...</div>}>

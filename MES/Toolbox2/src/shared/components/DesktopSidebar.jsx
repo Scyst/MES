@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Home, Activity, ShoppingCart, Truck, Bus, Calendar, FolderOpen, 
-  ChevronDown, ChevronRight, Package, Smartphone, ListOrdered, 
-  Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox, 
-  Camera, Settings, Users, MonitorPlay, Zap, Heart, Search, FileText, FlaskConical, History
-, Grid, Factory, ShieldCheck, Briefcase
+import {
+  Home, Activity, ShoppingCart, Truck, Bus, Calendar, FolderOpen,
+  ChevronDown, ChevronRight, Package, ListOrdered,
+  Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
+  Camera, Settings, Users, MonitorPlay, Zap, Heart, Search, FlaskConical,
+  Grid, Factory, ShieldCheck, Briefcase, X
 } from 'lucide-react';
 
-const MENU_DATA = [
+export const MENU_DATA = [
   {
-    title: 'GENERAL', sectionIcon: Grid,
+    title: 'GENERAL',
+    sectionIcon: Grid,
     items: [
-      { name: 'TOOLBOX OS (Home)', icon: Home, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
+      { name: 'TOOLBOX OS (Home)', icon: Home, to: '/' },
+      { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
       { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
       { name: 'Forklift Booking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php', external: true },
@@ -22,18 +24,19 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'PRODUCTION', sectionIcon: Factory,
+    title: 'PRODUCTION',
+    sectionIcon: Factory,
     items: [
       { name: 'Production & Inventory', icon: Package, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/productionUI.php', external: true },
       { name: 'Live Job Queue', icon: ListOrdered, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/jobQueueUI.php', external: true },
       { name: 'Tag Printer (WIP/FG)', icon: Printer, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/label_printer.php', external: true },
       { name: 'Scan Barcode', icon: ScanLine, href: '/iot-toolbox/sandbox-b9/MES/MES/page/scanBarcode/scanBarcodeUI.php', external: true },
-      { name: "บันทึกเคมีสี (Paint Chem)", icon: FlaskConical, to: "/paint-chem" },
-      
+      { name: 'บันทึกเคมีสี (Paint Chem)', icon: FlaskConical, to: '/paint-chem' },
     ]
   },
   {
-    title: 'WAREHOUSE & LOGISTICS', sectionIcon: Warehouse,
+    title: 'WAREHOUSE & LOGISTICS',
+    sectionIcon: Warehouse,
     items: [
       { name: 'Store Dashboard', icon: Store, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeDashboard.php', external: true },
       { name: 'Inventory Stock', icon: Box, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/inventoryDashboard.php', external: true },
@@ -42,7 +45,8 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'QUALITY & MT', sectionIcon: ShieldCheck,
+    title: 'QUALITY & MT',
+    sectionIcon: ShieldCheck,
     items: [
       { name: 'iQMS (Quality)', icon: MonitorPlay, href: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php', external: true },
       { name: 'Accessories Inspection', icon: Camera, href: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
@@ -50,7 +54,8 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'MANAGEMENT', sectionIcon: Briefcase,
+    title: 'MANAGEMENT',
+    sectionIcon: Briefcase,
     items: [
       { name: 'Management Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', external: true },
       { name: 'Utility & Energy', icon: Zap, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php', external: true },
@@ -60,7 +65,8 @@ const MENU_DATA = [
     ]
   },
   {
-    title: 'SYSTEM ADMIN', sectionIcon: Settings,
+    title: 'SYSTEM ADMIN',
+    sectionIcon: Settings,
     items: [
       { name: 'System Settings', icon: Settings, href: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php', external: true },
       { name: 'User Manager', icon: Users, href: '/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php', external: true },
@@ -68,98 +74,179 @@ const MENU_DATA = [
   }
 ];
 
-export default function DesktopSidebar() {
-  const [expanded, setExpanded] = useState({ 'GENERAL': true, 'PRODUCTION': true });
+export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) {
+  const [expanded, setExpanded] = useState({ GENERAL: true, PRODUCTION: true });
   const [search, setSearch] = useState('');
   const location = useLocation();
 
   const toggleSection = (title) => {
-    setExpanded(prev => ({ ...prev, [title]: !prev[title] }));
+    setExpanded((prev) => ({ ...prev, [title]: !prev[title] }));
   };
+
+  const renderMenuSections = (isMobileDrawer = false) =>
+    MENU_DATA.map((section, sIdx) => {
+      const filteredItems = section.items.filter((item) =>
+        item.name.toLowerCase().includes(search.toLowerCase())
+      );
+      if (filteredItems.length === 0 && search) return null;
+
+      const isExpanded = expanded[section.title] || search !== '';
+
+      return (
+        <div key={sIdx} className="mb-1">
+          <button
+            onClick={() => toggleSection(section.title)}
+            className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mx-2 my-1 rounded-md"
+            style={{ width: 'calc(100% - 16px)' }}
+          >
+            <div className="min-w-[20px] flex items-center justify-center text-gray-400 dark:text-gray-500">
+              {section.sectionIcon && <section.sectionIcon size={16} />}
+            </div>
+            <span
+              className={`ml-3 truncate whitespace-nowrap flex-1 text-left ${
+                isMobileDrawer ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'
+              }`}
+            >
+              {section.title}
+            </span>
+            <div
+              className={
+                isMobileDrawer ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'
+              }
+            >
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
+          </button>
+
+          {isExpanded && (
+            <div className="mt-1 space-y-0.5 px-2">
+              {filteredItems.map((item, iIdx) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.to;
+
+                if (item.external) {
+                  return (
+                    <a
+                      key={iIdx}
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg transition-colors group"
+                    >
+                      <div className="min-w-[20px] flex items-center justify-center">
+                        <Icon
+                          size={20}
+                          className="text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors"
+                        />
+                      </div>
+                      <span
+                        className={`ml-3 truncate whitespace-nowrap ${
+                          isMobileDrawer
+                            ? 'opacity-100'
+                            : 'opacity-0 group-hover:opacity-100 transition-opacity'
+                        }`}
+                      >
+                        {item.name}
+                      </span>
+                    </a>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={iIdx}
+                    to={item.to}
+                    onClick={() => {
+                      if (isMobileDrawer && onCloseMobile) onCloseMobile();
+                    }}
+                    className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    <div className="min-w-[20px] flex items-center justify-center">
+                      <Icon
+                        size={20}
+                        className={`${
+                          isActive
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                        } transition-colors`}
+                      />
+                    </div>
+                    <span
+                      className={`ml-3 truncate whitespace-nowrap ${
+                        isMobileDrawer
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover:opacity-100 transition-opacity'
+                      }`}
+                    >
+                      {item.name}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    });
 
   return (
     <>
+      {/* Desktop Collapsed Spacer + Expand-on-Hover Sidebar */}
       <div className="hidden md:block w-16 h-full flex-shrink-0 z-10" />
       <aside className="absolute top-0 left-0 hidden md:flex flex-col w-16 hover:w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg z-30 transition-all duration-300 group overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-center group-hover:justify-start">
-        <div className="relative w-full flex items-center justify-center group-hover:justify-start">
-          <Search className="text-gray-400 group-hover:absolute group-hover:left-3" size={20} />
-          <input 
-            type="text" 
-            placeholder="ค้นหาเมนู..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow opacity-0 group-hover:opacity-100 absolute group-hover:relative invisible group-hover:visible"
-          />
+        <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-center group-hover:justify-start">
+          <div className="relative w-full flex items-center justify-center group-hover:justify-start">
+            <Search className="text-gray-400 group-hover:absolute group-hover:left-3" size={20} />
+            <input
+              type="text"
+              placeholder="ค้นหาเมนู..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow opacity-0 group-hover:opacity-100 absolute group-hover:relative invisible group-hover:visible"
+            />
+          </div>
         </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-2">
-        {MENU_DATA.map((section, sIdx) => {
-          const filteredItems = section.items.filter(item => item.name.toLowerCase().includes(search.toLowerCase()));
-          if (filteredItems.length === 0 && search) return null;
 
-          const isExpanded = expanded[section.title] || search !== '';
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-2">
+          {renderMenuSections(false)}
+        </div>
+      </aside>
 
-          return (
-            <div key={sIdx} className="mb-1">
-              
-              <button 
-                onClick={() => toggleSection(section.title)}
-                className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mx-2 my-1 rounded-md"
-                style={{ width: 'calc(100% - 16px)' }}
+      {/* Mobile Navigation Drawer */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
+            onClick={onCloseMobile}
+          />
+          <aside className="relative w-72 max-w-[85vw] h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-2xl z-10 flex flex-col">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+              <div className="relative flex-1">
+                <Search className="text-gray-400 absolute left-3 top-2.5" size={18} />
+                <input
+                  type="text"
+                  placeholder="ค้นหาเมนู..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
+                />
+              </div>
+              <button
+                onClick={onCloseMobile}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="ปิดเมนู"
               >
-                <div className="min-w-[20px] flex items-center justify-center text-gray-400 dark:text-gray-500">
-                  {section.sectionIcon && <section.sectionIcon size={16} />}
-                </div>
-                <span className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity truncate whitespace-nowrap flex-1 text-left">{section.title}</span>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </div>
+                <X size={20} />
               </button>
-
-              
-              {isExpanded && (
-                <div className="mt-1 space-y-0.5 px-2">
-                  {filteredItems.map((item, iIdx) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.to;
-                    
-                    if (item.external) {
-                      return (
-                        <a 
-                          key={iIdx} 
-                          href={item.href}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg transition-colors group"
-                        >
-                          <div className="min-w-[20px] flex items-center justify-center">
-                            <Icon size={20} className="text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
-                          </div>
-                          <span className="ml-3 truncate opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{item.name}</span>
-                        </a>
-                      );
-                    }
-                    
-                    return (
-                      <Link 
-                        key={iIdx} 
-                        to={item.to}
-                        className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'}`}
-                      >
-                        <div className="min-w-[20px] flex items-center justify-center">
-                            <Icon size={20} className={`${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'} transition-colors`} />
-                          </div>
-                          <span className="ml-3 truncate opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          );
-        })}
-      </div>
-    </aside>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-2">
+              {renderMenuSections(true)}
+            </div>
+          </aside>
+        </div>
+      )}
     </>
   );
 }
