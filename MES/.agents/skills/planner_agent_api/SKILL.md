@@ -77,3 +77,7 @@ Creates a new task in the planner.
 1. **Always check the timeline first:** Before creating a new task, fetch the timeline to ensure you aren't creating a duplicate task.
 2. **Be Descriptive:** When creating a task, add enough context in the `description` so the user knows *why* the Agent created it.
 3. **Use Checklists:** Break down complex agent tasks into `checklist` items so the user can see step-by-step what the Agent intends to do or has done.
+4. **Zero-Gap Timing (Eliminate Idle Holes):** 
+   - NEVER log only the isolated 5-10 minutes of AI prompt execution. A real development task encompasses the **Full User Lifecycle**: user requirement analysis, prompt drafting, AI execution, and user UAT/testing on devices.
+   - **Chain-to-Previous-Task:** When logging a task, inspect the user's latest task for the day. Set `startTime = previousTask.endTime` (skipping standard lunch 12:00-13:00 or company meetings) so the timeline is continuous and unbroken.
+   - **Consolidate Micro-tasks:** Group small iterative fixes (e.g. 3-4 consecutive UI adjustments) into a single cohesive Milestone Block (e.g. 1.5 - 3 hours) and list the individual fixes under `subtasks`.

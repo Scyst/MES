@@ -43,6 +43,11 @@
 - **TEMPLATE COMPLIANCE:** Follow the template provided in E:\MES\MES\MES\.agents\sync_board\README.md.
 - **NO SILENT WORK:** Do not perform work and terminate without updating the sync board. This is critical for multi-agent handoffs and syncing to the MES Team Planner.
 
+# PLANNER ZERO-GAP PROTOCOL (SEAMLESS TIMELINE)
+- **FULL LIFECYCLE DURATION:** When registering or updating tasks in Team Planner (`TeamPlanner_Tasks`), NEVER log only the isolated 5-10 minutes of AI execution. Real tasks encompass user problem formulation, prompting, AI execution, and user testing/UAT.
+- **CHAIN-TO-PREVIOUS-TASK:** Ensure task times fit together without artificial gaps. Inspect the previous task's `EndTime` for the day and set `StartTime = previousTask.EndTime` (respecting standard lunch break 12:00-13:00 and fixed company events).
+- **CONSOLIDATE MICRO-TASKS:** Group consecutive small iterations into structured Milestone Blocks (e.g. 1.5 - 3 hours) and list granular changes under `Subtasks` rather than polluting the board with fragmented 5-minute entries.
+
 # POWERSHELL & SCRIPTING HAZARDS (CRITICAL)
 - **SINGLE-QUOTED HERE-STRINGS (`@' '@`):** When generating Python/Node.js scripts or writing files via PowerShell, ALWAYS use single-quoted here-strings (`@' '@`).
 - **AVOID DOUBLE-QUOTED HERE-STRINGS (`@" "@`):** NEVER use double-quoted here-strings unless explicit variable expansion is required. PowerShell aggressively evaluates `$variables` and interprets backticks (`` ` ``) as escape characters (e.g., `` `t `` becomes a TAB, `` `a `` becomes a BELL). This WILL silently destroy file contents (like PHP variables or Markdown backticks) and cause syntax errors.
