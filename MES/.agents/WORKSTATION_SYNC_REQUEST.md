@@ -67,8 +67,18 @@
    - `MES/page/areaAccess/` (เก็บไว้ — โปรเจ็คตามคำสั่งผู้บริหาร)
    - `MES/mes-mobile-app/` (เก็บไว้ก่อนเพื่อความปลอดภัยของพนักงานหน้างาน)
    - `MES/transport-system/` -> **ย้ายเข้าสู่ `MES/Toolbox2/src/modules/Transport/` และ `MES/Toolbox2/public/api/transport/` เรียบร้อยแล้ว** (Route: `#/transport/*`, เชื่อมต่อฐานข้อมูลกลาง `config.php` และลบโฟลเดอร์ `MES/transport-system` เดิมออกแล้ว)
-   - `MES/mes-team-planner/` (ห้ามลบโฟลเดอร์เดิมเด็ดขาด — **พอร์ตเข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner/` เรียบร้อยแล้ว** ภายใต้ Route `#/planner/*` โดยชี้ API และ `uploads/` ไปที่ `/iot-toolbox/sandbox-b9/Toolbox/planner/api/` และผ่านการทดสอบ Puppeteer E2E ครบทุกแท็บ 100%)
-   - ลบโมดูลจำลองที่ไม่สมบูรณ์ (`MES/Toolbox2/src/modules/QMS` และ `MoodInsight`) และชี้ลิงก์กลับสู่ระบบหลักใน `MES/page` พร้อมอัปเกรด `AuthContext.jsx`, `InactivityTimeoutModal.jsx`, และ `AppLayout.jsx` ให้ซิงค์ Cross-Tab Login/Logout (`mes_auth_channel`) ร่วมกับ `MES/page` และ `LearningHub` แบบ 100%
+   - `MES/mes-team-planner/` (ห้ามลบโฟลเดอร์เดิมเด็ดขาด — **พอร์ตเข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner/` เรียบร้อยแล้ว** ภายใต้ Route `#/planner/*` พร้อมพอร์ต PHP API ทั้ง 22 ไฟล์เข้าสู่ `MES/Toolbox2/public/api/planner/` ให้พึ่งพาตัวเองได้ 100% และผ่านการทดสอบ Puppeteer E2E ครบทุกแท็บ `0 errors`)
+   - ลบโมดูลจำลองที่ไม่สมบูรณ์ (`MES/Toolbox2/src/modules/QMS` และ `MoodInsight`) และชี้ลิงก์กลับสู่ระบบหลักใน `MES/page` พร้อมอัปเกรด `AuthContext.jsx`, `InactivityTimeoutModal.jsx`, `AccountSettingsModal.jsx`, และ `AppLayout.jsx` ให้ซิงค์ Cross-Tab Login/Logout (`mes_auth_channel`) ร่วมกับ `MES/page` และ `LearningHub` แบบ 100% และพอร์ต Backend API ทั้งหมด (`dailyLog`, `manpower`, `profile`, `paintChem`, `planner`) เข้าสู่ `MES/Toolbox2/public/api/` เพื่อให้ `MES/Toolbox2` พึ่งพาตัวเองได้ 100% (Zero External API Dependencies)
+
+### 🏛️ แผนงานถัดไป: แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น & พิมพ์เขียวระบบ (System Blueprint)
+1. **แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (ดูรายละเอียดเต็มใน `MES/Toolbox2/ARCHITECTURE.md`):**
+   - **Layer 1:** Shared UI & API Core Utilities (`apiClient.js`, `ToastContext.jsx`, `ConfirmModal.jsx`, `useSSE.js`)
+   - **Layer 2:** User Management & PBAC Permission Matrix 100% Parity (`#/admin/users`)
+   - **Layer 3:** System Settings & Master Data (`#/admin/settings`)
+   - **Layer 4:** Full Employee Profile & 4D Grading Page (`#/profile`)
+2. **พิมพ์เขียวแม่บทของระบบสำหรับผู้บริหารและการส่งมอบงาน (`MES/docs/blueprint/`):**
+   - เอกสารพิมพ์เขียวฉบับสมบูรณ์: `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md`
+   - ข้อมูลกราฟโหนดและเส้นเชื่อมสำหรับสร้าง Visual Blueprint: `MES/docs/blueprint/blueprint_graph.json`
 
 ### ขั้นตอนการทำงานเมื่อเปลี่ยนจาก Argon เป็น Flash
 1. เมื่อสลับเป็น **Flash** ให้โมเดลอ่านไฟล์นี้ (`MES/.agents/WORKSTATION_SYNC_REQUEST.md`) และ `MES/.agents/sync_board/handoff.md` เป็นอันดับแรก

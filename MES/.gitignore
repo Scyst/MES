@@ -3,7 +3,8 @@ node_modules/
 documents/
 test/
 Media/
-docs/
+docs/*
+!docs/blueprint/
 uploads/
 mcp_server/
 .vscode/

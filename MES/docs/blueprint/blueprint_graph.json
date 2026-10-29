@@ -1,0 +1,257 @@
+{
+  "schema_version": "2.0.0",
+  "blueprint_id": "SNC-B9-MES-BLUEPRINT-V2",
+  "updated_at": "2026-10-29",
+  "organization": "บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน) - B9",
+  "description": "Machine-readable Node & Edge Graph Schema for rendering an Interactive Visual Blueprint (React Flow / D3 / Digital Twin) covering Hardware/Electrical/IoT, External ERP/HR, SQL Server Database, PHP APIs, and all 28 MES Modules.",
+  "layers": [
+    { "id": "L1_HARDWARE_IOT", "order": 1, "name_th": "ฮาร์ดแวร์หน้างาน เครื่องจักร และระบบไฟฟ้า (Shopfloor, Electrical & IoT)", "color": "#f59e0b" },
+    { "id": "L2_EXTERNAL_ERP", "order": 2, "name_th": "ระบบองค์กรภายนอก (SAP ERP, HR Manpower, GitHub)", "color": "#8b5cf6" },
+    { "id": "L3_DATABASE", "order": 3, "name_th": "ฐานข้อมูลกลาง SQL Server (10.1.1.31 : IIOT_TOOLBOX)", "color": "#10b981" },
+    { "id": "L4_API_GATEWAY", "order": 4, "name_th": "เกตเวย์ API และระบบความปลอดภัย (PHP 8 PDO + SSO + RBAC)", "color": "#3b82f6" },
+    { "id": "L5_APPLICATIONS", "order": 5, "name_th": "ระบบแอปพลิเคชันผู้ใช้งาน (Toolbox2 SPA, MES Core, Learning Hub)", "color": "#ef4444" }
+  ],
+  "domains": [
+    { "id": "DOM_PROD", "name_th": "ระบบบริหารการผลิตและหน้างาน (Production & Shopfloor)" },
+    { "id": "DOM_STORE", "name_th": "ระบบคลังสินค้า โลจิสติกส์ และยานพาหนะ (Warehouse & Logistics)" },
+    { "id": "DOM_QMS_PE", "name_th": "ระบบคุณภาพ วิศวกรรมเครื่องจักร และพลังงานไฟฟ้า (Quality, PE & Electrical)" },
+    { "id": "DOM_HR_ACADEMY", "name_th": "ระบบทรัพยากรบุคคล การประเมิน 4 มิติ และศูนย์ฝึกอบรม (HR, 4D Grading & Academy)" },
+    { "id": "DOM_EXEC_FIN", "name_th": "ระบบผู้บริหาร การเงิน งบกำไรขาดทุน และแผนงานทีม (Executive, Finance & Planner)" },
+    { "id": "DOM_CORE_ADMIN", "name_th": "ระบบโครงสร้างพื้นฐานและตั้งค่าข้อมูลหลัก (Core Foundation & Master Data)" }
+  ],
+  "nodes": [
+    {
+      "id": "hw_electric_mqtt",
+      "layer": "L1_HARDWARE_IOT",
+      "domain": "DOM_QMS_PE",
+      "type": "hardware_sensor",
+      "title": "มิเตอร์ไฟฟ้า MDB / รายไลน์ & มิเตอร์แก๊ส LPG (MQTT)",
+      "path": "MES/page/components/py/Electric/",
+      "scripts": ["mqtt_full_logger.py", "live_power_monitor.py", "check_power_mqtt.py"],
+      "protocol": "MQTT -> Python -> SQL Server"
+    },
+    {
+      "id": "hw_ai_camera_cctv",
+      "layer": "L1_HARDWARE_IOT",
+      "domain": "DOM_QMS_PE",
+      "type": "hardware_camera",
+      "title": "กล้อง AI Vision ตรวจชิ้นงาน & ระบบกล้องวงจรปิด CCTV",
+      "path": "MES/page/AccessoriesInspection/cam_proxy.php",
+      "protocol": "HTTP RTSP/Snapshot Proxy"
+    },
+    {
+      "id": "hw_barcode_scanners",
+      "layer": "L1_HARDWARE_IOT",
+      "domain": "DOM_STORE",
+      "type": "hardware_scanner",
+      "title": "เครื่องสแกนบาร์โค้ด / มือถือสโตร์ (Cycle Count) / เครื่องพิมพ์ป้ายแท็ก",
+      "path": "MES/page/storeManagement/cycleCount.php",
+      "protocol": "HTTPS Mobile Web / QR Scanner"
+    },
+    {
+      "id": "ext_sap_erp",
+      "layer": "L2_EXTERNAL_ERP",
+      "domain": "DOM_CORE_ADMIN",
+      "type": "external_system",
+      "title": "SAP ERP (ZMM_GET_STOCK & ZCO_GET_STD_COST)",
+      "path": "MES/page/systemSettings/api/cron_sync_sap_staging.php",
+      "protocol": "REST API / Cron Sync"
+    },
+    {
+      "id": "ext_hr_manpower",
+      "layer": "L2_EXTERNAL_ERP",
+      "domain": "DOM_HR_ACADEMY",
+      "type": "external_system",
+      "title": "ระบบสแกนนิ้วและฐานข้อมูลพนักงาน HR",
+      "path": "MES/Toolbox2/public/api/userManage.php?action=sync_manpower",
+      "protocol": "Stored Procedure Sync"
+    },
+    {
+      "id": "db_sql_server",
+      "layer": "L3_DATABASE",
+      "domain": "DOM_CORE_ADMIN",
+      "type": "database_cluster",
+      "title": "SQL Server 10.1.1.31 (IIOT_TOOLBOX)",
+      "path": "MES/Toolbox2/public/db.php",
+      "core_tables": [
+        "USERS", "SYS_ROLES", "SYS_PERMISSIONS", "SYS_ROLE_PERMISSIONS", "SYS_USER_PERMISSIONS", "SYSTEM_LOGS",
+        "ITEMS", "PRODUCT_BOM", "LOCATIONS", "MANUFACTURING_ROUTES", "LINE_SCHEDULES",
+        "INVENTORY_ONHAND", "STOCK_TRANSACTIONS", "STOCK_TRANSACTION_USERS", "STOCK_TRANSFER_ORDERS", "INVENTORY_CYCLE_COUNTS",
+        "JOB_ORDERS", "PRODUCTION_PLANS", "STOP_CAUSES", "OPERATOR_DAILY_LOGS",
+        "MANPOWER_EMPLOYEES", "MANPOWER_DAILY_LOGS", "MANPOWER_SHIFTS", "EMPLOYEE_GRADES", "EMP_SKILLS", "LEARNING_RECORDS",
+        "QMS_CASES", "QMS_NCR", "QMS_CAR", "QMS_CLAIM",
+        "PE_MACHINES", "PE_WORK_ORDERS", "PE_DOWNTIME_LOG", "MT_ITEMS", "MT_INVENTORY_ONHAND",
+        "UTILITY_METERS", "UTILITY_HOURLY_SUMMARY",
+        "PL_STRUCTURE", "DAILY_PL_ENTRIES", "MONTHLY_PL_TARGETS", "FINANCE_INVOICES",
+        "PAINT_CHEM_SHEET_HEADER", "PAINT_CHEM_LOG",
+        "TeamPlanner_Tasks", "TeamPlanner_Projects", "TeamPlanner_Spaces", "TeamPlanner_Events"
+      ],
+      "stored_procedures": [
+        "sp_ManageUser", "sp_SyncExistingUsersFromManpower", "sp_ExecuteProduction",
+        "sp_UpdateOnhandBalance", "sp_CalculateProductionCostSummary", "sp_CalculateActualCostSummary",
+        "sp_CalculateOEE_Dashboard_PieChart", "sp_CalculateOEE_Hourly_Trend",
+        "sp_GetPLEntryData_WithTargets", "sp_GetPLReport_Range", "sp_GetDashboardStats"
+      ]
+    },
+    {
+      "id": "gw_auth_sso",
+      "layer": "L4_API_GATEWAY",
+      "domain": "DOM_CORE_ADMIN",
+      "type": "security_gateway",
+      "title": "Unified Session SSO + CSRF + Cross-Tab BroadcastChannel ('mes_auth_channel')",
+      "path": "MES/Toolbox2/src/shared/contexts/AuthContext.jsx",
+      "endpoints": [
+        "MES/Toolbox2/public/login.php",
+        "MES/Toolbox2/public/check.php",
+        "MES/Toolbox2/public/logout.php",
+        "MES/Toolbox2/public/utils/check_auth.php"
+      ]
+    },
+    {
+      "id": "mod_toolbox2_home",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_HR_ACADEMY",
+      "status": "PORTED_SELF_CONTAINED",
+      "title": "TOOLBOX OS Home, Daily Log & Morning Brief (#/)",
+      "ui_path": "MES/Toolbox2/src/modules/Home/pages/HomeDashboard.jsx",
+      "api_path": "MES/Toolbox2/public/api/dailyLog/dailyLogManage.php",
+      "tables": ["OPERATOR_DAILY_LOGS", "MANPOWER_DAILY_LOGS", "UTILITY_HOURLY_SUMMARY", "STOCK_TRANSACTIONS"]
+    },
+    {
+      "id": "mod_toolbox2_planner",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_EXEC_FIN",
+      "status": "PORTED_SELF_CONTAINED",
+      "title": "Team Planner & Gantt Timeline (#/planner/*)",
+      "ui_path": "MES/Toolbox2/src/modules/TeamPlanner/TeamPlannerApp.jsx",
+      "api_path": "MES/Toolbox2/public/api/planner/",
+      "tables": ["TeamPlanner_Tasks", "TeamPlanner_Projects", "TeamPlanner_Spaces", "TeamPlanner_Events", "TeamPlanner_Activities"]
+    },
+    {
+      "id": "mod_toolbox2_transport",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_STORE",
+      "status": "PORTED_SELF_CONTAINED",
+      "title": "Employee Shuttle Bus Booking (#/transport/*)",
+      "ui_path": "MES/Toolbox2/src/modules/Transport/TransportApp.jsx",
+      "api_path": "MES/Toolbox2/public/api/transport/",
+      "tables": ["MANPOWER_EMPLOYEES"]
+    },
+    {
+      "id": "mod_toolbox2_paintchem",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_PROD",
+      "status": "PORTED_SELF_CONTAINED",
+      "title": "Paint Line Chemical Control & SPC Analytics (#/paint-chem)",
+      "ui_path": "MES/Toolbox2/src/modules/PaintChem/pages/PaintChemEntryPage.jsx",
+      "api_path": "MES/Toolbox2/public/api/paintChem/",
+      "tables": ["PAINT_CHEM_SHEET_HEADER", "PAINT_CHEM_LOG"]
+    },
+    {
+      "id": "mod_toolbox2_admin",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_CORE_ADMIN",
+      "status": "PORTED_SELF_CONTAINED",
+      "title": "User & Role Permission Management (#/admin/users & AccountSettingsModal)",
+      "ui_path": "MES/Toolbox2/src/modules/Admin/pages/UserManagement.jsx",
+      "api_path": "MES/Toolbox2/public/api/userManage.php",
+      "tables": ["USERS", "SYS_ROLES", "SYS_PERMISSIONS", "SYS_ROLE_PERMISSIONS", "SYS_USER_PERMISSIONS", "SYSTEM_LOGS"]
+    },
+    {
+      "id": "mod_page_production",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_PROD",
+      "status": "ACTIVE_LEGACY_PHP",
+      "title": "Production Entry, Live Job Queue & Tag Printer",
+      "ui_path": "MES/page/production/productionUI.php",
+      "api_path": "MES/page/production/api/inventoryManage.php",
+      "tables": ["STOCK_TRANSACTIONS", "INVENTORY_ONHAND", "STOCK_TRANSACTION_USERS", "JOB_ORDERS", "PRODUCTION_PLANS"]
+    },
+    {
+      "id": "mod_page_store",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_STORE",
+      "status": "ACTIVE_LEGACY_PHP",
+      "title": "Store & Warehouse Management (RM Receiving, Cycle Count, Material Req)",
+      "ui_path": "MES/page/storeManagement/storeDashboard.php",
+      "api_path": "MES/page/storeManagement/api/api_store.php",
+      "tables": ["INVENTORY_ONHAND", "STOCK_TRANSACTIONS", "STOCK_TRANSFER_ORDERS", "LOCATIONS", "INVENTORY_CYCLE_COUNTS"]
+    },
+    {
+      "id": "mod_page_oee",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_PROD",
+      "status": "ACTIVE_LEGACY_PHP",
+      "title": "OEE Dashboard & Shopfloor Monitor",
+      "ui_path": "MES/page/OEE_Dashboard/OEE_Shopfloor.php",
+      "api_path": "MES/page/OEE_Dashboard/api/oeeDashboardApi.php",
+      "tables": ["STOP_CAUSES", "STOCK_TRANSACTIONS"]
+    },
+    {
+      "id": "mod_page_qms_pe",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_QMS_PE",
+      "status": "ACTIVE_LEGACY_PHP",
+      "title": "iQMS (NCR/CAR/Claim), IQS, Accessories AI Vision & PE Maintenance",
+      "ui_path": "MES/page/PE/peDashboard.php",
+      "api_path": "MES/page/PE/api/analyticsAPI.php",
+      "tables": ["QMS_CASES", "QMS_NCR", "QMS_CAR", "PE_MACHINES", "PE_WORK_ORDERS", "PE_DOWNTIME_LOG", "MT_ITEMS"]
+    },
+    {
+      "id": "mod_page_utility_exec",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_EXEC_FIN",
+      "status": "ACTIVE_LEGACY_PHP",
+      "title": "Executive Dashboard, Daily P&L & Utility Energy Dashboard (Electrical/LPG)",
+      "ui_path": "MES/page/management/utilityDashboard.php",
+      "api_path": "MES/page/management/api/get_utility_dashboard.php",
+      "tables": ["UTILITY_METERS", "UTILITY_HOURLY_SUMMARY", "DAILY_PL_ENTRIES", "MONTHLY_PL_TARGETS"]
+    },
+    {
+      "id": "mod_page_manpower",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_HR_ACADEMY",
+      "status": "ACTIVE_LEGACY_PHP",
+      "title": "Manpower Operations & 4D Employee Grading (IPH / 5S / Attendance / Learning)",
+      "ui_path": "MES/page/manpower/employeeGrading.php",
+      "api_path": "MES/Toolbox2/public/api/manpower/api_my_performance.php",
+      "tables": ["MANPOWER_EMPLOYEES", "MANPOWER_DAILY_LOGS", "EMPLOYEE_GRADES", "EMP_SKILLS"]
+    },
+    {
+      "id": "mod_learning_hub",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_HR_ACADEMY",
+      "status": "ACTIVE_REACT_SPA",
+      "title": "MES Learning Hub (Interactive Engineering Masterclass Academy)",
+      "ui_path": "MES/mes-learning-hub/src/App.jsx",
+      "api_path": "/LearningHub",
+      "tables": ["LEARNING_RECORDS", "EMP_SKILLS"]
+    },
+    {
+      "id": "mod_system_settings",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_CORE_ADMIN",
+      "status": "NEXT_FOUNDATION_PORT",
+      "title": "System Settings & Master Data (Item Master, BOM, Locations, SAP Valuation)",
+      "ui_path": "MES/page/systemSettings/systemSettings.php",
+      "api_path": "MES/page/systemSettings/api/sapValuationManage.php",
+      "tables": ["ITEMS", "PRODUCT_BOM", "LOCATIONS", "LINE_SCHEDULES", "sap_staging_inventory", "sap_staging_costs"]
+    }
+  ],
+  "edges": [
+    { "from": "hw_electric_mqtt", "to": "db_sql_server", "label": "บันทึกค่าไฟ (kWh) & แก๊ส LPG รายชั่วโมง" },
+    { "from": "hw_ai_camera_cctv", "to": "mod_page_qms_pe", "label": "ส่งภาพตรวจชิ้นส่วน & คลิปเหตุการณ์" },
+    { "from": "hw_barcode_scanners", "to": "mod_page_store", "label": "สแกนรับเข้า/เบิกจ่าย/ตรวจนับสต็อก" },
+    { "from": "ext_sap_erp", "to": "db_sql_server", "label": "Sync สต็อก & ต้นทุนมาตรฐานเข้า sap_staging_*" },
+    { "from": "ext_hr_manpower", "to": "db_sql_server", "label": "Sync พนักงานและเวลาสแกนนิ้วเข้างาน" },
+    { "from": "db_sql_server", "to": "gw_auth_sso", "label": "ตรวจสอบสิทธิ์ RBAC/PBAC & บันทึก SYSTEM_LOGS" },
+    { "from": "gw_auth_sso", "to": "mod_toolbox2_home", "label": "SSO Session & Cross-Tab Sync" },
+    { "from": "gw_auth_sso", "to": "mod_toolbox2_planner", "label": "SSO Session & Cross-Tab Sync" },
+    { "from": "gw_auth_sso", "to": "mod_toolbox2_transport", "label": "SSO Session & Cross-Tab Sync" },
+    { "from": "gw_auth_sso", "to": "mod_toolbox2_paintchem", "label": "SSO Session & Cross-Tab Sync" },
+    { "from": "gw_auth_sso", "to": "mod_learning_hub", "label": "SSO Session & 4D Grading Sync" },
+    { "from": "mod_page_production", "to": "mod_page_manpower", "label": "ส่งยอดผลิต FG คำนวณค่าผลงานรายบุคคล (IPH)" },
+    { "from": "mod_learning_hub", "to": "mod_page_manpower", "label": "ส่งผลสอบผ่านหลักสูตรเข้าเกรดมิติที่ 4 (Learning)" },
+    { "from": "hw_electric_mqtt", "to": "mod_page_utility_exec", "label": "คำนวณต้นทุนค่าไฟ/ค่าแก๊สรายวันเข้า Daily P&L" }
+  ]
+}

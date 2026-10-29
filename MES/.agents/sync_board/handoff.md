@@ -56,16 +56,22 @@
 - [x] ย้ายระบบจองรถรับส่งพนักงาน (`MES/transport-system`) เข้าสู่ `MES/Toolbox2/src/modules/Transport/` และ API ไปที่ `MES/Toolbox2/public/api/transport/` พร้อมเชื่อมเมนูใน `DesktopSidebar.jsx` & `HomeDashboard.jsx` และรัน `vite build` ผ่าน 100%
 - [x] พอร์ตระบบ `MES/mes-team-planner` เข้าสู่ `MES/Toolbox2/src/modules/TeamPlanner/` (Route `#/planner/*`) โดยคงโฟลเดอร์ `MES/mes-team-planner` เดิมไว้ 100% พร้อมแก้บั๊ก `require('react-router-dom').useLocation()` ใน `App.jsx`, เพิ่ม `ErrorBoundary.jsx`, และรันบอท Puppeteer ทดสอบครบ 20 หน้า/แท็บย่อย ยืนยัน `0 errors` ไร้จอขาว 100%
 - [x] ลบโมดูลจำลองที่ไม่สมบูรณ์ (`QMS`, `MoodInsight`) ใน `MES/Toolbox2` และชี้ลิงก์ใน `HomeDashboard.jsx` กลับไปที่ `MES/page` พร้อมอัปเกรดโครงสร้างพื้นฐาน (`AuthContext.jsx`, `InactivityTimeoutModal.jsx`, `AppLayout.jsx`, `DesktopSidebar.jsx`, `login.php`, `check.php`, `logout.php`) ให้รองรับ Cross-Tab Logout/Login Sync (`mes_auth_channel`), Inactivity Auto-Logout (60m + 30s countdown), Live Session Heartbeat (45s), และ Live Header Performance (`api_my_performance.php`) ทดสอบผ่านด้วย Puppeteer Multi-Tab E2E 100%
+- [x] ยกระดับ `MES/Toolbox2` ให้พึ่งพาตัวเองได้ 100% (**100% Self-Contained Architecture**): พอร์ต Backend PHP API ทั้งหมดเข้าสู่ `MES/Toolbox2/public/api/` (`dailyLog/`, `manpower/`, `profile/`, `paintChem/` 10 ไฟล์, `planner/` 22 ไฟล์) และสร้าง `AccountSettingsModal.jsx` ใน `Toolbox2` ยืนยันผ่าน Puppeteer E2E ว่าไม่มีการยิง API ออกนอก `/Toolbox2/` แม้แต่รายการเดียว (`External API Calls: 0`)
+- [x] บันทึก **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ลงใน `MES/Toolbox2/ARCHITECTURE.md` เพื่อส่งต่อให้ Agent ตัวหลักที่ทำงานหรือกะถัดไปดำเนินการตามลำดับ
+- [x] จัดทำ **"พิมพ์เขียวแม่บทของระบบ (MES System Master Blueprint)"** ตามคำสั่งผู้บริหาร ทั้งในรูปแบบเอกสารวิศวกรรม/คู่มือรับช่วงต่อ (`MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md`) และไฟล์โครงสร้างกราฟ JSON (`MES/docs/blueprint/blueprint_graph.json`) สำหรับนำไปสร้างเป็น Interactive Visual Blueprint ต่อได้ทันที
 
 ## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:**
   1. อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (หากไม่มีข้อมูลลับ หรือแยกเข้า `.env` แล้ว) และคัดลอก Global Skills อื่นๆ (ถ้ามี) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git
   2. ดึงไฟล์ใน `/MES/MES/page/AccessoriesInspection/` จาก FTP ลงมาเทียบกับใน Git (เผื่อเพื่อนอัปเดตโค้ดขึ้น FTP โดยตรง) โดยคงส่วนที่เก็บรูปใน `../../uploads/accessories_inspection/` เอาไว้
-- [ ] **[สำหรับกะกลางคืน Argon / Flash]:**
-  - **Next Step:** เตรียมแผนพอร์ตโมดูลถัดไปจาก `MES/page/*` เข้าสู่ `MES/Toolbox2/src/modules/` ตามลำดับความสำคัญ
+  3. ตรวจสอบและดำเนินการต่อตาม **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ใน `MES/Toolbox2/ARCHITECTURE.md` (เริ่มจาก Layer 1: Shared UI/API Utilities -> Layer 2: User Management 100% Parity -> Layer 3: System Settings -> Layer 4: Full Profile Page)
+- [ ] **[สำหรับงานพิมพ์เขียวผู้บริหาร (Visual Blueprint Extension)]:**
+  - หากผู้บริหารต้องการหน้าจอ Interactive Visual Blueprint (คล้ายผังไฟฟ้า/เครื่องจักรที่คลิกดูสถานะสดได้) ให้ Agent อ่าน `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (หัวข้อที่ 8) และใช้ข้อมูลโหนด/เส้นเชื่อมจาก `MES/docs/blueprint/blueprint_graph.json` สร้างโมดูล `MES/Toolbox2/src/modules/SystemBlueprint/` ได้ทันที
 
 ## Exact Files to Modify / Reference
+- `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (พิมพ์เขียวแม่บทของระบบ MES & คู่มือส่งมอบงานผู้บริหาร)
+- `MES/docs/blueprint/blueprint_graph.json` (Machine-Readable Node/Edge Graph Schema สำหรับสร้าง Visual Blueprint)
+- `MES/Toolbox2/ARCHITECTURE.md` (สถาปัตยกรรม 100% Self-Contained & แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น)
 - `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และบันทึกการลบ/รวมศูนย์ API)
 - `MES/.agents/ftp_structure.md` (โครงสร้างพาร์ทบน FTP Server)
-- `MES/Toolbox2/ARCHITECTURE.md` (สถาปัตยกรรมเป้าหมายของ React SPA)
 - `MES/page/storeManagement/api/api_store.php` (Single Source of Truth API ของระบบคลังสินค้า)
