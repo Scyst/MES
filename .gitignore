@@ -11,3 +11,7 @@ raw_data_evidence/
 # --- Old Versions ---
 # ไม่ควรเก็บโค้ดเวอร์ชันเก่าที่ไม่ใช้งานแล้วไว้ใน Repository
 oldVer/
+
+# --- Large Binaries & Local Docs ---
+MES/AutoBot/
+System_Specification_and_Upgrade_Analysis_ASUS_TUF_F15.pdf

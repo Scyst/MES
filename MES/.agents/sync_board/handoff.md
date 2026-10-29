@@ -31,3 +31,28 @@
 - `page/storeManagement/script/cycleCount.js` (สคริปต์ควบคุม UI)
 - `page/storeManagement/api/api_store.php` (Backend API)
 
+
+---
+
+# 🌙 Handoff Section: Night-Shift System Architecture Migration & Workstation Sync (2026-10-29)
+
+## Context / Goal
+- จัดตั้งระบบทำงานคู่ขนาน **Daytime (Feature Development ที่ทำงาน)** ควบคู่กับ **Night-Shift (System Architecture Refactoring & Migration ที่บ้าน)**
+- รองรับการส่งต่องานแบบไร้รอยต่อระหว่าง **Gemini 4 Argon** (วางแผน/วิเคราะห์โครงสร้าง) และ **Flash** (ลงมือ Refactor ตามแผนเมื่อสลับโควต้า)
+- ซิงค์ MCP Server และ Skills ทั้งหมดจากเครื่องหลักที่ทำงาน (`E:\MES\MES\MES`) มายังเครื่องที่บ้าน (`C:\Users\USER\Desktop\Project\MES`)
+
+## Completed Work (สิ่งที่ทำเสร็จแล้วคืนนี้)
+- [x] ดึง Git เวอร์ชันล่าสุด (`git fetch --all` & `git pull origin main` -> `b2612d59`)
+- [x] สำรวจโครงสร้างโปรเจ็คทั้งหมด (`MES/page/*` 30 โมดูล, `mes-v2`, `mes-toolbox`, `mes-learning-hub`, `mes-mobile-app`, `mes-team-planner`, `transport-system`, `estate-crm`, `SystemMonitorTauri`)
+- [x] ตั้งค่า Root Skill & Rule Discovery ที่เครื่องบ้าน (`.agents/skills.json` และ `AGENTS.md` ที่ระดับ Root) เพื่อให้โหลดสกิลใน `MES/.agents/skills/` ได้อัตโนมัติ
+- [x] ตั้งค่า Global MCP Config (`C:\Users\USER\.gemini\config\mcp_config.json`) สำหรับเครื่องที่บ้าน
+- [x] สร้างเอกสารแจ้งตัวหลักที่ทำงานและแผนแม่บทสถาปัตยกรรมใน `MES/.agents/WORKSTATION_SYNC_REQUEST.md`
+
+## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
+- [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:** อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (หากไม่มีข้อมูลลับ หรือแยกเข้า `.env` แล้ว) และคัดลอก Global Skills อื่นๆ (ถ้ามี) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git
+- [ ] **[สำหรับกะกลางคืน Argon / Flash]:** เริ่มดำเนินการตามแผน **Night-Shift Architecture Migration** (รวมศูนย์ Frontend สู่ `MES/mes-v2` แบบ Modular และใช้ Single Source of Truth API ที่ `MES/page/<module>/api/`) โดยตกลงเลือกโมดูลแรกที่จะเริ่มจัดระเบียบกับผู้ใช้
+
+## Exact Files to Modify / Reference
+- `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และแผนแม่บทสถาปัตยกรรม)
+- `MES/.gitignore` (สำหรับปลดล็อก `mcp_server/` ที่เครื่องทำงาน)
+- `MES/mes-v2/ARCHITECTURE.md` (สถาปัตยกรรมเป้าหมายของ React SPA)
