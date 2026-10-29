@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { IndustrialPhotoCard, PhotoComparisonPair } from '../../components/IndustrialPhotoGallery';
 import { 
   FiEye, 
   FiCamera, 
@@ -2511,6 +2512,50 @@ export function MachineVisionMod2() {
             </div>
           </div>
         </div>
+
+        {/* Real Industrial Hardware Photos: Area Scan & Line Scan Cameras */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <IndustrialPhotoCard 
+            src="./images/hardware/gige_camera_setup.jpg"
+            fallbackSrc="/images/hardware/gige_camera_setup.jpg"
+            badge="ฮาร์ดแวร์จริง (Real Hardware)"
+            badgeColor="cyan"
+            title="ชุดกล้องอุตสาหกรรม 2D GigE Vision & เลนส์ C-Mount"
+            subtitle="กล้อง Area Scan สำหรับงานตรวจสอบชิ้นงานรายชิ้นบนสายพาน"
+            specs={[
+              { label: 'พอร์ตเชื่อมต่อ', value: 'GigE (RJ45 PoE)' },
+              { label: 'ชนิดชัตเตอร์', value: 'Global Shutter' },
+              { label: 'เมาท์เลนส์', value: 'Standard C-Mount' },
+              { label: 'I/O Trigger', value: 'Hirose 12-Pin (Opto)' }
+            ]}
+            description="ภาพถ่ายกล้องอุตสาหกรรมจริง (SVS-Vistek EXO Series) บอดี้อะลูมิเนียมเกรดอุตสาหกรรมพร้อมครีบระบายความร้อน ออกแบบสำหรับติดตั้งในไลน์ผลิตที่มีการสั่นสะเทือนสูง รองรับสัญญาณฮาร์ดแวร์ทริกเกอร์ความเร็วระดับไมโครวินาที"
+            checkpoints={[
+              'ขันสกรูล็อกวงแหวนรูรับแสง (Aperture Lock) และระยะโฟกัส (Focus Lock) บนตัวเลนส์ทุกครั้ง ป้องกันการเลื่อนหลุดจากการสั่นสะเทือน',
+              'สายแลนต้องใช้เกรด High-Flex Cat6 แบบมีชิลด์ถัก (STP) และขันหัวเกลียวล็อกกันหลุด (Screw-Locking Connector)',
+              'เดินสายสัญญาณ Trigger แยกรางกับสายมอเตอร์หรือไฟสามเฟส 380V เพื่อป้องกันสัญญาณรบกวน EMI'
+            ]}
+          />
+
+          <IndustrialPhotoCard 
+            src="./images/hardware/line_scan_camera.jpg"
+            fallbackSrc="/images/hardware/line_scan_camera.jpg"
+            badge="ฮาร์ดแวร์จริง (Real Hardware)"
+            badgeColor="indigo"
+            title="กล้องสแกนแนวเส้นความเร็วสูง (Line Scan Camera)"
+            subtitle="สำหรับตรวจสอบแผ่นเหล็กม้วน ฟอยล์ หรือสายพานต่อเนื่อง"
+            specs={[
+              { label: 'ความละเอียด', value: '8192 x 1 พิกเซล' },
+              { label: 'อัตราสแกน', value: 'สูงสุด 140 kHz' },
+              { label: 'ความเร็วสายพาน', value: 'สูงสุด 500 m/min' },
+              { label: 'เมาท์เลนส์', value: 'M42 / F-Mount' }
+            ]}
+            description="ภาพถ่ายกล้อง Line Scan อุตสาหกรรมจริง เซนเซอร์มีแถวพิกเซลเส้นเดียวเรียงตัวยาว ภาพสมบูรณ์จะเกิดขึ้นเมื่อวัตถุเคลื่อนผ่านหน้ากล้อง เหมาะอย่างยิ่งสำหรับการตรวจหาตามด รอยข่วน หรือตำหนิบนแผ่นชีตต่อเนื่อง"
+            checkpoints={[
+              'ต้องติดตั้ง Rotary Encoder ที่เพลาสายพานเพื่อส่งสัญญาณพัลส์ซิงค์ความเร็วภาพกับความเร็วสายพาน (Encoder Line Pitch Sync)',
+              'ต้องใช้ไฟแท่งทรงกระบอกความเข้มสูงพิเศษ (Super High-Intensity Line Light) เนื่องจากเวลาเปิดรับแสง (Line Time) สั้นระดับไมโครวินาที'
+            ]}
+          />
+        </div>
       </section>
 
       {/* Section 2: 4 Industrial Application Pillars */}
@@ -2625,6 +2670,99 @@ export function MachineVisionMod3() {
       {/* Interactive Optical Lighting Simulator */}
       <OpticalLightingSimulator />
 
+      {/* Real Industrial Lighting Photography Showcase */}
+      <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
+          <span className="text-cyan-400 font-black mr-2">1.1</span>
+          ภาพถ่ายอุปกรณ์และตัวอย่างการจัดแสงในโรงงานจริง (Real Industrial Lighting Setups)
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          ศึกษาภาพถ่ายการใช้งานไฟอุตสาหกรรมของจริงควบคู่กับแบบจำลองด้านบน เพื่อสังเกตผลกระทบต่อพื้นผิววัสดุสะท้อนแสง:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialPhotoCard 
+            src="./images/lighting/coaxial_light.jpg"
+            fallbackSrc="/images/lighting/coaxial_light.jpg"
+            badge="อุปกรณ์แสงจริง (Coaxial)"
+            badgeColor="cyan"
+            title="ชุดไฟร่วมแกน (Coaxial Light) ส่องชิ้นงานโลหะเงา"
+            subtitle="ขจัดเงาสะท้อนดวงไฟด้วยกระจก Beam Splitter 50/50"
+            specs={[
+              { label: 'มุมตกกระทบ', value: '90° ในแนวแกนเลนส์' },
+              { label: 'ชิ้นงานเป้าหมาย', value: 'โลหะปัดเงา / เวเฟอร์' },
+              { label: 'ลักษณะแสง', value: 'Collimated Diffuse' },
+              { label: 'การตรวจจับ', value: 'รอยขูดขีดบนผิวกระจก' }
+            ]}
+            description="ภาพถ่ายชุดไฟ Coaxial ของจริงติดตั้งบนแท่นตรวจชิ้นงาน แสงจากหลอด LED ด้านข้างสะท้อนลงผ่านกระจก Half-Mirror ตกกระทบชิ้นงานสะท้อนกลับเข้าเลนส์ในมุมตั้งฉาก ทำให้พื้นผิวเงาเรียบมองเห็นเป็นสีขาวสว่างสม่ำเสมอ ขณะที่รอยขีดข่วนจะหักเหแสงออกกลายเป็นสีดำคมชัด 100%"
+            checkpoints={[
+              'ระยะ Working Distance (WD) ต้องคงที่ ห้ามชิ้นงานเอียงเกิน 2 องศา มิฉะนั้นแสงจะสะท้อนหลุดนอกแกนกล้อง',
+              'ทำความสะอาดกระจก Half-Mirror ภายในด้วยผ้าไมโครไฟเบอร์เป็นประจำ อย่าให้มีฝุ่นเกาะ'
+            ]}
+          />
+
+          <IndustrialPhotoCard 
+            src="./images/lighting/dome_diffuse_light.jpg"
+            fallbackSrc="/images/lighting/dome_diffuse_light.jpg"
+            badge="อุปกรณ์แสงจริง (Dome Diffuse)"
+            badgeColor="indigo"
+            title="ไฟโดมทรงกลม (Dome Diffuse Illuminator)"
+            subtitle="ขจัดเงามืดและแสงสะท้อนจ้าบนชิ้นงานผิวโค้งมน"
+            specs={[
+              { label: 'รูปทรงโคม', value: 'Hemispherical Dome' },
+              { label: 'การกระจายแสง', value: 'Omnidirectional 360°' },
+              { label: 'ชิ้นงานเป้าหมาย', value: 'ลูกปืน / ท่อทองแดง / กระป๋อง' },
+              { label: 'จุดเด่น', value: 'ไร้จุดแสงจ้า (Hotspot-Free)' }
+            ]}
+            description="ภาพถ่ายไฟโดมสำหรับงานตรวจสอบชิ้นงานโลหะผิวโค้ง (Cloudy Day Lighting) แสงจากวงแหวน LED ด้านล่างจะยิงขึ้นไปสะท้อนกับผนังโดมสีขาวด้านบน แล้วตกกระทบชิ้นงานจากทุกทิศทาง ทำให้ผิวโค้งมนไม่มีจุดสะท้อนดวงไฟจ้าจนตาบอด"
+            checkpoints={[
+              'กล้องต้องเล็งผ่านรูตรงกลางยอดโดม ต้องจัดระยะชิ้นงานให้อยู่ใกล้ปากโดม (ระยะ 5 - 20 มม.) เพื่อให้แสงโอบล้อมสมบูรณ์',
+              'เหมาะมากสำหรับชิ้นส่วนท่อแอร์ยานยนต์และงานปั๊มขึ้นรูปทรงกระบอก'
+            ]}
+          />
+
+          <IndustrialPhotoCard 
+            src="./images/lighting/ring_light.jpg"
+            fallbackSrc="/images/lighting/ring_light.jpg"
+            badge="อุปกรณ์แสงจริง (Ring Light)"
+            badgeColor="amber"
+            title="ไฟวงแหวนรอบเลนส์ (LED Direct Ring Light)"
+            subtitle="ให้แสงสว่างทั่วถึงตรงกลางสำหรับชิ้นงานผิวด้าน"
+            specs={[
+              { label: 'การติดตั้ง', value: 'ขันยึดรอบกระบอกเลนส์' },
+              { label: 'ลักษณะแสง', value: 'Direct Front Light' },
+              { label: 'ชิ้นงานเป้าหมาย', value: 'พลาสติกผิวด้าน / กล่องพัสดุ' },
+              { label: 'ข้อควรระวัง', value: 'ห้ามใช้กับโลหะเงาผิวเรียบ' }
+            ]}
+            description="ไฟวงแหวนแบบติดตั้งตรงหน้ารอบเลนส์กล้อง ให้ความสว่างสูงและติดตั้งง่ายที่สุดในบรรดาไฟอุตสาหกรรม ให้แสงสว่างตรงชิ้นงานด้านหน้า เหมาะสำหรับงานอ่านตัวหนังสือพิมพ์ (OCR) บนพลาสติก หรือตรวจรหัสบาร์โค้ดบนกล่องลัง"
+            checkpoints={[
+              'หากตรวจชิ้นงานที่มีความมันวาวเล็กน้อย ให้ติดแผ่นโพลาไรเซอร์ (Polarizer Cap) หน้าไฟวงแหวนเพื่อตัดแสงสะท้อน',
+              'เลือกมุมองศาหลอด LED (เช่น 30°, 60°, 90°) ให้เหมาะกับระยะห่าง Working Distance'
+            ]}
+          />
+
+          <IndustrialPhotoCard 
+            src="./images/lighting/darkfield_illumination.jpg"
+            fallbackSrc="/images/lighting/darkfield_illumination.jpg"
+            badge="อุปกรณ์แสงจริง (Darkfield)"
+            badgeColor="rose"
+            title="ไฟมุมต่ำพื้นหลังมืด (Darkfield Illumination)"
+            subtitle="ยิงแสงเฉียดระนาบตรวจจับรอยขูดขีดและรอยเลเซอร์"
+            specs={[
+              { label: 'มุมยิงแสง', value: '10° - 20° เหนือระนาบ' },
+              { label: 'ทฤษฎีออปติก', value: 'Specular Reflected Away' },
+              { label: 'ชิ้นงานเป้าหมาย', value: 'รอยขูดขีด / โลโก้เลเซอร์ / ลายนูน' },
+              { label: 'ผลลัพธ์ภาพ', value: 'พื้นผิวสีดำ รอยขีดข่วนสีขาว' }
+            ]}
+            description="การจัดแสงมุมเฉียดต่ำมาก (Low-Angle Ring Light) ลำแสงส่วนใหญ่จะสะท้อนพุ่งหนีระนาบกล้องออกไปทางด้านข้าง ทำให้พื้นผิวราบเรียบมองเห็นเป็นสีดำสนิท แต่เมื่อแสงชนกับรอยขูดขีด หลุม หรือขอบนูน แสงจะกระเจิงเข้าสู่เลนส์กล้อง เกิดเป็นเส้นสว่างคมชัดบนพื้นมืด"
+            checkpoints={[
+              'ปรับตำแหน่งไฟให้อยู่ชิดติดระนาบชิ้นงานที่สุด (Working Distance ของไฟต่ำกว่า 15 มม.)',
+              'ใช้ตรวจรอยสลักตัวเลข Dot-Peen / Laser Marking บนชิ้นงานโลหะได้อย่างมีประสิทธิภาพสูงสุด'
+            ]}
+          />
+        </div>
+      </section>
+
       {/* Detailed Lighting Cheat Sheet Table */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white leading-normal">
@@ -2709,6 +2847,41 @@ export function MachineVisionMod4() {
 
       {/* Optical Formulas & 3-Pixel Rule Calculator */}
       <OpticalFormulasCalculator />
+
+      {/* Real Industrial Lens Comparison: Standard vs Bi-Telecentric */}
+      <PhotoComparisonPair 
+        title="การเปรียบเทียบเลนส์จริง: เลนส์ธรรมดา (Perspective Distortion) vs เลนส์เทเลเซนทริก (Zero Parallax)"
+        badge="การทดสอบเลนส์หน้างานจริง (Lens Reality Test)"
+        left={{
+          title: "1. เลนส์ C-Mount มาตรฐานทั่วไป (Standard Fixed Focal Lens)",
+          badge: "PERSPECTIVE DISTORTION",
+          badgeColor: "amber",
+          src: "./images/hardware/industrial_lens_cmount.jpg",
+          fallbackSrc: "/images/hardware/industrial_lens_cmount.jpg",
+          specs: [
+            { label: 'ชนิดเลนส์', value: '25mm Standard C-Mount' },
+            { label: 'ลำแสงนำเข้า', value: 'มุมกรวย (Cone Beam)' },
+            { label: 'ปรากฏการณ์', value: 'ใกล้ใหญ่ ไกลเล็ก' },
+            { label: 'ผลกระทบ', value: 'ขอบกระบอกกลมเอียงมองเห็นข้างกระบอก' }
+          ],
+          desc: "เลนส์มาตรฐานมีมุมมองรูปกรวย (Angular FOV) ทำให้วัตถุที่อยู่ใกล้กล้องมองเห็นใหญ่กว่าวัตถุที่อยู่ไกล และหากชิ้นงานหนา ขอบของชิ้นงานจะบานเอียงออกด้านข้าง ทำให้การวัดขนาดมิติผิดพลาดหากชิ้นงานขยับขึ้นลง"
+        }}
+        right={{
+          title: "2. เลนส์ไบ-เทเลเซนทริก (Bi-Telecentric Industrial Lens)",
+          badge: "PERFECT PARALLEL RAYS",
+          badgeColor: "emerald",
+          src: "./images/hardware/telecentric_lens.jpg",
+          fallbackSrc: "/images/hardware/telecentric_lens.jpg",
+          specs: [
+            { label: 'ชนิดเลนส์', value: 'Bi-Telecentric Telecentricity < 0.05°' },
+            { label: 'ลำแสงนำเข้า', value: 'ลำแสงขนานแท้ (Parallel Rays)' },
+            { label: 'ความคลาดเคลื่อน', value: 'Zero Parallax Error' },
+            { label: 'การวัดขนาด', value: 'ความแม่นยำระดับไมครอน (±0.005mm)' }
+          ],
+          desc: "เลนส์เทเลเซนทริกใช้ทัศนศาสตร์ขนาน ทำให้รับเฉพาะลำแสงที่ตั้งฉากกับระนาบ 90 องศาเท่านั้น ไม่ว่าชิ้นงานจะกระดอนขึ้นหรือลงบนสายพาน ขนาดภาพบนเซนเซอร์จะไม่เปลี่ยนแปลงแม้แต่น้อย ไม่มีมุมเอียงมองทะลุเห็นข้างกระบอก"
+        }}
+        conclusion="สำหรับงานตรวจสอบที่มีการวัดขนาดมิติเชิงวิศวกรรม (Precision Dimension Gauging) ระดับ ±0.01 มม. ขึ้นไป หรือชิ้นงานที่วางบนสายพานแล้วมีความสูงไม่เท่ากัน จำเป็นต้องใช้เลนส์ Telecentric เท่านั้น เพื่อป้องกันปัญหาการอ่านขนาดผิดเพี้ยนจากการกระเพื่อมของสายพาน"
+      />
 
       {/* Industrial Camera Interface Comparison Matrix */}
       <section className="bg-slate-900/80 p-4 sm:p-6 rounded-2xl border border-slate-800 space-y-3 sm:space-y-4">

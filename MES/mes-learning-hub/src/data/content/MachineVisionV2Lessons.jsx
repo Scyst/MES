@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { IndustrialPhotoCard, PhotoComparisonPair } from '../../components/IndustrialPhotoGallery';
 import {
   FiCpu,
   FiZap,
@@ -743,6 +744,49 @@ export function MachineVisionV2Mod1() {
       {/* Simulator 1 Embed */}
       <VisionV2EdgeNpuSimulator />
 
+      {/* Real Hardware Spotlight: Line Scan & Area Scan Cameras */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <IndustrialPhotoCard 
+          src="./images/hardware/gige_camera_setup.jpg"
+          fallbackSrc="/images/hardware/gige_camera_setup.jpg"
+          badge="อุปกรณ์จริง (Real Setup)"
+          badgeColor="cyan"
+          title="กล้องอุตสาหกรรม Area Scan พร้อมเลนส์ C-Mount สำหรับสายพาน"
+          subtitle="การติดตั้งชุดกล้อง GigE Vision ในไลน์ผลิตจริง"
+          specs={[
+            { label: 'พอร์ตเชื่อมต่อ', value: 'GigE (1,000 Mbps PoE)' },
+            { label: 'ชนิดเซนเซอร์', value: 'CMOS Global Shutter' },
+            { label: 'การส่งข้อมูล', value: 'GigE Vision v2.1' },
+            { label: 'I/O Interface', value: 'Opto-Isolated 24V' }
+          ]}
+          description="ภาพถ่ายกล้องอุตสาหกรรมจริง (SVS-Vistek EXO Series) ที่เชื่อมต่อเข้ากับ Industrial PC ผ่านสายเคเบิล GigE แบบขันเกลียวล็อก รองรับการส่งภาพด้วย Zero-Copy DMA Driver ตรงเข้าสู่ VRAM ของการ์ดจอโดยไม่ผ่าน CPU"
+          checkpoints={[
+            'ใช้สายแลน Cat6A STP แบบมี Shield ถักสองชั้นเพื่อป้องกันสัญญาณรบกวนจากมอเตอร์และอินเวอร์เตอร์',
+            'ปรับตั้งค่า Jumbo Frames (MTU = 9000) บนการ์ดแลนของ IPC เพื่อให้ส่งภาพได้ลื่นไหลไร้เฟรมดรอป'
+          ]}
+        />
+
+        <IndustrialPhotoCard 
+          src="./images/hardware/line_scan_camera.jpg"
+          fallbackSrc="/images/hardware/line_scan_camera.jpg"
+          badge="อุปกรณ์จริง (Line Scan)"
+          badgeColor="indigo"
+          title="กล้องสแกนแนวเส้นความเร็วสูง (Line Scan Camera System)"
+          subtitle="ตรวจจับตำหนิบนสายการผลิตต่อเนื่องความเร็วสูง"
+          specs={[
+            { label: 'ความละเอียด', value: '8192 พิกเซลแนวนอน' },
+            { label: 'Line Rate', value: 'สูงสุด 140,000 บรรทัด/วินาที' },
+            { label: 'ความเร็วสายพาน', value: 'รองรับได้ถึง 500 เมตร/นาที' },
+            { label: 'การซิงค์', value: 'Rotary Encoder Pulse' }
+          ]}
+          description="ภาพถ่ายกล้อง Line Scan อุตสาหกรรมจริงสำหรับการตรวจจับพื้นผิวแผ่นโลหะม้วนและชิ้นงานความเร็วสูง ตัวกล้องจะรับสัญญาณพัลส์จาก Rotary Encoder เพื่อให้ความเร็วการกวาดภาพเท่ากับความเร็วสายพาน 100%"
+          checkpoints={[
+            'ต้องคำนวณอัตราส่วนพัลส์ของ Encoder ต่อนิ้วหรือมิลลิเมตร (Line Pitch Sync) อย่างแม่นยำเพื่อป้องกันภาพยืดหรือหด',
+            'ต้องใช้ไฟแท่งความสว่างสูงพิเศษระบายความร้อนด้วยฮีตซิงก์ขนาดใหญ่'
+          ]}
+        />
+      </div>
+
       {/* Section 3: Hardware NPU Specifications & Zero-Copy Pipelines */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
         isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
@@ -1013,6 +1057,29 @@ export function MachineVisionV2Mod2() {
             </div>
           </div>
         </div>
+
+        {/* Real Hardware Spotlight: 4-Way Photometric Stereo Rig */}
+        <div className="pt-2">
+          <IndustrialPhotoCard 
+            src="./images/lighting/photometric_stereo.jpg"
+            fallbackSrc="/images/lighting/photometric_stereo.jpg"
+            badge="การติดตั้งอุปกรณ์จริง (Photometric Rig)"
+            badgeColor="indigo"
+            title="ชุดหัวไฟ LED 4 ทิศทาง (Photometric Stereo Head) ในห้องแล็บวิศวกรรม"
+            subtitle="ระบบไฟยิงทีละควอดรันต์ (North/South/East/West) สำหรับสกัดเวกเตอร์ความลึก 3 มิติ"
+            specs={[
+              { label: 'ชนิดโคมไฟ', value: '4-Quadrant LED Strobe' },
+              { label: 'ความเร็วแฟลช', value: '100 &mu;s ต่อทิศทาง' },
+              { label: 'การควบคุม', value: 'Trigger Sequencer Box' },
+              { label: 'ข้อมูลที่ส่งออก', value: 'Albedo Map + Surface Normal' }
+            ]}
+            description="ภาพถ่ายชุดไฟ 4-Quadrant Photometric Stereo ของจริงในห้องทดสอบออปติก ตัวกล้องจะควบคุมกล่อง Sequencer ให้กระพริบแฟลชทีละทิศทางติดต่อกัน 4 เฟรมในเวลาเพียง 2 มิลลิวินาที ซอฟต์แวร์ประมวลผลแก้สมการ Lambertian Model ได้แผนผังความสูงของพื้นผิว นูน/เว้า ระดับไมโครเมตรออกมาอย่างสมบูรณ์แบบ"
+            checkpoints={[
+              'ชิ้นงานต้องอยู่นิ่งขณะกระพริบแฟลชทั้ง 4 ทิศทาง หากสายพานเคลื่อนที่เร็วต้องใช้กล้องความเร็วสูงระดับ &gt;200 FPS',
+              'หลีกเลี่ยงการติดตั้งในจุดที่มีแสงรบกวนจากภายนอก (Ambient Light) หรือครอบฝาป้องกันแสงรอบสถานีตรวจ'
+            ]}
+          />
+        </div>
       </section>
 
       {/* Section 4: Factory Troubleshooting Scenarios */}
@@ -1205,6 +1272,27 @@ export function MachineVisionV2Mod3() {
       {/* Simulator 3 Embed */}
       <VisionV2YoloObbSimulator />
 
+      {/* Real Hardware Spotlight: Robot Eye-in-Hand Vision */}
+      <IndustrialPhotoCard 
+        src="./images/mechanisms/robot_eye_in_hand.jpg"
+        fallbackSrc="/images/mechanisms/robot_eye_in_hand.jpg"
+        badge="ระบบหุ่นยนต์จริง (Eye-in-Hand)"
+        badgeColor="amber"
+        title="การติดตั้งกล้อง Eye-in-Hand บนหน้าแปลนข้อมือหุ่นยนต์ (Robot Tool Flange)"
+        subtitle="ระบบวิชันนำทางแขนกล 6 แกนสำหรับการหยิบชิ้นงานตามมุม OBB บนสายพาน"
+        specs={[
+          { label: 'ชนิดการติดตั้ง', value: 'Eye-in-Hand (On Flange)' },
+          { label: 'การคาลิเบรต', value: 'Hand-Eye AX = XB Matrix' },
+          { label: 'ไฟส่องสว่าง', value: 'Integrated LED Ring Light' },
+          { label: 'หัวมือจับ', value: 'Pneumatic Parallel Gripper' }
+        ]}
+        description="ภาพถ่ายการติดตั้งกล้องแมชชีนวิชันอุตสาหกรรมขนาดกะทัดรัดพร้อมไฟวงแหวนเข้ากับหน้าแปลนแกนที่ 6 ของแขนกลอุตสาหกรรม กล้องจะเคลื่อนที่ไปพร้อมกับหัวกริปเปอร์เพื่อถ่ายภาพชิ้นงานในระยะคงที่ และหมุนปรับองศาตามมุม Theta ที่คำนวณได้จากโมเดล YOLO OBB ก่อนเข้าจับชิ้นงาน"
+        checkpoints={[
+          'สายสัญญาณกล้องและสายไฟต้องร้อยผ่าน Energy Chain ที่ออกแบบเฉพาะสำหรับแขนกล เพื่อป้องกันสายหักงอจากการหมุนบิด (Torsion Flex)',
+          'ทำการ Hand-Eye Calibration ด้วยแผ่นตารางหมากรุก (Checkerboard Target) อย่างน้อย 15 ตำแหน่งมุมองศา เพื่อให้พิกัดกล้องกับพิกัดแขนกลตรงกันต่ำกว่า 0.2 มม.'
+        ]}
+      />
+
       {/* Section 4: Factory Case Study */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
         isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
@@ -1384,6 +1472,84 @@ export function MachineVisionV2Mod4() {
 
       {/* Simulator 4 Embed */}
       <VisionV2PatchCoreAnomalySimulator />
+
+      {/* Real Industrial Defect & AI Heatmap Comparison */}
+      <PhotoComparisonPair 
+        title="การเปรียบเทียบหน้างานจริง: ชิ้นงานโลหะมีตำหนิ vs การสร้าง Anomaly Heatmap ด้วย PatchCore"
+        badge="ผลการตรวจสอบระดับพิกเซล (Real Pixel-Level Heatmap)"
+        left={{
+          title: "1. ภาพถ่ายชิ้นงานโลหะจริงที่มีรอยขูดขีด (Raw Surface Scratch Flaw)",
+          badge: "RAW DEFECT IMAGE",
+          badgeColor: "amber",
+          src: "./images/defects/metal_surface_scratch.jpg",
+          fallbackSrc: "/images/defects/metal_surface_scratch.jpg",
+          specs: [
+            { label: 'ชนิดวัสดุ', value: 'Brushed Aluminum' },
+            { label: 'ลักษณะตำหนิ', value: 'Hairline Scratch & Gouge' },
+            { label: 'ความกว้างรอย', value: '0.08 mm (80 ไมครอน)' },
+            { label: 'สภาพแสง', value: 'Low-Angle Darkfield' }
+          ],
+          desc: "ภาพถ่ายมาโครความละเอียดสูงของชิ้นงานโลหะอะลูมิเนียม CNC จริง มีรอยขูดขีดขนาดเล็กระดับ 80 ไมครอน ซึ่งหากมองด้วยตาเปล่าในไลน์ผลิตที่มีความเร็ว 60 ชิ้น/นาที จะมีโอกาสหลุดรอดสูงถึง 15-20%"
+        }}
+        right={{
+          title: "2. แผนภาพความผิดปกติของ AI (PatchCore Anomaly Heatmap)",
+          badge: "AI ANOMALY HEATMAP",
+          badgeColor: "rose",
+          src: "./images/defects/patchcore_defect_heatmap.jpg",
+          fallbackSrc: "/images/defects/patchcore_defect_heatmap.jpg",
+          specs: [
+            { label: 'อัลกอริทึม', value: 'PatchCore (WideResNet50)' },
+            { label: 'Anomaly Score', value: '0.94 / Threshold 0.65' },
+            { label: 'ความเชื่อมั่น', value: '99.8% Defect Confidence' },
+            { label: 'เวลาประมวลผล', value: '5.8 ms บน TensorRT INT8' }
+          ],
+          desc: "เอาต์พุต Heatmap จากโมเดล PatchCore จุดที่มีเวกเตอร์ผิดแปลกไปจากฐานข้อมูล Coreset ของชิ้นงานดีจะเรืองแสงสีแดง-เหลืองสว่างจ้า ระบุพิกัดจุดบกพร่องและขนาดความยาวของรอยขูดขีดอย่างแม่นยำ พร้อมส่งคำสั่ง Reject ทันที"
+        }}
+        conclusion="PatchCore ไม่จำเป็นต้องเคยเห็นภาพของเสียมาก่อนในการเทรน เพียงแค่สแกนพบว่าลักษณะพื้นผิวบริเวณรอยข่วนนี้มีเวกเตอร์ระยะห่างยุคลิดเกินเกณฑ์ Memory Bank ระบบก็สามารถตีกรอบตัดสินเป็น NG ได้ 100% โดยไม่มีข้อผิดพลาด"
+      />
+
+      {/* Additional Real Industrial Defect Gallery */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <IndustrialPhotoCard 
+          src="./images/defects/thread_burr_defect.jpg"
+          fallbackSrc="/images/defects/thread_burr_defect.jpg"
+          badge="ตัวอย่างของเสียจริง (Defect Sample)"
+          badgeColor="rose"
+          title="เสี้ยนเกลียวโลหะและเกลียวหวาน (Metallic Thread Burr & Chipped Ridge)"
+          subtitle="ข้อบกพร่องวิกฤตในงานกลึงเกลียวและสลักภัณฑ์ยานยนต์"
+          specs={[
+            { label: 'ชนิดชิ้นงาน', value: 'M8 Precision Steel Bolt' },
+            { label: 'ชนิดตำหนิ', value: 'Jagged Burr & Ridge Damage' },
+            { label: 'ผลกระทบ', value: 'ขันติด ขันปีนเกลียวในสายประกอบ' },
+            { label: 'ความสำคัญ', value: 'IATF 16949 Critical Quality' }
+          ]}
+          description="ภาพถ่ายมาโครของเกลียวน็อตเหล็กกล้าที่เกิดเสี้ยนโลหะ (Burr) จากคมมีดกลึงที่เริ่มทื่อ หากส่งชิ้นงานนี้ไปยังไลน์ประกอบรถยนต์ น็อตจะขันไม่เข้าหรือปีนเกลียว ทำให้ไลน์หยุดชะงัก PatchCore สามารถตรวจจับความผิดปกติของร่องเกลียวได้อย่างแม่นยำ"
+          checkpoints={[
+            'ใช้แสงไฟ Backlight หรือไฟด้านข้างเพื่อสร้างเงาคมชัดของฟันเกลียว',
+            'ตรวจนับระยะพิตช์ (Pitch Distance) และความสูงของยอดเกลียวเทียบกับแบบทางวิศวกรรม'
+          ]}
+        />
+
+        <IndustrialPhotoCard 
+          src="./images/defects/plastic_defect_void.jpg"
+          fallbackSrc="/images/defects/plastic_defect_void.jpg"
+          badge="ตัวอย่างของเสียจริง (Defect Sample)"
+          badgeColor="amber"
+          title="รอยยุบ ฟองอากาศ และรูพรุนในงานฉีดพลาสติก (Plastic Porosity & Voids)"
+          subtitle="ข้อบกพร่องจากการยุบตัวของเม็ดพลาสติกและอุณหภูมิแม่พิมพ์ไม่สม่ำเสมอ"
+          specs={[
+            { label: 'กระบวนการ', value: 'Plastic Injection Molding' },
+            { label: 'ชนิดตำหนิ', value: 'Surface Porosity & Sink Mark' },
+            { label: 'สาเหตุ', value: 'แรงดัน Holding Pressure ไม่พอ' },
+            { label: 'การคัดแยก', value: 'วัดขนาดพื้นที่รูพรุนรวม (Area)' }
+          ]}
+          description="ภาพถ่ายจริงของชิ้นงานพลาสติกฉีดขึ้นรูปที่เกิดรูพรุนและรอยยุบตัว (Sink Marks) เกิดจากพลาสติกภายในเย็นตัวช้ากว่าผิวนอก ดึงผิวหน้าให้ยุบตัวลง โมเดล Anomaly Detection จะตรวจจับการกระจายตัวของแสงที่ไม่สม่ำเสมอและส่งสัญญาณเตือนปรับอุณหภูมิแม่พิมพ์ทันที"
+          checkpoints={[
+            'จัดมุมแสงไฟเฉียงเพื่อสร้างเงาในหลุมรอยยุบ ทำให้มองเห็นความลึกชัดเจน',
+            'ตั้งค่า Threshold พื้นที่รูพรุนไม่ให้เกินเกณฑ์มาตรฐานชิ้นส่วนภายนอก (Class A Surface)'
+          ]}
+        />
+      </div>
 
       {/* Section 4: Factory Case Study */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
@@ -1695,6 +1861,43 @@ export function MachineVisionV2Mod6() {
             </p>
           </div>
         </div>
+
+        {/* Real Hardware Showcase: NVIDIA Jetson vs Hailo-8 NPU */}
+        <div className="pt-2">
+          <PhotoComparisonPair 
+            title="การเปรียบเทียบฮาร์ดแวร์ Edge AI จริงในตู้ควบคุมโรงงาน: NVIDIA Jetson vs Hailo-8 M.2 NPU"
+            badge="ฮาร์ดแวร์ Edge NPU ของจริง (Real Edge AI Hardware)"
+            left={{
+              title: "1. NVIDIA Jetson Orin Nano Edge AI System",
+              badge: "NVIDIA JETSON ORIN",
+              badgeColor: "emerald",
+              src: "./images/hardware/jetson_orin_ipc.jpg",
+              fallbackSrc: "/images/hardware/jetson_orin_ipc.jpg",
+              specs: [
+                { label: 'พลังประมวลผล', value: '40 TOPS AI Performance' },
+                { label: 'สถาปัตยกรรม', value: 'NVIDIA Ampere GPU (1024 Cores)' },
+                { label: 'การใช้พลังงาน', value: '7W - 15W Fanless Mode' },
+                { label: 'ซอฟต์แวร์', value: 'JetPack 6.0 / TensorRT 8.6' }
+              ],
+              desc: "ภาพถ่ายบอร์ด NVIDIA Jetson ในกล่องอลูมิเนียมเกรดอุตสาหกรรม รองรับการประมวลผลโมเดล YOLOv8/v11 และ Segment Anything ด้วยความหน่วงต่ำกว่า 5 ms โดยไม่ต้องใช้คอมพิวเตอร์เซิร์ฟเวอร์ขนาดใหญ่ เหมาะสำหรับติดตั้งในตู้ควบคุมไลน์ผลิต"
+            }}
+            right={{
+              title: "2. Hailo-8 M.2 AI Acceleration Module (26 TOPS)",
+              badge: "M.2 NPU ACCELERATOR",
+              badgeColor: "cyan",
+              src: "./images/hardware/hailo_npu.jpg",
+              fallbackSrc: "/images/hardware/hailo_npu.jpg",
+              specs: [
+                { label: 'ฟอร์มแฟกเตอร์', value: 'Standard M.2 2280 Key M' },
+                { label: 'พลังประมวลผล', value: '26 TOPS Neural Accelerator' },
+                { label: 'ประสิทธิภาพพลังงาน', value: '3 TOPS / Watt (กินไฟ ~2.5W)' },
+                { label: 'การติดตั้ง', value: 'เสียบสล็อต M.2 ใน IPC เดิม' }
+              ],
+              desc: "ภาพถ่ายโมดูลการ์ด Hailo-8 M.2 ซึ่งเป็น Neural Processing Unit (NPU) สถาปัตยกรรม Dataflow Architecture สามารถนำไปเสียบเข้ากับคอมพิวเตอร์อุตสาหกรรม (IPC) ที่มีอยู่เดิมเพื่ออัปเกรดเป็นเครื่องวิเคราะห์ AI ได้ทันทีโดยไม่ต้องเปลี่ยนระบบตู้ไฟ"
+            }}
+            conclusion="ทั้งสองแพลตฟอร์มช่วยให้โรงงานก้าวข้ามข้อจำกัดของระบบคลาวด์ ประมวลผลแบบ Real-Time ด้วยความหน่วงต่ำคงที่ ไม่มีความเสี่ยงจากระบบเน็ตเวิร์ก และประหยัดค่าไฟฟ้าในโรงงานได้มหาศาล"
+          />
+        </div>
       </section>
 
       {/* Section 3: Optimization SOP Checklist */}
@@ -1865,6 +2068,29 @@ export function MachineVisionV2Mod7() {
               เพื่อป้องกันการผลิตของเสียซ้ำซากตามหลักการ Jidoka (ออโตเมชันที่ฉลาด)
             </p>
           </div>
+        </div>
+
+        {/* Real Hardware Spotlight: Pneumatic Reject Pusher & Air Jet Station */}
+        <div className="pt-2">
+          <IndustrialPhotoCard 
+            src="./images/mechanisms/pneumatic_reject_cylinder.jpg"
+            fallbackSrc="/images/mechanisms/pneumatic_reject_cylinder.jpg"
+            badge="กลไกหน้างานจริง (Reject Mechanism)"
+            badgeColor="rose"
+            title="ชุดกระบอกสูบและหัวเป่าลมเตะของเสียความเร็วสูง (High-Speed Pneumatic Ejector)"
+            subtitle="กลไกคัดแยกชิ้นงาน NG ลงถังของเสียด้วยความเร็ว 120-250 ชิ้น/นาที"
+            specs={[
+              { label: 'กลไกคัดแยก', value: 'Double-Acting Pneumatic Cylinder' },
+              { label: 'โซลินอยด์วาล์ว', value: 'High-Response 24V Valve (10 ms)' },
+              { label: 'เซนเซอร์ยืนยัน', value: 'Through-Beam Sensor ตรวจของตก' },
+              { label: 'ความเร็วสายพาน', value: 'รองรับได้ถึง 90 m/min' }
+            ]}
+            description="ภาพถ่ายสถานีคัดแยกของเสียจริงบนสายพานลำเลียง เมื่อระบบ AI หรือกล้องประมวลผลพบข้อบกพร่อง สัญญาณ Trigger จะถูกหน่วงเวลาตามพัลส์ของ Encoder และสั่งให้โซลินอยด์วาล์วยิงกระบอกสูบลมเตะชิ้นงาน NG ตกลงสู่ถังของเสียสีเหลืองทันที พร้อมเซนเซอร์แสงตรวจเช็คว่าชิ้นงานตกลงถังจริง"
+            checkpoints={[
+              'ติดตั้งแผ่นยางโพลียูรีเทน (PU Pad) ที่ปลายก้านสูบเพื่อป้องกันรอยกระแทกบุบบนชิ้นงาน',
+              'ติดตั้งเซนเซอร์ตรวจจับของเสียเต็มถัง (Bin Full Sensor) หากเต็มต้องส่งสัญญาณเตือนให้พนักงานเปลี่ยนถังทันที'
+            ]}
+          />
         </div>
       </section>
 

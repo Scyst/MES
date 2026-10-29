@@ -18,6 +18,10 @@ Here is the complete list of all directories on the FTP server.
 /LearningHub
 /LearningHub/assets
 /LearningHub/images
+/LearningHub/images/defects
+/LearningHub/images/hardware
+/LearningHub/images/lighting
+/LearningHub/images/mechanisms
 /MES
 /MES/MES
 /MES/MES/auth
