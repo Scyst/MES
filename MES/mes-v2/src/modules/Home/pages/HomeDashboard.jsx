@@ -185,7 +185,6 @@ export default function HomeDashboard() {
 
   const qualityServices = [
     { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa'] },
-    { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php' },
     { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peDashboard.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peTechMobile.php' },
     { title: 'Digital Twin', desc: 'ระบบ 3D Monitoring ของโรงงาน', icon: Cuboid, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/digitalTwin/digitalTwin.html' },
@@ -209,11 +208,7 @@ export default function HomeDashboard() {
     { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/admin/users', roles: ['admin', 'creator'] },
   ];
 
-  const sandboxServices = [
-    { title: 'Plan Dashboard (Test)', desc: 'ระบบวางแผนการผลิต (ทดสอบ)', icon: LineChart, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/managementCopy/managementDashboard.php', roles: ['admin', 'creator'] },
-    { title: 'Production (Test)', desc: 'ระบบบันทึกผลผลิต (ทดสอบ)', icon: Boxes, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/productionCopy/productionUI.php', roles: ['admin', 'creator'] },
-    { title: 'Sales Tracking (Test)', desc: 'ติดตามสถานะออเดอร์ (ทดสอบ)', icon: Truck, colorClass: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400', to: '/iot-toolbox/sandbox-b9/MES/MES/page/salesCopy/salesDashboard.php', roles: ['admin', 'creator'] },
-  ];
+  const sandboxServices = [];
 
   const prototypeServices = [
     { title: 'New MES Toolbox (SPA)', desc: 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', icon: Rocket, colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', to: '/iot-toolbox/sandbox-b9/Toolbox2/#/' },

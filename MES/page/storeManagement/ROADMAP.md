@@ -88,7 +88,7 @@
     - [x] ตรวจสอบยอดแท็กใน `dbo.RM_SERIAL_TAGS` (ปรับ current_qty และซิงค์ location_id เมื่อเป็นของหลงคลัง)
     - [x] ตรวจสอบประวัติ Ledger ใน `dbo.STOCK_TRANSACTIONS` (Reference: `CC-<count_id>`, ประเภท `ADJ_IN`/`ADJ_OUT`)
   - [x] **ทดสอบการกด Reject ด้วยมือ**: ยืนยันว่าสต็อกคงเดิม 100% ไม่สร้าง Transaction หลอก และบันทึกสถานะ REJECTED พร้อมผู้อนุมัติถูกต้อง
-  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/api/api_store.php`, `mes-toolbox/public/api/v1/inventory.php`
+  - *ไฟล์ที่เกี่ยวข้อง:* `page/storeManagement/inventoryDashboard.php`, `page/storeManagement/script/inventoryDashboard.js`, `page/storeManagement/api/api_store.php`
 
 - [x] **1.3 Inventory Record Accuracy (IRA) & Zone Health Metrics**
   - [x] พัฒนาฟังก์ชันคำนวณสูตร IRA ระดับรายการ (Item-level IRA: $\frac{\text{Accurate Items}}{\text{Counted Items}} \times 100\%$) และระดับมูลค่า (Value-weighted IRA: $\max(0, 1 - \frac{\sum |\text{diff}| \times \text{Price}}{\sum \text{system\_qty} \times \text{Price}}) \times 100\%$)

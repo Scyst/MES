@@ -43,7 +43,6 @@ const MENU_DATA = [
     title: 'QUALITY & MT', sectionIcon: ShieldCheck,
     items: [
       { name: 'iQMS (Quality)', icon: MonitorPlay, href: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php', external: true },
-      { name: 'Accessories Inspection', icon: Camera, href: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
       { name: 'PE Enterprise', icon: Wrench, href: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peDashboard.php', external: true },
     ]
   },

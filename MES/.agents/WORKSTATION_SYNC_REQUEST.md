@@ -37,13 +37,33 @@
 เพื่อรองรับการสลับโมเดลระหว่าง **Gemini 4 Argon** (วางแผน/วิเคราะห์เชิงลึก) และ **Flash** (ลงมือ Refactor จำนวนมากอย่างรวดเร็วเมื่อโควต้า Argon ใกล้หมด) ให้ยึดแนวทางดังนี้:
 
 ### เป้าหมายสถาปัตยกรรมใหม่ (Target System Architecture)
-- **Unified Modular Frontend (`MES/mes-v2`):**
+- **Unified Modular Frontend (`MES/mes-v2` -> เป้าหมายเปลี่ยนชื่อเป็น `MES/Toolbox2` ให้ตรงกับ FTP):**
   - ใช้ React 18 + Vite + TailwindCSS + HashRouter (`#/`) โครงสร้าง `src/modules/<ModuleName>/` และ `src/shared/`
-  - ค่อยๆ พอร์ตโมดูลจาก Legacy PHP (`MES/page/*`) และรวมฟีเจอร์จาก Prototype เดิม (`MES/mes-toolbox`) เข้ามาไว้ใน `mes-v2` เป็นหนึ่งเดียว
+  - ค่อยๆ พอร์ตโมดูลจาก Legacy PHP (`MES/page/*`) และรวมโปรเจ็คย่อย (`MES/transport-system`, `MES/mes-team-planner`) เข้ามาไว้ใน `mes-v2` เป็นหนึ่งเดียว
 - **Single Source of Truth Backend API (`MES/page/<module>/api/*.php`):**
   - เลิกคัดลอกไฟล์ API แยกไปไว้ในหลายโฟลเดอร์ ให้ทุก Frontend เรียกใช้ REST/JSON API ที่ `MES/page/<module>/api/` ร่วมกัน โดยใช้ Session & PBAC Permission (`check_auth.php`) ชุดเดียวกัน
 - **Zero-Disruption Guarantee (ห้ามกระทบงานกลางวัน):**
   - ก่อนเริ่มงานกะกลางคืน ต้องรัน `git pull origin main --rebase` และอ่าน `MES/.agents/sync_board/<YYYY-MM-DD>.md` ของวันนั้นเสมอ เพื่อดูว่าตอนกลางวันผู้ใช้กำลังแก้โมดูลไหนอยู่ และหลีกเลี่ยงการแก้ทับไฟล์เดียวกัน
+
+### 🧹 บันทึกการทำความสะอาดระบบและจัดระเบียบ Repository (2026-10-29 Night-Shift)
+> **⚠️ สำคัญมากสำหรับ Agent ทุกตัว (Workstation & Home):** โฟลเดอร์และไฟล์ต่อไปนี้ถูกจัดการ/ลบออกจาก Git เรียบร้อยแล้ว ห้ามสร้างซ้ำหรืออ้างอิงถึงอีก:
+1. **ลบ `MES/mes-toolbox` และรวมศูนย์ API คลังสินค้าสู่ `MES/page/storeManagement/api/api_store.php`:**
+   - จากการตรวจสอบเปรียบเทียบ Switch-Case Actions ทั้งหมด พบว่า `MES/page/storeManagement/api/api_store.php` มีครบ **72 Actions** (206 KB) ซึ่งเป็น Superset 100% ของ `MES/mes-toolbox/public/api/v1/inventory.php` ที่มีเพียง 50 Actions (และไม่มี Action ใดเลยที่มีเฉพาะใน `inventory.php`)
+   - สคริปต์ทั้งหมดใน `MES/page/storeManagement/script/*.js` เรียกใช้ `api/api_store.php` อยู่แล้ว 100%
+   - ดังนั้นจึงทำการลบ `MES/mes-toolbox/` ทิ้งทั้งหมด และกำหนดให้ **`MES/page/storeManagement/api/api_store.php` เป็น Single Source of Truth เพียงจุดเดียว**
+2. **แยก `SystemMonitorBackend` และ `SystemMonitorTauri` ออกเป็น Standalone Repository:**
+   - ย้ายออกจากโปรเจ็ค `MES` ไปยัง Git Repository แยกต่างหากที่ `C:\Users\USER\Desktop\Project\SystemMonitor` เพื่อไม่ให้ปะปนกับระบบโรงงาน
+3. **ลบโฟลเดอร์ทดสอบ/ซ้ำซ้อน/ไม่ได้ใช้งานแล้ว (ลดขนาด Repo ไปกว่า 213 MB / 2,383 ไฟล์):**
+   - `MES_TEST/` (1,567 ไฟล์, 121.77 MB — Staging mirror เก่า)
+   - `MES/Toolbox2/` (โฟลเดอร์เก็บไฟล์ Build `dist` เก่าที่ซ้ำซ้อน — เคลียร์พื้นที่เพื่อเตรียมเปลี่ยนชื่อ `MES/mes-v2` มาใช้ชื่อ `MES/Toolbox2` ให้ตรงกับพาร์ทบน FTP `/Toolbox2`)
+   - `MES/estate-crm/` (โปรเจ็คทดสอบอสังหาฯ ไม่เกี่ยวกับโรงงาน)
+   - `MES/page/AccessoriesInspection/`, `MES/page/managementCopy/`, `MES/page/salesCopy/`, `MES/page/maintenancePE/`, `MES/page/SAP_Sync/`, `MES/page/sap_db.php` (โมดูลสำเนา/ทดสอบที่เลิกใช้แล้ว พร้อมถอดลิงก์ออกจาก Navbar และ Sidebar ทั้งหมด)
+   - ไฟล์รายงานและ Log ชั่วคราว (`MES/Executive_Report_*.html`, `MES/timeline.json`, `mqtt_system_profile.json`, `recovery_plan.md`)
+4. **โมดูลที่เก็บรักษาไว้ตามคำสั่งผู้ใช้:**
+   - `MES/page/areaAccess/` (เก็บไว้ — โปรเจ็คตามคำสั่งผู้บริหาร)
+   - `MES/mes-mobile-app/` (เก็บไว้ก่อนเพื่อความปลอดภัยของพนักงานหน้างาน)
+   - `MES/transport-system/` (เก็บไว้ — ระบบจองรถรับส่งพนักงาน เตรียมย้ายเข้า `mes-v2/src/modules/Transport`)
+   - `MES/mes-team-planner/` (ห้ามลบเด็ดขาด — เตรียมวางแผนรวมโครงสร้างเข้า `mes-v2/src/modules/TeamPlanner`)
 
 ### ขั้นตอนการทำงานเมื่อเปลี่ยนจาก Argon เป็น Flash
 1. เมื่อสลับเป็น **Flash** ให้โมเดลอ่านไฟล์นี้ (`MES/.agents/WORKSTATION_SYNC_REQUEST.md`) และ `MES/.agents/sync_board/handoff.md` เป็นอันดับแรก

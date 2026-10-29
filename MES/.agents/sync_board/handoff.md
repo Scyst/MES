@@ -47,12 +47,20 @@
 - [x] ตั้งค่า Root Skill & Rule Discovery ที่เครื่องบ้าน (`.agents/skills.json` และ `AGENTS.md` ที่ระดับ Root) เพื่อให้โหลดสกิลใน `MES/.agents/skills/` ได้อัตโนมัติ
 - [x] ตั้งค่า Global MCP Config (`C:\Users\USER\.gemini\config\mcp_config.json`) สำหรับเครื่องที่บ้าน
 - [x] สร้างเอกสารแจ้งตัวหลักที่ทำงานและแผนแม่บทสถาปัตยกรรมใน `MES/.agents/WORKSTATION_SYNC_REQUEST.md`
+- [x] แก้ปัญหา GitHub Reject ไฟล์ขนาดใหญ่เกิน 100MB (`MES/AutoBot/AutoBot.exe` 115MB) โดยเพิ่มเข้า `.gitignore`
+- [x] แยกโปรเจ็ค `SystemMonitorBackend` และ `SystemMonitorTauri` ออกไปยัง Git Repository แยกต่างหากที่ `C:\Users\USER\Desktop\Project\SystemMonitor`
+- [x] ตรวจสอบยืนยันว่า `MES/page/storeManagement/api/api_store.php` (72 actions) เป็น Superset 100% ของ `MES/mes-toolbox/public/api/v1/inventory.php` (50 actions) และลบ `MES/mes-toolbox/` ออกอย่างปลอดภัย
+- [x] ลบโฟลเดอร์และไฟล์ที่ไม่ได้ใช้แล้วรวม 2,383 ไฟล์ (~213.4 MB): `MES_TEST/`, `MES/Toolbox2/` (โฟลเดอร์เก็บ build เก่า), `MES/estate-crm/`, `MES/mes-toolbox/`, `MES/page/AccessoriesInspection/`, `MES/page/managementCopy/`, `MES/page/salesCopy/`, `MES/page/maintenancePE/`, `MES/page/SAP_Sync/`, `MES/page/sap_db.php` และไฟล์รายงานชั่วคราว พร้อมถอดลิงก์ที่ตายแล้วออกจาก `nav_dropdown.php`, `dailyLogUI.php`, `DesktopSidebar.jsx`, `HomeDashboard.jsx`
 
 ## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:** อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (หากไม่มีข้อมูลลับ หรือแยกเข้า `.env` แล้ว) และคัดลอก Global Skills อื่นๆ (ถ้ามี) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git
-- [ ] **[สำหรับกะกลางคืน Argon / Flash]:** เริ่มดำเนินการตามแผน **Night-Shift Architecture Migration** (รวมศูนย์ Frontend สู่ `MES/mes-v2` แบบ Modular และใช้ Single Source of Truth API ที่ `MES/page/<module>/api/`) โดยตกลงเลือกโมดูลแรกที่จะเริ่มจัดระเบียบกับผู้ใช้
+- [ ] **[สำหรับกะกลางคืน Argon / Flash]:**
+  - **Step 1:** เปลี่ยนชื่อโฟลเดอร์ `MES/mes-v2` เป็น `MES/Toolbox2` เพื่อให้ชื่อโฟลเดอร์ในโปรเจ็คตรงกับพาร์ทจริงบน FTP (`/Toolbox2`) ตามที่ระบุใน `MES/.agents/ftp_structure.md`
+  - **Step 2:** ย้ายระบบจองรถรับส่งพนักงาน (`MES/transport-system`) เข้าไปเป็นโมดูล `src/modules/Transport` ใน `MES/Toolbox2` (`mes-v2`)
+  - **Step 3:** วางโครงสร้างรองรับการย้าย `MES/mes-team-planner` เข้าสู่ `src/modules/TeamPlanner` ใน `MES/Toolbox2` (`mes-v2`)
 
 ## Exact Files to Modify / Reference
-- `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และแผนแม่บทสถาปัตยกรรม)
-- `MES/.gitignore` (สำหรับปลดล็อก `mcp_server/` ที่เครื่องทำงาน)
+- `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และบันทึกการลบ/รวมศูนย์ API)
+- `MES/.agents/ftp_structure.md` (โครงสร้างพาร์ทบน FTP Server)
 - `MES/mes-v2/ARCHITECTURE.md` (สถาปัตยกรรมเป้าหมายของ React SPA)
+- `MES/page/storeManagement/api/api_store.php` (Single Source of Truth API ของระบบคลังสินค้า)
