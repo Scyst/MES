@@ -148,13 +148,13 @@ $pageIcon = "fas fa-folder-open";
                             <thead style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
 
-                                    <th style="width: 35%;">File Name</th>
-                                    <th style="width: 20%;">Description</th>
-                                    <th style="width: 15%;">Category</th>
-                                    <th style="width: 10%;">Size</th>
-                                    <th style="width: 10%;">Uploaded By</th>
+                                    <th style="width: 33%;">File Name</th>
+                                    <th style="width: 18%;">Description</th>
+                                    <th style="width: 14%;">Category</th>
+                                    <th style="width: 9%;">Size</th>
+                                    <th style="width: 14%;">Uploaded By</th>
                                     <?php if ($canManage): ?>
-                                    <th style="width: 10%; text-align: right;">Actions</th>
+                                    <th style="width: 12%; text-align: right;">Actions</th>
                                     <?php endif; ?>
                                 </tr>
                             </thead>

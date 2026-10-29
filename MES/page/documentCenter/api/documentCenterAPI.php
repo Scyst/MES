@@ -35,6 +35,7 @@ try {
     // ดึงชื่อตารางจาก config มาใส่ในตัวแปรเพื่อง่ายต่อการใช้งาน
     $documentsTable = DOCUMENTS_TABLE;
     $usersTable = USERS_TABLE;
+    $manpowerEmployeesTable = defined('MANPOWER_EMPLOYEES_TABLE') ? MANPOWER_EMPLOYEES_TABLE : 'MANPOWER_EMPLOYEES';
 
     switch ($action) {
         //==================================
@@ -56,9 +57,13 @@ try {
             // 1. Get explicit folders (only if not searching, or if search term matches)
             $explicitFolders = [];
             if (empty($searchTerm)) {
-                $sqlFolders = "SELECT d.id, d.file_name, d.category, CONVERT(VARCHAR, d.created_at, 126) AS created_at, u.username AS uploaded_by 
+                $sqlFolders = "SELECT d.id, d.file_name, d.category, CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
+                                      COALESCE(NULLIF(LTRIM(RTRIM(u.fullname)), ''), NULLIF(LTRIM(RTRIM(m.name_th)), ''), u.username) AS uploaded_by,
+                                      u.username AS uploader_username,
+                                      u.profile_picture AS uploader_avatar
                                FROM dbo.{$documentsTable} d 
                                LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id 
+                               LEFT JOIN dbo.{$manpowerEmployeesTable} m ON u.emp_id = m.emp_id
                                WHERE d.file_type = 'folder' AND d.category = ?";
                 $stmtFolders = $pdo->prepare($sqlFolders);
                 $stmtFolders->execute([$folderPath]);
@@ -101,6 +106,8 @@ try {
                         'category' => $folderPath,
                         'created_at' => null,
                         'uploaded_by' => 'System',
+                        'uploader_username' => 'System',
+                        'uploader_avatar' => null,
                         'is_folder' => true
                     ];
                 }
@@ -116,9 +123,9 @@ try {
 
             if (!empty($searchTerm)) {
                 // If searching, ignore folderPath and search globally
-                $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR u.username LIKE ?)";
+                $whereClauses[] = "(d.file_name LIKE ? OR d.file_description LIKE ? OR u.username LIKE ? OR u.fullname LIKE ? OR m.name_th LIKE ?)";
                 $searchValue = "%{$searchTerm}%";
-                array_push($params, $searchValue, $searchValue, $searchValue);
+                array_push($params, $searchValue, $searchValue, $searchValue, $searchValue, $searchValue);
             } else {
                 $whereClauses[] = "d.category = ?";
                 $params[] = $folderPath;
@@ -133,9 +140,12 @@ try {
             $sqlDocs = "
                 SELECT d.id, d.file_name, d.file_description, d.category, d.file_size,
                       CONVERT(VARCHAR, d.created_at, 126) AS created_at, 
-                      u.username AS uploaded_by
+                      COALESCE(NULLIF(LTRIM(RTRIM(u.fullname)), ''), NULLIF(LTRIM(RTRIM(m.name_th)), ''), u.username) AS uploaded_by,
+                      u.username AS uploader_username,
+                      u.profile_picture AS uploader_avatar
                 FROM dbo.{$documentsTable} d
                 LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id
+                LEFT JOIN dbo.{$manpowerEmployeesTable} m ON u.emp_id = m.emp_id
                 {$finalWhereClause}
                 ORDER BY d.created_at DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
@@ -187,7 +197,10 @@ try {
             // Combine: Folders first, then documents
             $data = array_merge($foldersToReturn, $documentsToReturn);
 
-            $countSql = "SELECT COUNT(*) FROM dbo.{$documentsTable} d LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id {$finalWhereClause}";
+            $countSql = "SELECT COUNT(*) FROM dbo.{$documentsTable} d 
+                         LEFT JOIN dbo.{$usersTable} u ON d.uploaded_by_user_id = u.id 
+                         LEFT JOIN dbo.{$manpowerEmployeesTable} m ON u.emp_id = m.emp_id 
+                         {$finalWhereClause}";
             $countStmt = $pdo->prepare($countSql);
             $countStmt->execute($params);
             $totalRecords = $countStmt->fetchColumn();

@@ -194,9 +194,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     <td class="text-secondary small">-</td>
                     <td class="text-secondary small fw-medium">-</td>
                     <td>
-                        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
-                            <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
-                            ${escapeHTML(doc.uploaded_by) || 'N/A'}
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;" title="${escapeHTML(doc.uploader_username && doc.uploader_username !== doc.uploaded_by ? 'Username: ' + doc.uploader_username : (doc.uploaded_by || ''))}">
+                            ${doc.uploader_avatar ? `
+                                <img src="${escapeHTML(doc.uploader_avatar)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="Avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: none; align-items: center; justify-content: center; color: white; flex-shrink: 0;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
+                            ` : `
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
+                            `}
+                            <span>${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
                         </span>
                     </td>
                     ${canManage ? `
@@ -234,9 +239,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     </td>
                     <td class="text-secondary small fw-medium">${formatBytes(doc.file_size)}</td>
                     <td>
-                        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
-                            <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
-                            ${escapeHTML(doc.uploaded_by) || 'N/A'}
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;" title="${escapeHTML(doc.uploader_username && doc.uploader_username !== doc.uploaded_by ? 'Username: ' + doc.uploader_username : (doc.uploaded_by || ''))}">
+                            ${doc.uploader_avatar ? `
+                                <img src="${escapeHTML(doc.uploader_avatar)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="Avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: none; align-items: center; justify-content: center; color: white; flex-shrink: 0;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
+                            ` : `
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #CBD5E1; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;"><i class="fas fa-user" style="font-size: 0.6rem;"></i></div>
+                            `}
+                            <span>${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
                         </span>
                     </td>
                     ${canManage ? `
@@ -334,7 +344,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (editDocId) editDocId.value = doc.id;
         if (editDocDescription) editDocDescription.value = doc.file_description || '';
         if (editDocCategory) editDocCategory.value = doc.category || '';
-        if (viewDocUploadedBy) viewDocUploadedBy.textContent = doc.uploaded_by || 'N/A';
+        if (viewDocUploadedBy) {
+            viewDocUploadedBy.textContent = doc.uploaded_by || 'N/A';
+            if (doc.uploader_username && doc.uploader_username !== doc.uploaded_by) {
+                viewDocUploadedBy.title = `Username: ${doc.uploader_username}`;
+            } else {
+                viewDocUploadedBy.removeAttribute('title');
+            }
+        }
         if (viewDocUploadedAt) viewDocUploadedAt.textContent = new Date(doc.created_at).toLocaleString();
 
         if (editDocDescription) editDocDescription.readOnly = !canManage;
