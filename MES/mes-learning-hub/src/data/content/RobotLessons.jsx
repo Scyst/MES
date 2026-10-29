@@ -2650,64 +2650,197 @@ export function RobotAiVisionBinPickingSimulator() {
 /* ========================================================================= */
 /* MODULE 9 LESSON COMPONENT: COBOTS & DIRECT TEACHING                       */
 /* ========================================================================= */
+/* ========================================================================= */
+/* MODULE 9 LESSON: COBOTS, DIRECT TEACHING & FORCE-LIMITING SAFETY          */
+/* ========================================================================= */
 export function RobotMod9() {
   const { isDark } = useTheme();
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-        <div className="flex items-center gap-2 text-teal-500 text-xs font-bold uppercase tracking-wider mb-2">
-          <FiShield className="w-4 h-4" /> บทที่ 9 (Module 9)
+    <div className="space-y-6 md:space-y-8 animate-fadeIn">
+      {/* Module Header Banner */}
+      <div className={`p-6 md:p-8 rounded-2xl border shadow-xl relative overflow-hidden transition-all ${
+        isDark 
+          ? 'bg-gradient-to-r from-teal-950/80 via-slate-900 to-cyan-950/70 border-teal-500/30' 
+          : 'bg-gradient-to-r from-teal-50 via-white to-cyan-50 border-teal-300 shadow-teal-500/5'
+      }`}>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-600 dark:text-teal-300 text-xs font-bold mb-3 border border-teal-500/30">
+          <FiShield className="w-4 h-4" /> โมดูลที่ 9 (Module 9 of 12 - Advanced Robotics Masterclass)
         </div>
-        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          หุ่นยนต์ร่วมปฏิบัติการ (Cobots) &amp; ระบบจูงสอน Direct Teaching (ISO/TS 15066)
+        <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          หุ่นยนต์ร่วมปฏิบัติการ (Cobots), Direct Teaching &amp; มาตรฐานแรงปะทะ ISO/TS 15066
         </h1>
-        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-          ศึกษาวิวัฒนาการจากหุ่นยนต์อุตสาหกรรมในกรงสู่หุ่นยนต์ร่วมปฏิบัติการกับมนุษย์ เทคโนโลยี Joint Torque Sensor, ระบบจำกัดแรงปะทะ (PFL), และการสอนจุดพิกัดด้วยมือเปล่า
+        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          ศึกษาวิวัฒนาการการปฏิวัติจากการกักขังหุ่นยนต์ในกรงตาข่ายเหล็ก สู่การทำงานเคียงบ่าเคียงไหล่กับมนุษย์แบบไร้รั้วกั้น (Fenceless Operation), 
+          4 รูปแบบการทำงานร่วมกันตามมาตรฐาน ISO 10218 และ ISO/TS 15066, การคำนวณขีดจำกัดแรงกดทางชีวกลศาสตร์ (Biomechanical Thresholds 140 N), 
+          และกลไกชดเชยแรงโน้มถ่วงแบบแอกทีฟสำหรับการจูงสอนด้วยมือเปล่า (Zero-Gravity Direct Teaching)
         </p>
       </div>
 
-      <RobotCobotDirectTeachingSimulator />
-
+      {/* Section 1: Evolution to Collaborative Robotics */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
         isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-500 flex items-center justify-center text-sm font-black border border-teal-500/40">1</span>
-          4 วิธีการทำงานร่วมกันระหว่างมนุษย์และหุ่นยนต์ตามมาตรฐาน ISO 10218 / ISO/TS 15066
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-600 dark:text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">1</span>
+          วิวัฒนาการจาก Traditional Industrial Robot สู่ Collaborative Robot (Cobot)
+        </h2>
+        <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          ในอดีต หุ่นยนต์อุตสาหกรรมถูกเปรียบเหมือน "ยักษ์ตาบอด" ที่มีแรงเหวี่ยงมหาศาล หากมนุษย์หลุดเข้าไปในพื้นที่รัศมีทำงานอาจเกิดอุบัติเหตุถึงแก่ชีวิตได้ 
+          กฎหมายความปลอดภัยจึงบังคับให้ติดตั้งกรงเหล็กล้อมรอบ 100% แต่หุ่นยนต์ร่วมปฏิบัติการ (Cobot) ถูกออกแบบใหม่ตั้งแต่ฐานรากเพื่อความปลอดภัย:
+        </p>
+
+        <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
+          <table className="w-full min-w-[680px] text-left text-xs border-collapse">
+            <thead className={`font-semibold uppercase text-[11px] border-b ${
+              isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
+            }`}>
+              <tr>
+                <th className="py-3 px-4 w-[24%]">มิติการประเมิน (Feature)</th>
+                <th className="py-3 px-4 w-[38%] text-rose-600 dark:text-rose-300">หุ่นยนต์กรงเหล็กดั้งเดิม (Caged Robot)</th>
+                <th className="py-3 px-4 w-[38%] text-teal-600 dark:text-teal-400 font-bold">หุ่นยนต์ร่วมปฏิบัติการ (Cobot)</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-800'}`}>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">การป้องกันพื้นที่ (Safety Guarding)</td>
+                <td className="py-3 px-4 text-rose-500">ต้องมีรั้วตาข่ายเหล็กล้อมรอบ 100% + Safety Interlock</td>
+                <td className="py-3 px-4 font-bold text-teal-600 dark:text-teal-400">ทำงานไร้รั้วกั้นได้ (Fenceless) ร่วมโต๊ะงานเดียวกับมนุษย์</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">เซนเซอร์ตรวจจับแรงที่ข้อต่อ (Torque Sensing)</td>
+                <td className="py-3 px-4 text-rose-500">ไม่มี ตรวจจับการชนไม่ได้จนกว่ามอเตอร์จะ Overload ตัด</td>
+                <td className="py-3 px-4 font-bold text-teal-600 dark:text-teal-400">มี Joint Torque Sensor ทุกข้อต่อ หยุดในเวลา &lt; 50 ms</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">วิธีการสอนจุดพิกัด (Teaching Method)</td>
+                <td className="py-3 px-4">กดปุ่มจ็อกแกนบน Teach Pendant ทีละแกน (ใช้เวลา 2-4 ชม.)</td>
+                <td className="py-3 px-4 font-bold text-teal-600 dark:text-teal-400">จูงแขนกลด้วยมือเปล่า (Direct Hand Guiding ใน 5 นาที)</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">การประหยัดพื้นที่โรงงาน (Factory Footprint)</td>
+                <td className="py-3 px-4 text-rose-500">ใช้พื้นที่กว้างมาก เสียพื้นที่ให้กับรั้วและระยะเผื่อความปลอดภัย</td>
+                <td className="py-3 px-4 font-bold text-teal-600 dark:text-teal-400">ประหยัดพื้นที่โรงงานลงได้ 40 - 60%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Section 2: 4 Collaborative Modes ISO 15066 */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-600 dark:text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">2</span>
+          4 รูปแบบการทำงานร่วมกันตามข้อกำหนดมาตรฐาน ISO 10218 / ISO/TS 15066
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-teal-600 text-sm">1. Safety-Rated Monitored Stop (SMS)</h3>
+            <h3 className="font-bold text-teal-600 dark:text-teal-300 text-sm">1. Safety-Rated Monitored Stop (SMS)</h3>
             <p className="leading-relaxed">
-              หุ่นยนต์ทำงานด้วยความเร็วปกติ แต่เมื่อมนุษย์ก้าวเข้าสู่พื้นที่ปฏิบัติการ (ตรวจจับผ่าน Scanner หรือ Light Curtain) มอเตอร์จะหยุดหมุนโดยไม่ต้องตัดไฟเลี้ยง (Drive stays energized) และทำงานต่ออัตโนมัติเมื่อมนุษย์เดินออก
+              หุ่นยนต์สามารถทำงานด้วยความเร็วสูงสุดของมอเตอร์อุตสาหกรรม แต่เมื่อมนุษย์ก้าวเข้าสู่พื้นที่ปฏิบัติการ (ตรวจจับผ่าน Laser Scanner หรือม่านแสง) 
+              ระบบขับเคลื่อนจะหยุดนิ่งทันทีโดยไม่ต้องตัดกระแสไฟเลี้ยง (Drive stays energized with zero speed) และเริ่มทำงานต่อโดยอัตโนมัติเมื่อมนุษย์เดินออก
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-cyan-600 text-sm">2. Hand Guiding (Direct Teaching)</h3>
+            <h3 className="font-bold text-cyan-600 dark:text-cyan-300 text-sm">2. Hand Guiding (Direct Teaching)</h3>
             <p className="leading-relaxed">
-              ผู้สอนสามารถจับแขนกลขยับได้อย่างอิสระ โดยมีปุ่ม Enabling Switch หรือปุ่ม Free-Drive บนมือจับ แขนกลจะปรับน้ำหนักตัวเองให้ลอยไร้น้ำหนัก (Zero Gravity Payload Compensation) เพื่อบันทึกจุดทางเดินได้อย่างรวดเร็ว
+              ผู้สอนงานสามารถจับแขนกลขยับได้อย่างอิสระ โดยมีปุ่ม Enabling Switch หรือปุ่ม Free-Drive บนมือจับ แขนกลจะเปิดระบบ Active Gravity Compensation 
+              ชดเชยน้ำหนักตัวเองให้ลอยตัวเสมือนอยู่ในสภาวะสุญญากาศไร้น้ำหนัก ทำให้ผู้สอนลากแขนกลไปแตะจุดที่ต้องการและกดบันทึกพิกัดได้ทันที
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-amber-600 text-sm">3. Speed &amp; Separation Monitoring (SSM)</h3>
+            <h3 className="font-bold text-amber-600 dark:text-amber-300 text-sm">3. Speed &amp; Separation Monitoring (SSM)</h3>
             <p className="leading-relaxed">
-              ใช้เซนเซอร์ความปลอดภัย (Safety Radar / Laser Scanner 2D-3D) วัดระยะห่างระหว่างคนกับแขนกล หากคนเข้าใกล้ แขนกลจะลดความเร็วลงแบบไดนามิก และหากเข้าใกล้เกินระยะปลอดภัยวิกฤตจะหยุดสนิททันที
+              การคำนวณระยะปลอดภัยตามมาตรฐาน ISO 13855: $S = (v_h \times T_r) + (v_r \times T_s) + C$ 
+              โดยเซนเซอร์ 2D/3D Laser Scanner วัดระยะห่างระหว่างคนกับแขนกล หากคนอยู่ไกล แขนกลวิ่งเต็มสปีด 1,500 mm/s เมื่อคนเดินเข้าใกล้ จะลดความเร็วเหลือ 250 mm/s และหยุดสนิทหากเข้าใกล้เกินระยะวิกฤต
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-rose-600 text-sm">4. Power and Force Limiting (PFL)</h3>
+            <h3 className="font-bold text-rose-600 dark:text-rose-300 text-sm">4. Power and Force Limiting (PFL)</h3>
             <p className="leading-relaxed">
-              หัวใจสำคัญของ Cobot ทุกตัว มอเตอร์ทุกข้อต่อมี Torque Sensor คอยวัดแรงบิดอย่างต่อเนื่อง หากเกิดการกระทบกับคนเกินเกณฑ์ไบโอเมคานิกส์ (Bio-mechanical threshold ~140N) ระบบจะหยุดการเคลื่อนที่ในเสี้ยววินาทีและคลายแรงออก
+              หัวใจสำคัญที่สุดของ Cobot ข้อต่อทุกแกนมีเซนเซอร์วัดแรงบิดอย่างต่อเนื่อง หากเกิดการกระทบกับร่างกายมนุษย์เกินเกณฑ์ชีวกลศาสตร์ 
+              <strong>Max 140 N</strong> (สำหรับบริเวณหน้าอกและซี่โครง) หรือเกิดแรงดันเกิน <strong>150 N/cm²</strong> ระบบจะตัดการเคลื่อนที่ในเสี้ยววินาทีและคลายแรงออกทันที
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Simulator 9 Embed */}
+      <RobotCobotDirectTeachingSimulator />
+
+      {/* Section 3: Joint Torque Sensing & Zero-G Mathematics */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-600 dark:text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">3</span>
+          คณิตศาสตร์ระบบชดเชยแรงโน้มถ่วง (Zero-Gravity Active Compensation)
+        </h2>
+        <div className={`p-4 rounded-xl border font-mono text-xs space-y-2 ${
+          isDark ? 'bg-slate-950 border-slate-800 text-teal-300' : 'bg-slate-50 border-slate-200 text-teal-800'
+        }`}>
+          <div className="font-bold text-sm text-slate-800 dark:text-white">สมการควบคุมแรงบิดชดเชย (Joint Torque Feedforward Equation):</div>
+          <div>&tau;_motor(i) = G_i(q_1, ..., q_6) + M_tool &times; g &times; r_cg(q) &plusmn; &tau;_friction</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-sans">
+            โดย G_i คือเมทริกซ์แรงโน้มถ่วงของชิ้นส่วนแขนกล, M_tool คือน้ำหนักของเครื่องมือปลายแขน (Gripper + Part), ระบบประมวลผลคำนวณซ้ำทุก 1 ms ทำให้ผู้สอนใช้นิ้วมือสะกิดแขนกลขยับได้อย่างนุ่มนวล
+          </div>
+        </div>
+      </section>
+
+      {/* Section 4: Factory Case Study */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-600 dark:text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">4</span>
+          กรณีศึกษาหน้างาน: การติดตั้ง Cobot ช่วยขันสกรูในสถานีประกอบเครื่องปรับอากาศ
+        </h2>
+        <div className="space-y-3 text-xs">
+          <div className={`p-4 rounded-xl border space-y-1.5 ${
+            isDark ? 'bg-slate-800/60 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+          }`}>
+            <div className="flex items-center justify-between font-bold">
+              <span className="text-amber-500 flex items-center gap-1.5"><FiAlertTriangle /> ปัญหาเดิม: พนักงานเมื่อยล้าจากการก้มขันสกรู 1,600 ตัวต่อกะ เกิดปัญหาแรงบิดไม่ถึงสเปก</span>
+            </div>
+            <p><strong>การแก้ปัญหาด้วย Cobot:</strong> ติดตั้ง Cobot 6 แกนข้างโต๊ะงานของพนักงานโดยไม่ต้องกั้นรั้ว พนักงานวางคอมเพรสเซอร์ Cobot ยื่นหัวขันสกรูอัตโนมัติด้วยแรงบิดควบคุม 8.5 Nm และมีเซนเซอร์ Safety Laser Scanner ควบคุมความเร็วตามระยะห่างพนักงาน เพิ่มผลผลิต 35% ไร้อุบัติเหตุ 100%</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 5: Risk Assessment SOP Checklist */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-600 dark:text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">5</span>
+          ใบตรวจสอบความปลอดภัยก่อนส่งมอบ Cobot (ISO 12100 &amp; ISO/TS 15066 SOP Checklist)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          {[
+            { title: '1. Pinch Points & Gap Check', desc: 'ตรวจสอบระยะหนีบระหว่างข้อต่อ ไม่ให้มีช่องว่างแคบที่อาจหนีบนิ้วมือ (ระยะปลอดภัยต้อง &ge; 25 mm หรือ &le; 4 mm)' },
+            { title: '2. End-Effector Radius Radius', desc: 'หัวจับ Gripper และชิ้นงานต้องไม่มีขอบคม หากเป็นชิ้นงานมีคมต้องติดตั้งกรอบกำบังหรือใช้เซนเซอร์หยุดก่อนแตะ' },
+            { title: '3. Bio-fidelic Force Measurement', desc: 'ใช้เครื่องวัดแรงกระแทกมาตรฐาน (Pilz PRMS) ทดสอบชนจุดต่างๆ แรงกดต้องไม่เกิน 140 N ตามเกณฑ์ ISO 15066' },
+            { title: '4. Operator Safety Acceptance', desc: 'ฝึกอบรมพนักงานประจำสถานีให้เข้าใจพฤติกรรมการเคลื่อนที่ของ Cobot และการกดปุ่มหยุดฉุกเฉิน E-Stop' }
+          ].map((item, idx) => (
+            <div key={idx} className={`p-3.5 rounded-xl border flex items-start gap-3 ${
+              isDark ? 'bg-slate-800/70 border-slate-700' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <FiCheckCircle className="w-5 h-5 text-teal-500 shrink-0 mt-0.5" />
+              <div>
+                <div className={`font-bold text-xs ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{item.title}</div>
+                <div className={`text-[11px] mt-0.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
@@ -2715,58 +2848,169 @@ export function RobotMod9() {
 }
 
 /* ========================================================================= */
-/* MODULE 10 LESSON COMPONENT: DIGITAL TWIN & OFFLINE PROGRAMMING (OLP)      */
+/* MODULE 10 LESSON: DIGITAL TWIN & OFFLINE PROGRAMMING (OLP)               */
 /* ========================================================================= */
 export function RobotMod10() {
   const { isDark } = useTheme();
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-        <div className="flex items-center gap-2 text-indigo-500 text-xs font-bold uppercase tracking-wider mb-2">
-          <FiLayers className="w-4 h-4" /> บทที่ 10 (Module 10)
+    <div className="space-y-6 md:space-y-8 animate-fadeIn">
+      {/* Module Header Banner */}
+      <div className={`p-6 md:p-8 rounded-2xl border shadow-xl relative overflow-hidden transition-all ${
+        isDark 
+          ? 'bg-gradient-to-r from-indigo-950/80 via-slate-900 to-purple-950/70 border-indigo-500/30' 
+          : 'bg-gradient-to-r from-indigo-50 via-white to-purple-50 border-indigo-300 shadow-indigo-500/5'
+      }`}>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs font-bold mb-3 border border-indigo-500/30">
+          <FiLayers className="w-4 h-4" /> โมดูลที่ 10 (Module 10 of 12 - Advanced Robotics Masterclass)
         </div>
-        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+        <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           Digital Twin &amp; โปรแกรมหุ่นยนต์ออฟไลน์ (Offline Programming - OLP)
         </h1>
-        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-          การจำลองสายการผลิตเสมือนจริงด้วยซอฟต์แวร์ OLP (RoboDK / Siemens Process Simulate) การวางแผนเส้นทางเชื่อมและหยิบชิ้นงานบน 3D CAD, การตรวจสอบการชน (Clash Detection), และการขจัดจุดวิกฤต Singularity
+        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          การจำลองสายการผลิตเสมือนจริงด้วยซอฟต์แวร์ OLP (RoboDK / Siemens Process Simulate), การวิเคราะห์เชิงคณิตศาสตร์เพื่อขจัด 3 จุดวิกฤต Singularity 
+          (Wrist, Shoulder, Elbow), การตรวจสอบการชนของเครื่องมือกับจิ๊กจับยึด (Clash Detection), 
+          และการปรับแต่งรัศมีโค้ง Zone Blending เพื่อตัดลดเวลา Cycle Time ลงได้มากกว่า 25%
         </p>
       </div>
 
-      <RobotOfflineSimulationLab />
-
+      {/* Section 1: Economic Justification of OLP */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
         isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-500 flex items-center justify-center text-sm font-black border border-indigo-500/40">1</span>
-          3 จุดวิกฤตทางกลศาสตร์ (Singularities) ที่ต้องหลีกเลี่ยงในงานจำลอง
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">1</span>
+          ต้นทุนเศรษฐศาสตร์: ทำไมโรงงานยุคใหม่จึงห้ามใช้ Teach Pendant สอนสดหน้างาน?
         </h2>
+        <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          การหยุดไลน์ผลิต (Line Stop) เพื่อให้โปรแกรมเมอร์เข้าไปยืนกดจ็อกแขนกลทีละจุด มีต้นทุนความสูญเสียทางอุตสาหกรรมสูงถึง 50,000 - 200,000 บาทต่อชั่วโมง 
+          การเขียนโปรแกรมแบบ OLP บน Digital Twin ช่วยให้สามารถจำลองและตรวจสอบโค้ดล่วงหน้าได้ 100% ขณะที่ไลน์ผลิตจริงยังเดินเครื่องผลิตชิ้นงานเดิมอยู่:
+        </p>
+
+        <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
+          <table className="w-full min-w-[680px] text-left text-xs border-collapse">
+            <thead className={`font-semibold uppercase text-[11px] border-b ${
+              isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
+            }`}>
+              <tr>
+                <th className="py-3 px-4 w-[24%]">มิติการประเมิน (Dimension)</th>
+                <th className="py-3 px-4 w-[38%] text-rose-600 dark:text-rose-300">การสอนสดหน้างาน (Teach Pendant Online)</th>
+                <th className="py-3 px-4 w-[38%] text-indigo-600 dark:text-indigo-400 font-bold">การจำลองออฟไลน์ (Digital Twin OLP)</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-800'}`}>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">เวลาหยุดเครื่องเพื่อ Setup (Downtime)</td>
+                <td className="py-3 px-4 text-rose-500">8 - 24 ชั่วโมง (สูญเสียมูลค่าการผลิตมหาศาล)</td>
+                <td className="py-3 px-4 font-bold text-indigo-600 dark:text-indigo-400">15 - 30 นาที (โหลดโค้ดและ Calibrate จุดอ้างอิง)</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">ความเสี่ยงแขนกลชนจิ๊กและอุปกรณ์ (Collision Risk)</td>
+                <td className="py-3 px-4 text-rose-500">สูงมาก จากมุมอับสายตาของผู้สอนหน้างาน</td>
+                <td className="py-3 px-4 font-bold text-indigo-600 dark:text-indigo-400">0% ผ่านการทดสอบ 3D Collision Mesh Check ล่วงหน้า</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">การคำนวณ Cycle Time ที่แม่นยำ</td>
+                <td className="py-3 px-4">กะประมาณด้วยนาฬิกาจับเวลา ไม่รู้ความเร็วเร่งสูงสุด</td>
+                <td className="py-3 px-4 font-bold text-indigo-600 dark:text-indigo-400">จำลองกราฟไดนามิกส์มอเตอร์ แม่นยำ &plusmn;0.1 วินาที</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Section 2: Mathematical Singularities */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">2</span>
+          คณิตศาสตร์ของ 3 จุดวิกฤตทางกลศาสตร์ (Kinematic Singularities)
+        </h2>
+        <div className={`p-4 rounded-xl border font-mono text-xs space-y-2 ${
+          isDark ? 'bg-slate-950 border-slate-800 text-indigo-300' : 'bg-slate-50 border-slate-200 text-indigo-800'
+        }`}>
+          <div className="font-bold text-sm text-slate-800 dark:text-white">สมการจาโคเบียนจุดวิกฤต (Jacobian Singularity Condition):</div>
+          <div>v_tcp = J(q) &times; q_dot &rArr; q_dot = J(q)^(-1) &times; v_tcp</div>
+          <div>เมื่อ det(J(q)) = 0 &rArr; ความเร็วข้อต่อ q_dot &rarr; &infin; (Infinite Joint Velocity)</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-sans">
+            คอนโทรลเลอร์ไม่สามารถคำนวณการเคลื่อนที่แนวเส้นตรง (MOVEL) ได้ ส่งผลให้มอเตอร์เกิดเสียงดังกระชากและตัดการทำงาน Error ทันที
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div className={`p-4 rounded-xl border space-y-2 ${
-            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+            isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
           }`}>
-            <h3 className="font-bold text-rose-600 text-sm">Wrist Singularity (แกน 4 และ 6 ขนานกัน)</h3>
-            <p className="leading-relaxed">
-              เกิดขึ้นเมื่อแกนที่ 5 พับตรงเป็นมุม 0° ทำให้แกน 4 และแกน 6 เรียงตัวอยู่ในแนวเส้นตรงเดียวกัน คอนโทรลเลอร์ไม่สามารถคำนวณทิศทางการหมุนได้ ส่งผลให้มอเตอร์แกน 4 หมุนด้วยความเร็วสูงผิดปกติจนเกิด Error ทันที
+            <h4 className="font-bold text-rose-600 dark:text-rose-400 text-sm">1. Wrist Singularity</h4>
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+              เกิดขึ้นเมื่อแกน 5 พับตรงเป็นมุม 0° ทำให้แกน 4 และแกน 6 ขนานกันในแนวเส้นตรงเดียวกัน 
+              แขนกลสูญเสียองศาอิสระในการบิดข้อมือ มอเตอร์แกน 4 จะพยายามหมุนด้วยความเร็วสูงผิดปกติ แก้ไขโดยเอียงหัว Tool อย่างน้อย 5°
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
-            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+            isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
           }`}>
-            <h3 className="font-bold text-amber-600 text-sm">Shoulder Singularity (ข้อมือตัดแกน 1)</h3>
-            <p className="leading-relaxed">
-              เกิดขึ้นเมื่อจุดตัดของข้อมือ (Center of Wrist) เคลื่อนที่มาตัดกับแนวแกนหมุนของแกนที่ 1 (Base Joint) แขนกลต้องสะบัดฐาน 180° ในทันทีเพื่อรักษาความเร็วแนวราบ ทำให้โครงสร้างสั่นกระพือ
+            <h4 className="font-bold text-amber-600 dark:text-amber-400 text-sm">2. Shoulder Singularity</h4>
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+              เกิดขึ้นเมื่อจุดศูนย์กลางข้อมือ (Wrist Center) เคลื่อนที่ผ่านแนวแกนหมุนของแกนที่ 1 (Base Joint) 
+              แขนกลต้องสะบัดฐาน 180° ในพริบตาเพื่อรักษาความเร็วปลาย Tool แก้ไขโดยปรับตำแหน่งฐานหุ่นยนต์หรือหลบเส้นทางไม่ให้ตัดแกนกลาง
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
-            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+            isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
           }`}>
-            <h3 className="font-bold text-teal-600 text-sm">Elbow Singularity (แขนเหยียดสุดขอบ)</h3>
-            <p className="leading-relaxed">
-              เกิดขึ้นเมื่อข้อศอก (แกน 3) เหยียดตรง 180° แขนกลสูญเสียองศาอิสระในการเคลื่อนที่แนวเหยียดออก (Limit Reach) ต้องจัดวางตำแหน่งฐานหุ่นยนต์ใหม่ในขั้นตอน Simulation ก่อนสร้างแท่นจริง
+            <h4 className="font-bold text-teal-600 dark:text-teal-400 text-sm">3. Elbow Singularity</h4>
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+              เกิดขึ้นเมื่อข้อศอก (แกน 3) เหยียดตรง 180° แขนกลเหยียดสุดรัศมีทำงาน (Maximum Reach Limit) 
+              ไม่สามารถเคลื่อนที่แนวเส้นตรงเหยียดออกไปได้อีก แก้ไขโดยวางชิ้นงานให้อยู่ในระยะ 60-80% ของรัศมีแขนกล
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Simulator 10 Embed */}
+      <RobotOfflineSimulationLab />
+
+      {/* Section 3: Zone Blending Optimization */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">3</span>
+          การเพิ่มผลผลิตด้วย Zone Blending (Corner Smoothing Optimization)
+        </h2>
+        <p className={`text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300`}>
+          หากใช้คำสั่งหยุดสนิท (Fine Stop: CNT 0 หรือ Fine) แขนกลจะต้องชะลอความเร็วลงเหลือ 0 mm/s ในทุกๆ จุดเลี้ยว แล้วจึงเร่งความเร็วใหม่ 
+          ทำให้เกิดการกระตุกและกินเวลาไปป์ไลน์ ใน OLP วิศวกรจะกำหนด <strong>Corner Zone Radius (Zone 50 - 100 mm)</strong> 
+          ให้แขนกลตัดโค้งอย่างนุ่มนวล รักษาความเร็วต่อเนื่อง ตัดลดเวลา Cycle Time ลงได้กว่า <strong>27.3%</strong> และยืดอายุการใช้งานกระปุกเกียร์
+        </p>
+      </section>
+
+      {/* Section 4: Calibration SOP Checklist */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">4</span>
+          ขั้นตอนการ Calibrate โลกเสมือนกับโลกจริง (3-Point User Frame SOP Checklist)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          {[
+            { title: '1. Tool Center Point (TCP) Calibration', desc: 'ใช้วิธี 4-Point Method หรือ Pointer Jig สอบเทียบจุดปลาย Tool ให้มีความคลาดเคลื่อนไม่เกิน &plusmn;0.2 mm' },
+            { title: '2. User Frame 3-Point Touch', desc: 'แตะจุดกำเนิด (Origin), จุดแกน X+, และจุดแกน Y+ บนจิ๊กจริง เพื่อปรับระนาบโลกเสมือนใน OLP ให้ตรงกับแท่นหน้างาน 100%' },
+            { title: '3. Low-Speed Dry Run Verification', desc: 'รันโค้ดรอบแรกด้วยความเร็ว Override 10% พร้อมกดปุ่ม Hold เพื่อตรวจดูระยะเผื่อ Safety Clearance หน้างานจริง' },
+            { title: '4. Post-Processor Syntax Check', desc: 'ตรวจสอบรหัสคำสั่งเฉพาะยี่ห้อ (เช่น Fanuc .TP, KUKA .src/.dat, ABB .mod) ไม่มีคำสั่งพิกัดที่เกินขอบเขตแกน' }
+          ].map((item, idx) => (
+            <div key={idx} className={`p-3.5 rounded-xl border flex items-start gap-3 ${
+              isDark ? 'bg-slate-800/70 border-slate-700' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <FiCheckCircle className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+              <div>
+                <div className={`font-bold text-xs ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{item.title}</div>
+                <div className={`text-[11px] mt-0.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
@@ -2774,56 +3018,112 @@ export function RobotMod10() {
 }
 
 /* ========================================================================= */
-/* MODULE 11 LESSON COMPONENT: INDUSTRIAL FIELDBUS & MES INTEGRATION        */
+/* MODULE 11 LESSON: INDUSTRIAL FIELDBUS & MES INTEGRATION                   */
 /* ========================================================================= */
 export function RobotMod11() {
   const { isDark } = useTheme();
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-        <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold uppercase tracking-wider mb-2">
-          <FiServer className="w-4 h-4" /> บทที่ 11 (Module 11)
+    <div className="space-y-6 md:space-y-8 animate-fadeIn">
+      {/* Module Header Banner */}
+      <div className={`p-6 md:p-8 rounded-2xl border shadow-xl relative overflow-hidden transition-all ${
+        isDark 
+          ? 'bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/70 border-emerald-500/30' 
+          : 'bg-gradient-to-r from-emerald-50 via-white to-teal-50 border-emerald-300 shadow-emerald-500/5'
+      }`}>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
+          <FiServer className="w-4 h-4" /> โมดูลที่ 11 (Module 11 of 12 - Advanced Robotics Masterclass)
         </div>
-        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+        <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           การเชื่อมต่อโครงข่ายอุตสาหกรรม (Fieldbus) &amp; ระบบ MES ยุค Industry 4.0
         </h1>
-        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-          ก้าวข้ามการเดินสายรีเลย์ 24V แบบเก่า สู่การสื่อสารดิจิทัลแบบ Real-Time ด้วย PROFINET, EtherCAT, และมาตรฐานกลาง OPC UA Robotics Companion Specification สำหรับส่งถ่ายข้อมูล OEE, Alarm, และ Traceability ตรงเข้า MES
+        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          ก้าวข้ามการเดินสายรีเลย์ 24V แบบเก่า สู่การสื่อสารดิจิทัลแบบ Real-Time ด้วย PROFINET IRT, EtherCAT, และมาตรฐานกลาง OPC UA Robotics Companion Specification (VDMA 40010), 
+          ลำดับสัญญาณดิจิทัล Handshake ระดับมิลลิวินาที, โครงสร้างข้อมูลคำนวณ OEE (Availability, Performance, Quality), 
+          และการแจ้งเตือนซ่อมบำรุงเชิงคาดการณ์ (Predictive Maintenance)
         </p>
       </div>
 
-      <RobotIndustrialFieldbusLab />
-
+      {/* Section 1: Evolution of Fieldbus */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
         isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-500 flex items-center justify-center text-sm font-black border border-emerald-500/40">1</span>
-          โครงสร้างชุดข้อมูลที่หุ่นยนต์ส่งเข้า MES เพื่อคำนวณ OEE และ Predictive Maintenance
+          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-black border border-emerald-500/40">1</span>
+          วิวัฒนาการการเชื่อมต่อหุ่นยนต์: จากสายรีเลย์ 24V สู่ Industrial Ethernet
+        </h2>
+        <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
+          <table className="w-full min-w-[680px] text-left text-xs border-collapse">
+            <thead className={`font-semibold uppercase text-[11px] border-b ${
+              isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
+            }`}>
+              <tr>
+                <th className="py-3 px-4 w-[24%]">โปรโตคอล (Protocol)</th>
+                <th className="py-3 px-4 w-[25%]">Cycle Time &amp; Jitter</th>
+                <th className="py-3 px-4 w-[25%]">การประยุกต์ใช้งานหลัก</th>
+                <th className="py-3 px-4 w-[26%]">จุดเด่นทางวิศวกรรม</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-800'}`}>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">1. PROFINET IRT (Siemens Standard)</td>
+                <td className="py-3 px-4 font-bold">&lt; 1 ms (Jitter &lt; 1 &mu;s)</td>
+                <td className="py-3 px-4">สายการผลิตยานยนต์และชิ้นส่วนอิเล็กทรอนิกส์</td>
+                <td className="py-3 px-4">ส่งทั้ง Safety (PROFIsafe) และ Motion บนสาย Cat6 เดียว</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold text-cyan-600 dark:text-cyan-400">2. EtherCAT (Beckhoff Standard)</td>
+                <td className="py-3 px-4 font-bold">250 &mu;s - 1 ms</td>
+                <td className="py-3 px-4">หุ่นยนต์ Delta ความเร็วสูงและซิงโครไนซ์หลายแกน</td>
+                <td className="py-3 px-4">เทคโนโลยี Processing on the fly ประสิทธิภาพบัสสูงสุด</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold text-amber-600 dark:text-amber-400">3. OPC UA Robotics (VDMA 40010)</td>
+                <td className="py-3 px-4">10 - 100 ms</td>
+                <td className="py-3 px-4">IT/OT Gateway ส่งข้อมูลเข้าสู่ระบบ MES และ Cloud</td>
+                <td className="py-3 px-4">มาตรฐานเปิดข้ามแบรนด์ (Fanuc, KUKA, ABB คุยกันได้)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Simulator 11 Embed */}
+      <RobotIndustrialFieldbusLab />
+
+      {/* Section 2: OEE Data Dictionary */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-black border border-emerald-500/40">2</span>
+          โครงสร้างชุดข้อมูล OEE &amp; การบำรุงรักษาเชิงคาดการณ์ (Predictive Maintenance)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-emerald-600 text-sm">Availability &amp; Alarms</h3>
+            <h4 className="font-bold text-emerald-600 dark:text-emerald-300 text-sm">Availability Tracking (ความพร้อมเครื่อง)</h4>
             <p className="leading-relaxed">
-              รหัสข้อผิดพลาดเฉพาะจุด (Specific Error Code), สถานะ E-Stop, ประวัติเวลาหยุดเครื่อง (Downtime Reason) แยกเป็น Mechanical, Electrical, หรือ Part Starvation ส่งให้ MES ทันที
+              ส่งสถานะบิต: Running, Waiting_Part, Alarm_Stop, E-Stop_Active พร้อมรหัสข้อผิดพลาดเฉพาะจุด (Specific Error Code) 
+              เข้าสู่ระบบ MES ทันที เพื่อจำแนกสาเหตุ Downtime แยกตามหมวดหมู่ช่างไฟฟ้า ช่างกล หรือวัตถุดิบหมด
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-teal-600 text-sm">Performance &amp; Cycle Time</h3>
+            <h4 className="font-bold text-teal-600 dark:text-teal-300 text-sm">Performance Tracking (สมรรถนะการทำงาน)</h4>
             <p className="leading-relaxed">
-              เวลาทำงานต่อชิ้น (Actual Cycle Time เทียบกับ Target Ideal Cycle Time), สัญญาณความเร็ว Joint Speed เพื่อตรวจจับการสึกหรอของกระปุกเกียร์ Harmonic/RV Reducer
+              บันทึกเวลาทำงานต่อชิ้น (Actual Cycle Time) เปรียบเทียบกับเป้าหมาย Ideal Cycle Time แบบมิลลิวินาที 
+              หากพบว่า Cycle Time ช้าลงเกิน 5% ระบบจะเตือนว่าอุปกรณ์จับยึดลมเริ่มมีการรั่วไหล
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
             isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
-            <h3 className="font-bold text-cyan-600 text-sm">Quality &amp; Process Data</h3>
+            <h4 className="font-bold text-cyan-600 dark:text-cyan-300 text-sm">Predictive Reducer Life (การสึกหรอกระปุกเกียร์)</h4>
             <p className="leading-relaxed">
-              ค่าแรงกด Press Fit, ข้อมูลอุณหภูมิหัวเชื่อม, ความหนาของเส้นกาว (Dispensing Volume), และบาร์โค้ดชิ้นงานผูกเข้ากับ Work Order เพื่อการตรวจสอบย้อนกลับระดับ Serial No.
+              อ่านค่าแรงบิดสะสม (Torque Integral) และอุณหภูมิขดลวดมอเตอร์ คำนวณชั่วโมงอายุการใช้งานของน้ำมันหล่อลื่น (Grease Lifetime Hours) 
+              แจ้งเตือนเปลี่ยนถ่ายน้ำมันเกียร์ก่อนเกิดอาการฟันเกียร์แตกหัก
             </p>
           </div>
         </div>
@@ -2833,50 +3133,139 @@ export function RobotMod11() {
 }
 
 /* ========================================================================= */
-/* MODULE 12 LESSON COMPONENT: 3D VISION & AI BIN-PICKING                    */
+/* MODULE 12 LESSON: 3D VISION GUIDANCE & AI BIN PICKING 6-DoF               */
 /* ========================================================================= */
 export function RobotMod12() {
   const { isDark } = useTheme();
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div className={`border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-        <div className="flex items-center gap-2 text-cyan-500 text-xs font-bold uppercase tracking-wider mb-2">
-          <FiEye className="w-4 h-4" /> บทที่ 12 (Module 12)
+    <div className="space-y-6 md:space-y-8 animate-fadeIn">
+      {/* Module Header Banner */}
+      <div className={`p-6 md:p-8 rounded-2xl border shadow-xl relative overflow-hidden transition-all ${
+        isDark 
+          ? 'bg-gradient-to-r from-cyan-950/80 via-slate-900 to-blue-950/70 border-cyan-500/30' 
+          : 'bg-gradient-to-r from-cyan-50 via-white to-blue-50 border-cyan-300 shadow-cyan-500/5'
+      }`}>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 text-xs font-bold mb-3 border border-cyan-500/30">
+          <FiEye className="w-4 h-4" /> โมดูลที่ 12 (Module 12 of 12 - Capstone Masterclass)
         </div>
-        <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          ระบบนำทางด้วยภาพ 3 มิติ (3D Vision Guidance) &amp; AI Bin Picking
+        <h1 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          ระบบนำทางด้วยภาพ 3 มิติ (3D Vision Guidance) &amp; AI Bin Picking 6-DoF
         </h1>
-        <p className={`text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-          การบูรณาการเทคโนโลยีกล้อง 3D Point Cloud, อัลกอริทึม AI ค้นหาตำแหน่งวัตถุใน 6 มิติ (6-DoF Pose Estimation), และการวางแผนเส้นทางหลบการชน (Collision-Free Motion Planning) เพื่อหยิบชิ้นงานที่กองระเกะระกะในกระบะ
+        <p className={`text-sm md:text-base leading-relaxed max-w-4xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          การบูรณาการเทคโนโลยีระดับสูงสุดของระบบอัตโนมัติ: การสแกนกลุ่มจุดพิกัด 3 มิติ (3D Point Cloud), 
+          อัลกอริทึม AI ค้นหาพิกัดและมุมเอียง 6 องศาอิสระ (6-DoF Pose Estimation), การวางแผนเส้นทางหลบการชนขอบกระบะ (Collision-Free Motion Planning), 
+          และการใช้เซนเซอร์วัดแรงข้อมือหุ่นยนต์เพื่อสวมประกอบชิ้นงานแบบยืดหยุ่น (Active Compliance)
         </p>
       </div>
 
-      <RobotAiVisionBinPickingSimulator />
-
+      {/* Section 1: Why 3D Vision for Random Bin Picking */}
       <section className={`p-6 rounded-2xl border space-y-4 ${
         isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-500 flex items-center justify-center text-sm font-black border border-cyan-500/40">1</span>
-          สถาปัตยกรรมระบบจับชิ้นงานอัจฉริยะ (Intelligent Gripping &amp; Tactile Feedback)
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">1</span>
+          ความท้าทายระดับสูงสุด: ทำไมกล้อง 2D จึงแก้ปัญหา Random Bin Picking ไม่ได้?
         </h2>
+        <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
+          <table className="w-full min-w-[680px] text-left text-xs border-collapse">
+            <thead className={`font-semibold uppercase text-[11px] border-b ${
+              isDark ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-700 border-slate-200'
+            }`}>
+              <tr>
+                <th className="py-3 px-4 w-[24%]">ปัจจัยวิศวกรรม</th>
+                <th className="py-3 px-4 w-[38%] text-rose-600 dark:text-rose-300">กล้อง 2D Vision แบบดั้งเดิม</th>
+                <th className="py-3 px-4 w-[38%] text-cyan-600 dark:text-cyan-400 font-bold">กล้อง 3D Point Cloud + AI 6-DoF</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${isDark ? 'divide-slate-800 text-slate-300' : 'divide-slate-200 text-slate-800'}`}>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">มิติพิกัดที่ได้ (Degrees of Freedom)</td>
+                <td className="py-3 px-4 text-rose-500">ได้เพียง 3 มิติ (X, Y, &theta;) ไม่รู้ความลึก Z</td>
+                <td className="py-3 px-4 font-bold text-cyan-600 dark:text-cyan-400">ครบทั้ง 6 มิติ (X, Y, Z, Roll, Pitch, Yaw)</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">การหยิบชิ้นงานที่กองซ้อนทับกัน (Overlapping)</td>
+                <td className="py-3 px-4 text-rose-500">หยิบไม่ได้ ไม่รู้ว่าชิ้นใดอยู่บน ชิ้นใดอยู่ล่าง</td>
+                <td className="py-3 px-4 font-bold text-cyan-600 dark:text-cyan-400">เลือกหยิบชิ้นงานตัวบนสุดที่ไม่ถูกทับได้อัตโนมัติ</td>
+              </tr>
+              <tr className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
+                <td className="py-3 px-4 font-bold">การหลบหลีกการชนขอบกระบะเหล็ก (Bin Collision)</td>
+                <td className="py-3 px-4 text-rose-500">ทำไม่ได้ หัว Gripper ชนขอบกระบะจนเสียหายบ่อยครั้ง</td>
+                <td className="py-3 px-4 font-bold text-cyan-600 dark:text-cyan-400">คำนวณ 3D Envelope หลบขอบกระบะได้ 100%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Simulator 12 Embed */}
+      <RobotAiVisionBinPickingSimulator />
+
+      {/* Section 2: Hand-Eye Calibration Mathematics */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">2</span>
+          คณิตศาสตร์การสอบเทียบพิกัดมือ-ตา (Hand-Eye Calibration Formulation: AX = XB)
+        </h2>
+        <div className={`p-4 rounded-xl border font-mono text-xs space-y-2 ${
+          isDark ? 'bg-slate-950 border-slate-800 text-cyan-300' : 'bg-slate-50 border-slate-200 text-cyan-800'
+        }`}>
+          <div className="font-bold text-sm text-slate-800 dark:text-white">สมการคลาสสิกของ Tsai-Lenz (Hand-Eye Matrix Formulation):</div>
+          <div>A_i &times; X = X &times; B_i</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-sans">
+            โดย A_i คือการเคลื่อนที่ของหน้าแปลนหุ่นยนต์ระหว่างตำแหน่ง 1 และ 2, B_i คือการเคลื่อนที่ของเป้าสอบเทียบในกล้อง, และ X คือเมทริกซ์การแปลงพิกัดระหว่างกล้องกับฐานหุ่นยนต์ (T_camera_to_base)
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div className={`p-4 rounded-xl border space-y-2 ${
-            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+            isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
           }`}>
-            <h3 className="font-bold text-cyan-600 text-sm">Electric Smart Gripper with Force Control</h3>
-            <p className="leading-relaxed">
-              กริปเปอร์ไฟฟ้าระบบเซอร์โวมอเตอร์ สามารถตั้งค่าแรงจับยึด (Grip Force 5N - 200N) และวัดขนาดชิ้นงานได้แบบเรียลไทม์ (Part Dimension Verification) เพื่อยืนยันว่าหยิบชิ้นงานถูกชนิดก่อนนำไปประกอบ
+            <h4 className="font-bold text-cyan-600 dark:text-cyan-400 text-sm">1. Eye-to-Hand (กล้องติดอยู่กับที่เหนือกระบะ):</h4>
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+              กล้องติดตั้งอยู่บนโครงสร้างเหนือกระบะชิ้นงาน ข้อดีคือมองเห็นภาพรวมทั้งกระบะตลอดเวลา 
+              แขนกลไม่จำเป็นต้องแบกน้ำหนักของกล้อง ทำให้เคลื่อนไหวได้รวดเร็วสูงสุด เหมาะกับงานหยิบของจากกระบะลึก
             </p>
           </div>
           <div className={`p-4 rounded-xl border space-y-2 ${
-            isDark ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+            isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
           }`}>
-            <h3 className="font-bold text-teal-600 text-sm">Force/Torque Sensor (ข้อมือหุ่นยนต์)</h3>
-            <p className="leading-relaxed">
-              เมื่อนำชิ้นงานลงสวมประกอบ เซนเซอร์วัดแรง 6 แกน Fx, Fy, Fz จะปรับมุมข้อมือแบบยืดหยุ่น (Active Compliance) ระดับไมครอน ป้องกันชิ้นงานติดขัดหรือเกิดรอยขูดขีดบนชิ้นงานอย่างสมบูรณ์แบบ
+            <h4 className="font-bold text-teal-600 dark:text-teal-400 text-sm">2. Eye-in-Hand (กล้องติดอยู่ที่ข้อมือแขนกล):</h4>
+            <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+              กล้องติดอยู่ที่ปลายแขนกล เคลื่อนที่ไปพร้อมกับหัวจับ ข้อดีคือสามารถซูมเข้าไปถ่ายในมุมอับหรือตรวจความเรียบร้อยหลังประกอบได้ 
+              ข้อเสียคือเพิ่มน้ำหนัก Payload ให้แขนกล และต้องหยุดนิ่งขณะถ่ายภาพ
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Section 3: Commissioning SOP Checklist */}
+      <section className={`p-6 rounded-2xl border space-y-4 ${
+        isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <h2 className={`text-xl font-bold flex items-center gap-2.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">3</span>
+          ขั้นตอนการส่งมอบระบบ AI Bin Picking (Commissioning SOP Checklist)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          {[
+            { title: '1. Hand-Eye Accuracy Verification', desc: 'ทดสอบให้แขนกลนำพอยน์เตอร์ไปแตะจุดกึ่งกลางลูกบอลสอบเทียบ 10 มุม คลาดเคลื่อนต้องไม่เกิน &plusmn;0.5 mm' },
+            { title: '2. Empty Bin Clearance Check', desc: 'ทดสอบการหยิบชิ้นงานชิ้นสุดท้ายที่ติดก้นกระบะ หัว Gripper ต้องไม่ขูดกระแทกขอบหรือก้นกระบะ' },
+            { title: '3. Drop Rate Below 0.2%', desc: 'ทดสอบหยิบชิ้นงาน 1,000 ครั้งติดต่อกัน อัตราการทำชิ้นงานหลุดมือ (Grasp Drop Rate) ต้องต่ำกว่า 2 ชิ้น' },
+            { title: '4. Cycle Time Sign-off', desc: 'เวลาเฉลี่ยในการสแกน 3D + คำนวณพิกัด AI + แขนกลหยิบวาง ต้องได้ตาม Target Cycle Time (เช่น &le; 6.5 วินาที/ชิ้น)' }
+          ].map((item, idx) => (
+            <div key={idx} className={`p-3.5 rounded-xl border flex items-start gap-3 ${
+              isDark ? 'bg-slate-800/70 border-slate-700' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <FiCheckCircle className="w-5 h-5 text-cyan-500 shrink-0 mt-0.5" />
+              <div>
+                <div className={`font-bold text-xs ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{item.title}</div>
+                <div className={`text-[11px] mt-0.5 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
