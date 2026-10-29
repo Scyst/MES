@@ -126,8 +126,22 @@ import {
   RobotMod5,
   RobotMod6,
   RobotMod7,
-  RobotMod8
+  RobotMod8,
+  RobotMod9,
+  RobotMod10,
+  RobotMod11,
+  RobotMod12
 } from '../data/content/RobotLessons';
+
+import {
+  MachineVisionV2Mod1,
+  MachineVisionV2Mod2,
+  MachineVisionV2Mod3,
+  MachineVisionV2Mod4,
+  MachineVisionV2Mod5,
+  MachineVisionV2Mod6,
+  MachineVisionV2Mod7
+} from '../data/content/MachineVisionV2Lessons';
 
 export default function CourseContent({ courseId, moduleContent }) {
   // Mapping content IDs to actual React components containing the text/layout
@@ -265,6 +279,19 @@ export default function CourseContent({ courseId, moduleContent }) {
     'robot-programming-logic': <RobotMod6 />,
     'robot-offset-palletizing': <RobotMod7 />,
     'robot-safety-maintenance': <RobotMod8 />,
+    'robot-m9-cobots-direct-teaching': <RobotMod9 />,
+    'robot-m10-digital-twin-olp': <RobotMod10 />,
+    'robot-m11-industrial-fieldbus-mes': <RobotMod11 />,
+    'robot-m12-ai-vision-binpicking': <RobotMod12 />,
+
+    // Next-Gen AI Machine Vision & Edge Intelligence (2026 Edition)
+    'vision-v2-m1-architecture': <MachineVisionV2Mod1 />,
+    'vision-v2-m2-smart-optics-3d': <MachineVisionV2Mod2 />,
+    'vision-v2-m3-yolo-obb': <MachineVisionV2Mod3 />,
+    'vision-v2-m4-unsupervised-anomaly': <MachineVisionV2Mod4 />,
+    'vision-v2-m5-vit-sam2': <MachineVisionV2Mod5 />,
+    'vision-v2-m6-edge-npu-tensorrt': <MachineVisionV2Mod6 />,
+    'vision-v2-m7-reject-mes-integration': <MachineVisionV2Mod7 />,
     // Legacy mapping fallback
     'robot-basics-industry4': <RobotMod1 />,
     'robot-kinematics-coordinates': <RobotMod4 />,

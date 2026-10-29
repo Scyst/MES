@@ -768,6 +768,78 @@ export const courses = [
         id: 'm8',
         title: '8. มาตรฐานความปลอดภัยสากล ISO 10218, Deadman Switch และการบำรุงรักษา',
         content: 'robot-safety-maintenance'
+      },
+      {
+        id: 'm9',
+        title: '9. หุ่นยนต์ร่วมปฏิบัติการ (Cobots), Direct Teaching & มาตรฐานแรงปะทะ ISO/TS 15066',
+        content: 'robot-m9-cobots-direct-teaching'
+      },
+      {
+        id: 'm10',
+        title: '10. Digital Twin & โปรแกรมหุ่นยนต์ออฟไลน์ (Offline Programming - OLP)',
+        content: 'robot-m10-digital-twin-olp'
+      },
+      {
+        id: 'm11',
+        title: '11. การเชื่อมต่อโครงข่ายอุตสาหกรรม (PROFINET / EtherCAT) & ข้อมูล OEE สู่ MES',
+        content: 'robot-m11-industrial-fieldbus-mes'
+      },
+      {
+        id: 'm12',
+        title: '12. ระบบนำทางด้วยภาพ 3 มิติ (3D Vision Guidance) & AI Bin Picking 6-DoF',
+        content: 'robot-m12-ai-vision-binpicking'
+      }
+    ]
+  },
+  {
+    id: 'c-machine-vision-v2',
+    title: 'Next-Gen AI Machine Vision & Edge Intelligence (2026 Edition)',
+    description: 'หลักสูตรแมชชีนวิชันและปัญญาประดิษฐ์ยุคใหม่ (ฉบับอัปเกรด 2026): สถาปัตยกรรม Edge NPU, เทคโนโลยีเซนเซอร์ 3D Photometric Stereo & High-Speed CMOS, โมเดลตรวจสอบชิ้นงาน Anchor-Free YOLOv8/v11 & Oriented Bounding Box (OBB), การตรวจจับรอยตำหนิแบบไม่ใช้ข้อมูล NG (Unsupervised Anomaly Detection - PatchCore/FastFlow), Vision Transformers (ViT) & Segment Anything (SAM 2), การแปลงโมเดลด้วย TensorRT INT8 Quantization บน Jetson Orin / Hailo NPU, และการส่งข้อมูล Reject ความเร็วสูงเชื่อมต่อ PROFINET & MES',
+    instructor: 'ทีมวิศวกรรมปัญญาประดิษฐ์และระบบอัตโนมัติ (AI & Smart Vision Group)',
+    duration: '36 hours (5-6 days)',
+    category: 'เครื่องจักรและวิศวกรรมการผลิต',
+    image: CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'],
+    subCategories: ["ทักษะวิชาชีพขั้นสูง","ระบบอัตโนมัติและหุ่นยนต์","ระบบอัตโนมัติและ AI","เปิดรับรองบุคคลภายนอก","การควบคุมคุณภาพ"],
+    tags: ["Machine Vision 2.0","Edge AI","YOLOv11","PatchCore","TensorRT","3D Vision","NPU"],
+    isFeatured: true,
+    featuredBadge: "🚀 อัปเกรด 2026 · NEXT-GEN AI",
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
+    modules: [
+      {
+        id: 'm1',
+        title: '1. สถาปัตยกรรม Next-Gen AI Machine Vision ยุคปี 2026 & Edge Computing',
+        content: 'vision-v2-m1-architecture'
+      },
+      {
+        id: 'm2',
+        title: '2. เทคโนโลยีเซนเซอร์ภาพความเร็วสูง, เลนส์ Smart Optics & 3D Photometric Stereo',
+        content: 'vision-v2-m2-smart-optics-3d'
+      },
+      {
+        id: 'm3',
+        title: '3. Anchor-Free YOLOv8 / YOLOv11 & การตีกรอบตรวจจับชิ้นงานเอียง (Oriented Bounding Box - OBB)',
+        content: 'vision-v2-m3-yolo-obb'
+      },
+      {
+        id: 'm4',
+        title: '4. การตรวจจับของเสียแบบไม่ต้องมีรูป NG (Unsupervised Defect Detection: PatchCore / FastFlow)',
+        content: 'vision-v2-m4-unsupervised-anomaly'
+      },
+      {
+        id: 'm5',
+        title: '5. Vision Transformers (ViT) & Segment Anything Model (SAM 2) ในงานอุตสาหกรรม',
+        content: 'vision-v2-m5-vit-sam2'
+      },
+      {
+        id: 'm6',
+        title: '6. การ Deploy โมเดลบน Edge NPU (Jetson Orin / Hailo) ด้วย TensorRT INT8 Quantization',
+        content: 'vision-v2-m6-edge-npu-tensorrt'
+      },
+      {
+        id: 'm7',
+        title: '7. ระบบขับดันของเสียความเร็วสูง (High-Speed Reject), PROFINET IRT & Data Pipeline สู่ MES',
+        content: 'vision-v2-m7-reject-mes-integration'
       }
     ]
   }
