@@ -208,6 +208,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php 
                         $themeQa = 'text-danger bg-danger bg-opacity-10';
                         renderServiceLink('iQMS Dashboard', 'ระบบจัดการคุณภาพ (NCR/CAR)', '<i class="fas fa-shield-alt"></i>', '../QMS/qmsDashboard.php', 'view_qms', $themeQa);
+                        renderServiceLink('Accessories Inspection', 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', '<i class="fas fa-camera"></i>', '../AccessoriesInspection/accessoriesInspectionUI.php', '', $themeQa);
                         renderServiceLink('PE Enterprise', 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', '<i class="fas fa-cogs"></i>', '../PE/peDashboard.php', 'view_maintenance', $themeQa);
                         renderServiceLink('PE Tech (Mobile)', 'ระบบรับงานและจัดการซ่อมสำหรับช่าง (มือถือ)', '<i class="fas fa-wrench"></i>', '../PE/peTechMobile.php', 'view_maintenance', $themeQa);
                         renderServiceLink('Digital Twin', 'ระบบ 3D Monitoring ของโรงงาน', '<i class="fas fa-cubes"></i>', '../digitalTwin/digitalTwin.html', '', $themeQa);
@@ -245,6 +246,21 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                     </div>
                 </div>
 
+                <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+                <div class="service-group mt-4">
+                    <div class="service-group-title fw-bold text-warning border-bottom border-warning border-opacity-50 pb-1 mb-3">
+                        <i class="fas fa-flask me-1"></i> SANDBOX (TEST ENVIRONMENT)
+                    </div>
+                    <div class="service-grid">
+                        <?php
+                        $themeTest = 'text-warning bg-warning bg-opacity-10 border border-warning border-opacity-25';
+                        renderServiceLink('Plan Dashboard (Test)', 'ระบบวางแผนการผลิต (ทดสอบ)', '<i class="fas fa-tachometer-alt"></i>', '../managementCopy/managementDashboard.php', '', $themeTest);
+                        renderServiceLink('Production (Test)', 'ระบบบันทึกผลผลิต (ทดสอบ)', '<i class="fas fa-boxes"></i>', '../productionCopy/productionUI.php', '', $themeTest);
+                        renderServiceLink('Sales Tracking (Test)', 'ติดตามสถานะออเดอร์ (ทดสอบ)', '<i class="fas fa-shipping-fast"></i>', '../salesCopy/salesDashboard.php', '', $themeTest);
+                        ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <?php if ($userRole === 'admin'): ?>
                 <div class="service-group mt-4">

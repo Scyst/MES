@@ -57,7 +57,8 @@
    - `MES_TEST/` (1,567 ไฟล์, 121.77 MB — Staging mirror เก่า)
    - `MES/Toolbox2/` (โฟลเดอร์เก็บไฟล์ Build `dist` เก่าที่ซ้ำซ้อน — เคลียร์พื้นที่เพื่อเตรียมเปลี่ยนชื่อ `MES/mes-v2` มาใช้ชื่อ `MES/Toolbox2` ให้ตรงกับพาร์ทบน FTP `/Toolbox2`)
    - `MES/estate-crm/` (โปรเจ็คทดสอบอสังหาฯ ไม่เกี่ยวกับโรงงาน)
-   - `MES/page/AccessoriesInspection/`, `MES/page/managementCopy/`, `MES/page/salesCopy/`, `MES/page/maintenancePE/`, `MES/page/SAP_Sync/`, `MES/page/sap_db.php` (โมดูลสำเนา/ทดสอบที่เลิกใช้แล้ว พร้อมถอดลิงก์ออกจาก Navbar และ Sidebar ทั้งหมด)
+   - `MES/page/AccessoriesInspection/img/` (ลบเฉพาะไฟล์รูปภาพสำรอง 176 ไฟล์ ~58.8 MB ออกจาก Git และใส่ `.gitignore` แต่เก็บรักษาโค้ดทั้ง 7 ไฟล์ของระบบ `MES/page/AccessoriesInspection/` ไว้ครบ 100%)
+   - `MES/page/managementCopy/`, `MES/page/salesCopy/`, `MES/page/maintenancePE/`, `MES/page/SAP_Sync/`, `MES/page/sap_db.php` (โมดูลสำเนา/ทดสอบที่เลิกใช้แล้ว พร้อมถอดลิงก์ออกจาก Navbar)
    - ไฟล์รายงานและ Log ชั่วคราว (`MES/Executive_Report_*.html`, `MES/timeline.json`, `mqtt_system_profile.json`, `recovery_plan.md`)
 4. **โมดูลที่เก็บรักษาไว้ตามคำสั่งผู้ใช้:**
    - `MES/page/areaAccess/` (เก็บไว้ — โปรเจ็คตามคำสั่งผู้บริหาร)

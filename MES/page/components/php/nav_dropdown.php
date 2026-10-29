@@ -68,6 +68,7 @@
                 <ul class="list-unstyled ms-3 ps-2 border-start py-1">
                     <li><a class="dropdown-item-icon py-1" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw"></i><span>iQMS (Quality)</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../IQS/iqsUI.php"><i class="fas fa-clipboard-check fa-fw"></i><span>IQS (Pull Test)</span></a></li>
+                    <li><a class="dropdown-item-icon py-1" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw"></i><span>Accessories Inspection</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../PE/peDashboard.php"><i class="fas fa-cogs fa-fw"></i><span>PE Enterprise Dashboard</span></a></li>
                     <li><a class="dropdown-item-icon py-1" href="../PE/peTechMobile.php"><i class="fas fa-wrench fa-fw"></i><span>PE Tech (Mobile)</span></a></li>
                 </ul>
@@ -123,6 +124,20 @@
         </li>
         <?php endif; ?>
         
+        <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+        <li class="bg-warning bg-opacity-10 border-top border-bottom border-warning border-opacity-50 mt-3">
+            <a class="dropdown-item-icon text-warning-emphasis fw-bold" data-bs-toggle="collapse" href="#collapseSandbox" role="button">
+                <i class="fas fa-flask fa-fw"></i>
+                <span>SANDBOX (TEST)</span>
+                <i class="fas fa-chevron-down ms-auto text-warning-emphasis" style="font-size: 0.7em;"></i>
+            </a>
+            <div class="collapse" id="collapseSandbox" data-bs-parent="#desktopAccordionMenu">
+                <ul class="list-unstyled ms-3 ps-2 border-start border-warning py-1 mb-0">
+                    <li><a class="dropdown-item-icon py-1 text-warning-emphasis" href="../productionCopy/productionUI.php"><i class="fas fa-boxes fa-fw"></i><span>Production (Test)</span></a></li>
+                </ul>
+            </div>
+        </li>
+        <?php endif; ?>
     </ul>
 </nav>
 
@@ -201,6 +216,7 @@
 
             <div class="bg-light px-3 py-2 fw-bold small text-dark text-uppercase border-top">QUALITY & MAINTENANCE</div>
             <a class="list-group-item list-group-item-action text-dark" href="../QMS/qmsDashboard.php"><i class="fas fa-check-circle fa-fw me-3"></i> iQMS (Quality)</a>
+            <a class="list-group-item list-group-item-action text-dark" href="../AccessoriesInspection/accessoriesInspectionUI.php"><i class="fas fa-camera fa-fw me-3"></i> Accessories Inspection</a>
             <a class="list-group-item list-group-item-action text-dark" href="../PE/peDashboard.php"><i class="fas fa-cogs fa-fw me-3"></i> PE Enterprise Dashboard</a>
             <a class="list-group-item list-group-item-action text-dark" href="../PE/peTechMobile.php"><i class="fas fa-wrench fa-fw me-3"></i> PE Tech (Mobile)</a>
             <a class="list-group-item list-group-item-action text-dark" href="../digitalTwin/digitalTwin.html" target="_blank"><i class="fas fa-cubes fa-fw me-3"></i> Digital Twin (3D)</a>
@@ -234,6 +250,10 @@
             <?php endif; ?>
             <?php endif; ?>
 
+            <?php if ($userRole && in_array($userRole, ['admin', 'creator'])): ?>
+            <div class="bg-warning px-3 py-2 fw-bold small text-dark text-uppercase border-top border-warning border-opacity-50">SANDBOX (TEST)</div>
+            <a class="list-group-item list-group-item-action text-warning-emphasis fw-bold bg-warning bg-opacity-10" href="../productionCopy/productionUI.php"><i class="fas fa-boxes fa-fw me-3"></i> Production (Test)</a>
+            <?php endif; ?>
             <div class="p-3 mt-4 border-top">
                 <a class="btn btn-outline-danger w-100 logout-action" href="<?php echo function_exists('getMesBaseUrl') ? getMesBaseUrl() : (defined('BASE_URL') ? BASE_URL : '/iot-toolbox/sandbox-b9/MES/MES'); ?>/auth/logout.php">
                     <i class="fas fa-sign-out-alt me-2"></i> <?php _e('sidebar.logout'); ?>
