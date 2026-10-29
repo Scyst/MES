@@ -1164,7 +1164,7 @@ export function MachineVisionV2Mod3() {
           คณิตศาสตร์ของ Oriented Bounding Box: การคำนวณมุมและ Rotated IoU
         </h2>
         <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-          ในการแสดงผล OBB มี 2 รูปแบบมาตรฐานคือ รูปแบบ 5 พารามิเตอร์ $(x_c, y_c, w, h, 	heta)$ และรูปแบบจุดพิกัด 8 จุด $(x_1, y_1, x_2, y_2, x_3, y_3, x_4, y_4)$:
+          ในการแสดงผล OBB มี 2 รูปแบบมาตรฐานคือ รูปแบบ 5 พารามิเตอร์ (x<sub>c</sub>, y<sub>c</sub>, w, h, &theta;) และรูปแบบจุดพิกัด 8 จุด (x<sub>1</sub>, y<sub>1</sub>, x<sub>2</sub>, y<sub>2</sub>, x<sub>3</sub>, y<sub>3</sub>, x<sub>4</sub>, y<sub>4</sub>):
         </p>
 
         <div className={`p-4 rounded-xl border font-mono text-xs space-y-2 ${
@@ -1184,8 +1184,8 @@ export function MachineVisionV2Mod3() {
           }`}>
             <h4 className="font-bold text-amber-600 dark:text-amber-300 text-sm">ปัญหา Angle Boundary Periodicity:</h4>
             <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-              เมื่อวัตถุหมุนรอบแกน ค่ามุมจะเกิดการกระโดดจาก $+90^circ$ เป็น $-90^circ$ หากใช้สมการ Loss แบบดั้งเดิม (L1/Smooth L1) 
-              โมเดลจะมองว่าความคลาดเคลื่อนสูงถึง $180^circ$ ทำให้การเทรนไม่ลู่เข้า (Training Instability) 
+              เมื่อวัตถุหมุนรอบแกน ค่ามุมจะเกิดการกระโดดจาก +90&deg; เป็น -90&deg; หากใช้สมการ Loss แบบดั้งเดิม (L1/Smooth L1) 
+              โมเดลจะมองว่าความคลาดเคลื่อนสูงถึง 180&deg; ทำให้การเทรนไม่ลู่เข้า (Training Instability) 
               ใน YOLOv11 จึงเปลี่ยนไปใช้ <strong>Gaussian Wasserstein Distance (GWD Loss)</strong> ซึ่งคำนวณระยะห่างของการกระจายตัวทางสถิติ ทำให้การเรียนรู้ราบรื่น 100%
             </p>
           </div>
@@ -1194,8 +1194,8 @@ export function MachineVisionV2Mod3() {
           }`}>
             <h4 className="font-bold text-teal-600 dark:text-teal-300 text-sm">การเชื่อมโยงพิกัดสู่ Robot Tool Flange:</h4>
             <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-              เมื่อกล้องอ่านได้มุม $	heta = 42.5^circ$ ข้อมูลจะถูกแปลงผ่าน Hand-Eye Calibration Matrix $T_{cam}^{base}$ 
-              ส่งพิกัด $(X, Y, Z, Roll, Pitch, Yaw)$ ตรงเข้า Teach Pendant แขนกลจะหมุนหน้าแปลนข้อมือ (แกน 6) มารอที่มุม $42.5^circ$ 
+              เมื่อกล้องอ่านได้มุม &theta; = 42.5&deg; ข้อมูลจะถูกแปลงผ่าน Hand-Eye Calibration Matrix T<sub>cam</sub><sup>base</sup> 
+              ส่งพิกัด (X, Y, Z, Roll, Pitch, Yaw) ตรงเข้า Teach Pendant แขนกลจะหมุนหน้าแปลนข้อมือ (แกน 6) มารอที่มุม 42.5&deg; 
               ก่อนที่หัวดูดจะลงแตะชิ้นงาน ลดเวลาปรับองศาหน้างานลงได้ 0.8 วินาทีต่อชิ้น
             </p>
           </div>
@@ -1351,10 +1351,10 @@ export function MachineVisionV2Mod4() {
           isDark ? 'bg-slate-950 border-slate-800 text-rose-300' : 'bg-slate-50 border-slate-200 text-rose-800'
         }`}>
           <div className="font-bold text-sm text-slate-800 dark:text-white">สมการคำนวณ Anomaly Score:</div>
-          <div>s(x_i) = min_{m in M_C} || &phi;(x_i) - m ||_2</div>
-          <div>S_image = max_{i} s(x_i)</div>
+          <div>s(x<sub>i</sub>) = min<sub>m &isin; M<sub>C</sub></sub> || &phi;(x<sub>i</sub>) - m ||<sub>2</sub></div>
+          <div>S<sub>image</sub> = max<sub>i</sub> s(x<sub>i</sub>)</div>
           <div className="text-[11px] text-slate-600 dark:text-slate-400 font-sans">
-            โดย &phi;(x_i) คือเวกเตอร์แพทช์ในรูปใหม่, M_C คือ Coreset Memory Bank ของชิ้นงานดี, หากระยะห่างแบบยุคลิดเกินค่า Threshold ระบบจะตัดสินเป็น NG ทันที
+            โดย &phi;(x<sub>i</sub>) คือเวกเตอร์แพทช์ในรูปใหม่, M<sub>C</sub> คือ Coreset Memory Bank ของชิ้นงานดี, หากระยะห่างแบบยุคลิดเกินค่า Threshold ระบบจะตัดสินเป็น NG ทันที
           </div>
         </div>
 
@@ -1473,7 +1473,7 @@ export function MachineVisionV2Mod5() {
         </h2>
         <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           สถาปัตยกรรม CNN ใช้เคอร์เนลเลื่อนผ่านทีละจุด (Local Receptive Field) ทำให้มองเห็นเฉพาะบริเวณแคบๆ 
-          ขณะที่ Vision Transformer (ViT) แบ่งภาพออกเป็นแพทช์ขนาด $16 	imes 16$ พิกเซล และคำนวณความสัมพันธ์ระหว่างทุกจุดในภาพพร้อมกัน:
+          ขณะที่ Vision Transformer (ViT) แบ่งภาพออกเป็นแพทช์ขนาด 16 &times; 16 พิกเซล และคำนวณความสัมพันธ์ระหว่างทุกจุดในภาพพร้อมกัน:
         </p>
 
         <div className="overflow-x-auto pb-2 scrollbar-thin rounded-xl border border-slate-200 dark:border-slate-800">
