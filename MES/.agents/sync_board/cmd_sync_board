@@ -1,0 +1,7 @@
+$enc874 = [System.Text.Encoding]::GetEncoding(874)
+$utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
+Get-ChildItem -Filter "*.md" | Sort-Object Name | ForEach-Object {
+    $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+    try { $text = $utf8Strict.GetString($bytes) } catch { $text = $enc874.GetString($bytes) }
+    "`n`n# ===== FILE: $($_.Name) =====`n" + $text
+} | Set-Content "All_Work_Logs_Clean.md" -Encoding UTF8
