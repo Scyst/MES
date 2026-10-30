@@ -35,7 +35,10 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiSearch,
-  FiExternalLink
+  FiExternalLink,
+  FiMaximize2,
+  FiBox,
+  FiGrid
 } from 'react-icons/fi';
 import {
   ENTERPRISE_WORKSHOPS_DATA,
@@ -44,7 +47,7 @@ import {
   ENTERPRISE_PRACTICAL_EXAM
 } from '../enterpriseAppFullData';
 
-// Helper component for Code Block with copy functionality
+// Reusable Code Block with copy button
 function CodeBlock({ code, language = 'javascript' }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
@@ -54,7 +57,7 @@ function CodeBlock({ code, language = 'javascript' }) {
   };
 
   return (
-    <div className="relative group rounded-xl overflow-hidden my-4 border border-slate-700 bg-slate-950/90 font-mono text-xs md:text-sm shadow-xl">
+    <div className="relative group rounded-xl overflow-hidden my-3 border border-slate-700 bg-slate-950/90 font-mono text-xs md:text-sm shadow-xl">
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 text-slate-400">
         <span className="flex items-center gap-1.5 uppercase font-bold text-[11px] text-fuchsia-400">
           <FiTerminal className="w-3.5 h-3.5" /> {language}
@@ -73,6 +76,73 @@ function CodeBlock({ code, language = 'javascript' }) {
   );
 }
 
+// Industrial Diagram & Architecture Card (for embedded slide diagrams)
+function IndustrialDiagramCard({ imgSrc, title, subtitle, caption, badge = 'ARCHITECTURE DIAGRAM' }) {
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  return (
+    <>
+      <div className="rounded-2xl border border-slate-700/80 bg-slate-950 overflow-hidden shadow-lg hover:border-indigo-500/50 transition-all group">
+        <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {badge}
+            </span>
+            <span className="text-xs font-bold text-white truncate">{title}</span>
+          </div>
+          <button
+            onClick={() => setIsZoomed(true)}
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer transition-colors"
+            title="คลิกเพื่อขยายภาพขนาดใหญ่"
+          >
+            <FiMaximize2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div 
+          onClick={() => setIsZoomed(true)}
+          className="p-3 flex items-center justify-center bg-slate-900/40 cursor-pointer min-h-[160px] max-h-[300px] overflow-hidden"
+        >
+          <img 
+            src={imgSrc} 
+            alt={title}
+            className="max-h-[260px] w-auto object-contain rounded-lg group-hover:scale-[1.02] transition-transform duration-300"
+            loading="lazy"
+          />
+        </div>
+
+        {(caption || subtitle) && (
+          <div className="p-3 bg-slate-900/90 border-t border-slate-800 text-[11px] text-slate-300 leading-relaxed">
+            {subtitle && <strong className="text-indigo-300 block mb-0.5">{subtitle}</strong>}
+            {caption}
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox Modal */}
+      {isZoomed && (
+        <div 
+          onClick={() => setIsZoomed(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md cursor-zoom-out"
+        >
+          <div className="relative max-w-5xl max-h-[90vh] bg-slate-950 p-4 rounded-3xl border border-indigo-500/40 shadow-2xl flex flex-col items-center">
+            <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800 text-xs">
+              <span className="font-bold text-white text-sm">{title}</span>
+              <span className="text-slate-400">คลิกที่ใดก็ได้เพื่อปิด</span>
+            </div>
+            <img 
+              src={imgSrc} 
+              alt={title} 
+              className="max-h-[75vh] w-auto object-contain my-3 rounded-xl"
+            />
+            {caption && <p className="text-xs text-slate-300 text-center m-0 max-w-2xl">{caption}</p>}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // =========================================================================
 // INTERACTIVE COMPANION 1: ISA-95 5-Level Architecture & Live Data Uplink
 // =========================================================================
@@ -86,45 +156,45 @@ export function Isa95PyramidExplorer() {
     {
       level: 4,
       name: 'Level 4: Business Planning & Logistics (ERP)',
-      tech: 'SAP, Oracle, Odoo, REST API, SQL',
+      tech: 'SAP S/4HANA, Oracle ERP, REST API, SQL Server',
       speed: 'ชั่วโมง / วัน / เดือน',
-      role: 'วางแผนทรัพยากรองค์กร, ต้นทุน, สั่งซื้อวัตถุดิบ, ยอดขาย และกำไร',
+      role: 'วางแผนทรัพยากรองค์กร, คำนวณต้นทุนผลิต, บัญชีการเงิน, การสั่งซื้อวัตถุดิบ และยอดส่งมอบสินค้าลูกค้า',
       color: 'from-purple-600 to-indigo-600',
       badge: 'IT WORLD (ERP)'
     },
     {
       level: 3,
       name: 'Level 3: Manufacturing Operations Management (MES / MOM)',
-      tech: 'MES Web App, Node-RED, SQL Server, MQTT, API',
-      speed: 'นาที / ชั่วโมง / กะผลิต',
-      role: 'ติดตามแผนผลิตตามใบสั่ง (Job Order), ตรวจสอบย้อนกลับ (Traceability), คำนวณ OEE และของเสีย',
+      tech: 'MES Web Application, React/Vite, Node-RED, MQTT Gateway, SQL Server',
+      speed: 'วินาที / นาที / กะการผลิต (Shift)',
+      role: 'ติดตามแผนผลิตตามใบสั่งงาน (Job Order), ตรวจสอบย้อนกลับ (Traceability), คำนวณ OEE และควบคุมสูตรการผลิต',
       color: 'from-blue-600 to-cyan-600',
       badge: 'MES / IT-OT BRIDGE'
     },
     {
       level: 2,
-      name: 'Level 2: Supervisory Control (SCADA & HMI)',
-      tech: 'SCADA Software, Industrial Touch Panels, IPC, Modbus TCP',
+      name: 'Level 2: Supervisory Control (SCADA & Industrial HMI)',
+      tech: 'SCADA (Ignition, WinCC), HMI Touch Panels (Pro-face, Siemens), Modbus TCP, OPC-UA',
       speed: 'วินาที (Seconds)',
-      role: 'แสดงสถานะเครื่องจักรหน้าไลน์, หน้าจอ HMI ให้พนักงานกดสั่ง Start/Stop, แสดงกราฟแนวโน้ม และ Alarm',
+      role: 'แสดงสถานะเครื่องจักรหน้าไลน์, หน้าจอ HMI ให้ช่างและพนักงานกดสั่งงาน, เฝ้าระวังเตือนภัย (Alarming)',
       color: 'from-teal-600 to-emerald-600',
       badge: 'OT SUPERVISORY'
     },
     {
       level: 1,
-      name: 'Level 1: Direct Control (PLC & PAC)',
-      tech: 'PLC (Siemens, Mitsubishi, Omron), Robot Controllers, Inverters',
-      speed: 'มิลลิวินาที (10-100 ms)',
-      role: 'ลอจิกควบคุมการทำงานอัตโนมัติของเครื่องจักรโดยตรง ตัดสินใจแบบ Real-Time ห้ามแฮงก์เด็ดขาด',
+      name: 'Level 1: Direct Control (PLC, PAC & Robot Controllers)',
+      tech: 'PLC (Siemens S7-1500, Mitsubishi iQ-R, Omron NX), Motion Controllers',
+      speed: 'มิลลิวินาที (10–100 ms Hard Real-Time)',
+      role: 'ลอจิกควบคุมการทำงานอัตโนมัติของเครื่องจักรโดยตรง ตัดสินใจและตัดตอนเพื่อความปลอดภัย ห้ามหยุดชะงักเด็ดขาด',
       color: 'from-amber-600 to-orange-600',
       badge: 'OT CONTROL'
     },
     {
       level: 0,
-      name: 'Level 0: Production Process (Sensors & Actuators)',
-      tech: 'Proximity, Thermocouple, Load Cell, Pneumatic Cylinders, Motors',
-      speed: 'ไมโครวินาที (Real-time Physical)',
-      role: 'วัดค่าทางกายภาพจริง (อุณหภูมิ, แรงดัน, ชิ้นงานผ่าน) และขับเคลื่อนกลไกการผลิต',
+      name: 'Level 0: Production Process (Sensors, Motors & Actuators)',
+      tech: 'Photoelectric Sensors, Thermocouples, Inverters, Pneumatic Valves, 4-20mA, IO-Link',
+      speed: 'ไมโครวินาที (Continuous Physical Process)',
+      role: 'ตรวจวัดสถานะทางกายภาพจริง (อุณหภูมิ, แรงดัน, โหลดเซลล์) และขับเคลื่อนกลไกการผลิตทางกลไก',
       color: 'from-rose-600 to-red-600',
       badge: 'PHYSICAL PROCESS'
     }
@@ -201,7 +271,7 @@ export function Isa95PyramidExplorer() {
                       <span>{lvl.name.split(':')[1] || lvl.name}</span>
                       {isUplinkCurrent && (
                         <span className="px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 text-[10px] font-black animate-bounce">
-                          DATA HERE!
+                          DATA UPLINK!
                         </span>
                       )}
                     </div>
@@ -245,7 +315,7 @@ export function Isa95PyramidExplorer() {
           </div>
 
           <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-indigo-200 text-[11px] leading-relaxed">
-            💡 <strong>บทบาทในคอร์สนี้:</strong> เรากำลังสร้างแอปพลิเคชันในระดับ <strong>Level 3 (MES)</strong> เพื่อดึงข้อมูลจาก Level 1/2 มาแสดงผลให้ผู้ปฏิบัติงานและเชื่อมต่อสรุปผลสู่ Level 4
+            💡 <strong>บทบาทในหลักสูตรนี้:</strong> เรากำลังสร้างเว็บแอปพลิเคชันในระดับ <strong>Level 3 (MES)</strong> เพื่อดึงข้อมูลเซนเซอร์จาก Level 1/2 มาแสดงผลแดชบอร์ดให้พนักงาน และส่งข้อมูลสรุปผลยอดผลิตขึ้นสู่ Level 4 (ERP)
           </div>
         </div>
       </div>
@@ -470,23 +540,7 @@ export function IndustrialHmiValidatorSimulator() {
 // =========================================================================
 export function JsonPathInteractiveExplorer() {
   const { isDark } = useTheme();
-  const [selectedKey, setSelectedKey] = useState('data.voltage');
-
-  const sampleJson = {
-    machineId: "MC-01",
-    line: "Line A",
-    status: "RUNNING",
-    timestamp: "2026-10-30T10:00:00Z",
-    metrics: {
-      voltage: 231.4,
-      current: 15.6,
-      powerKw: 3.61,
-      temperatureC: 48.2
-    },
-    alarms: [
-      { id: "ALM-01", code: "TEMP_WARN", active: false }
-    ]
-  };
+  const [selectedKey, setSelectedKey] = useState('metrics.voltage');
 
   const keyMap = {
     'machineId': { js: 'data.machineId', val: '"MC-01"', desc: 'รหัสเครื่องจักร (String)' },
@@ -772,14 +826,14 @@ export function ControlCabinetDomSimulator() {
   const handleStart = () => {
     setIsRunning(true);
     setLastDomCode(
-      `// สั่งเปิดเครื่อง:\nconst statusBadge = document.getElementById("status-badge");\nstatusBadge.textContent = "RUNNING";\nstatusBadge.classList.replace("bg-slate-800", "bg-emerald-600");`
+      `// สั่งเปิดเครื่อง:\\nconst statusBadge = document.getElementById("status-badge");\\nstatusBadge.textContent = "RUNNING";\\nstatusBadge.classList.replace("bg-slate-800", "bg-emerald-600");`
     );
   };
 
   const handleStop = () => {
     setIsRunning(false);
     setLastDomCode(
-      `// สั่งหยุดเครื่อง:\nconst statusBadge = document.getElementById("status-badge");\nstatusBadge.textContent = "STOPPED";\nstatusBadge.classList.replace("bg-emerald-600", "bg-slate-800");`
+      `// สั่งหยุดเครื่อง:\\nconst statusBadge = document.getElementById("status-badge");\\nstatusBadge.textContent = "STOPPED";\\nstatusBadge.classList.replace("bg-emerald-600", "bg-slate-800");`
     );
   };
 
@@ -787,11 +841,11 @@ export function ControlCabinetDomSimulator() {
     setVoltage(newV);
     if (newV > 240) {
       setLastDomCode(
-        `// ตรวจพบแรงดันเกิน (>240V!):\nif (voltage > 240) {\n  alarmLight.classList.add("bg-rose-600", "animate-ping");\n  alertBox.textContent = "ALARM: Overvoltage detected!";\n}`
+        `// ตรวจพบแรงดันเกิน (>240V!):\\nif (voltage > 240) {\\n  alarmLight.classList.add("bg-rose-600", "animate-ping");\\n  alertBox.textContent = "ALARM: Overvoltage detected!";\\n}`
       );
     } else {
       setLastDomCode(
-        `// ปรับแรงดันปกติ:\nvoltDisplay.textContent = "${newV} V";`
+        `// ปรับแรงดันปกติ:\\nvoltDisplay.textContent = "${newV} V";`
       );
     }
   };
@@ -1257,7 +1311,7 @@ export function AutomatedTestCaseEvaluator() {
 // =========================================================================
 // REUSABLE WORKSHOP SUMMARY CARD
 // =========================================================================
-function WorkshopGuideCard({ workshopId, title, duration, goal, folder, starterCount, solutionCount }) {
+function WorkshopGuideCard({ workshopId, title, duration, goal, folder }) {
   const [showSolution, setShowSolution] = useState(false);
   const w = ENTERPRISE_WORKSHOPS_DATA?.workshops?.find(item => 
     item.id === workshopId || item.id === `Workshop ${workshopId.replace('w', '')}`
@@ -1345,59 +1399,166 @@ export function EnterpriseAppMod1() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-violet-950/70 via-indigo-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-violet-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-3 border border-violet-500/30">
-          <FiLayers className="w-4 h-4" /> โมดูลที่ 1 (Module 1) · วันที่ 1 ภาคเช้า
+          <FiLayers className="w-4 h-4" /> โมดูลที่ 1 (Module 1) · วันที่ 1 ภาคเช้า · ระดับพื้นฐานสู่วิศวกรระบบ
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
           Enterprise System &amp; Digital Industry Landscape
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          สถาปัตยกรรมระบบองค์กรดิจิทัล, การหลอมรวมระหว่างเทคโนโลยีสารสนเทศ (IT) และเทคโนโลยีปฏิบัติการหน้างาน (OT) ตามมาตรฐาน ISA-95 (IEC 62264), สถาปัตยกรรม Client-Server และโครงสร้างข้อมูล JSON
+          สถาปัตยกรรมระบบองค์กรดิจิทัล, การหลอมรวมระหว่างเทคโนโลยีสารสนเทศ (IT) และเทคโนโลยีปฏิบัติการหน้างาน (OT) ตามมาตรฐาน ISA-95 (IEC 62264), สถาปัตยกรรม Client-Server และโครงสร้างข้อมูล JSON สำหรับอุตสาหกรรม
         </p>
       </div>
 
-      {/* 1.1 ISA-95 & IT/OT Convergence Section */}
+      {/* 1.1 Digital Transformation in Industrial Enterprise */}
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
           <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">1</span>
-          1.1 สถาปัตยกรรมระบบอุตสาหกรรม (ISA-95) &amp; ความต่างระหว่าง IT กับ OT
+          1.1 การเปลี่ยนผ่านสู่องค์กรการผลิตดิจิทัล (Digital Transformation in Industry 4.0)
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          ในโรงงานอุตสาหกรรมยุคใหม่ เราแบ่งระบบออกเป็น 5 ระดับตามมาตรฐาน <strong>ISA-95 (IEC 62264)</strong> โดยมีข้อกำหนดเรื่องความปลอดภัยและเวลาตอบสนองที่ต่างกันโดยสิ้นเชิง: 
-          <strong> ฝั่ง OT (Level 0–2)</strong> เน้นความพร้อมใช้งานและความปลอดภัยทางกายภาพ (Availability &amp; Safety) ตอบสนองระดับมิลลิวินาที 
-          ส่วน <strong>ฝั่ง IT (Level 4)</strong> เน้นการบริหารข้อมูล วางแผนทรัพยากร (Confidentiality &amp; Integrity) 
-          และมี <strong>Level 3 (MES)</strong> ทำหน้าที่เป็นสะพานเชื่อมระหว่างสองโลก
+          ในอดีต โรงงานผลิตบันทึกยอดผลิตและปัญหาเครื่องจักรด้วย <strong>กระดาษ (Paper-based) หรือไฟล์สเปรดชีต</strong> ที่ต้องรอรวบรวมท้ายกะ ทำให้ผู้บริหารและทีมซ่อมบำรุงทราบปัญหาล่าช้ากว่า 12–24 ชั่วโมง เกิดภาวะ Blind Spot ในกระบวนการผลิต การเปลี่ยนผ่านสู่ Digital Enterprise จึงมุ่งเน้นการเชื่อมต่อข้อมูลแบบ Real-Time จากสายการผลิตตรงสู่หน้าจอผู้ปฏิบัติงาน
         </p>
+
+        {/* Embedded Architecture Diagram from Slide 11/12 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image1.webp"
+            title="Digital Enterprise Transformation Map"
+            subtitle="เส้นทางการเปลี่ยนผ่านจาก Analog สู่ Connected Smart Factory"
+            caption="เปรียบเทียบกระบวนการเดิมที่ต้องพึ่งพามือคน กับระบบเชื่อมต่อดิจิทัลที่อ่านค่าเซนเซอร์และสถานะเครื่องจักรขึ้นระบบกลางทันที"
+            badge="INDUSTRY 4.0 ROADMAP"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image4.webp"
+            title="Client-Server & Cloud-Native Architecture"
+            subtitle="สถาปัตยกรรมระบบแอปพลิเคชันองค์กร"
+            caption="การแบ่งหน้าที่อย่างชัดเจนระหว่าง Client (เบราว์เซอร์แสดงผลและรับอินพุต) และ Server (ประมวลผล Business Logic และบันทึกฐานข้อมูล)"
+            badge="SYSTEM ARCHITECTURE"
+          />
+        </div>
+      </section>
+
+      {/* 1.2 ISA-95 & IT/OT Convergence */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">2</span>
+          1.2 สถาปัตยกรรมระบบอุตสาหกรรม (ISA-95) &amp; ความต่างระหว่าง IT กับ OT
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          มาตรฐาน <strong>ANSI/ISA-95 (IEC 62264)</strong> กำหนดพีระมิด 5 ระดับเพื่อแยกบทบาทของระบบอย่างชัดเจน:
+          ความปลอดภัยของระบบ OT อยู่ที่การไม่หยุดชะงัก (Availability 99.99%) และการตอบสนองเร็วระดับมิลลิวินาที 
+          ในขณะที่ระบบ IT ให้ความสำคัญกับความลับและความถูกต้องของข้อมูลธุรกิจ (Confidentiality &amp; Data Integrity)
+        </p>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden font-mono">
+            <thead className="bg-slate-950 text-slate-300 font-bold uppercase">
+              <tr>
+                <th className="p-3 border-b border-slate-800 font-sans">มิติเปรียบเทียบ</th>
+                <th className="p-3 border-b border-slate-800 text-sky-400 font-sans">Information Technology (IT)</th>
+                <th className="p-3 border-b border-slate-800 text-amber-400 font-sans">Operational Technology (OT)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 bg-slate-900/60 text-slate-300 font-sans">
+              <tr>
+                <td className="p-3 font-bold text-indigo-300">เป้าหมายหลัก</td>
+                <td className="p-3">จัดการข้อมูลธุรกิจ, บัญชี, คลังสินค้า, ERP</td>
+                <td className="p-3">ควบคุมเครื่องจักรทางกายภาพ, ความปลอดภัยหน้างาน</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-bold text-indigo-300">ลำดับความสำคัญ (CIA vs AIC)</td>
+                <td className="p-3">1. ความลับ (C) → 2. ความถูกต้อง (I) → 3. ความพร้อมใช้ (A)</td>
+                <td className="p-3">1. ความพร้อมใช้งาน 99.99% (A) → 2. ความถูกต้อง (I) → 3. ความลับ (C)</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-bold text-indigo-300">เวลาตอบสนอง (Latency)</td>
+                <td className="p-3 font-mono">วินาที ถึง นาที (Seconds - Minutes)</td>
+                <td className="p-3 font-mono text-emerald-400 font-bold">10 - 100 มิลลิวินาที (Sub-second Hard Real-Time)</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-bold text-indigo-300">วงรอบการอัปเดตระบบ</td>
+                <td className="p-3">อัปเดต Patch ประจำสัปดาห์/เดือน รีสตาร์ตได้</td>
+                <td className="p-3 text-rose-300">ห้ามรีสตาร์ตระหว่างเดินเครื่อง! วงรอบ 10–20 ปี</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Embedded Diagram from Slide 13/14 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image10.webp"
+            title="IT & OT Integration Bridge"
+            subtitle="การหลอมรวมระบบปฏิบัติการเข้ากับระบบสารสนเทศ"
+            caption="บทบาทของระบบ MES และ IoT Gateway ในการเป็นตัวกลางแปลงสัญญาณอุตสาหกรรม (Modbus/OPC) เข้าสู่โปรโตคอลเว็บ (HTTP/JSON)"
+            badge="IT/OT BRIDGE"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image13.webp"
+            title="IT vs OT Boundary Matrix"
+            subtitle="ความแตกต่างของข้อกำหนดความปลอดภัยและเวลาตอบสนอง"
+            caption="NIST SP 800-82 ชี้ชัดว่าระบบควบคุมเครื่องจักรต้องไม่หยุดทำงาน แม้ระบบเครือข่ายอินเทอร์เน็ตภายนอกจะขัดข้อง"
+            badge="SECURITY MATRIX"
+          />
+        </div>
 
         {/* Companion Interactive Aid #1: ISA-95 Pyramid */}
         <Isa95PyramidExplorer />
       </section>
 
-      {/* 1.2 Industrial UX/UI Principles */}
+      {/* 1.3 Industrial UX/UI Principles */}
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
-          <span className="w-7 h-7 rounded-lg bg-pink-600/30 text-pink-400 flex items-center justify-center text-sm font-black border border-pink-500/40">2</span>
-          1.2 หลักการออกแบบหน้าจอโรงงาน (Industrial UX/UI &amp; IEC 60204-1)
+          <span className="w-7 h-7 rounded-lg bg-pink-600/30 text-pink-400 flex items-center justify-center text-sm font-black border border-pink-500/40">3</span>
+          1.3 หลักการออกแบบหน้าจอโรงงาน (Industrial UX/UI &amp; IEC 60204-1)
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          หน้าจอควบคุมในโรงงานไม่ใช่แค่เรื่องความสวยงาม แต่เกี่ยวกับ <strong>ความปลอดภัยและเวลาตัดสินใจใน 5 วินาที</strong>:
-          สีแดงใช้เฉพาะเหตุฉุกเฉิน (E-Stop/Fault), สีเหลืองสำหรับค่าเตือนก่อนเกินพิกัด, สีเขียวสำหรับการทำงานปกติ, 
-          และขนาดปุ่มสัมผัสต้องไม่ต่ำกว่า <strong>44 × 44 พิกเซล</strong> เพื่อให้พนักงานสวมถุงมือสามารถกดได้แม่นยำ ไม่กดพลาด (Touch Hitbox Accuracy)
+          หน้าจอควบคุมในโรงงานไม่ใช่แค่เรื่องความสวยงาม แต่เป็นเรื่องของ <strong>ความปลอดภัยและการตัดสินใจภายใน 5 วินาที</strong>:
+          การใช้สีต้องยึดตามมาตรฐานสากล <strong>IEC 60204-1</strong>: สีแดงใช้เฉพาะเหตุฉุกเฉิน (E-Stop/Fault), 
+          สีเหลืองสำหรับสภาวะเตือนก่อนเกินพิกัด, สีเขียวสำหรับการทำงานปกติ, 
+          และขนาดปุ่มสัมผัสต้องไม่ต่ำกว่า <strong>44 × 44 พิกเซล</strong> เพื่อรองรับนิ้วมือสวมถุงมือหน้างาน
         </p>
+
+        {/* Embedded UI Standard Diagrams */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image20.webp"
+            title="User-Centered Design (UCD) in Manufacturing"
+            subtitle="กระบวนการออกแบบโดยยึดผู้ปฏิบัติงานเป็นศูนย์กลาง"
+            caption="การเก็บ Requirement หน้างานจากช่างเทคนิคและ Operator เพื่อลดความผิดพลาดในการกดสั่งงาน (Zero Human Error)"
+            badge="UX PRINCIPLE"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image29.webp"
+            title="Standards for Industrial UI Design"
+            subtitle="มาตรฐานสีและระยะสัมผัส IEC 60204-1 / ISA-101"
+            caption="หลีกเลี่ยงหน้าจอสีรุ้ง (Rainbow UI) ที่รบกวนสายตา และเน้น High-Contrast Data Display ที่มองเห็นได้ชัดจากระยะ 2 เมตร"
+            badge="IEC 60204-1"
+          />
+        </div>
 
         {/* Companion Interactive Aid #2: HMI Validator */}
         <IndustrialHmiValidatorSimulator />
       </section>
 
-      {/* 1.3 JSON Data Format */}
+      {/* 1.4 JSON Data Format */}
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
-          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">3</span>
-          1.3 โครงสร้างข้อมูล JSON สำหรับระบบอุตสาหกรรม (RFC 8259)
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">4</span>
+          1.4 โครงสร้างข้อมูล JSON สำหรับระบบอุตสาหกรรม (RFC 8259)
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          JSON (JavaScript Object Notation) คือภาษากลางที่ใช้แลกเปลี่ยนข้อมูลระหว่างเครื่องจักร, Edge Gateway, ระบบ MES และหน้าเว็บ Dashboard 
-          ทดลองคลิกที่คีย์ต่างๆ ด้านล่างเพื่อดูวิธีการเขียนคำสั่ง JavaScript ในการเข้าถึงข้อมูลตัวเลขและอาร์เรย์
+          JSON (JavaScript Object Notation) คือรูปแบบข้อมูลแบบ Text ที่เบา อ่านง่าย และเป็นมาตรฐานสากลที่ทุกภาษาเข้าใจตรงกัน 
+          ในระบบโรงงาน เซนเซอร์และ Edge Gateway จะแพ็กค่าแรงดัน กระแสไฟฟ้า และสถานะเครื่องจักรเป็น JSON ส่งเข้าสู่ API ของ MES
         </p>
+
+        <IndustrialDiagramCard 
+          imgSrc="./images/enterprise_slides/image78.webp"
+          title="JSON Data Structure Specification (RFC 8259)"
+          subtitle="โครงสร้างคีย์และชนิดข้อมูลในระบบ IoT อุตสาหกรรม"
+          caption="คีย์ต้องเป็น String ในเครื่องหมายคำพูดคู่เสมอ และรองรับ Value ทั้ง String, Number, Boolean, Array, และ Nested Object"
+          badge="DATA STANDARD"
+        />
 
         {/* Companion Interactive Aid #3: JSON Explorer */}
         <JsonPathInteractiveExplorer />
@@ -1415,7 +1576,7 @@ export function EnterpriseAppMod2() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-pink-950/70 via-rose-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-pink-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold mb-3 border border-pink-500/30">
-          <FiLayout className="w-4 h-4" /> โมดูลที่ 2 (Module 2) · วันที่ 1 ภาคบ่าย
+          <FiLayout className="w-4 h-4" /> โมดูลที่ 2 (Module 2) · วันที่ 1 ภาคบ่าย · ทักษะโครงสร้างและการจัดหน้าจอ
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
           Industrial UX/UI &amp; Modern Layout Design (HTML5 &amp; Flexbox)
@@ -1432,11 +1593,28 @@ export function EnterpriseAppMod2() {
           2.1 โครงสร้าง Semantic HTML5 สำหรับระบบแสดงผล Dashboard
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          เลิกใช้ <code>&lt;div&gt;</code> ครอบทุกอย่าง (Div Soup) แต่ใช้แท็กที่มีความหมายเชิงโครงสร้างตามมาตรฐานสากล:
-          <code>&lt;header&gt;</code> สำหรับระบุชื่อโรงงานและไลน์การผลิต, 
+          หลีกเลี่ยงการใช้ <code>&lt;div&gt;</code> ครอบทุกอย่าง (Div Soup) ซึ่งทำให้โค้ดอ่านยากและเบราว์เซอร์ประมวลผลช้า 
+          ในระบบโรงงานเราใช้แท็กเชิงความหมาย: <code>&lt;header&gt;</code> ระบุชื่อสายการผลิต, 
           <code>&lt;main&gt;</code> ครอบส่วนเนื้อหาแสดงผลค่าวัด, 
-          และ <code>&lt;section&gt;</code> หรือ <code>&lt;article&gt;</code> สำหรับการ์ดแสดงค่าแต่ละตัว
+          และ <code>&lt;article class="meter-card"&gt;</code> สำหรับการ์ดแสดงค่าแต่ละตัว
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image30.webp"
+            title="HTML5 Document Architecture"
+            subtitle="โครงสร้างพื้นฐานของเอกสารเว็บตามมาตรฐาน W3C"
+            caption="การประกาศ DOCTYPE, กำหนด charset UTF-8 เพื่อรองรับภาษาไทย, และ viewport meta tag เพื่อให้แสดงผลถูกต้องบนมือถือ"
+            badge="HTML5 SPEC"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image32.webp"
+            title="Semantic HTML Tags Hierarchy"
+            subtitle="โครงสร้างแท็กที่มีความหมายเชิงวิศวกรรม"
+            caption="การใช้ header, main, section, article ช่วยให้โค้ดมีระเบียบและง่ายต่อการเขียนสคริปต์ DOM ค้นหา Element"
+            badge="SEMANTIC WEB"
+          />
+        </div>
 
         <CodeBlock
           code={`<!-- โครงสร้าง Semantic HTML5 สำหรับหน้าจอ Electrical Meter -->
@@ -1470,16 +1648,33 @@ export function EnterpriseAppMod2() {
         />
       </section>
 
-      {/* 2.2 Flexbox Simulator */}
+      {/* 2.2 CSS Box Model & Flexbox */}
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
           <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">2</span>
-          2.2 ออกแบบ Layout แบบยืดหยุ่นด้วย CSS Flexbox
+          2.2 CSS Box Model &amp; Flexbox สำหรับหน้าจอแสดงผลอุตสาหกรรม
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          ในโรงงานอุตสาหกรรม หน้าจอควบคุมต้องเปิดดูได้ทั้งบนแท็บเล็ตประจำตัวช่าง, โน้ตบุ๊กหัวหน้างาน, และจอโทรทัศน์แขวนเพดาน (Andon Display) 
-          ทดลองปรับคุณสมบัติ <code>flex-wrap</code>, <code>gap</code> และสลับขนาดหน้าจอด้านล่างเพื่อดูการตัดบรรทัดของการ์ดจริง
+          หน้าจอแดชบอร์ดโรงงานต้องเปิดดูได้ทั้งบนแท็บเล็ตตรวจงานของช่าง, หน้าจอมือถือพนักงาน, และจอแอลอีดีขนาดใหญ่แขวนเพดาน 
+          เราใช้ <strong>CSS Flexbox</strong> กำหนด <code>flex-wrap: wrap</code> ร่วมกับ <code>flex: 1 1 240px</code> เพื่อให้การ์ดขยายเต็มพื้นที่เมื่อจอกว้าง และตัดลงมาเป็นแถวใหม่โดยอัตโนมัติเมื่อจอแคบ
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image38.webp"
+            title="CSS Box Model Architecture"
+            subtitle="ความสัมพันธ์ Content, Padding, Border และ Margin"
+            caption="กฎสำคัญ: ใช้ box-sizing: border-box เสมอ เพื่อให้ความกว้างของการ์ดรวม padding แล้ว ไม่ล้นจอเกินขนาดที่คำนวณ"
+            badge="BOX MODEL"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image40.webp"
+            title="Flexbox Main Axis vs Cross Axis"
+            subtitle="ทิศทางการจัดเรียงและการตัดบรรทัดของการ์ด"
+            caption="การควบคุม flex-direction, justify-content, align-items และ gap ช่วยให้จัด Layout แดชบอร์ดได้โดยไม่ต้องใช้ Float หรือ Table"
+            badge="FLEXBOX MODEL"
+          />
+        </div>
 
         {/* Companion Interactive Aid #4: Flexbox Playground */}
         <IndustrialFlexboxSimulator />
@@ -1506,7 +1701,7 @@ export function EnterpriseAppMod3() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-blue-950/70 via-cyan-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-blue-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-3 border border-blue-500/30">
-          <FiCode className="w-4 h-4" /> โมดูลที่ 3 (Module 3) · วันที่ 2 เต็มวัน
+          <FiCode className="w-4 h-4" /> โมดูลที่ 3 (Module 3) · วันที่ 2 เต็มวัน · ทักษะโปรแกรมมิ่งและการควบคุมหน้าจอ
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
           JavaScript Programming Logic, DOM &amp; State Control
@@ -1542,19 +1737,53 @@ export function EnterpriseAppMod3() {
             </p>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image45.gif"
+            title="JavaScript Execution & Event Loop"
+            subtitle="กลไกการทำงานแบบ Single-Thread Asynchronous"
+            caption="JavaScript ประมวลผลคำสั่งทีละบรรทัด และใช้ Event Loop จัดการเหตุการณ์การคลิกและข้อมูลตอบกลับจากเครือข่ายโดยไม่ทำให้หน้าเว็บค้าง"
+            badge="JS RUNTIME"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image59.webp"
+            title="JavaScript Objects & Arrays Hierarchy"
+            subtitle="การจัดเก็บข้อมูลสถานะเครื่องจักรในรูปแบบอ็อบเจกต์"
+            caption="การเข้าถึงค่าผ่าน Property เช่น machine.metrics.temperature เพื่อนำไปเปรียบเทียบกับเกณฑ์ความปลอดภัย"
+            badge="DATA STRUCTURE"
+          />
+        </div>
       </section>
 
-      {/* 3.2 Smart Control Cabinet Simulator */}
+      {/* 3.2 DOM Architecture & Manipulation */}
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
           <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">2</span>
           3.2 การสั่งงานหน้าจอผ่าน DOM (Document Object Model)
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          เมื่อเซนเซอร์ส่งค่ามาหรือพนักงานกดปุ่ม JavaScript จะเปลี่ยนเนื้อหาข้อความด้วย <code>textContent</code> 
-          และเปลี่ยนสีการ์ดหรือสถานะไฟเตือนด้วย <code>classList.add/remove/toggle</code> 
-          ทดลองกดเล่นในห้องแล็บจำลองด้านล่าง:
+          DOM คือโครงสร้างต้นไม้ (Tree Structure) ที่เบราว์เซอร์สร้างขึ้นแทนเอกสาร HTML เมื่อมีข้อมูลส่งมาจากเซนเซอร์ 
+          JavaScript จะเข้าถึง Element ผ่าน <code>document.getElementById()</code> แล้วเปลี่ยนเนื้อหาด้วย <code>textContent</code> 
+          และเปลี่ยนสีการ์ดหรือสั่งไฟเตือนกระพริบด้วย <code>classList.add/remove/toggle</code>
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image66.webp"
+            title="The DOM Tree Structure"
+            subtitle="โครงสร้างลำดับชั้นของ Element บนหน้าเว็บ"
+            caption="document → html → body → main → article แต่ละส่วนคือ Node ที่ JavaScript สามารถเข้าถึงและสั่งแก้ไขได้แบบ Real-Time"
+            badge="DOM ARCHITECTURE"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image73.webp"
+            title="Event Listener & Callback Flow"
+            subtitle="วงจรการตรวจจับการกดปุ่ม (Event Handling)"
+            caption="การผูก addEventListener('click', handler) เข้ากับปุ่มควบคุม เพื่อสั่งงานมอเตอร์หรือยอมรับข้อความแจ้งเตือน (Alarm Acknowledge)"
+            badge="EVENT FLOW"
+          />
+        </div>
 
         {/* Companion Interactive Aid #5: Control Cabinet */}
         <ControlCabinetDomSimulator />
@@ -1581,7 +1810,7 @@ export function EnterpriseAppMod4() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-emerald-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
-          <FiActivity className="w-4 h-4" /> โมดูลที่ 4 (Module 4) · วันที่ 3 เต็มวัน
+          <FiActivity className="w-4 h-4" /> โมดูลที่ 4 (Module 4) · วันที่ 3 เต็มวัน · ทักษะการบูรณาการระบบและ IoT
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
           Application Integration, REST APIs &amp; Webhook Automation
@@ -1598,24 +1827,60 @@ export function EnterpriseAppMod4() {
           4.1 สถาปัตยกรรม REST API &amp; HTTP Methods ตามมาตรฐาน RFC 9110
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          API (Application Programming Interface) ทำหน้าที่เป็นช่องทางการสื่อสารมาตรฐานระหว่างหน้าเว็บ Dashboard กับเครื่องแม่ข่าย 
           เปรียบเสมือนบริกรในร้านอาหารที่นำคำสั่งของลูกค้า (Client) ไปบอกแม่ครัว (Server) และนำอาหาร (Data JSON) กลับมาเสิร์ฟ 
-          ทดลองกดส่งคำสั่ง HTTP Method แต่ละชนิดด้านล่างเพื่อดูข้อมูลจำลองที่เซิร์ฟเวอร์ตอบกลับมา:
+          โดยมี <strong>HTTP Methods</strong> กำหนดเจตนาอย่างเคร่งครัด
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image80.webp"
+            title="REST API Architecture Concept"
+            subtitle="การแลกเปลี่ยนข้อมูลผ่าน HTTP Protocol"
+            caption="Client ส่ง Request พร้อม Method และ Header → Server ประมวลผลและส่ง Response กลับมาพร้อม Status Code และ JSON Payload"
+            badge="API SPECIFICATION"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image82.webp"
+            title="HTTP Methods Taxonomy (RFC 9110)"
+            subtitle="GET (อ่าน), POST (สร้าง), PUT (แทนที่), DELETE (ลบ)"
+            caption="เข้าใจความหมายของ Safe และ Idempotent: คำสั่ง GET ต้องไม่เปลี่ยนแปลงข้อมูลในฐานข้อมูลเด็ดขาด"
+            badge="HTTP METHODS"
+          />
+        </div>
 
         {/* Companion Interactive Aid #6: REST API Waiter */}
         <RestApiWaiterSimulator />
       </section>
 
-      {/* 4.2 Polling vs Webhook */}
+      {/* 4.2 Data Fetching & Real-Time Polling vs Webhook */}
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
           <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">2</span>
-          4.2 การอัปเดตข้อมูลแบบ Real-Time: Polling vs Webhook
+          4.2 การดึงข้อมูล Asynchronous (Fetch API) &amp; Polling vs Webhook
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          ในระบบมอนิเตอร์ไลน์ผลิต เราใช้ <strong>Polling (setInterval)</strong> สำหรับดึงค่ามิเตอร์ที่ต้องอัปเดตต่อเนื่องทุก 5 วินาที 
-          และใช้ <strong>Webhook (POST Notification)</strong> เมื่อเกิดเหตุฉุกเฉิน (Event-Driven) เพื่อแจ้งเตือนเข้าแชตทันที
+          เราใช้ <code>fetch()</code> ร่วมกับ <code>async/await</code> เพื่อดึงข้อมูลเซนเซอร์โดยไม่ทำให้หน้าเว็บค้าง 
+          ในการมอนิเตอร์สถานะการผลิต เราใช้ <strong>Polling (setInterval)</strong> สำหรับค่าน้ำ-ไฟที่ต้องอัปเดตต่อเนื่องทุก 5 วินาที 
+          และใช้ <strong>Webhook (POST Notification)</strong> เมื่อเกิดเหตุฉุกเฉิน (Event-Driven) เช่น มอเตอร์ร้อนจัด เพื่อยิงแจ้งเตือนเข้ากลุ่มแชตทันที
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image86.webp"
+            title="Asynchronous Fetch Data Flow"
+            subtitle="วงจรชีวิตของการยิง Fetch และจัดการ Error"
+            caption="try { const res = await fetch(url); if (!res.ok) throw ... } catch (err) { แสดงสถานะ Offline } ป้องกันหน้าจอค้าง"
+            badge="FETCH ASYNC/AWAIT"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image88.webp"
+            title="Event-Driven Webhook Architecture"
+            subtitle="การส่งแจ้งเตือนทันทีเมื่อเกิดเหตุการณ์วิกฤต"
+            caption="เมื่อเซนเซอร์ตรวจจับ Overvoltage > 240V ระบบจะส่ง HTTP POST พร้อม JSON Payload เข้า Webhook Gateway เพื่อกระจายแจ้งเตือนทันที"
+            badge="WEBHOOK ARCHITECTURE"
+          />
+        </div>
 
         {/* Companion Interactive Aid #7: Polling vs Webhook */}
         <PollingVsWebhookSimulator />
@@ -1655,7 +1920,7 @@ export function EnterpriseAppMod5() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-amber-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold mb-3 border border-amber-500/30">
-          <FiAward className="w-4 h-4" /> โมดูลที่ 5 (Module 5) · วันที่ 4 เต็มวัน
+          <FiAward className="w-4 h-4" /> โมดูลที่ 5 (Module 5) · วันที่ 4 เต็มวัน · การประกันคุณภาพและศูนย์สอบวัดผลจริง
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
           Software QA Standards &amp; Formal Examination Center
@@ -1669,13 +1934,30 @@ export function EnterpriseAppMod5() {
       <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
         <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
           <span className="w-7 h-7 rounded-lg bg-orange-600/30 text-orange-400 flex items-center justify-center text-sm font-black border border-orange-500/40">1</span>
-          5.1 การออกแบบกรณีทดสอบและการวิเคราะห์ค่าขอบเขต (Boundary Value Analysis)
+          5.1 การรับประกันคุณภาพซอฟต์แวร์และการวิเคราะห์ค่าขอบเขต (Boundary Value Analysis)
         </h2>
         <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-          บั๊กในระบบโรงงานมักไม่ได้เกิดที่ค่าปกติ แต่เกิดที่ <strong>"ค่าขอบเขต (Boundaries)"</strong> 
-          เช่น เกณฑ์ผ่าน 85.0% พอดี หรือยอดผลิตเป็น 0 
-          ทดลองป้อนตัวเลขยอดผลิตในเครื่องมือทดสอบด้านล่างเพื่อดูผลการรัน Test Cases ทั้ง 5 กรณี:
+          ในระบบซอฟต์แวร์โรงงาน บั๊กไม่ได้เกิดที่ข้อมูลปกติ แต่เกิดที่ <strong>"ค่าขอบเขต (Boundary Values)"</strong> 
+          เช่น อัตราผลผลิต 85.0% พอดี (เกณฑ์ผ่าน) หรือ 60.0% (เกณฑ์เฝ้าระวัง) หรือยอดผลิตเป้าหมายเป็น 0 (หารด้วยศูนย์) 
+          การทดสอบระบบจึงต้องสร้างตาราง Test Cases ครอบคลุมทั้งกรณีปกติ, ค่าขอบเขต, และกรณีผิดพลาด (Negative Testing)
         </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image95.webp"
+            title="Software Testing Pyramid & Hierarchy"
+            subtitle="ลำดับขั้นของการทดสอบซอฟต์แวร์อุตสาหกรรม"
+            caption="Unit Testing (ทดสอบฟังก์ชันคำนวณ) → Integration Testing (ทดสอบ API) → System Testing → UAT (ตรวจรับงานโดยผู้ใช้จริง)"
+            badge="QA PYRAMID"
+          />
+          <IndustrialDiagramCard 
+            imgSrc="./images/enterprise_slides/image96.webp"
+            title="Test Case Matrix & Specification"
+            subtitle="โครงสร้างตารางกรณีทดสอบมาตรฐาน ISO/IEC/IEEE 29119"
+            caption="ประกอบด้วย Test Case ID, คำอธิบายกรณีทดสอบ, ข้อมูลนำเข้า (Input Data), ผลลัพธ์ที่คาดหวัง, และสถานะการตรวจ Pass/Fail"
+            badge="TEST CASE MATRIX"
+          />
+        </div>
 
         {/* Companion Interactive Aid #8: BVA Simulator */}
         <AutomatedTestCaseEvaluator />
@@ -1760,6 +2042,14 @@ export function EnterpriseAppMod5() {
                 </p>
               </div>
             </div>
+
+            <IndustrialDiagramCard 
+              imgSrc="./images/enterprise_slides/image97.webp"
+              title="User Acceptance Testing (UAT) Sign-off Protocol"
+              subtitle="ขั้นตอนการตรวจรับงานจริงระหว่างผู้พัฒนาและผู้ใช้งาน"
+              caption="การส่งมอบซอฟต์แวร์ระดับองค์กรต้องผ่านเกณฑ์ UAT 100% โดยผู้ใช้จริงในสภาพแวดล้อมเสมือนจริงก่อนนำขึ้น Production"
+              badge="UAT SIGN-OFF"
+            />
           </div>
         )}
 
