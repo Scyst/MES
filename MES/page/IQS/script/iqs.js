@@ -559,9 +559,9 @@ const IQS = {
         // Current Slot Info
         let currentSlot = 'รอบมาตรฐาน';
         if (this.slotStatuses && this.slotStatuses.length > 0) {
-            const activeSlot = this.slotStatuses.find(s => s.status === 'DUE_NOW') || 
-                               this.slotStatuses.find(s => s.status === 'IN_PROGRESS') || 
-                               this.slotStatuses[0];
+            const activeSlot = this.slotStatuses.find(s => s.status === 'DUE_NOW') ||
+                this.slotStatuses.find(s => s.status === 'IN_PROGRESS') ||
+                this.slotStatuses[0];
             if (activeSlot) {
                 currentSlot = `${activeSlot.template_name} (${activeSlot.std_time}) - กะ ${activeSlot.shift}`;
             }
