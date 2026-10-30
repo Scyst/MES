@@ -1474,7 +1474,7 @@ export default function CourseViewer() {
             </div>
           )}
 
-          {/* Quick-Access Engineering Glossary Pill Button */}
+          {/* Quick-Access Engineering Glossary & Complete Teaching Kit Pill Buttons */}
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
             <button
               onClick={() => setIsGlossaryOpen(true)}
@@ -1492,9 +1492,30 @@ export default function CourseViewer() {
               <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                 isDark ? 'bg-cyan-500/20 text-cyan-200' : 'bg-cyan-100 text-cyan-800'
               }`}>
-                WD · FOV · MP · NPU · INT8 · OBB · PPM
+                {course?.id === 'c-enterprise-app'
+                  ? 'IT/OT · ISA-95 · DOM · REST API · JSON · Webhook · UAT'
+                  : 'WD · FOV · MP · NPU · INT8 · OBB · PPM'}
               </span>
             </button>
+
+            {(course?.id === 'c-enterprise-app' || course?.id === 'c-machine-vision') && (
+              <button
+                onClick={() => setIsTrainerGuideOpen(true)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-2 shadow-md group cursor-pointer ${
+                  isDark
+                    ? 'bg-gradient-to-r from-fuchsia-950/80 via-purple-950/80 to-indigo-950/80 hover:from-fuchsia-900 hover:to-indigo-900 text-fuchsia-200 border-fuchsia-500/50'
+                    : 'bg-gradient-to-r from-fuchsia-50 via-purple-50 to-indigo-50 hover:from-fuchsia-100 hover:to-indigo-100 text-fuchsia-900 border-fuchsia-300'
+                }`}
+                title="เปิดชุดคู่มือวิทยากร 102 สไลด์ + บทพูด + ทบทวนผู้สอน 14 หัวข้อ + เฉลย Workshop + ข้อสอบ"
+              >
+                <span className="text-sm">🎓</span>
+                <span>
+                  {course?.id === 'c-enterprise-app'
+                    ? 'เปิดชุดคู่มือผู้สอน & บทพูด 102 สไลด์ครบชุด (Complete Teaching Kit)'
+                    : 'คู่มือวิทยากรและแผนการสอน 3 วัน (Trainer Companion)'}
+                </span>
+              </button>
+            )}
           </div>
 
           {activeModule && (

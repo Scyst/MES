@@ -36,9 +36,23 @@ import {
   FiUserCheck,
   FiCheckCircle,
   FiXCircle,
-  FiSearch
+  FiSearch,
+  FiChevronLeft,
+  FiChevronRight,
+  FiBookOpen,
+  FiEyeOff
 } from 'react-icons/fi';
 import { ENTERPRISE_APP_SPEAKER_NOTES } from '../enterpriseAppSpeakerNotes';
+import {
+  ENTERPRISE_SLIDES_102,
+  ENTERPRISE_CODE_EXAMPLES_16,
+  ENTERPRISE_WORKSHOPS_DATA,
+  ENTERPRISE_TEMPLATES_DATA,
+  ENTERPRISE_THEORY_EXAM,
+  ENTERPRISE_PRACTICAL_EXAM,
+  ENTERPRISE_INSTRUCTOR_REVIEW_14
+} from '../enterpriseAppFullData';
+import EnterpriseTeachingKitHub, { TeachingKitVisualLabs } from '../../components/EnterpriseTeachingKitHub';
 
 // Helper component for Code Block with copy functionality
 function CodeBlock({ code, language = 'javascript' }) {
@@ -1236,6 +1250,833 @@ export function AutomatedTestCaseEvaluator() {
 }
 
 // =========================================================================
+// SHARED FULL-CURRICULUM COMPONENTS (102 Slides + 98 Images + 16 Examples + 4 Workshops + Day 4 Exam)
+// =========================================================================
+
+function TeachingKitQuickDrawer({ defaultTab = 'script', dayLabel = 'ครบทั้ง 4 วัน' }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-2xl border-2 border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-950/40 via-indigo-950/40 to-slate-900 overflow-hidden shadow-xl">
+      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shrink-0 shadow-lg shadow-fuchsia-500/20">
+            🎓
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base sm:text-lg font-black text-white m-0">
+                ชุดคู่มือผู้สอน &amp; สื่อการสอนฉบับสมบูรณ์ (Complete Teaching Kit Hub)
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40">
+                102 สไลด์ · 14 บททบทวน · 16 ตัวอย่างโค้ด · 4 Workshop · ข้อสอบจริง
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1 m-0 leading-relaxed">
+              รวบรวมทุกไฟล์จากชุดสื่อการสอนต้นฉบับ: เช็กลิสต์เตรียมสอน, บทพูดรายสไลด์ 102 หน้าพร้อมโหมดสอนทีละหน้า, สรุปทบทวนผู้สอน 14 หัวข้อ + ตารางแก้บั๊ก F12, สื่อจำลอง 4 ชิ้น, Pre/Post-test 40 ข้อ และเฉลย Workshop/ข้อสอบ ({dayLabel})
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white shadow-lg shadow-fuchsia-600/20 flex items-center gap-2 shrink-0 cursor-pointer transition-all"
+        >
+          {open ? (
+            <>
+              <FiChevronUp className="w-4 h-4" /> ซ่อนชุดคู่มือผู้สอน
+            </>
+          ) : (
+            <>
+              <FiBookOpen className="w-4 h-4" /> เปิดชุดคู่มือผู้สอน 6 แท็บเต็มรูปแบบ
+            </>
+          )}
+        </button>
+      </div>
+
+      {open && (
+        <div className="p-4 sm:p-6 border-t border-fuchsia-500/30 bg-slate-950/90">
+          <EnterpriseTeachingKitHub initialTab={defaultTab} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModuleSlidesDeckViewer({ moduleId, moduleLabel }) {
+  const slides = ENTERPRISE_SLIDES_102.filter((s) => s.moduleId === moduleId);
+  const [viewMode, setViewMode] = useState('deck'); // 'deck' | 'all'
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [search, setSearch] = useState('');
+  const [showSpeakerNotes, setShowSpeakerNotes] = useState(true);
+
+  if (!slides.length) return null;
+
+  const activeSlide = slides[currentIdx] || slides[0];
+  const filteredSlides = slides.filter((s) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      String(s.n) === q ||
+      (s.title && s.title.toLowerCase().includes(q)) ||
+      (s.say && s.say.toLowerCase().includes(q)) ||
+      (s.tip && s.tip.toLowerCase().includes(q)) ||
+      (s.textBlocks && s.textBlocks.some((t) => t.toLowerCase().includes(q)))
+    );
+  });
+
+  return (
+    <section className="rounded-2xl border border-indigo-500/40 bg-slate-900/95 overflow-hidden shadow-2xl">
+      {/* Header Bar */}
+      <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-950/90 via-slate-900 to-slate-900 border-b border-indigo-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+              📊 สไลด์ต้นฉบับครบทุกหน้า ({slides[0].n}–{slides[slides.length - 1].n})
+            </span>
+            <span className="text-xs font-bold text-amber-300">
+              รวม {slides.length} สไลด์ · พร้อมภาพประกอบจากสไลด์จริง &amp; บทพูดผู้สอน
+            </span>
+          </div>
+          <h2 className="text-lg sm:text-xl font-black text-white mt-1 m-0">
+            สไลด์การสอนและบทพูดวิทยากรประจำ{moduleLabel}
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowSpeakerNotes(!showSpeakerNotes)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+              showSpeakerNotes
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            {showSpeakerNotes ? <FiEye className="w-3.5 h-3.5" /> : <FiEyeOff className="w-3.5 h-3.5" />}
+            {showSpeakerNotes ? 'แสดงบทพูดผู้สอน (ON)' : 'ซ่อนบทพูดผู้สอน (OFF)'}
+          </button>
+
+          <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setViewMode('deck')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                viewMode === 'deck' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🖥️ ดูทีละสไลด์ (Slide Deck)
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                viewMode === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              📜 เรียงทุกสไลด์ ({slides.length} หน้า)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {viewMode === 'deck' ? (
+        <div className="p-4 sm:p-6 space-y-5">
+          {/* Slide Number Selector Strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+            {slides.map((s, idx) => (
+              <button
+                key={s.n}
+                type="button"
+                onClick={() => setCurrentIdx(idx)}
+                className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold shrink-0 cursor-pointer transition-all ${
+                  idx === currentIdx
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30 scale-105'
+                    : 'bg-slate-800/90 text-slate-400 hover:bg-slate-700 hover:text-white'
+                }`}
+                title={`สไลด์ ${s.n}: ${s.title}`}
+              >
+                #{s.n}
+              </button>
+            ))}
+          </div>
+
+          {/* Active Slide Card */}
+          <div className="rounded-2xl bg-slate-950 border border-slate-800 p-5 sm:p-6 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-xl bg-indigo-600 text-white font-mono text-sm font-black">
+                  Slide {activeSlide.n} / 102
+                </span>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-white m-0">{activeSlide.title}</h3>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Day {activeSlide.day} · หน้าที่ {currentIdx + 1} จาก {slides.length} ในโมดูลนี้
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeSlide.time && (
+                  <span className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs font-bold">
+                    ⏱️ เวลาแนะนำ: {activeSlide.time}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  disabled={currentIdx === 0}
+                  onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <FiChevronLeft /> ก่อนหน้า
+                </button>
+                <button
+                  type="button"
+                  disabled={currentIdx === slides.length - 1}
+                  onClick={() => setCurrentIdx((i) => Math.min(slides.length - 1, i + 1))}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  ถัดไป <FiChevronRight />
+                </button>
+              </div>
+            </div>
+
+            {/* Slide Content & Visuals Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Left: Slide Text, Bullets, Tables, and Slide Images */}
+              <div className={`${showSpeakerNotes ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4`}>
+                {activeSlide.textBlocks && activeSlide.textBlocks.length > 0 && (
+                  <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+                    <div className="text-[11px] font-mono uppercase tracking-wider text-indigo-400 font-bold">
+                      📌 เนื้อหาบนสไลด์ (Slide Content)
+                    </div>
+                    <ul className="space-y-1.5 text-xs sm:text-sm text-slate-200 list-disc list-inside leading-relaxed">
+                      {activeSlide.textBlocks.map((tb, idx) => (
+                        <li key={idx}>{Array.isArray(tb) ? tb.join(' ') : tb}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {activeSlide.tables &&
+                  activeSlide.tables.map((tbl, tIdx) => (
+                    <div key={tIdx} className="overflow-x-auto rounded-xl border border-slate-800">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-900 text-indigo-300">
+                          <tr>
+                            {tbl[0]?.map((cell, cIdx) => (
+                              <th key={cIdx} className="p-2.5 border-b border-slate-800 font-bold">
+                                {cell}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/80 bg-slate-950 text-slate-300">
+                          {tbl.slice(1).map((row, rIdx) => (
+                            <tr key={rIdx} className="hover:bg-slate-900/40">
+                              {row.map((cell, cIdx) => (
+                                <td key={cIdx} className="p-2.5">
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+
+                {activeSlide.images && activeSlide.images.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
+                      🖼️ ภาพประกอบและไดอะแกรมจากสไลด์จริง ({activeSlide.images.length} ภาพ)
+                    </div>
+                    <div
+                      className={`grid gap-3 ${
+                        activeSlide.images.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
+                      }`}
+                    >
+                      {activeSlide.images.map((img, iIdx) => (
+                        <div
+                          key={iIdx}
+                          className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 p-2 flex items-center justify-center"
+                        >
+                          <img
+                            src={`./images/enterprise_slides/${img}`}
+                            alt={`Slide ${activeSlide.n} visual ${iIdx + 1}`}
+                            className="max-h-80 w-auto object-contain rounded-lg"
+                            loading="lazy"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Speaker Notes (Say / Ask / Tip) */}
+              {showSpeakerNotes && (
+                <div className="lg:col-span-5 space-y-3">
+                  <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/30 space-y-2">
+                    <div className="text-xs font-black text-indigo-300 uppercase tracking-wider">
+                      🎙️ บทพูดผู้สอน (Say)
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed m-0 whitespace-pre-line">
+                      {activeSlide.say || 'อธิบายเนื้อหาตามหัวข้อบนสไลด์และเชื่อมโยงกับบริบทโรงงานจริง'}
+                    </p>
+                  </div>
+
+                  {activeSlide.ask && (
+                    <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1.5">
+                      <div className="text-xs font-black text-amber-300 uppercase tracking-wider">
+                        ❓ คำถามชวนผู้เรียนคิด (Ask)
+                      </div>
+                      <p className="text-xs sm:text-sm text-amber-100 leading-relaxed m-0">
+                        {activeSlide.ask}
+                      </p>
+                    </div>
+                  )}
+
+                  {activeSlide.tip && (
+                    <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-1.5">
+                      <div className="text-xs font-black text-emerald-300 uppercase tracking-wider">
+                        💡 เทคนิคการสอน / จุดเน้นหน้าห้อง (Tip)
+                      </div>
+                      <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed m-0">
+                        {activeSlide.tip}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* All Slides List View */
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative w-full sm:w-96">
+              <FiSearch className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="ค้นหาเลขสไลด์, หัวข้อ, หรือคำในบทพูด..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+              />
+            </div>
+            <span className="text-xs text-slate-400 font-mono">
+              แสดง {filteredSlides.length} จาก {slides.length} สไลด์
+            </span>
+          </div>
+
+          <div className="space-y-4 max-h-[850px] overflow-y-auto pr-1">
+            {filteredSlides.map((s) => (
+              <div
+                key={s.n}
+                className="p-4 sm:p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-mono text-xs font-black">
+                      สไลด์ {s.n}
+                    </span>
+                    <h4 className="text-base font-black text-white m-0">{s.title}</h4>
+                  </div>
+                  {s.time && (
+                    <span className="text-xs font-mono text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                      ⏱️ {s.time}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  <div className={`${showSpeakerNotes ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-3`}>
+                    {s.textBlocks && s.textBlocks.length > 0 && (
+                      <ul className="text-xs text-slate-200 space-y-1 list-disc list-inside bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                        {s.textBlocks.map((tb, idx) => (
+                          <li key={idx}>{Array.isArray(tb) ? tb.join(' ') : tb}</li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {s.tables &&
+                      s.tables.map((tbl, tIdx) => (
+                        <div key={tIdx} className="overflow-x-auto rounded-xl border border-slate-800">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-900 text-indigo-300">
+                              <tr>
+                                {tbl[0]?.map((c, cIdx) => (
+                                  <th key={cIdx} className="p-2 border-b border-slate-800">
+                                    {c}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800 bg-slate-950 text-slate-300">
+                              {tbl.slice(1).map((r, rIdx) => (
+                                <tr key={rIdx}>
+                                  {r.map((c, cIdx) => (
+                                    <td key={cIdx} className="p-2">
+                                      {c}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+
+                    {s.images && s.images.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {s.images.map((img, iIdx) => (
+                          <div
+                            key={iIdx}
+                            className="rounded-xl overflow-hidden border border-slate-800 bg-slate-900 p-2 flex items-center justify-center"
+                          >
+                            <img
+                              src={`./images/enterprise_slides/${img}`}
+                              alt={`Slide ${s.n}`}
+                              className="max-h-56 w-auto object-contain rounded"
+                              loading="lazy"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {showSpeakerNotes && (
+                    <div className="lg:col-span-5 space-y-2 text-xs">
+                      <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/30 text-slate-200">
+                        <strong className="text-indigo-300 block mb-1">💬 บทพูด (Say):</strong>
+                        {s.say}
+                      </div>
+                      {s.ask && (
+                        <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-100">
+                          <strong className="text-amber-300 block mb-1">❓ คำถามชวนคิด (Ask):</strong>
+                          {s.ask}
+                        </div>
+                      )}
+                      {s.tip && (
+                        <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-100">
+                          <strong className="text-emerald-300 block mb-1">💡 เทคนิคผู้สอน (Tip):</strong>
+                          {s.tip}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ModuleDeepTheorySection({ reviewIds = [], sectionTitle }) {
+  const articles = ENTERPRISE_INSTRUCTOR_REVIEW_14.filter((item) => reviewIds.includes(item.id));
+  if (!articles.length) return null;
+
+  return (
+    <section className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-xl font-black text-white flex items-center gap-2.5 m-0">
+          <span className="px-2.5 py-1 rounded-lg bg-fuchsia-600/30 text-fuchsia-300 text-xs font-mono border border-fuchsia-500/40">
+            DEEP-DIVE KNOWLEDGE
+          </span>
+          {sectionTitle}
+        </h2>
+        <span className="text-xs text-slate-400 font-mono">
+          สรุปเนื้อหาเจาะลึก + โค้ดต้นแบบ + จุดที่ผู้เรียนมักพลาดบ่อยในห้องแล็บ
+        </span>
+      </div>
+
+      <div className="space-y-5">
+        {articles.map((art) => (
+          <div
+            key={art.id}
+            className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-lg"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="px-2.5 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 font-mono text-xs font-bold border border-fuchsia-500/30">
+                  {art.tag}
+                </span>
+                <h3 className="text-lg font-black text-white m-0">{art.title}</h3>
+              </div>
+              <span className="text-xs font-mono text-amber-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                📌 {art.useIn}
+              </span>
+            </div>
+
+            {art.lead && (
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed bg-slate-950/70 p-3.5 rounded-xl border-l-4 border-fuchsia-500 m-0">
+                {art.lead}
+              </p>
+            )}
+
+            {art.flowline && (
+              <div className="flex flex-wrap items-center gap-2 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-300">
+                {art.flowline.map((node, idx) => (
+                  <React.Fragment key={idx}>
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700">
+                      {node}
+                    </span>
+                    {idx < art.flowline.length - 1 && <span className="text-slate-500">→</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
+            {art.cards && art.cards.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {art.cards.map((c, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-xl border space-y-2 ${
+                      c.variant === 'trap'
+                        ? 'bg-amber-950/20 border-amber-500/40'
+                        : 'bg-slate-950/80 border-slate-800'
+                    }`}
+                  >
+                    <h4
+                      className={`text-sm font-black m-0 ${
+                        c.variant === 'trap' ? 'text-amber-300' : 'text-indigo-300'
+                      }`}
+                    >
+                      {c.title}
+                    </h4>
+                    {c.text && <p className="text-xs text-slate-300 leading-relaxed m-0">{c.text}</p>}
+                    {c.bullets && (
+                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside leading-relaxed">
+                        {c.bullets.map((b, bIdx) => (
+                          <li key={bIdx}>{b}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {c.code && <CodeBlock code={c.code} language="javascript / html" />}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {art.table && (
+              <div className="overflow-x-auto rounded-xl border border-slate-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-indigo-300 font-bold">
+                    <tr>
+                      {art.table.headers.map((h, hIdx) => (
+                        <th key={hIdx} className="p-3 border-b border-slate-800">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 bg-slate-900/60 text-slate-300">
+                    {art.table.rows.map((row, rIdx) => (
+                      <tr key={rIdx} className="hover:bg-slate-800/40">
+                        {row.map((cell, cIdx) => (
+                          <td
+                            key={cIdx}
+                            className={`p-3 ${cIdx === 0 ? 'font-mono font-bold text-amber-300' : ''}`}
+                          >
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {art.faqs && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {art.faqs.map((f, fIdx) => (
+                  <div
+                    key={fIdx}
+                    className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs"
+                  >
+                    <div className="font-bold text-amber-300">❓ {f.q}</div>
+                    <div className="text-slate-300 leading-relaxed">💡 {f.a}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {art.selfCheck && (
+              <div className="space-y-2">
+                <div className="text-xs font-bold text-emerald-300">
+                  ✅ คำถามทบทวนความเข้าใจ 10 ข้อพร้อมคำตอบ:
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {art.selfCheck.map((sc, sIdx) => (
+                    <div
+                      key={sIdx}
+                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1 text-xs"
+                    >
+                      <div className="font-bold text-white">
+                        {sIdx + 1}. {sc.q}
+                      </div>
+                      <div className="text-emerald-300 leading-relaxed">↳ {sc.a}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ModuleCodeExamplesViewer({ moduleId, title }) {
+  const examples = ENTERPRISE_CODE_EXAMPLES_16.filter((ex) => ex.moduleId === moduleId);
+  const [selectedFile, setSelectedFile] = useState(examples[0]?.file || '');
+
+  if (!examples.length) return null;
+  const activeEx = examples.find((e) => e.file === selectedFile) || examples[0];
+
+  return (
+    <section className="rounded-2xl border border-cyan-500/40 bg-slate-900/90 p-5 sm:p-6 space-y-4 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[11px] font-mono font-bold mb-1">
+            💻 CODE EXAMPLES ({examples.length} ไฟล์จากโฟลเดอร์ examples/)
+          </div>
+          <h2 className="text-lg sm:text-xl font-black text-white m-0">{title}</h2>
+        </div>
+        <span className="text-xs text-slate-400">
+          คลิกเลือกไฟล์ตัวอย่างเพื่อดูโค้ดฉบับเต็มและคัดลอกไปรันทดสอบ
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {examples.map((ex) => (
+          <button
+            key={ex.file}
+            type="button"
+            onClick={() => setSelectedFile(ex.file)}
+            className={`px-3 py-2 rounded-xl text-xs font-mono font-bold border cursor-pointer transition-all ${
+              activeEx.file === ex.file
+                ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-500/20'
+                : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
+            }`}
+          >
+            📄 {ex.file}
+          </button>
+        ))}
+      </div>
+
+      {activeEx && (
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="text-sm font-black text-cyan-300">{activeEx.title}</span>
+              <span className="ml-2 text-xs font-mono text-slate-400">({activeEx.slides})</span>
+            </div>
+            <span className="text-xs text-slate-300">{activeEx.desc}</span>
+          </div>
+          <CodeBlock code={activeEx.code} language={activeEx.file} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function WorkshopFullLabSheet({ workshopId }) {
+  const workshops = ENTERPRISE_WORKSHOPS_DATA?.workshops || [];
+  const w = workshops.find((item) => 
+    item.id === workshopId || 
+    item.id.toLowerCase() === workshopId.toLowerCase() ||
+    item.id.replace(/\s+/g, '').toLowerCase() === workshopId.toLowerCase() ||
+    (workshopId === 'w1' && item.id === 'Workshop 1') ||
+    (workshopId === 'w2' && item.id === 'Workshop 2') ||
+    (workshopId === 'w3' && item.id === 'Workshop 3') ||
+    (workshopId === 'w4' && item.id === 'Workshop 4')
+  );
+  const [codeTab, setCodeTab] = useState('starter'); // 'starter' | 'solution' | 'mockapi'
+
+  if (!w) return null;
+
+  const starterEntries = Object.entries(w.starterFiles || {});
+  const solutionEntries = Object.entries(w.solutionFiles || {});
+  const hasMockApi = w.id === 'Workshop 3' || w.id === 'Workshop 4' || workshopId === 'w3' || workshopId === 'w4';
+
+  return (
+    <section className="rounded-2xl border-2 border-emerald-500/40 bg-slate-900/95 overflow-hidden shadow-2xl">
+      <div className="p-5 sm:p-6 bg-gradient-to-r from-emerald-950/90 via-teal-950/70 to-slate-900 border-b border-emerald-500/30 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-xs font-black border border-emerald-500/40">
+            🛠️ HANDS-ON WORKSHOP LAB SHEET · {w.day}
+          </span>
+          <span className="text-xs font-mono text-amber-300 bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800">
+            ⏱️ เวลาทำแล็บ: {w.duration} · โฟลเดอร์: {w.folder}
+          </span>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-white m-0">{w.title}</h2>
+        <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed m-0">
+          <strong>เป้าหมาย (Goal):</strong> {w.goal}
+        </p>
+      </div>
+
+      <div className="p-5 sm:p-6 space-y-6">
+        {/* Steps & Spec Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-6 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <h3 className="text-sm font-black text-emerald-400 m-0">
+              📋 ขั้นตอนการลงมือทำทีละขั้น (Step-by-Step Instructions)
+            </h3>
+            <ol className="text-xs sm:text-sm text-slate-200 space-y-2 list-decimal list-inside leading-relaxed">
+              {(w.steps || []).map((st, idx) => (
+                <li key={idx} className="pl-1">
+                  {st}
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="lg:col-span-6 space-y-4">
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <h3 className="text-sm font-black text-cyan-400 m-0">
+                📐 ข้อกำหนดทางเทคนิค (Technical Specification)
+              </h3>
+              <div className="divide-y divide-slate-800 text-xs">
+                {(w.spec || []).map(([k, v], idx) => (
+                  <div key={idx} className="py-2 flex flex-col sm:flex-row sm:justify-between gap-1">
+                    <span className="font-bold text-slate-300">{k}</span>
+                    <span className="font-mono text-cyan-300 sm:text-right">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
+              <h3 className="text-sm font-black text-emerald-300 m-0">
+                ✅ เกณฑ์ตรวจงาน "ทำเสร็จเมื่อ" (Definition of Done)
+              </h3>
+              <ul className="text-xs text-slate-200 space-y-1.5 list-disc list-inside">
+                {(w.doneWhen || []).map((dw, idx) => (
+                  <li key={idx}>{dw}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Hints & Stretch Goals */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {w.hints && w.hints.length > 0 && (
+            <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-1.5">
+              <div className="font-black text-amber-300">💡 คำใบ้และจุดสังเกต (Hints):</div>
+              <ul className="space-y-1 text-amber-100 list-disc list-inside">
+                {w.hints.map((h, idx) => (
+                  <li key={idx}>{h}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {w.stretch && w.stretch.length > 0 && (
+            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 space-y-1.5">
+              <div className="font-black text-indigo-300">🚀 โจทย์ท้าทายเพิ่มเติมสำหรับคนที่เสร็จเร็ว (Stretch Goals):</div>
+              <ul className="space-y-1 text-indigo-100 list-disc list-inside">
+                {w.stretch.map((st, idx) => (
+                  <li key={idx}>{st}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Starter & Solution Code Switcher */}
+        <div className="space-y-4 pt-2 border-t border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCodeTab('starter')}
+                className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                  codeTab === 'starter'
+                    ? 'bg-cyan-600 text-white shadow-md'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                📂 โค้ดตั้งต้นสำหรับผู้เรียน (starter/ · {starterEntries.length} ไฟล์)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCodeTab('solution')}
+                className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                  codeTab === 'solution'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                🔑 เฉลยฉบับสมบูรณ์สำหรับผู้สอน (solution/ · {solutionEntries.length} ไฟล์)
+              </button>
+              {hasMockApi && (
+                <button
+                  type="button"
+                  onClick={() => setCodeTab('mockapi')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                    codeTab === 'mockapi'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  🐍 เซิร์ฟเวอร์จำลอง Python (mock_api.py)
+                </button>
+              )}
+            </div>
+          </div>
+
+          {codeTab === 'starter' && (
+            <div className="space-y-4">
+              {starterEntries.map(([fname, content]) => (
+                <div key={fname}>
+                  <div className="text-xs font-mono font-bold text-cyan-300 mb-1">
+                    📄 {w.folder}/starter/{fname}
+                  </div>
+                  <CodeBlock code={content} language={`starter/${fname}`} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {codeTab === 'solution' && (
+            <div className="space-y-4">
+              {solutionEntries.map(([fname, content]) => (
+                <div key={fname}>
+                  <div className="text-xs font-mono font-bold text-emerald-300 mb-1">
+                    ✅ {w.folder}/solution/{fname}
+                  </div>
+                  <CodeBlock code={content} language={`solution/${fname}`} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {codeTab === 'mockapi' && hasMockApi && (
+            <div>
+              <div className="text-xs font-mono font-bold text-purple-300 mb-1">
+                🐍 workshops/mock-api/mock_api.py (รันด้วยคำสั่ง python mock_api.py เปิดพอร์ต http://localhost:8000)
+              </div>
+              <CodeBlock code={ENTERPRISE_WORKSHOPS_DATA.mockApiPy} language="mock_api.py" />
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// =========================================================================
 // MODULE 1: Enterprise System & Digital Industry Landscape (Day 1 - Morning)
 // =========================================================================
 export function EnterpriseAppMod1() {
@@ -1244,105 +2085,29 @@ export function EnterpriseAppMod1() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-violet-950/70 via-indigo-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-violet-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-3 border border-violet-500/30">
-          <FiLayers className="w-4 h-4" /> โมดูลที่ 1 (Module 1) · วันที่ 1 ภาคเช้า
+          <FiLayers className="w-4 h-4" /> โมดูลที่ 1 (Module 1) · วันที่ 1 ภาคเช้า · สไลด์ 1–24
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Enterprise System &amp; Digital Industry Landscape
+          Enterprise System &amp; Digital Industry Landscape (สถาปัตยกรรมระบบองค์กร IT/OT, ISA-95 &amp; JSON)
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          ทำความเข้าใจสถาปัตยกรรมระบบองค์กรดิจิทัล การหลอมรวมระหว่างเทคโนโลยีสารสนเทศ (IT) 
-          และเทคโนโลยีปฏิบัติการหน้างาน (OT) เพื่อเชื่อมโยงข้อมูลจากเครื่องจักรสู่ผู้บริหารแบบ Real-time
+          ทำความเข้าใจสถาปัตยกรรมระบบองค์กรดิจิทัล การหลอมรวมระหว่างเทคโนโลยีสารสนเทศ (IT) และเทคโนโลยีปฏิบัติการหน้างาน (OT) ตามโครงสร้างมาตรฐาน IEC 62264 (ISA-95), สถาปัตยกรรม Client-Server, และโครงสร้างข้อมูล JSON (RFC 8259)
         </p>
       </div>
 
-      {/* Speaker Notes Drawer for Instructor */}
-      <TrainerNotesDrawer dayFilter={1} defaultOpen={false} />
+      {/* Quick Open Full 6-Tab Teaching Kit */}
+      <TeachingKitQuickDrawer defaultTab="prep" dayLabel="วันที่ 1 ภาคเช้า · สไลด์ 1–24" />
 
-      {/* 1.1 Digital Transformation Overview */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">1</span>
-          1.1 การเปลี่ยนผ่านสู่องค์กรดิจิทัล (Digital Transformation in Industry 4.0)
-        </h2>
-        <p className="text-sm text-slate-300 leading-relaxed">
-          ในยุคอุตสาหกรรม 4.0 องค์กรการผลิตไม่สามารถพึ่งพาวิธีการทำงานแบบเดิมที่ใช้กระดาษ (Paper-based) หรือไฟล์สเปรดชีต (Spreadsheet) 
-          ที่ต้องรอคนป้อนข้อมูลท้ายกะได้อีกต่อไป เพราะทำให้ข้อมูลล่าช้า เกิดความผิดพลาดจากการป้อนข้อมูลซ้ำซ้อน (Data Redundancy) 
-          และการตัดสินใจของผู้บริหารคลาดเคลื่อน
-        </p>
+      {/* Complete Slide Deck Viewer for Module 1 (Slides 1-24 + Images + Speaker Script) */}
+      <ModuleSlidesDeckViewer moduleId="m1" moduleLabel="โมดูลที่ 1 (วันที่ 1 ภาคเช้า: สไลด์ 1–24)" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div className="bg-rose-950/30 border border-rose-500/30 p-4 rounded-xl space-y-2">
-            <h3 className="text-sm font-bold text-rose-300 flex items-center gap-1.5">
-              <FiAlertTriangle className="w-4 h-4" /> ระบบเดิม (Legacy Shop Floor)
-            </h3>
-            <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-              <li>จดบันทึกยอดผลิตและของเสียลงกระดาษหน้าเครื่อง</li>
-              <li>ผู้จัดการทราบยอดการผลิตจริงในวันถัดไป (ล่าช้า 12-24 ชม.)</li>
-              <li>ข้อมูลเครื่องจักรเสีย (Breakdown) ถูกบันทึกด้วยความจำ</li>
-              <li>ขาดระบบตรวจสอบย้อนกลับ (Traceability) เมื่อลูกค้าเคลมของเสีย</li>
-            </ul>
-          </div>
+      {/* Deep-Dive Theory from Teaching Kit Review (#rv-arch, #rv-json) */}
+      <ModuleDeepTheorySection
+        reviewIds={['rv-arch', 'rv-json']}
+        sectionTitle="เจาะลึกสถาปัตยกรรม IT/OT · ISA-95 · Client-Server และโครงสร้าง JSON (RFC 8259)"
+      />
 
-          <div className="bg-emerald-950/30 border border-emerald-500/30 p-4 rounded-xl space-y-2">
-            <h3 className="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
-              <FiCheck className="w-4 h-4" /> ระบบดิจิทัล (Connected Smart Factory)
-            </h3>
-            <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-              <li>เซนเซอร์และแอปพลิเคชันบันทึกข้อมูลแบบ Real-time</li>
-              <li>แสดงแดชบอร์ด OEE และสถานะเครื่องจักรขึ้นจอมือถือทันที</li>
-              <li>ส่งสัญญาณแจ้งเตือน (Andon Alert) เข้ากลุ่มแชตเมื่อเครื่องหยุด</li>
-              <li>มีประวัติการผลิตแบบครบวงจร (Audit Trail &amp; Traceability)</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* 1.2 IT vs OT Convergence */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">2</span>
-          1.2 การบรรจบกันของระบบ IT และ OT (IT &amp; OT Convergence)
-        </h2>
-        <p className="text-sm text-slate-300 leading-relaxed">
-          หัวใจสำคัญของการสร้าง Enterprise Application ในโรงงานคือการเข้าใจความแตกต่างระหว่างสองโลก:
-        </p>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border border-slate-700 rounded-xl overflow-hidden">
-            <thead className="bg-slate-800 text-slate-300 font-bold uppercase">
-              <tr>
-                <th className="p-3 border-b border-slate-700">เกณฑ์เปรียบเทียบ</th>
-                <th className="p-3 border-b border-slate-700">Information Technology (IT)</th>
-                <th className="p-3 border-b border-slate-700">Operational Technology (OT)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-indigo-400">เป้าหมายหลัก</td>
-                <td className="p-3">การจัดการข้อมูลธุรกิจ, บัญชี, วางแผนการผลิต (ERP)</td>
-                <td className="p-3">ควบคุมเครื่องจักรทางกายภาพ, ความปลอดภัยหน้างาน</td>
-              </tr>
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-indigo-400">ลำดับความสำคัญ (Priority)</td>
-                <td className="p-3">1. ความลับข้อมูล (Confidentiality) → 2. ความถูกต้อง</td>
-                <td className="p-3">1. ความพร้อมใช้งาน (Availability 99.99%) → 2. ความปลอดภัย</td>
-              </tr>
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-indigo-400">เวลาตอบสนอง (Response Time)</td>
-                <td className="p-3">วินาที หรือ นาที (Seconds to Minutes)</td>
-                <td className="p-3">มิลลิวินาที (Sub-second / Milliseconds)</td>
-              </tr>
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-indigo-400">วงรอบการอัปเดตระบบ</td>
-                <td className="p-3">อัปเดตได้บ่อย (Patching ทุกสัปดาห์/เดือน)</td>
-                <td className="p-3">เครื่องจักรห้ามหยุด! อายุใช้งาน 10–20 ปี</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Simulator 1 Inserted Here */}
+      {/* Interactive Simulator 1: Industrial HMI Color & Gloved Touch Validator */}
       <IndustrialHmiValidatorSimulator />
     </div>
   );
@@ -1357,38 +2122,39 @@ export function EnterpriseAppMod2() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-pink-950/70 via-rose-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-pink-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold mb-3 border border-pink-500/30">
-          <FiLayout className="w-4 h-4" /> โมดูลที่ 2 (Module 2) · วันที่ 1 ภาคบ่าย
+          <FiLayout className="w-4 h-4" /> โมดูลที่ 2 (Module 2) · วันที่ 1 ภาคบ่าย · สไลด์ 25–35 · Workshop 1
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Industrial UX/UI &amp; Modern Layout Design (HTML5 &amp; Flexbox)
+          Industrial UX/UI &amp; Modern Layout Design (Semantic HTML5, CSS Box Model &amp; Flexbox)
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          การออกแบบส่วนติดต่อผู้ใช้งาน (UI) และโครงสร้างเว็บมาตรฐาน (Semantic HTML5 &amp; Flexbox): 
-          จัดหน้าระบบวัดไฟฟ้า (Electrical Meter) ให้แสดงผลได้อย่างสมบูรณ์แบบทั้งบนมือถือ แท็บเล็ต และจอโรงงาน
+          การออกแบบหน้าจอควบคุมและแดชบอร์ดอุตสาหกรรมตามหลักการมองเห็น 5 วินาที, มาตรฐานสี IEC 60204-1, โครงสร้าง Semantic HTML5, CSS Flexbox และลงมือทำแล็บจริง Workshop 1: จัดหน้าระบบวัดไฟฟ้า (Electrical Meter UI)
         </p>
       </div>
 
-      {/* Speaker Notes Drawer for Instructor */}
-      <TrainerNotesDrawer dayFilter={1} defaultOpen={false} />
+      {/* Quick Open Full 6-Tab Teaching Kit */}
+      <TeachingKitQuickDrawer defaultTab="script" dayLabel="วันที่ 1 ภาคบ่าย · สไลด์ 25–35 + Workshop 1" />
 
-      {/* 2.1 Semantic HTML Structure */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-pink-600/30 text-pink-400 flex items-center justify-center text-sm font-black border border-pink-500/40">1</span>
-          2.1 โครงสร้าง Semantic HTML5 สำหรับระบบ Dashboard
-        </h2>
-        <p className="text-sm text-slate-300 leading-relaxed">
-          หลีกเลี่ยงการใช้ <code>&lt;div&gt;</code> ครอบทุกอย่าง แต่ใช้แท็กที่มีความหมายเชิงโครงสร้างตามมาตรฐานสากล:
-        </p>
-        <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-          <li><code>&lt;header&gt;</code> สำหรับส่วนหัวของหน้าจอ ระบุชื่อโรงงานและไลน์การผลิต</li>
-          <li><code>&lt;main&gt;</code> ครอบพื้นที่แสดงข้อมูลหลักของการตรวจวัด</li>
-          <li><code>&lt;section&gt;</code> หรือ <code>&lt;article&gt;</code> สำหรับการ์ดแสดงค่าแต่ละตัว (เช่น การ์ด Voltage, การ์ด Current)</li>
-        </ul>
-      </section>
+      {/* Complete Slide Deck Viewer for Module 2 (Slides 25-35 + Images + Speaker Script) */}
+      <ModuleSlidesDeckViewer moduleId="m2" moduleLabel="โมดูลที่ 2 (วันที่ 1 ภาคบ่าย: สไลด์ 25–35)" />
+
+      {/* Deep-Dive Theory (#rv-html, #rv-css, #rv-f12) */}
+      <ModuleDeepTheorySection
+        reviewIds={['rv-html', 'rv-css', 'rv-f12']}
+        sectionTitle="เจาะลึก Semantic HTML5 · CSS Box Model &amp; Flexbox · และตารางแก้ปัญหาด้วย F12 DevTools"
+      />
+
+      {/* Code Examples 01 to 07 */}
+      <ModuleCodeExamplesViewer
+        moduleId="m2"
+        title="ไฟล์ตัวอย่างโค้ด HTML5, CSS Flexbox &amp; พื้นฐานการผูก элемент (ไฟล์ 01–07)"
+      />
 
       {/* Simulator 2: Industrial Flexbox Playground */}
       <IndustrialFlexboxSimulator />
+
+      {/* Full Workshop 1 Lab Sheet + Starter & Solution Code */}
+      <WorkshopFullLabSheet workshopId="w1" />
     </div>
   );
 }
@@ -1402,44 +2168,47 @@ export function EnterpriseAppMod3() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-blue-950/70 via-cyan-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-blue-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-3 border border-blue-500/30">
-          <FiCode className="w-4 h-4" /> โมดูลที่ 3 (Module 3) · วันที่ 2
+          <FiCode className="w-4 h-4" /> โมดูลที่ 3 (Module 3) · วันที่ 2 เต็มวัน · สไลด์ 36–71 · Workshop 2
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          JavaScript Programming Logic, DOM &amp; State Control
+          JavaScript Programming Logic, DOM Manipulation, Events &amp; Fetch API
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          ควบคุมตรรกะของแอปพลิเคชันด้วย JavaScript ES6+: ตัวแปร เงื่อนไข อาร์เรย์ อ็อบเจกต์ 
-          การดักฟังเหตุการณ์ (Events) และการอัปเดตหน้าจอผ่าน DOM (Workshop 2)
+          ควบคุมตรรกะของแอปพลิเคชันด้วย JavaScript ES6+: ตัวแปร เงื่อนไข ฟังก์ชัน อาร์เรย์ อ็อบเจกต์, การเข้าถึงและเปลี่ยนค่า DOM (`getElementById`, `textContent`, `classList`), การดักฟังเหตุการณ์ (`addEventListener`), พื้นฐาน HTTP/REST API และลงมือทำ Workshop 2: ตู้ควบคุมไฟอัจฉริยะ (Control Cabinet)
         </p>
       </div>
 
-      {/* Speaker Notes Drawer for Instructor */}
-      <TrainerNotesDrawer dayFilter={2} defaultOpen={false} />
+      {/* Quick Open Full 6-Tab Teaching Kit */}
+      <TeachingKitQuickDrawer defaultTab="lab" dayLabel="วันที่ 2 · สไลด์ 36–71 + Workshop 2" />
 
-      {/* 3.1 JavaScript Core Logic */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center text-sm font-black border border-blue-500/40">1</span>
-          3.1 ตัวแปร เงื่อนไข และการประมวลผลข้อมูล
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-sky-400">let vs const</h3>
-            <p className="text-slate-300">
-              ใช้ <code>const</code> เป็นค่าเริ่มต้นสำหรับค่าคงที่ เช่น พิกัดลิมิต <code>const MAX_VOLT = 240;</code> และใช้ <code>let</code> เมื่อค่านั้นต้องเปลี่ยนแปลงตามเซนเซอร์ เช่น <code>let currentVolt = 220;</code> ห้ามใช้ <code>var</code>
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
-            <h3 className="font-bold text-amber-400">Strict Equality (===)</h3>
-            <p className="text-slate-300">
-              ใช้ <code>===</code> เสมอเพื่อตรวจสอบทั้งค่าและชนิดข้อมูล เช่น <code>status === 'RUNNING'</code> เพื่อป้องกันข้อผิดพลาดทางตรรกะแบบ Silent Error
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Complete Slide Deck Viewer for Module 3 (Slides 36-71 + Images + Speaker Script) */}
+      <ModuleSlidesDeckViewer moduleId="m3" moduleLabel="โมดูลที่ 3 (วันที่ 2: สไลด์ 36–71)" />
+
+      {/* Deep-Dive Theory (#rv-dom, #rv-http, #rv-fetch) */}
+      <ModuleDeepTheorySection
+        reviewIds={['rv-dom', 'rv-http', 'rv-fetch']}
+        sectionTitle="เจาะลึก DOM &amp; Events · มาตรฐาน HTTP Methods (RFC 9110) · และ Fetch async/await"
+      />
+
+      {/* Code Examples 08 to 12 */}
+      <ModuleCodeExamplesViewer
+        moduleId="m3"
+        title="ไฟล์ตัวอย่างโค้ด JSON, Async/Await, Fetch GET/POST และ Polling (ไฟล์ 08–12)"
+      />
 
       {/* Simulator 3: Control Cabinet DOM Simulator */}
       <ControlCabinetDomSimulator />
+
+      {/* Interactive 4 Visual Teaching Labs from Teaching Kit */}
+      <section className="space-y-3">
+        <h2 className="text-xl font-black text-white flex items-center gap-2 m-0">
+          <span>🧪</span> สื่อจำลองเข้าใจง่าย 4 ชิ้น (API บริกรร้านอาหาร · JSON Path · DOM টিละบรรทัด · Polling vs Webhook)
+        </h2>
+        <TeachingKitVisualLabs />
+      </section>
+
+      {/* Full Workshop 2 Lab Sheet + Starter & Solution Code */}
+      <WorkshopFullLabSheet workshopId="w2" />
     </div>
   );
 }
@@ -1453,65 +2222,45 @@ export function EnterpriseAppMod4() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-emerald-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
-          <FiActivity className="w-4 h-4" /> โมดูลที่ 4 (Module 4) · วันที่ 3
+          <FiActivity className="w-4 h-4" /> โมดูลที่ 4 (Module 4) · วันที่ 3 เต็มวัน · สไลด์ 72–90 · Workshop 3 &amp; 4
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Application Integration, REST APIs &amp; Webhook Automation
+          Application Integration, Real-Time Polling, Webhook &amp; Python Backend (Flask)
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          การเชื่อมต่อระบบผ่าน RESTful APIs, การดึงข้อมูล Asynchronous (Fetch &amp; Async/Await), 
-          การประมวลผล JSON, และการส่งแจ้งเตือนฉุกเฉินผ่าน Webhook (Workshop 3 &amp; 4)
+          การบูรณาการระบบแบบครบวงจร (End-to-End): ดึงค่ามิเตอร์น้ำ-ไฟจาก REST API แบบ Real-Time Polling (`setInterval`), การส่งแจ้งเตือนฉุกเฉินผ่าน Webhook (`POST JSON`), การป้องกันการยิงแจ้งเตือนซ้ำ (Debounce/Cooldown), และการสร้างเซิร์ฟเวอร์ API ด้วย Python Flask (Workshop 3 &amp; Workshop 4)
         </p>
       </div>
 
-      {/* Speaker Notes Drawer for Instructor */}
-      <TrainerNotesDrawer dayFilter={3} defaultOpen={false} />
+      {/* Quick Open Full 6-Tab Teaching Kit */}
+      <TeachingKitQuickDrawer defaultTab="review" dayLabel="วันที่ 3 · สไลด์ 72–90 + Workshop 3 & 4" />
 
-      {/* 4.1 RFC 9110 HTTP Methods */}
-      <section className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-sm font-black border border-emerald-500/40">1</span>
-          4.1 ภาษาที่ API ใช้คุยกัน: HTTP Methods ตามมาตรฐาน RFC 9110
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border border-slate-700 rounded-xl overflow-hidden font-mono">
-            <thead className="bg-slate-800 text-slate-300 font-bold uppercase">
-              <tr>
-                <th className="p-3 border-b border-slate-700">Method</th>
-                <th className="p-3 border-b border-slate-700">ความหมาย / การใช้งาน</th>
-                <th className="p-3 border-b border-slate-700">Safe?</th>
-                <th className="p-3 border-b border-slate-700">Idempotent?</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-emerald-400">GET</td>
-                <td className="p-3 font-sans">อ่านข้อมูลอย่างเดียว เช่น ดึงค่าน้ำ-ไฟ (/api/meter)</td>
-                <td className="p-3 text-emerald-400">Yes (ไม่เปลี่ยนข้อมูล)</td>
-                <td className="p-3 text-emerald-400">Yes</td>
-              </tr>
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-amber-400">POST</td>
-                <td className="p-3 font-sans">ส่งข้อมูลใหม่ หรือยิงแจ้งเตือน Webhook (/api/notify)</td>
-                <td className="p-3 text-rose-400">No (สร้างข้อมูลใหม่)</td>
-                <td className="p-3 text-rose-400">No (กดซ้ำ ส่งเบิ้ล!)</td>
-              </tr>
-              <tr className="hover:bg-slate-800/40">
-                <td className="p-3 font-bold text-sky-400">PUT / PATCH</td>
-                <td className="p-3 font-sans">แก้ไขข้อมูล หรืออัปเดตสถานะเครื่องจักร</td>
-                <td className="p-3 text-rose-400">No</td>
-                <td className="p-3 text-emerald-400">Yes</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {/* Complete Slide Deck Viewer for Module 4 (Slides 72-90 + Images + Speaker Script) */}
+      <ModuleSlidesDeckViewer moduleId="m4" moduleLabel="โมดูลที่ 4 (วันที่ 3: สไลด์ 72–90)" />
+
+      {/* Deep-Dive Theory (#rv-poll, #rv-flask, #rv-e2e) */}
+      <ModuleDeepTheorySection
+        reviewIds={['rv-poll', 'rv-flask', 'rv-e2e']}
+        sectionTitle="เจาะลึก Polling vs Webhook · การสร้าง Backend ด้วย Python Flask · และการเชื่อมระบบ End-to-End"
+      />
+
+      {/* Code Examples 13 to 14 */}
+      <ModuleCodeExamplesViewer
+        moduleId="m4"
+        title="ไฟล์ตัวอย่างโค้ด Webhook Notification &amp; Python Flask API (ไฟล์ 13–14)"
+      />
 
       {/* Simulator 4: Live REST API & JSON Tree */}
       <RestApiJsonTreeSimulator />
 
       {/* Simulator 5: Webhook Notification Sandbox */}
       <WebhookNotificationSimulator />
+
+      {/* Full Workshop 3 Lab Sheet */}
+      <WorkshopFullLabSheet workshopId="w3" />
+
+      {/* Full Workshop 4 Lab Sheet */}
+      <WorkshopFullLabSheet workshopId="w4" />
     </div>
   );
 }
@@ -1520,155 +2269,370 @@ export function EnterpriseAppMod4() {
 // MODULE 5: Software QA & Day 4 Formal Examination Center (Day 4)
 // =========================================================================
 export function EnterpriseAppMod5() {
+  const [examTab, setExamTab] = useState('theory'); // 'theory' | 'practical' | 'templates'
+  const [showTheoryAnswers, setShowTheoryAnswers] = useState(true);
+  const [showPracticalSolution, setShowPracticalSolution] = useState(false);
+
   return (
     <div className="space-y-8 text-slate-200">
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-amber-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold mb-3 border border-amber-500/30">
-          <FiAward className="w-4 h-4" /> โมดูลที่ 5 (Module 5) · วันที่ 4 ศูนย์สอบวัดผล &amp; UAT
+          <FiAward className="w-4 h-4" /> โมดูลที่ 5 (Module 5) · วันที่ 4 · สไลด์ 91–102 · สอบวัดผล &amp; UAT
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Software QA Standards &amp; Formal Examination Center
+          Software Testing (Unit / Integration / UAT) &amp; Day 4 Official Examination Center
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          การออกแบบกรณีทดสอบ (Test Cases), การตรวจรับงานจริง (UAT Showcase), 
-          และคู่มือระเบียบการสอบวัดผลประจำหลักสูตร (สอบทฤษฎี &amp; สอบปฏิบัติ The Performance Update)
+          การรับประกันคุณภาพซอฟต์แวร์ (Software QA), การออกแบบ Test Cases และวิเคราะห์ค่าขอบเขต (Boundary Value Analysis), การตรวจรับงานโดยผู้ใช้จริง (UAT Showcase), พร้อมชุดข้อสอบจริงประจำวันที่ 4 ครบชุด (ข้อสอบทฤษฎี 32 ข้อ + ข้อสอบปฏิบัติ &ldquo;The Performance Update&rdquo; + เฉลยและเกณฑ์การให้คะแนน Rubric)
         </p>
       </div>
 
-      {/* Speaker Notes Drawer for Instructor */}
-      <TrainerNotesDrawer dayFilter={4} defaultOpen={false} />
+      {/* Quick Open Full 6-Tab Teaching Kit */}
+      <TeachingKitQuickDrawer defaultTab="code" dayLabel="วันที่ 4 · สไลด์ 91–102 + ข้อสอบทฤษฎี/ปฏิบัติ & UAT" />
 
-      {/* 5.1 QA & Boundary Value Analysis Simulator */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-orange-600/30 text-orange-400 flex items-center justify-center text-sm font-black border border-orange-500/40">1</span>
-          5.1 การออกแบบกรณีทดสอบ (Test Case Design &amp; Boundary Value Analysis)
-        </h2>
-        <p className="text-sm text-slate-300 leading-relaxed">
-          ในซอฟต์แวร์ระดับองค์กร การทดสอบต้องครอบคลุมค่าขอบเขต (Boundary Cases) เช่น จุดตัด 85.0% และ 60.0% เสมอ:
-        </p>
+      {/* Complete Slide Deck Viewer for Module 5 (Slides 91-102 + Images + Speaker Script) */}
+      <ModuleSlidesDeckViewer moduleId="m5" moduleLabel="โมดูลที่ 5 (วันที่ 4: สไลด์ 91–102)" />
 
-        <AutomatedTestCaseEvaluator />
-      </section>
+      {/* Deep-Dive Theory (#rv-test, #rv-faq, #rv-quiz) */}
+      <ModuleDeepTheorySection
+        reviewIds={['rv-test', 'rv-faq', 'rv-quiz']}
+        sectionTitle="เจาะลึก Software Testing &amp; UAT · คำถามที่ผู้เรียนมักถามบ่อย · และคำถามทบทวนผู้สอน 10 ข้อ"
+      />
 
-      {/* 5.2 Formal Day 4 Examination Protocol */}
-      <section className="bg-slate-900/90 p-6 rounded-2xl border-2 border-amber-500/40 space-y-6 shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <h2 className="text-xl font-black text-white flex items-center gap-2.5">
-            <FiAward className="w-6 h-6 text-amber-400" />
-            5.2 ระเบียบการสอบวัดผลจริงประจำวันที่ 4 (Day 4 Official Examination)
-          </h2>
-          <span className="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-bold border border-amber-500/30">
-            เกณฑ์ผ่าน: ทฤษฎี + ปฏิบัติ + UAT
-          </span>
+      {/* Code Examples 15 to 16 */}
+      <ModuleCodeExamplesViewer
+        moduleId="m5"
+        title="ไฟล์ตัวอย่างโค้ด Error Handling (try/catch) &amp; Automated Testing (ไฟล์ 15–16)"
+      />
+
+      {/* Boundary Value Simulator */}
+      <AutomatedTestCaseEvaluator />
+
+      {/* COMPLETE DAY 4 OFFICIAL EXAM & UAT CENTER */}
+      <section className="rounded-2xl border-2 border-amber-500/50 bg-slate-900/95 overflow-hidden shadow-2xl">
+        <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-950/90 via-orange-950/80 to-slate-900 border-b border-amber-500/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-mono text-xs font-black border border-amber-500/40">
+              🏆 DAY 4 OFFICIAL EXAM &amp; UAT ARCHIVE (ครบทุกไฟล์ 100%)
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-white mt-2 m-0">
+              คลังข้อสอบวัดผลจริงประจำวันที่ 4 · เกณฑ์การตรวจให้คะแนน &amp; เอกสาร UAT
+            </h2>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setExamTab('theory')}
+              className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                examTab === 'theory'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              📝 1. ข้อสอบทฤษฎี (30 ปรนัย + 2 อัตนัย = 40 คะแนน)
+            </button>
+            <button
+              type="button"
+              onClick={() => setExamTab('practical')}
+              className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                examTab === 'practical'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              💻 2. ข้อสอบปฏิบัติ The Performance Update (60 คะแนน)
+            </button>
+            <button
+              type="button"
+              onClick={() => setExamTab('templates')}
+              className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                examTab === 'templates'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              📋 3. ใบตรวจรับงาน UAT Checklist &amp; Test Report
+            </button>
+          </div>
         </div>
 
-        {/* Exam Schedule */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-            <div className="font-bold text-amber-300 flex items-center justify-between">
-              <span>📝 ช่วงเช้า (09:00 - 10:00 น.): สอบทฤษฎี</span>
-              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-[10px]">50 คะแนน</span>
+        <div className="p-5 sm:p-6 space-y-6">
+          {examTab === 'theory' && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-950 border border-slate-800">
+                <div>
+                  <h3 className="text-base font-black text-white m-0">
+                    {ENTERPRISE_THEORY_EXAM.title} ({ENTERPRISE_THEORY_EXAM.duration} · {ENTERPRISE_THEORY_EXAM.totalMarks})
+                  </h3>
+                  <p className="text-xs text-slate-400 m-0 mt-1">
+                    ตอนที่ 1: ปรนัย 4 ตัวเลือก จำนวน 30 ข้อ (30 คะแนน) · ตอนที่ 2: อัตนัยเขียนตอบ 2 ข้อ (10 คะแนน)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTheoryAnswers(!showTheoryAnswers)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                    showTheoryAnswers
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  {showTheoryAnswers ? '🔑 ซ่อนเฉลยคำตอบ' : '🔑 แสดงเฉลยคำตอบทั้งหมด'}
+                </button>
+              </div>
+
+              {/* 30 Multiple Choice Questions */}
+              <div className="space-y-3 max-h-[800px] overflow-y-auto pr-1">
+                {(ENTERPRISE_THEORY_EXAM.mcQuestions || []).map((q) => (
+                  <div
+                    key={q.n}
+                    className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-white text-sm">
+                        ข้อที่ {q.n}. {q.q}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold">
+                        {q.clo} · {q.topic}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {(q.choices || []).map((ch, cIdx) => {
+                        const letter = ['A', 'B', 'C', 'D'][cIdx];
+                        const isAns = showTheoryAnswers && letter === q.ans;
+                        return (
+                          <div
+                            key={cIdx}
+                            className={`p-2.5 rounded-lg border ${
+                              isAns
+                                ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300 font-bold'
+                                : 'bg-slate-900/70 border-slate-800 text-slate-300'
+                            }`}
+                          >
+                            {letter}. {ch} {isAns && '✓ (คำตอบที่ถูก)'}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 2 Subjective Questions */}
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h4 className="text-base font-black text-amber-300 m-0">
+                  ✍️ ตอนที่ 2: ข้อสอบอัตนัย (2 ข้อ · 10 คะแนน) พร้อมแนวคำตอบและเกณฑ์ให้คะแนน
+                </h4>
+                {(ENTERPRISE_THEORY_EXAM.subjectiveQuestions || []).map((sq) => (
+                  <div
+                    key={sq.n}
+                    className="p-5 rounded-xl bg-slate-950 border border-amber-500/30 space-y-3 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-black text-white">
+                        ข้อเขียนที่ {sq.n}: {sq.title}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
+                        {sq.marks} · {sq.clo}
+                      </span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed m-0">
+                      <strong>โจทย์สถานการณ์:</strong> {sq.scenario}
+                    </p>
+                    <ul className="space-y-1 text-slate-200 list-disc list-inside">
+                      {(sq.subQuestions || []).map((sub, idx) => (
+                        <li key={idx}>{sub}</li>
+                      ))}
+                    </ul>
+                    {showTheoryAnswers && (
+                      <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/40 space-y-2">
+                        <div className="font-black text-emerald-300">
+                          🔑 แนวคำตอบและเกณฑ์การให้คะแนน (Grading Rubric):
+                        </div>
+                        <ul className="space-y-1 text-emerald-100 list-disc list-inside">
+                          {(sq.answerGuide || []).map((ag, idx) => (
+                            <li key={idx}>{ag}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-slate-300 leading-relaxed">
-              • เวลา 60 นาที (ปิดหนังสือ ปิดคอมพิวเตอร์)<br />
-              • ข้อสอบปรนัย 30 ข้อ (30 คะแนน) + อัตนัย 2 ข้อ (20 คะแนน)<br />
-              • ครอบคลุม: สถาปัตยกรรม IT/OT, HTML/CSS, JavaScript, JSON, API Methods, และ Software Testing
-            </p>
-          </div>
+          )}
 
-          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-            <div className="font-bold text-orange-300 flex items-center justify-between">
-              <span>💻 ช่วงเช้า (10:00 - 12:00 น.): สอบปฏิบัติเดี่ยว</span>
-              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-[10px]">100 คะแนน</span>
+          {examTab === 'practical' && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <h3 className="text-lg font-black text-amber-300 m-0">
+                  {ENTERPRISE_PRACTICAL_EXAM.title} ({ENTERPRISE_PRACTICAL_EXAM.duration} · {ENTERPRISE_PRACTICAL_EXAM.totalScore})
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+                  {ENTERPRISE_PRACTICAL_EXAM.scenario}
+                </p>
+              </div>
+
+              {/* 6 Tasks & 7 Rubrics */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                  <h4 className="text-sm font-black text-cyan-300 m-0">
+                    📌 ภารกิจสอบปฏิบัติ 6 ขั้นตอน (Tasks T1–T6)
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    {(ENTERPRISE_PRACTICAL_EXAM.tasks || []).map((t) => (
+                      <div key={t.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                        <div className="flex justify-between font-bold text-white">
+                          <span>
+                            {t.id}: {t.title} ({t.file})
+                          </span>
+                          <span className="text-amber-300 font-mono">{t.time}</span>
+                        </div>
+                        <p className="text-slate-300 mt-1 m-0">{t.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                  <h4 className="text-sm font-black text-emerald-300 m-0">
+                    📊 เกณฑ์การตรวจให้คะแนน 7 หมวด (Rubric R1–R7 รวม 60 คะแนน)
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    {(ENTERPRISE_PRACTICAL_EXAM.rubric || []).map((r) => (
+                      <div key={r.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                        <div className="flex justify-between font-bold text-white">
+                          <span>
+                            {r.id}: {r.topic} ({r.clo})
+                          </span>
+                          <span className="text-emerald-300 font-mono">{r.full} คะแนน</span>
+                        </div>
+                        <p className="text-slate-400 mt-1 m-0">{r.passCriteria}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Expected Output Table for 5 Sample JSONs */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                <h4 className="text-sm font-black text-indigo-300 m-0">
+                  🧪 ตารางผลลัพธ์ที่ถูกต้องเมื่อสลับไฟล์ JSON ทั้ง 5 กรณี (สำหรับผู้สอนใช้ตรวจงาน)
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-slate-900 text-slate-300">
+                      <tr>
+                        <th className="p-2.5">ไฟล์ข้อมูลตัวอย่าง</th>
+                        <th className="p-2.5">Target</th>
+                        <th className="p-2.5">Actual</th>
+                        <th className="p-2.5">Performance</th>
+                        <th className="p-2.5">สถานะที่ต้องแสดง</th>
+                        <th className="p-2.5">ปุ่มส่งแจ้งเตือน</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 text-slate-200">
+                      {(ENTERPRISE_PRACTICAL_EXAM.expectedSamples || []).map((row, idx) => (
+                        <tr key={idx}>
+                          {row.map((c, cIdx) => (
+                            <td key={cIdx} className="p-2.5">
+                              {c}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Practical Starter vs Solution Files */}
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-sm font-black text-white m-0">
+                    📂 โค้ดตั้งต้นสำหรับผู้เข้าสอบ (exam/practical/starter/) &amp; เฉลยผู้สอน (solution/)
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowPracticalSolution(!showPracticalSolution)}
+                    className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                      showPracticalSolution
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-800 text-amber-300 border border-amber-500/40'
+                    }`}
+                  >
+                    {showPracticalSolution
+                      ? '🔑 กำลังแสดง: เฉลยข้อสอบปฏิบัติ (solution/)'
+                      : '🔑 คลิกเพื่อเปิดดูเฉลยข้อสอบปฏิบัติ (solution/)'}
+                  </button>
+                </div>
+
+                {!showPracticalSolution ? (
+                  <div className="space-y-4">
+                    {Object.entries(ENTERPRISE_PRACTICAL_EXAM.starterFiles || {}).map(
+                      ([fname, content]) => (
+                        <div key={fname}>
+                          <div className="text-xs font-mono font-bold text-cyan-300 mb-1">
+                            📄 exam/practical/starter/{fname}
+                          </div>
+                          <CodeBlock code={content} language={`starter/${fname}`} />
+                        </div>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(ENTERPRISE_PRACTICAL_EXAM.solutionFiles || {}).map(
+                      ([fname, content]) => (
+                        <div key={fname}>
+                          <div className="text-xs font-mono font-bold text-emerald-300 mb-1">
+                            ✅ exam/practical/solution/{fname}
+                          </div>
+                          <CodeBlock code={content} language={`solution/${fname}`} />
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="text-slate-300 leading-relaxed">
-              • โจทย์: <strong>"The Performance Update"</strong> (เวลา 120 นาที)<br />
-              • พัฒนาหน้า Line Performance ต่อจากโฟลเดอร์ <code>starter</code><br />
-              • ห้ามใช้ AI ช่วยเขียนโค้ด และห้ามปรึกษากัน (เปิดสไลด์และงานเก่าตัวเองได้)
-            </p>
-          </div>
-        </div>
+          )}
 
-        {/* Practical Exam Tasks Table */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <FiList className="w-4 h-4 text-amber-400" /> รายละเอียดข้อสอบปฏิบัติ: The Performance Update (6 ภารกิจ)
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden">
-              <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[10px]">
-                <tr>
-                  <th className="p-3">รหัส</th>
-                  <th className="p-3">ภารกิจที่ต้องทำ</th>
-                  <th className="p-3">เวลาที่แนะนำ</th>
-                  <th className="p-3">ไฟล์ที่เกี่ยวข้อง</th>
-                  <th className="p-3">สาระสำคัญในการตรวจ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80 bg-slate-950/40 text-slate-300">
-                <tr>
-                  <td className="p-3 font-mono font-bold text-amber-400">T1</td>
-                  <td className="p-3 font-bold text-white">จัดหน้าจอ Dashboard</td>
-                  <td className="p-3 font-mono">20 นาที</td>
-                  <td className="p-3 font-mono text-slate-400">style.css</td>
-                  <td className="p-3">การ์ด 4 ใบเรียง Flexbox ตัดบรรทัดเมื่อจอแคบ ตัวเลขเด่นอ่านได้ใน 5 วินาที</td>
-                </tr>
-                <tr>
-                  <td className="p-3 font-mono font-bold text-amber-400">T2</td>
-                  <td className="p-3 font-bold text-white">ดึงข้อมูลด้วย fetch</td>
-                  <td className="p-3 font-mono">20 นาที</td>
-                  <td className="p-3 font-mono text-slate-400">loadPerformance()</td>
-                  <td className="p-3">ใช้ async/await อ่าน DATA_URL ตรวจ res.ok แสดงชื่อไลน์ กะ และตัวเลขลงการ์ด</td>
-                </tr>
-                <tr>
-                  <td className="p-3 font-mono font-bold text-amber-400">T3</td>
-                  <td className="p-3 font-bold text-white">คำนวณ Performance และสถานะ</td>
-                  <td className="p-3 font-mono">20 นาที</td>
-                  <td className="p-3 font-mono text-slate-400">calcPerformance()</td>
-                  <td className="p-3">actual ÷ target × 100 ปัดทศนิยม 1 ตำแหน่ง ตัดสินสถานะ ปกติ/เฝ้าระวัง/ต่ำกว่าเป้า</td>
-                </tr>
-                <tr>
-                  <td className="p-3 font-mono font-bold text-amber-400">T4</td>
-                  <td className="p-3 font-bold text-white">อัปเดตอัตโนมัติ (Polling)</td>
-                  <td className="p-3 font-mono">10 นาที</td>
-                  <td className="p-3 font-mono text-slate-400">setInterval()</td>
-                  <td className="p-3">โหลดใหม่ทุก 10 วินาที แสดงเวลาอัปเดตล่าสุด ไม่มี timer ซ้อนกัน</td>
-                </tr>
-                <tr>
-                  <td className="p-3 font-mono font-bold text-amber-400">T5</td>
-                  <td className="p-3 font-bold text-white">แจ้งเตือนผ่าน Webhook</td>
-                  <td className="p-3 font-mono">25 นาที</td>
-                  <td className="p-3 font-mono text-slate-400">sendAlert()</td>
-                  <td className="p-3">กดได้เฉพาะเมื่อต่ำกว่าเป้า ส่ง POST พร้อม message ที่มีตัวเลขจริง ป้องกันการกดซ้ำ</td>
-                </tr>
-                <tr>
-                  <td className="p-3 font-mono font-bold text-amber-400">T6</td>
-                  <td className="p-3 font-bold text-white">เขียนและทดสอบ Test Case</td>
-                  <td className="p-3 font-mono">20 นาที</td>
-                  <td className="p-3 font-mono text-slate-400">ใบ Test Case</td>
-                  <td className="p-3">เขียน Test Case 5 กรณี ทดสอบจริงกับไฟล์ samples และบันทึกผล Pass/Fail</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+          {examTab === 'templates' && (
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-black text-emerald-300 mb-2">
+                  📋 1. แบบฟอร์มตรวจรับงานโดยผู้ใช้ (templates/uat-checklist.md)
+                </h4>
+                <CodeBlock
+                  code={ENTERPRISE_TEMPLATES_DATA.uatChecklistMd}
+                  language="templates/uat-checklist.md"
+                />
+              </div>
 
-        {/* 5.3 Peer UAT Showcase Protocol */}
-        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
-          <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
-            <FiUserCheck className="w-4 h-4" /> กิจกรรมช่วงบ่าย (13:00 - 15:00 น.): UAT Showcase &amp; Peer Sign-Off
-          </h3>
-          <p className="text-xs text-slate-300 leading-relaxed m-0">
-            นักเรียนจะจับคู่สลับเครื่องกันทำหน้าที่เป็น <strong>"ผู้ตรวจรับงานจริง (UAT Inspector)"</strong> โดยเปิดดูหน้าจอของเพื่อนและทดสอบตามแบบฟอร์ม <code>uat-checklist.md</code>:
-          </p>
-          <ul className="text-xs text-slate-400 space-y-1 list-disc list-inside">
-            <li>ทดสอบเปิดหน้าจอผ่าน Live Server (ย่อหน้าต่างดูว่า Responsive หรือไม่)</li>
-            <li>ทดลองเปลี่ยนไฟล์ <code>data/samples</code> (ทดสอบกรณีปกติ, เฝ้าระวัง, และต่ำกว่าเป้า)</li>
-            <li>กดปุ่มส่งแจ้งเตือน Webhook และตรวจดูข้อความในห้องเรียน</li>
-            <li>ลงชื่อยอมรับ (Accept) หรือแจ้งแก้ไข (Decline) ในใบตรวจรับงาน</li>
-          </ul>
+              <div>
+                <h4 className="text-sm font-black text-cyan-300 mb-2">
+                  📋 2. แบบฟอร์มบันทึกผลการทดสอบ Test Cases (templates/test-report.md)
+                </h4>
+                <CodeBlock
+                  code={ENTERPRISE_TEMPLATES_DATA.testReportMd}
+                  language="templates/test-report.md"
+                />
+              </div>
+
+              <div>
+                <h4 className="text-sm font-black text-purple-300 mb-2">
+                  🧪 3. สคริปต์ทดสอบระบบอัตโนมัติ (templates/system-test-example.js)
+                </h4>
+                <CodeBlock
+                  code={ENTERPRISE_TEMPLATES_DATA.systemTestExampleJs}
+                  language="templates/system-test-example.js"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>

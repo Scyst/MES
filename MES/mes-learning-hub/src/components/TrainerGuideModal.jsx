@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiX, 
   FiCalendar, 
@@ -18,26 +18,31 @@ import {
   FiTarget
 } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext';
+import EnterpriseTeachingKitHub from './EnterpriseTeachingKitHub';
 
 export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machine-vision' }) {
   const { isDark } = useTheme();
   const [selectedCourse, setSelectedCourse] = useState(courseId || 'c-machine-vision');
   const [activeTab, setActiveTab] = useState('schedule'); // 'schedule' | 'scripts' | 'tactics'
 
+  useEffect(() => {
+    if (courseId) setSelectedCourse(courseId);
+  }, [courseId]);
+
   if (!isOpen) return null;
 
   const isVision = selectedCourse === 'c-machine-vision';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div className={`relative w-full max-w-4xl border rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col transition-colors ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
+      <div className={`relative w-full ${isVision ? 'max-w-4xl' : 'max-w-7xl'} border rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[94vh] flex flex-col transition-all ${
         isDark 
           ? 'bg-slate-900 border-purple-500/40 text-slate-100' 
           : 'bg-white border-purple-200 text-slate-800'
       }`}>
         
         {/* Header */}
-        <div className={`p-5 sm:p-6 border-b flex items-center justify-between flex-shrink-0 transition-colors ${
+        <div className={`p-4 sm:p-5 border-b flex items-center justify-between flex-shrink-0 transition-colors ${
           isDark 
             ? 'bg-gradient-to-r from-purple-950/90 via-slate-900 to-slate-900 border-purple-500/30' 
             : 'bg-gradient-to-r from-purple-100 via-indigo-50 to-white border-purple-200'
@@ -47,9 +52,9 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
               {isVision ? '📷' : '💻'}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className={`text-base sm:text-lg font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  คู่มือวิทยากรและแผนการสอน 3 วัน
+                  {isVision ? 'คู่มือวิทยากรและแผนการสอน 3 วัน' : 'ชุดคู่มือวิทยากรฉบับสมบูรณ์ 4 วัน (Complete Teaching Kit · 102 สไลด์)'}
                 </h2>
                 <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${
                   isDark ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-800 border-purple-300'
@@ -57,10 +62,10 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
                   Trainer Companion
                 </span>
               </div>
-              <p className={`text-xs mt-0.5 truncate max-w-md sm:max-w-xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <p className={`text-xs mt-0.5 truncate max-w-md sm:max-w-2xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 {isVision 
-                  ? 'หลักสูตร Basic Machine Vision and Sensor Inspection for Smart Factories (BOI STEMPlus &middot; 24-30 ชม.)'
-                  : 'หลักสูตร Enterprise Application Design, Development & Integration (BOI STEMPlus &middot; 24 ชม.)'
+                  ? 'หลักสูตร Basic Machine Vision and Sensor Inspection for Smart Factories (BOI STEMPlus · 24-30 ชม.)'
+                  : 'หลักสูตร Enterprise Application Design, Development & Integration (BOI STEMPlus · 24 ชม. · 102 สไลด์ · 14 บททบทวน · 4 Workshop · ข้อสอบจริง)'
                 }
               </p>
             </div>
@@ -68,7 +73,7 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
           
           <button
             onClick={onClose}
-            className={`p-2 rounded-xl transition-colors ${
+            className={`p-2 rounded-xl transition-colors cursor-pointer ${
               isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -84,7 +89,7 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
           <div className="flex items-center gap-2 overflow-x-auto">
             <button
               onClick={() => setSelectedCourse('c-machine-vision')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 isVision 
                   ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30' 
                   : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
@@ -95,19 +100,20 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
             </button>
             <button
               onClick={() => setSelectedCourse('c-enterprise-app')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 !isVision 
                   ? 'bg-fuchsia-600 text-white shadow-md shadow-fuchsia-600/30' 
                   : isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
               <FiCode className="w-3.5 h-3.5" />
-              <span>💻 Enterprise App &amp; MES Architecture</span>
+              <span>💻 Enterprise App &amp; MES Architecture (102 สไลด์ครบชุด)</span>
             </button>
           </div>
         </div>
 
-        {/* Tab Buttons */}
+        {/* Tab Buttons (Only for Machine Vision — Enterprise App uses its own 6-Tab Teaching Kit Hub) */}
+        {isVision && (
         <div className={`px-6 py-2.5 border-b flex gap-2 overflow-x-auto flex-shrink-0 transition-colors ${
           isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-100/90 border-slate-200'
         }`}>
@@ -145,11 +151,16 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
             <span>3. เทคนิคสอนสบาย ไม่หัวร้อน (Frustration-Free Tactics)</span>
           </button>
         </div>
+        )}
 
         {/* Scrollable Body Content */}
-        <div className={`p-6 overflow-y-auto space-y-6 text-xs sm:text-sm leading-relaxed ${
+        <div className={`p-4 sm:p-6 overflow-y-auto space-y-6 text-xs sm:text-sm leading-relaxed ${
           isDark ? 'text-slate-300' : 'text-slate-700'
         }`}>
+          {!isVision ? (
+            <EnterpriseTeachingKitHub initialTab="script" />
+          ) : (
+            <>
           
           {/* ========================================================================= */}
           {/* TAB 1: 3-DAY TIMETABLE & LABS                                             */}
@@ -616,6 +627,8 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
               </div>
 
             </div>
+          )}
+            </>
           )}
 
         </div>
