@@ -274,7 +274,7 @@ Node-RED: ${NODE_RED_URL}/ | User: ${NODE_RED_USER} | Pass: ${NODE_RED_PASS}
           user: FTP_USER,
           password: FTP_PASS,
         });
-        
+
         // Auto-create parent directories if they don't exist
         const lastSlashIndex = args.remotePath.lastIndexOf('/');
         if (lastSlashIndex > 0) {
@@ -298,7 +298,7 @@ Node-RED: ${NODE_RED_URL}/ | User: ${NODE_RED_USER} | Pass: ${NODE_RED_PASS}
           user: FTP_USER,
           password: FTP_PASS,
         });
-        
+
         // Ensure the local directory exists before downloading
         const localDir = path.dirname(args.localPath);
         await fs.mkdir(localDir, { recursive: true });

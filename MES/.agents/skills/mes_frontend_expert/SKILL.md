@@ -95,3 +95,4 @@ Assume the environment is already initialized via `init.php`.
 ### 5. API Standard Flow:
 Always wrap operations in `try...catch`. Call `handleApiError($e, $pdo)` in the catch block (ensure rollbacks are processed first if in a transaction).
 Record successful mutations using `writeLog()`.
+
