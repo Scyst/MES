@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Search, Shield, Info } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
+import { useToast } from '../../../shared/contexts/FeedbackContext';
 
 export default function UserFormModal({ isOpen, onClose, userData }) {
+  const toast = useToast();
   const isEditMode = !!userData;
   
   const [formData, setFormData] = useState({
@@ -112,10 +114,10 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
           username: prev.username || searchEmpId // Suggest username
         }));
       } else {
-        alert("Employee not found in Manpower HR system");
+        toast.warning("ไม่พบพนักงานในระบบ Manpower HR");
       }
     } catch (e) {
-      alert("Error searching employee");
+      console.error(e);
     }
   };
 
@@ -138,13 +140,13 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
       }
 
       if (res.success) {
+        toast.success(isEditMode ? 'บันทึกการแก้ไขผู้ใช้งานสำเร็จ' : 'เพิ่มผู้ใช้งานสำเร็จ');
         onClose(true); // reload list
       } else {
-        alert(res.message || 'Operation failed');
+        toast.error(res.message || 'ดำเนินการไม่สำเร็จ');
       }
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || 'Error connecting to API');
     } finally {
       setLoading(false);
     }

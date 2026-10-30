@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-d
 import AppLayout from '../shared/components/AppLayout';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../shared/contexts/AuthContext';
+import { FeedbackProvider } from '../shared/contexts/FeedbackContext';
 
 // 🚀 Lazy Loading โมดูลต่างๆ
 const HomeDashboard = lazy(() => import('../modules/Home/pages/HomeDashboard'));
@@ -26,6 +27,7 @@ const ProtectedRoute = ({ children }) => {
 export default function App() {
   return (
     <ErrorBoundary>
+      <FeedbackProvider>
       <HashRouter>
         <AuthProvider>
           <Routes>
@@ -88,6 +90,7 @@ export default function App() {
           </Routes>
         </AuthProvider>
       </HashRouter>
+      </FeedbackProvider>
     </ErrorBoundary>
   );
 }

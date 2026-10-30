@@ -69,12 +69,12 @@ MES/Toolbox/
 > **สำหรับ Agent ตัวหลักที่ทำงาน & กะกลางคืน:** ให้ดำเนินการพัฒนาตามลำดับชั้นนี้ก่อนพอร์ตโมดูลหน้างานขนาดใหญ่ เพื่อให้ทุกโมดูลใช้โครงสร้างพื้นฐานชุดเดียวกัน:
 
 ### ชั้นที่ 1: Shared UI & Core Utilities (`src/shared/`) — *เทียบเท่า `MES/page/components/js/`*
-- [ ] **1.1 Global Toast & Confirm Dialog System (`useToast` & `useConfirm`):**
-  - สร้าง Context และ Component แจ้งเตือน Toast มุมจอ (Success / Warning / Error) และหน้าต่างยืนยันแบบ Industrial Grade แทนการใช้ `window.alert()` และ `window.confirm()` ดิบๆ
-- [ ] **1.2 Standardized API Client (`src/shared/services/apiClient.js`):**
-  - ตัวครอบ Axios กลางที่แนบ `X-CSRF-TOKEN`, จัดการ Loading State, แปลง Error เป็น Toast ภาษาไทยอัตโนมัติ และรองรับ Retry เหมือน `MES/page/components/js/apiClient.js`
-- [ ] **1.3 Reusable Industrial Data Table & Pagination (`<DataTable />` & `<Pagination />`):**
-  - คอมโพเนนต์ตารางมาตรฐานโรงงาน (`w-full`, ค้นหา, กรอง, เรียงลำดับ, แบ่งหน้า, และ Export Excel) เพื่อใช้ซ้ำในทุกโมดูล
+- [x] **1.1 Global Toast & Confirm Dialog System (`useToast` & `useConfirm`):**
+  - สร้าง Context และ Component แจ้งเตือน Toast มุมจอ (Success / Warning / Error) และหน้าต่างยืนยันแบบ Industrial Grade แทนการใช้ `window.alert()` และ `window.confirm()` ดิบๆ (`src/shared/contexts/FeedbackContext.jsx`)
+- [x] **1.2 Standardized API Client (`src/shared/services/apiClient.js`):**
+  - ตัวครอบ Axios กลางที่แนบ `X-CSRF-TOKEN`, จัดการ Loading State, แปลง Error เป็น Toast ภาษาไทยอัตโนมัติ และรองรับ Retry สำหรับ Network/5xx errors
+- [x] **1.3 Reusable Industrial Data Table & Pagination (`<DataTable />` & `<Pagination />`):**
+  - คอมโพเนนต์ตารางมาตรฐานโรงงาน (`w-full`, ค้นหา Debounce 300ms, กรอง, เรียงลำดับ, แบ่งหน้า, และ Export Excel) เพื่อใช้ซ้ำในทุกโมดูล (`src/shared/components/DataTable.jsx`, `Pagination.jsx`) พร้อมปรับใช้จริงใน `UserManagement.jsx` แล้ว
 
 ### ชั้นที่ 2: อัปเกรดระบบจัดการผู้ใช้งานและสิทธิ์ (`Admin / User Management` — `#/admin/users`) ให้ครบ 100%
 - [ ] **2.1 Backend Parity (`public/api/userManage.php`):**

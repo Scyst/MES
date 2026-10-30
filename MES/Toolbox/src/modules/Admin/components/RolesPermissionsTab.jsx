@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Settings, ShieldAlert, Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 import { useAuth } from '../../../shared/contexts/AuthContext';
+import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
 
 export default function RolesPermissionsTab() {
   const { user } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [matrixData, setMatrixData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
@@ -31,7 +34,6 @@ export default function RolesPermissionsTab() {
       }
     } catch (e) {
       console.error(e);
-      alert('Failed to load matrix');
     } finally {
       setLoading(false);
     }
@@ -43,7 +45,7 @@ export default function RolesPermissionsTab() {
 
   const handleToggle = async (roleCode, permCode, isCurrentlyGranted) => {
     if (roleCode === 'creator') {
-      alert("ไม่สามารถแก้ไขสิทธิ์ของ System Owner (creator) ได้");
+      toast.warning("ไม่สามารถแก้ไขสิทธิ์ของ System Owner (creator) ได้");
       return;
     }
     
@@ -62,11 +64,11 @@ export default function RolesPermissionsTab() {
     try {
       const res = await userManageApi.togglePermission(roleCode, permCode, newGrantedState);
       if (!res.success) {
-        alert(res.message);
+        toast.error(res.message || 'ไม่สามารถบันทึกสิทธิ์ได้');
         loadMatrix(); // Revert on failure
       }
     } catch (e) {
-      alert("Error saving permission");
+      console.error(e);
       loadMatrix();
     }
   };
@@ -77,29 +79,37 @@ export default function RolesPermissionsTab() {
     try {
       const res = await userManageApi.addPermission(newPerm.code, newPerm.desc, newPerm.module);
       if (res.success) {
+        toast.success('เพิ่มสิทธิ์สำเร็จ');
         setNewPerm({ code: '', desc: '', module: '' });
         loadMatrix();
       } else {
-        alert(res.message);
+        toast.error(res.message || 'ไม่สามารถเพิ่มสิทธิ์ได้');
       }
     } catch (e) {
-      alert(e.response?.data?.message || 'Error adding permission');
+      console.error(e);
     } finally {
       setAdding(false);
     }
   };
 
   const handleDeletePerm = async (permCode) => {
-    if (!window.confirm(`Are you sure you want to delete permission '${permCode}'?`)) return;
+    const accepted = await confirm({
+      title: 'ลบสิทธิ์การใช้งาน',
+      message: `กรุณายืนยันการลบสิทธิ์ '${permCode}' การลบจะมีผลกับทุกบทบาทที่ได้รับสิทธิ์นี้`,
+      confirmText: 'ลบสิทธิ์',
+      danger: true,
+    });
+    if (!accepted) return;
     try {
       const res = await userManageApi.deletePermission(permCode);
       if (res.success) {
+        toast.success('ลบสิทธิ์สำเร็จ');
         loadMatrix();
       } else {
-        alert(res.message);
+        toast.error(res.message || 'ไม่สามารถลบสิทธิ์ได้');
       }
     } catch (e) {
-      alert(e.response?.data?.message || 'Error deleting permission');
+      console.error(e);
     }
   };
 

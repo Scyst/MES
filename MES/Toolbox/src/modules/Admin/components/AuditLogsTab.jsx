@@ -29,7 +29,6 @@ export default function AuditLogsTab() {
       }
     } catch (e) {
       console.error(e);
-      alert('Failed to load logs');
     } finally {
       setLoading(false);
     }
