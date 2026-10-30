@@ -6,17 +6,24 @@ let globalMonthlyData = {};
 let globalTodayDate = getProductionDate();
 let globalUnreadDates = [];
 
-function getProductionDate() {
-    const now = new Date();
-    const hour = now.getHours();
+function formatLocalYmd(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function getProductionDate(now = new Date()) {
+    const date = new Date(now.getTime());
+    const hour = date.getHours();
 
     // ถ้าเวลาน้อยกว่า 08:00 น. (เช่น 01:00, 07:59) ให้ถือว่าเป็น "เมื่อวาน"
     if (hour < 8) {
-        now.setDate(now.getDate() - 1);
+        date.setDate(date.getDate() - 1);
     }
-    
-    // แปลงเป็น String YYYY-MM-DD
-    return now.toISOString().split('T')[0];
+
+    // ใช้วันที่ตามโซนเวลาเครื่อง (ไทย UTC+7) — ห้ามใช้ toISOString() เพราะเป็น UTC
+    return formatLocalYmd(date);
 }
 
 const periodInfo = {
