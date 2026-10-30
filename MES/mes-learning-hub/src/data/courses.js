@@ -427,15 +427,16 @@ export const courses = [
   // 1. Enterprise Application Design, Development & Integration
   {
     id: 'c-enterprise-app',
-    title: 'Enterprise Application Design, Development & Integration',
+    title: 'การออกแบบ พัฒนา และบูรณาการแอปพลิเคชันระดับองค์กร (Enterprise Application)',
+    isFeatured: true,
+    featuredBadge: '⭐ หลักสูตรแนะนำ · ENTERPRISE FULL-STACK',
     description: 'หลักสูตรการออกแบบ พัฒนา และบูรณาการแอปพลิเคชันระดับองค์กร: สถาปัตยกรรมระบบองค์กร IT/OT, การออกแบบ Industrial UX/UI สำหรับพนักงานและแดชบอร์ดผู้บริหาร, การพัฒนา Web Application (HTML5, CSS Grid, ES6+ Async/Await), การเชื่อมต่อ IoT & Webhook (Telegram/Teams Alert), การทดสอบระบบ UAT, และความปลอดภัยไซเบอร์ระดับ Enterprise',
     instructor: 'อาจารย์ผู้เชี่ยวชาญและทีมวิศวกรรมดิจิทัล (99 Industrial Solutions / SNC Former)',
     duration: '24 hours (4 days)',
     category: 'โปรแกรมและระบบดิจิทัล',
     image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
-    subCategories: ["ระบบอัตโนมัติและดิจิทัล","สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม"],
-    tags: ["MES","Full-Stack","UI/UX","API","IT-OT","Security"],
-    isFeatured: false,
+    subCategories: ["ระบบอัตโนมัติและดิจิทัล","สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม","ทักษะวิชาชีพขั้นสูง","เปิดรับรองบุคคลภายนอก"],
+    tags: ["MES","Full-Stack","UI/UX","API","IT-OT","Security","App","Enterprise","Web Development"],
     level: "Level 3 (Certified Specialist)",
     isPublicEligible: true,
     modules: [
