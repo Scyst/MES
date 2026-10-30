@@ -31,28 +31,18 @@ import {
   FiClipboard,
   FiList,
   FiAward,
-  FiChevronDown,
-  FiChevronUp,
   FiUserCheck,
   FiCheckCircle,
   FiXCircle,
   FiSearch,
-  FiChevronLeft,
-  FiChevronRight,
-  FiBookOpen,
-  FiEyeOff
+  FiExternalLink
 } from 'react-icons/fi';
-import { ENTERPRISE_APP_SPEAKER_NOTES } from '../enterpriseAppSpeakerNotes';
 import {
-  ENTERPRISE_SLIDES_102,
-  ENTERPRISE_CODE_EXAMPLES_16,
   ENTERPRISE_WORKSHOPS_DATA,
   ENTERPRISE_TEMPLATES_DATA,
   ENTERPRISE_THEORY_EXAM,
-  ENTERPRISE_PRACTICAL_EXAM,
-  ENTERPRISE_INSTRUCTOR_REVIEW_14
+  ENTERPRISE_PRACTICAL_EXAM
 } from '../enterpriseAppFullData';
-import EnterpriseTeachingKitHub, { TeachingKitVisualLabs } from '../../components/EnterpriseTeachingKitHub';
 
 // Helper component for Code Block with copy functionality
 function CodeBlock({ code, language = 'javascript' }) {
@@ -71,7 +61,7 @@ function CodeBlock({ code, language = 'javascript' }) {
         </span>
         <button 
           onClick={handleCopy}
-          className="flex items-center gap-1 text-[11px] hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded"
+          className="flex items-center gap-1 text-[11px] hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded cursor-pointer"
         >
           {copied ? <><FiCheck className="text-emerald-400 w-3 h-3" /> คัดลอกแล้ว</> : <><FiCopy className="w-3 h-3" /> คัดลอกโค้ด</>}
         </button>
@@ -84,118 +74,187 @@ function CodeBlock({ code, language = 'javascript' }) {
 }
 
 // =========================================================================
-// TRAINER GUIDE & SPEAKER SCRIPT DRAWER (Integrated Turnkey Teacher Mode)
+// INTERACTIVE COMPANION 1: ISA-95 5-Level Architecture & Live Data Uplink
 // =========================================================================
-function TrainerNotesDrawer({ dayFilter = 'all', defaultOpen = false }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [search, setSearch] = useState('');
-  const [selectedSlide, setSelectedSlide] = useState(null);
+export function Isa95PyramidExplorer() {
+  const { isDark } = useTheme();
+  const [selectedLevel, setSelectedLevel] = useState(2);
+  const [uplinkActive, setUplinkActive] = useState(false);
+  const [uplinkStep, setUplinkStep] = useState(null);
 
-  const filteredNotes = ENTERPRISE_APP_SPEAKER_NOTES.filter(item => {
-    const slideDay = item.n <= 35 ? 1 : item.n <= 71 ? 2 : item.n <= 97 ? 3 : 4;
-    const matchDay = dayFilter === 'all' || slideDay === Number(dayFilter);
-    const q = search.trim().toLowerCase();
-    const matchText = !q || 
-      String(item.n) === q || 
-      item.title.toLowerCase().includes(q) || 
-      (item.say && item.say.toLowerCase().includes(q)) ||
-      (item.tip && item.tip.toLowerCase().includes(q));
-    return matchDay && matchText;
-  });
+  const levels = [
+    {
+      level: 4,
+      name: 'Level 4: Business Planning & Logistics (ERP)',
+      tech: 'SAP, Oracle, Odoo, REST API, SQL',
+      speed: 'ชั่วโมง / วัน / เดือน',
+      role: 'วางแผนทรัพยากรองค์กร, ต้นทุน, สั่งซื้อวัตถุดิบ, ยอดขาย และกำไร',
+      color: 'from-purple-600 to-indigo-600',
+      badge: 'IT WORLD (ERP)'
+    },
+    {
+      level: 3,
+      name: 'Level 3: Manufacturing Operations Management (MES / MOM)',
+      tech: 'MES Web App, Node-RED, SQL Server, MQTT, API',
+      speed: 'นาที / ชั่วโมง / กะผลิต',
+      role: 'ติดตามแผนผลิตตามใบสั่ง (Job Order), ตรวจสอบย้อนกลับ (Traceability), คำนวณ OEE และของเสีย',
+      color: 'from-blue-600 to-cyan-600',
+      badge: 'MES / IT-OT BRIDGE'
+    },
+    {
+      level: 2,
+      name: 'Level 2: Supervisory Control (SCADA & HMI)',
+      tech: 'SCADA Software, Industrial Touch Panels, IPC, Modbus TCP',
+      speed: 'วินาที (Seconds)',
+      role: 'แสดงสถานะเครื่องจักรหน้าไลน์, หน้าจอ HMI ให้พนักงานกดสั่ง Start/Stop, แสดงกราฟแนวโน้ม และ Alarm',
+      color: 'from-teal-600 to-emerald-600',
+      badge: 'OT SUPERVISORY'
+    },
+    {
+      level: 1,
+      name: 'Level 1: Direct Control (PLC & PAC)',
+      tech: 'PLC (Siemens, Mitsubishi, Omron), Robot Controllers, Inverters',
+      speed: 'มิลลิวินาที (10-100 ms)',
+      role: 'ลอจิกควบคุมการทำงานอัตโนมัติของเครื่องจักรโดยตรง ตัดสินใจแบบ Real-Time ห้ามแฮงก์เด็ดขาด',
+      color: 'from-amber-600 to-orange-600',
+      badge: 'OT CONTROL'
+    },
+    {
+      level: 0,
+      name: 'Level 0: Production Process (Sensors & Actuators)',
+      tech: 'Proximity, Thermocouple, Load Cell, Pneumatic Cylinders, Motors',
+      speed: 'ไมโครวินาที (Real-time Physical)',
+      role: 'วัดค่าทางกายภาพจริง (อุณหภูมิ, แรงดัน, ชิ้นงานผ่าน) และขับเคลื่อนกลไกการผลิต',
+      color: 'from-rose-600 to-red-600',
+      badge: 'PHYSICAL PROCESS'
+    }
+  ];
+
+  const handleSimulateUplink = () => {
+    if (uplinkActive) return;
+    setUplinkActive(true);
+    setUplinkStep(0);
+    const timers = [
+      setTimeout(() => setUplinkStep(1), 600),
+      setTimeout(() => setUplinkStep(2), 1200),
+      setTimeout(() => setUplinkStep(3), 1800),
+      setTimeout(() => setUplinkStep(4), 2400),
+      setTimeout(() => {
+        setUplinkActive(false);
+        setUplinkStep(null);
+      }, 3400)
+    ];
+  };
+
+  const current = levels.find(l => l.level === selectedLevel) || levels[2];
 
   return (
-    <div className="rounded-2xl border border-indigo-500/30 bg-indigo-950/20 overflow-hidden shadow-lg transition-all">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 bg-indigo-950/40 hover:bg-indigo-900/40 transition-colors text-left"
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold">
-            🎙️
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            INTERACTIVE AID #1 · ISA-95 (IEC 62264)
           </span>
-          <div>
-            <div className="font-bold text-sm text-indigo-200 flex items-center gap-2">
-              คู่มือผู้สอน &amp; บทพูดรายสไลด์ (Trainer Guide &amp; Speaker Script)
-              <span className="text-[10px] bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
-                {dayFilter === 'all' ? '102 สไลด์' : `วันที่ ${dayFilter} (${filteredNotes.length} สไลด์)`}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 m-0">
-              บทพูดแบบคำต่อคำ (Say), คำถามชวนคิด (Ask), และเทคนิคหน้าห้อง (Tip) สำหรับผู้สอน
-            </p>
-          </div>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            พีระมิดสถาปัตยกรรมระบบอุตสาหกรรม 5 ระดับ (ISA-95 Interactive Pyramid)
+          </h3>
         </div>
-        <div className="text-indigo-400 text-sm font-bold flex items-center gap-1">
-          {isOpen ? <><FiChevronUp className="w-5 h-5" /> ย่อเก็บ</> : <><FiChevronDown className="w-5 h-5" /> เปิดดูบทพูด</>}
-        </div>
-      </button>
 
-      {isOpen && (
-        <div className="p-4 space-y-4 border-t border-indigo-500/20 bg-slate-950/60">
-          <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
-            <div className="relative w-full sm:w-72">
-              <FiSearch className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="ค้นหาเลขสไลด์ หรือคำสำคัญ..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
-              />
-            </div>
-            <span className="text-[11px] text-slate-400">
-              พบ {filteredNotes.length} สไลด์
+        <button
+          onClick={handleSimulateUplink}
+          disabled={uplinkActive}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer transition-all ${
+            uplinkActive
+              ? 'bg-amber-600 text-white animate-pulse'
+              : 'bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white'
+          }`}
+        >
+          <FiZap /> {uplinkActive ? `กำลังส่งข้อมูลสู่ Level ${uplinkStep}...` : 'จำลองข้อมูลเซนเซอร์วิ่งสู่ ERP'}
+        </button>
+      </div>
+
+      {/* Interactive Pyramid Layers */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+        {/* Visual Pyramid Stack */}
+        <div className="lg:col-span-7 space-y-2">
+          {levels.map((lvl) => {
+            const isSelected = selectedLevel === lvl.level;
+            const isUplinkCurrent = uplinkStep === lvl.level;
+            return (
+              <button
+                key={lvl.level}
+                onClick={() => setSelectedLevel(lvl.level)}
+                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                  isSelected
+                    ? 'ring-2 ring-indigo-400 border-transparent bg-slate-950 shadow-lg scale-[1.01]'
+                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                } ${isUplinkCurrent ? 'ring-4 ring-amber-400 bg-amber-950/40' : ''}`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-black text-xs text-white bg-gradient-to-br ${lvl.color}`}>
+                    L{lvl.level}
+                  </span>
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-2">
+                      <span>{lvl.name.split(':')[1] || lvl.name}</span>
+                      {isUplinkCurrent && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 text-[10px] font-black animate-bounce">
+                          DATA HERE!
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      ความเร็ว: {lvl.speed}
+                    </span>
+                  </div>
+                </div>
+
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                  isSelected
+                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                    : 'bg-slate-900 text-slate-400 border-slate-800'
+                }`}>
+                  {lvl.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Level Detail Card */}
+        <div className="lg:col-span-5 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span className="font-bold text-indigo-300 uppercase tracking-wider font-mono">
+              ข้อมูลเจาะลึก Level {current.level}
+            </span>
+            <span className="font-mono text-[11px] text-slate-400">
+              เวลาตอบสนอง: {current.speed}
             </span>
           </div>
 
-          <div className="max-h-96 overflow-y-auto space-y-3 pr-1 divide-y divide-slate-800/80">
-            {filteredNotes.map((note) => (
-              <div key={note.n} className="pt-3 first:pt-0 space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-indigo-300 flex items-center gap-1.5 font-mono">
-                    <span className="px-1.5 py-0.5 rounded bg-indigo-900/60 text-indigo-200 text-[10px]">
-                      สไลด์ {note.n}
-                    </span>
-                    {note.title}
-                  </span>
-                  {note.time && (
-                    <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded">
-                      ⏱️ {note.time}
-                    </span>
-                  )}
-                </div>
+          <div className="space-y-1">
+            <strong className="text-white block font-bold text-sm">{current.name}</strong>
+            <p className="text-slate-300 leading-relaxed m-0">{current.role}</p>
+          </div>
 
-                <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-2">
-                  <div className="text-slate-200 leading-relaxed">
-                    <strong className="text-indigo-400 block text-[11px] mb-0.5">💬 สิ่งที่ผู้สอนต้องพูด (Say):</strong>
-                    {note.say}
-                  </div>
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1">
+            <span className="text-[11px] text-cyan-400 font-bold block">ฮาร์ดแวร์ &amp; โปรโตคอลหลัก:</span>
+            <span className="font-mono text-slate-300 text-[11px]">{current.tech}</span>
+          </div>
 
-                  {note.ask && (
-                    <div className="p-2 rounded bg-amber-950/30 border border-amber-500/30 text-amber-200/90">
-                      <strong className="text-amber-400 block text-[10px] uppercase font-bold">❓ คำถามชวนผู้เรียนคิด (Ask):</strong>
-                      {note.ask}
-                    </div>
-                  )}
-
-                  {note.tip && (
-                    <div className="p-2 rounded bg-rose-950/20 border border-rose-500/30 text-rose-200/90">
-                      <strong className="text-rose-400 block text-[10px] uppercase font-bold">💡 ข้อควรระวัง / เทคนิคการสอน (Tip):</strong>
-                      {note.tip}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-indigo-200 text-[11px] leading-relaxed">
+            💡 <strong>บทบาทในคอร์สนี้:</strong> เรากำลังสร้างแอปพลิเคชันในระดับ <strong>Level 3 (MES)</strong> เพื่อดึงข้อมูลจาก Level 1/2 มาแสดงผลให้ผู้ปฏิบัติงานและเชื่อมต่อสรุปผลสู่ Level 4
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 // =========================================================================
-// SIMULATOR 1: Industrial HMI Color & Gloved Touch Validator (Module 1 & 2)
+// INTERACTIVE COMPANION 2: Industrial HMI Color & Gloved Touch Validator
 // =========================================================================
 export function IndustrialHmiValidatorSimulator() {
   const { isDark } = useTheme();
@@ -206,12 +265,11 @@ export function IndustrialHmiValidatorSimulator() {
 
   const handleButtonClick = (actionName, targetSize) => {
     if (gloveMode && targetSize < 44) {
-      // 70% probability of misclick due to fat glove and tiny hitbox
       const isMisclick = Math.random() < 0.75;
       if (isMisclick) {
         setFeedback({
           type: 'error',
-          text: `❌ MISCLICK DETECTED! พนักงานสวมถุงมือกดปุ่ม "${actionName}" พลาดไปโดนพื้นที่ข้างเคียง เนื่องจากปุ่มมีขนาดเพียง ${targetSize}px (ต่ำกว่าเกณฑ์มาตรฐาน 44px)`
+          text: `❌ MISCLICK DETECTED! พนักงานสวมถุงมือกดปุ่ม "${actionName}" พลาดไปโดนพื้นที่ข้างเคียง เนื่องจากปุ่มมีขนาดเพียง ${targetSize}px (ต่ำกว่าเกณฑ์มาตรฐาน 44px ตาม WCAG 2.2)`
         });
         setStats(prev => ({ ...prev, misclick: prev.misclick + 1 }));
         return;
@@ -219,52 +277,49 @@ export function IndustrialHmiValidatorSimulator() {
     }
     setFeedback({
       type: 'success',
-      text: `✅ TOUCH SUCCESS! ตรวจจับการกด "${actionName}" แม่นยำ 100% (Hitbox ${targetSize}px รองรับนิ้วมือสวมถุงมือตาม IEC/ISO)`
+      text: `✅ TOUCH SUCCESS! ตรวจจับการกด "${actionName}" แม่นยำ 100% (Hitbox ${targetSize}px รองรับนิ้วมือสวมถุงมือตาม IEC 60204-1 / ISO 9241)`
     });
     setStats(prev => ({ ...prev, success: prev.success + 1 }));
   };
 
   return (
-    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
       isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
     }`}>
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div>
-          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            <FiSmartphone className="w-5 h-5 text-pink-500" />
-            ห้องแล็บทดสอบ Industrial UX/UI (มาตรฐานสี IEC 60204-1 &amp; ISA-101.01)
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+            INTERACTIVE AID #2 · IEC 60204-1 &amp; ISA-101
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            ห้องแล็บทดสอบ Industrial UX/UI (มาตรฐานสีโรงงาน &amp; ปุ่มสวมถุงมือ)
           </h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            เปรียบเทียบหน้าจอควบคุมอุตสาหกรรมที่ถูกและผิดหลักวิศวกรรม พร้อมจำลองการกดด้วยถุงมือหนาหน้างาน
-          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setUiMode('STANDARD')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
               uiMode === 'STANDARD'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                ? 'bg-emerald-600 text-white shadow-md'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            ✅ มาตรฐาน IEC 60204-1 (Good UI)
+            ✅ มาตรฐาน IEC (Good UI)
           </button>
           <button
             onClick={() => setUiMode('BAD_RAINBOW')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
               uiMode === 'BAD_RAINBOW'
-                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20'
+                ? 'bg-rose-600 text-white shadow-md'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            ❌ สีรุ้งแสบตา / ปุ่มเล็ก (Bad UI)
+            ❌ สีรุ้งแสบตา/ปุ่มเล็ก (Bad UI)
           </button>
           <button
             onClick={() => setGloveMode(!gloveMode)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all ${
               gloveMode
                 ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
                 : 'bg-slate-800 border-slate-700 text-slate-400'
@@ -294,31 +349,31 @@ export function IndustrialHmiValidatorSimulator() {
         </div>
 
         {/* Content & KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className={`p-3 rounded-xl border ${
             uiMode === 'STANDARD' 
               ? 'bg-slate-900 border-slate-800 text-slate-200' 
-              : 'bg-green-600 border-white text-white font-serif'
+              : 'bg-green-600 border-white text-white'
           }`}>
             <span className="text-[10px] uppercase font-bold tracking-wider opacity-75">Motor Voltage</span>
             <div className="text-2xl font-black font-mono">231.4 V</div>
-            <span className="text-[10px] text-emerald-400 font-bold">● Nominal Range</span>
+            <span className="text-[10px] text-emerald-400 font-bold">● ปกติ (Nominal Range)</span>
           </div>
 
           <div className={`p-3 rounded-xl border ${
             uiMode === 'STANDARD' 
               ? 'bg-slate-900 border-slate-800 text-slate-200' 
-              : 'bg-blue-600 border-yellow-300 text-yellow-200 font-serif'
+              : 'bg-blue-600 border-yellow-300 text-yellow-200'
           }`}>
             <span className="text-[10px] uppercase font-bold tracking-wider opacity-75">Motor Current</span>
             <div className="text-2xl font-black font-mono">15.6 A</div>
-            <span className="text-[10px] text-emerald-400 font-bold">● Normal Load</span>
+            <span className="text-[10px] text-emerald-400 font-bold">● โหลดปกติ</span>
           </div>
 
           <div className={`p-3 rounded-xl border ${
             uiMode === 'STANDARD' 
               ? 'bg-slate-900 border-slate-800 text-slate-200' 
-              : 'bg-red-600 border-white text-white font-serif'
+              : 'bg-red-600 border-white text-white'
           }`}>
             <span className="text-[10px] uppercase font-bold tracking-wider opacity-75">Machine State</span>
             <div className="text-2xl font-black font-mono">RUNNING</div>
@@ -330,7 +385,7 @@ export function IndustrialHmiValidatorSimulator() {
         <div className="space-y-2">
           <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
             <span>กดทดสอบควบคุมเครื่องจักร (Touch Hitbox Test):</span>
-            <span className="text-amber-400">
+            <span className="text-amber-400 font-mono">
               {uiMode === 'STANDARD' ? 'Hitbox: 52×52px (Safe Target)' : 'Hitbox: 24×24px (Dangerous Cluster)'}
             </span>
           </div>
@@ -340,59 +395,52 @@ export function IndustrialHmiValidatorSimulator() {
               <>
                 <button
                   onClick={() => handleButtonClick('START CYCLE', 52)}
-                  className="min-h-[52px] min-w-[120px] px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
+                  className="min-h-[52px] min-w-[120px] px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
                 >
                   <FiPlay className="w-5 h-5" /> START
                 </button>
                 <button
                   onClick={() => handleButtonClick('NORMAL STOP', 52)}
-                  className="min-h-[52px] min-w-[120px] px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
+                  className="min-h-[52px] min-w-[120px] px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
                 >
                   <FiSquare className="w-5 h-5" /> STOP
                 </button>
                 <button
                   onClick={() => handleButtonClick('ACKNOWLEDGE ALARM', 52)}
-                  className="min-h-[52px] min-w-[140px] px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
+                  className="min-h-[52px] min-w-[140px] px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
                 >
                   <FiBell className="w-5 h-5" /> ACK ALARM
                 </button>
                 <button
                   onClick={() => handleButtonClick('EMERGENCY STOP (E-STOP)', 56)}
-                  className="min-h-[56px] min-w-[150px] px-6 py-3 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-black text-sm border-2 border-yellow-400 shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                  className="min-h-[56px] min-w-[150px] px-6 py-3 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-black text-sm border-2 border-yellow-400 shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
                 >
                   🚨 E-STOP
                 </button>
               </>
             ) : (
-              // Bad UI: Tiny buttons clustered closely
               <>
                 <button
                   onClick={() => handleButtonClick('START', 24)}
-                  className="h-6 px-2 text-[10px] bg-green-500 text-black border border-black rounded"
+                  className="h-6 px-2 text-[10px] bg-green-500 text-black border border-black rounded cursor-pointer"
                 >
                   Start
                 </button>
                 <button
                   onClick={() => handleButtonClick('STOP', 24)}
-                  className="h-6 px-2 text-[10px] bg-red-500 text-white border border-black rounded"
+                  className="h-6 px-2 text-[10px] bg-red-500 text-white border border-black rounded cursor-pointer"
                 >
                   Stop
                 </button>
                 <button
                   onClick={() => handleButtonClick('RESET', 24)}
-                  className="h-6 px-2 text-[10px] bg-yellow-500 text-black border border-black rounded"
+                  className="h-6 px-2 text-[10px] bg-yellow-500 text-black border border-black rounded cursor-pointer"
                 >
                   Reset
                 </button>
                 <button
-                  onClick={() => handleButtonClick('PURGE', 24)}
-                  className="h-6 px-2 text-[10px] bg-blue-500 text-white border border-black rounded"
-                >
-                  Purge
-                </button>
-                <button
                   onClick={() => handleButtonClick('E-STOP', 24)}
-                  className="h-6 px-2 text-[10px] bg-fuchsia-600 text-white border border-black rounded font-bold"
+                  className="h-6 px-2 text-[10px] bg-fuchsia-600 text-white border border-black rounded font-bold cursor-pointer"
                 >
                   E-Stop
                 </button>
@@ -404,7 +452,7 @@ export function IndustrialHmiValidatorSimulator() {
 
       {/* Feedback Toast */}
       {feedback && (
-        <div className={`p-3.5 rounded-xl border text-xs leading-relaxed flex items-center gap-2.5 ${
+        <div className={`p-3 rounded-xl border text-xs leading-relaxed flex items-center gap-2.5 ${
           feedback.type === 'success' 
             ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' 
             : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
@@ -413,26 +461,120 @@ export function IndustrialHmiValidatorSimulator() {
           <span>{feedback.text}</span>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Engineering Rule Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
-          <strong className="text-emerald-400 font-bold block">1. มาตรฐานสีสากล (IEC 60204-1 &amp; IEC 60073):</strong>
-          <p className="text-slate-400 m-0">
-            • <strong>แดง:</strong> วิกฤต / ฉุกเฉิน / อันตราย (Emergency Stop, Trip)<br />
-            • <strong>เหลือง:</strong> สภาพผิดปกติ / เตรียมพร้อม / เฝ้าระวัง (Warning &gt; 240V)<br />
-            • <strong>เขียว:</strong> ปลอดภัย / ทำงานปกติ (Running, Normal Operation)<br />
-            • <strong>เทา:</strong> ออฟไลน์ / ไม่ได้เปิดใช้งาน (Disconnected)
-          </p>
+// =========================================================================
+// INTERACTIVE COMPANION 3: JSON Interactive Syntax & Path Explorer
+// =========================================================================
+export function JsonPathInteractiveExplorer() {
+  const { isDark } = useTheme();
+  const [selectedKey, setSelectedKey] = useState('data.voltage');
+
+  const sampleJson = {
+    machineId: "MC-01",
+    line: "Line A",
+    status: "RUNNING",
+    timestamp: "2026-10-30T10:00:00Z",
+    metrics: {
+      voltage: 231.4,
+      current: 15.6,
+      powerKw: 3.61,
+      temperatureC: 48.2
+    },
+    alarms: [
+      { id: "ALM-01", code: "TEMP_WARN", active: false }
+    ]
+  };
+
+  const keyMap = {
+    'machineId': { js: 'data.machineId', val: '"MC-01"', desc: 'รหัสเครื่องจักร (String)' },
+    'line': { js: 'data.line', val: '"Line A"', desc: 'ไลน์การผลิต (String)' },
+    'status': { js: 'data.status', val: '"RUNNING"', desc: 'สถานะเครื่องจักร (String)' },
+    'metrics.voltage': { js: 'data.metrics.voltage', val: '231.4', desc: 'แรงดันไฟฟ้า (Number)' },
+    'metrics.current': { js: 'data.metrics.current', val: '15.6', desc: 'กระแสไฟฟ้า (Number)' },
+    'metrics.powerKw': { js: 'data.metrics.powerKw', val: '3.61', desc: 'กำลังไฟฟ้ากิโลวัตต์ (Number)' },
+    'alarms[0].code': { js: 'data.alarms[0].code', val: '"TEMP_WARN"', desc: 'รหัสแจ้งเตือนตัวแรกในอาร์เรย์ (Array Index [0])' }
+  };
+
+  const currentInfo = keyMap[selectedKey] || keyMap['metrics.voltage'];
+
+  return (
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+            INTERACTIVE AID #3 · RFC 8259
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            เครื่องมือฝึกอ่านและดึงค่า JSON (JSON Path &amp; Dot Notation Explorer)
+          </h3>
+        </div>
+        <span className="text-xs text-slate-400">
+          คลิกที่คีย์ต่างๆ เพื่อดูคำสั่ง JavaScript ที่ใช้ดึงค่าไปแสดงผล
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Clickable JSON Tree */}
+        <div className="lg:col-span-7 p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs leading-relaxed overflow-x-auto text-slate-300">
+          <div>&#123;</div>
+          <div className="pl-4">
+            <button onClick={() => setSelectedKey('machineId')} className={`cursor-pointer hover:underline ${selectedKey === 'machineId' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"machineId"</button>: <span className="text-emerald-300">"MC-01"</span>,
+          </div>
+          <div className="pl-4">
+            <button onClick={() => setSelectedKey('line')} className={`cursor-pointer hover:underline ${selectedKey === 'line' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"line"</button>: <span className="text-emerald-300">"Line A"</span>,
+          </div>
+          <div className="pl-4">
+            <button onClick={() => setSelectedKey('status')} className={`cursor-pointer hover:underline ${selectedKey === 'status' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"status"</button>: <span className="text-emerald-300">"RUNNING"</span>,
+          </div>
+          <div className="pl-4 text-amber-300">"metrics": &#123;</div>
+          <div className="pl-8">
+            <button onClick={() => setSelectedKey('metrics.voltage')} className={`cursor-pointer hover:underline ${selectedKey === 'metrics.voltage' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"voltage"</button>: <span className="text-amber-300 font-bold">231.4</span>,
+          </div>
+          <div className="pl-8">
+            <button onClick={() => setSelectedKey('metrics.current')} className={`cursor-pointer hover:underline ${selectedKey === 'metrics.current' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"current"</button>: <span className="text-amber-300 font-bold">15.6</span>,
+          </div>
+          <div className="pl-8">
+            <button onClick={() => setSelectedKey('metrics.powerKw')} className={`cursor-pointer hover:underline ${selectedKey === 'metrics.powerKw' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"powerKw"</button>: <span className="text-amber-300 font-bold">3.61</span>
+          </div>
+          <div className="pl-4 text-amber-300">&#125;,</div>
+          <div className="pl-4 text-indigo-300">"alarms": [</div>
+          <div className="pl-8">&#123;</div>
+          <div className="pl-12">
+            <button onClick={() => setSelectedKey('alarms[0].code')} className={`cursor-pointer hover:underline ${selectedKey === 'alarms[0].code' ? 'text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded' : 'text-fuchsia-400'}`}>"code"</button>: <span className="text-emerald-300">"TEMP_WARN"</span>
+          </div>
+          <div className="pl-8">&#125;</div>
+          <div className="pl-4 text-indigo-300">]</div>
+          <div>&#125;</div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
-          <strong className="text-pink-400 font-bold block">2. กฎขนาดปุ่มสัมผัส (Minimum Touch Target):</strong>
-          <p className="text-slate-400 m-0">
-            ตามมาตรฐาน <strong>WCAG 2.2</strong> และข้อกำหนดการใช้หน้าจอในโรงงานอุตสาหกรรม 
-            พื้นที่ปุ่มต้องไม่ต่ำกว่า <strong>44 × 44 พิกเซล</strong> เสมอ เพื่อลดความผิดพลาดในการแตะ (Touch Inaccuracy) 
-            เมื่อพนักงานสวมถุงมือผ้าหรือถุงมือยางหน้าสายการผลิต
-          </p>
+        {/* Live Evaluator Output */}
+        <div className="lg:col-span-5 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-4 text-xs">
+          <div className="space-y-1">
+            <span className="text-[11px] text-slate-400 font-mono">คำสั่ง JavaScript ที่ใช้เข้าถึงค่า:</span>
+            <div className="p-3 rounded-lg bg-slate-900 border border-cyan-500/40 font-mono text-cyan-300 font-bold text-sm">
+              const value = {currentInfo.js};
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-slate-400">ค่าที่ได้ (Value):</span>
+              <span className="font-mono text-emerald-400 font-bold">{currentInfo.val}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">ชนิดข้อมูล:</span>
+              <span className="text-slate-300">{currentInfo.desc}</span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-amber-950/20 border border-amber-500/30 text-amber-200 text-[11px] leading-relaxed">
+            ⚠️ <strong>กฎเหล็ก RFC 8259:</strong> ในไฟล์ JSON ชื่อคีย์ (Key) และข้อความต้องอยู่ในเครื่องหมายคำพูดคู่ (<code>"..."</code>) เท่านั้น ห้ามใช้ single quote (<code>'...'</code>) หรือละเว้นเครื่องหมายคำพูดเด็ดขาด
+          </div>
         </div>
       </div>
     </div>
@@ -440,15 +582,15 @@ export function IndustrialHmiValidatorSimulator() {
 }
 
 // =========================================================================
-// SIMULATOR 2: Industrial Flexbox Layout Playground (Workshop 1 Engine)
+// INTERACTIVE COMPANION 4: Industrial Flexbox Layout Playground (Workshop 1)
 // =========================================================================
 export function IndustrialFlexboxSimulator() {
   const { isDark } = useTheme();
-  const [viewport, setViewport] = useState('DESKTOP'); // 'MOBILE' (375px) | 'TABLET' (768px) | 'DESKTOP' (100%)
-  const [flexWrap, setFlexWrap] = useState('wrap'); // 'wrap' | 'nowrap'
-  const [flexDirection, setFlexDirection] = useState('row'); // 'row' | 'column'
-  const [gap, setGap] = useState(16); // px
-  const [cardMinWidth, setCardMinWidth] = useState(240); // px
+  const [viewport, setViewport] = useState('DESKTOP');
+  const [flexWrap, setFlexWrap] = useState('wrap');
+  const [flexDirection, setFlexDirection] = useState('row');
+  const [gap, setGap] = useState(16);
+  const [cardMinWidth, setCardMinWidth] = useState(240);
 
   const viewportWidthClass = {
     MOBILE: 'max-w-[375px]',
@@ -456,39 +598,24 @@ export function IndustrialFlexboxSimulator() {
     DESKTOP: 'w-full'
   }[viewport];
 
-  const generatedCss = `.meter-container {
-  display: flex;
-  flex-direction: ${flexDirection};
-  flex-wrap: ${flexWrap};
-  gap: ${gap}px;
-}
-
-.meter-card {
-  flex: 1 1 ${cardMinWidth}px;
-}`;
-
   return (
-    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
       isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
     }`}>
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div>
-          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            <FiLayout className="w-5 h-5 text-indigo-500" />
-            ห้องแล็บจำลองการจัด Flexbox หน้าระบบวัดไฟฟ้า (Workshop 1 Sandbox)
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            INTERACTIVE AID #4 · WORKSHOP 1 ENGINE
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            ห้องแล็บจำลอง Flexbox Dashboard (ทดสอบตัดบรรทัดบนมือถือ vs จอโรงงาน)
           </h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            ทดลองปรับคุณสมบัติ Flexbox, ระยะห่าง, และสลับขนาดหน้าจอ (Mobile, Tablet, Terminal) เพื่อดูการตัดบรรทัดของการ์ดจริง
-          </p>
         </div>
 
-        {/* Viewport Switcher */}
         <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setViewport('MOBILE')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all flex items-center gap-1 ${
               viewport === 'MOBILE' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -496,7 +623,7 @@ export function IndustrialFlexboxSimulator() {
           </button>
           <button
             onClick={() => setViewport('TABLET')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all flex items-center gap-1 ${
               viewport === 'TABLET' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -504,17 +631,17 @@ export function IndustrialFlexboxSimulator() {
           </button>
           <button
             onClick={() => setViewport('DESKTOP')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all flex items-center gap-1 ${
               viewport === 'DESKTOP' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
-            🖥️ จอโรงงาน (เต็มจอ)
+            🖥️ จอโรงงาน
           </button>
         </div>
       </div>
 
-      {/* Control Sliders & Toggles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
+      {/* Controls */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs">
         <div className="space-y-1.5">
           <div className="flex justify-between font-bold text-slate-300">
             <span>ระยะห่าง (gap):</span>
@@ -552,7 +679,7 @@ export function IndustrialFlexboxSimulator() {
           <div className="flex gap-2">
             <button
               onClick={() => setFlexWrap('wrap')}
-              className={`flex-1 py-1 rounded font-mono font-bold text-xs ${
+              className={`flex-1 py-1 rounded font-mono font-bold text-xs cursor-pointer ${
                 flexWrap === 'wrap' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'
               }`}
             >
@@ -560,7 +687,7 @@ export function IndustrialFlexboxSimulator() {
             </button>
             <button
               onClick={() => setFlexWrap('nowrap')}
-              className={`flex-1 py-1 rounded font-mono font-bold text-xs ${
+              className={`flex-1 py-1 rounded font-mono font-bold text-xs cursor-pointer ${
                 flexWrap === 'nowrap' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'
               }`}
             >
@@ -574,7 +701,7 @@ export function IndustrialFlexboxSimulator() {
           <div className="flex gap-2">
             <button
               onClick={() => setFlexDirection('row')}
-              className={`flex-1 py-1 rounded font-mono font-bold text-xs ${
+              className={`flex-1 py-1 rounded font-mono font-bold text-xs cursor-pointer ${
                 flexDirection === 'row' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'
               }`}
             >
@@ -582,7 +709,7 @@ export function IndustrialFlexboxSimulator() {
             </button>
             <button
               onClick={() => setFlexDirection('column')}
-              className={`flex-1 py-1 rounded font-mono font-bold text-xs ${
+              className={`flex-1 py-1 rounded font-mono font-bold text-xs cursor-pointer ${
                 flexDirection === 'column' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'
               }`}
             >
@@ -604,7 +731,6 @@ export function IndustrialFlexboxSimulator() {
             )}
           </div>
 
-          {/* Meter Container Under Test */}
           <div 
             className="p-4 rounded-xl border border-slate-800 bg-slate-900/90 transition-all"
             style={{
@@ -614,506 +740,15 @@ export function IndustrialFlexboxSimulator() {
               gap: `${gap}px`
             }}
           >
-            {/* Card 1: Voltage */}
-            <div 
-              className="p-4 rounded-xl border border-indigo-500/40 bg-indigo-950/30 text-slate-200 transition-all"
-              style={{ flex: `1 1 ${cardMinWidth}px` }}
-            >
-              <div className="flex justify-between items-center text-xs text-indigo-300 font-bold mb-1">
-                <span>⚡ แรงดันไฟฟ้า (Voltage)</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px]">ปกติ</span>
-              </div>
-              <div className="text-3xl font-black font-mono text-white">231.4 <span className="text-sm font-normal text-slate-400">V</span></div>
-              <p className="text-[11px] text-slate-400 mt-2 m-0">แรงดันไฟฟ้ากระแสสลับ 1 เฟส 220V ±10%</p>
-            </div>
-
-            {/* Card 2: Current */}
-            <div 
-              className="p-4 rounded-xl border border-teal-500/40 bg-teal-950/30 text-slate-200 transition-all"
-              style={{ flex: `1 1 ${cardMinWidth}px` }}
-            >
-              <div className="flex justify-between items-center text-xs text-teal-300 font-bold mb-1">
-                <span>🔌 กระแสไฟฟ้า (Current)</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px]">ปกติ</span>
-              </div>
-              <div className="text-3xl font-black font-mono text-white">15.6 <span className="text-sm font-normal text-slate-400">A</span></div>
-              <p className="text-[11px] text-slate-400 mt-2 m-0">กระแสโหลดขณะมอเตอร์กำลังหมุนชิ้นงาน</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Generated CSS Code Display */}
-      <div className="space-y-2">
-        <span className="text-xs font-bold text-slate-400">CSS ที่ได้สำหรับ Workshop 1 (คัดลอกไปใช้ใน `style.css`):</span>
-        <CodeBlock code={generatedCss} language="css" />
-      </div>
-    </div>
-  );
-}
-
-// =========================================================================
-// SIMULATOR 3: Control Cabinet DOM & State Machine (Workshop 2 Engine)
-// =========================================================================
-export function ControlCabinetDomSimulator() {
-  const { isDark } = useTheme();
-  const [machineState, setMachineState] = useState('STOPPED'); // 'RUNNING' | 'STOPPED'
-  const [voltage, setVoltage] = useState(230);
-  const [executedCommand, setExecutedCommand] = useState('');
-
-  const isOverVoltage = voltage > 240;
-
-  const handleStart = () => {
-    setMachineState('RUNNING');
-    setExecutedCommand(`// ผู้ใช้คลิกปุ่ม #btn-start
-const statusEl = document.querySelector('#status');
-statusEl.textContent = 'RUNNING';
-statusEl.className = 'status-running';`);
-  };
-
-  const handleStop = () => {
-    setMachineState('STOPPED');
-    setExecutedCommand(`// ผู้ใช้คลิกปุ่ม #btn-stop
-const statusEl = document.querySelector('#status');
-statusEl.textContent = 'STOPPED';
-statusEl.className = 'status-stopped';`);
-  };
-
-  const handleVoltageChange = (newVal) => {
-    setVoltage(newVal);
-    if (newVal > 240) {
-      setExecutedCommand(`// ตรวจสอบค่าใน Event Listener: ค่าแรงดัน ${newVal}V > 240V
-const warnEl = document.querySelector('#warning-box');
-warnEl.textContent = '⚠️ ALARM: แรงดันเกินพิกัด (> 240V)';
-warnEl.classList.remove('hidden');`);
-    } else {
-      setExecutedCommand(`// แรงดันอยู่ในเกณฑ์ปกติ ${newVal}V
-document.querySelector('#warning-box').classList.add('hidden');`);
-    }
-  };
-
-  return (
-    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
-      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
-    }`}>
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
-        <div>
-          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            <FiActivity className="w-5 h-5 text-emerald-500" />
-            ตู้คอนโทรลจำลอง &amp; การควบคุม DOM (Workshop 2 Sandbox)
-          </h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            ทดสอบปุ่ม Start / Stop และสไลเดอร์ปรับแรงดัน เพื่อดูการเปลี่ยนสถานะ DOM และคำสั่ง JavaScript ที่ทำงานเบื้องหลัง
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">สถานะปัจจุบัน:</span>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-black font-mono tracking-wide ${
-            machineState === 'RUNNING' 
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse' 
-              : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-          }`}>
-            {machineState}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Interactive Control Panel */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-5">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <FiSliders className="w-4 h-4 text-emerald-400" /> แผงควบคุมหน้าตู้ (Operator Station)
-          </h4>
-
-          {/* Start / Stop Buttons */}
-          <div className="flex gap-4">
-            <button
-              onClick={handleStart}
-              className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                machineState === 'RUNNING'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <FiPlay className="w-4 h-4" /> กดปุ่ม START
-            </button>
-            <button
-              onClick={handleStop}
-              className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                machineState === 'STOPPED'
-                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <FiSquare className="w-4 h-4" /> กดปุ่ม STOP
-            </button>
-          </div>
-
-          {/* Voltage Slider */}
-          <div className="space-y-2 pt-2 border-t border-slate-800">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-slate-300">ปรับค่าแรงดันไฟฟ้าหน้างาน:</span>
-              <span className={`font-mono font-black text-sm ${isOverVoltage ? 'text-amber-400 animate-bounce' : 'text-emerald-400'}`}>
-                {voltage} V {isOverVoltage && '(เกิน 240V!)'}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="190"
-              max="260"
-              step="1"
-              value={voltage}
-              onChange={e => handleVoltageChange(Number(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>190V (Undervoltage)</span>
-              <span>220V (Nominal)</span>
-              <span>240V (Threshold)</span>
-              <span>260V (Critical)</span>
-            </div>
-          </div>
-
-          {/* Overvoltage Alert Banner */}
-          {isOverVoltage && (
-            <div className="p-3.5 rounded-xl border border-amber-500/50 bg-amber-950/40 text-amber-200 text-xs flex items-center gap-3 animate-pulse">
-              <FiAlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-              <div>
-                <strong>⚠️ OVERVOLTAGE WARNING DETECTED!</strong>
-                <p className="text-[11px] text-amber-300/80 m-0">แรงดันไฟฟ้า {voltage}V เกินพิกัดปลอดภัย 240V กรุณาตรวจสอบหม้อแปลงไฟฟ้า</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Live DOM & Code Inspector */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <FiCode className="w-4 h-4 text-sky-400" /> คำสั่ง DOM &amp; JavaScript ที่ทำงานเบื้องหลัง
-          </h4>
-
-          <div className="space-y-2 text-xs">
-            <span className="text-slate-400">คำสั่งล่าสุดที่เบราว์เซอร์ประมวลผล:</span>
-            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[11px] text-sky-300 whitespace-pre-wrap leading-relaxed">
-              {executedCommand || '// รอการกดปุ่มหรือปรับค่าสไลเดอร์...'}
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-            <strong className="text-emerald-400 block font-bold">เทคนิคสำคัญสำหรับ Workshop 2:</strong>
-            <ul className="text-slate-400 text-[11px] space-y-1 list-disc list-inside m-0">
-              <li>ใช้ <code>textContent</code> แทน <code>innerHTML</code> เมื่อแค่เปลี่ยนข้อความ เพื่อป้องกันช่องโหว่ XSS</li>
-              <li>การรับค่าจาก <code>&lt;input&gt;</code> จะได้ชนิดข้อมูลเป็น <code>String</code> เสมอ ต้องแปลงด้วย <code>Number()</code> ก่อนนำไปเปรียบเทียบ <code>&gt; 240</code></li>
-              <li>ใช้ <code>addEventListener('click', ...)</code> แยกตรรกะออกจาก HTML</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =========================================================================
-// SIMULATOR 4: Live REST API & JSON Tree Explorer (Workshop 3 Engine)
-// =========================================================================
-export function RestApiJsonTreeSimulator() {
-  const { isDark } = useTheme();
-  const [isPolling, setIsPolling] = useState(false);
-  const [networkCondition, setNetworkCondition] = useState('200_OK'); // '200_OK' | '404_NOT_FOUND' | '500_SERVER_ERROR'
-  const [apiData, setApiData] = useState({
-    line: "A",
-    electric: { voltage: 231.4, current: 15.6 },
-    water: { flow: 3.2 },
-    updatedAt: new Date().toLocaleTimeString('th-TH')
-  });
-  const [selectedKey, setSelectedKey] = useState(null);
-  const [errorLog, setErrorLog] = useState(null);
-
-  const fetchMeterData = () => {
-    if (networkCondition === '404_NOT_FOUND') {
-      setErrorLog('HTTP Error 404: Endpoint /api/meter not found on server.');
-      return;
-    }
-    if (networkCondition === '500_SERVER_ERROR') {
-      setErrorLog('HTTP Error 500: Internal Server Error (Database Connection Timeout)');
-      return;
-    }
-
-    setErrorLog(null);
-    // Simulate real sensor fluctuations
-    const randomVolt = (228 + Math.random() * 8).toFixed(1);
-    const randomCurr = (14 + Math.random() * 3).toFixed(1);
-    const randomFlow = (3.0 + Math.random() * 0.5).toFixed(1);
-    setApiData({
-      line: "A",
-      electric: { voltage: Number(randomVolt), current: Number(randomCurr) },
-      water: { flow: Number(randomFlow) },
-      updatedAt: new Date().toLocaleTimeString('th-TH')
-    });
-  };
-
-  useEffect(() => {
-    let interval = null;
-    if (isPolling) {
-      interval = setInterval(fetchMeterData, 5000);
-    }
-    return () => clearInterval(interval);
-  }, [isPolling, networkCondition]);
-
-  const jsonString = JSON.stringify(apiData, null, 2);
-
-  return (
-    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
-      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
-    }`}>
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
-        <div>
-          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            <FiServer className="w-5 h-5 text-blue-500" />
-            ห้องแล็บดึงข้อมูลผ่าน REST API &amp; แกะโครงสร้าง JSON (Workshop 3 Sandbox)
-          </h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            จำลอง Mock API ค่าน้ำ-ไฟโรงงาน ดึงข้อมูลแบบ Asynchronous (fetch/await) พร้อมคลิกสำรวจ Path ของ JSON
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={fetchMeterData}
-            className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all active:scale-95"
-          >
-            <FiRefreshCw className="w-3.5 h-3.5" /> ดึงข้อมูลทันที (Fetch)
-          </button>
-          <button
-            onClick={() => setIsPolling(!isPolling)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 ${
-              isPolling 
-                ? 'bg-emerald-600 border-emerald-500 text-white animate-pulse' 
-                : 'bg-slate-800 border-slate-700 text-slate-300'
-            }`}
-          >
-            <FiClock className="w-3.5 h-3.5" /> Polling 5s: {isPolling ? 'ACTIVE' : 'OFF'}
-          </button>
-        </div>
-      </div>
-
-      {/* Network Condition Selector */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
-        <span className="font-bold text-slate-400">จำลองสถานะเน็ตเวิร์ก:</span>
-        <button
-          onClick={() => setNetworkCondition('200_OK')}
-          className={`px-2.5 py-1 rounded font-mono text-[11px] font-bold ${
-            networkCondition === '200_OK' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
-          }`}
-        >
-          200 OK (ปกติ)
-        </button>
-        <button
-          onClick={() => setNetworkCondition('404_NOT_FOUND')}
-          className={`px-2.5 py-1 rounded font-mono text-[11px] font-bold ${
-            networkCondition === '404_NOT_FOUND' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'
-          }`}
-        >
-          404 Not Found (URL ผิด)
-        </button>
-        <button
-          onClick={() => setNetworkCondition('500_SERVER_ERROR')}
-          className={`px-2.5 py-1 rounded font-mono text-[11px] font-bold ${
-            networkCondition === '500_SERVER_ERROR' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'
-          }`}
-        >
-          500 Server Down (ระบบล่ม)
-        </button>
-      </div>
-
-      {/* Live Error Notification */}
-      {errorLog && (
-        <div className="p-3.5 rounded-xl border border-rose-500/50 bg-rose-950/40 text-rose-200 text-xs flex items-center gap-2.5">
-          <FiAlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-          <span><strong>ตรวจพบข้อผิดพลาด:</strong> {errorLog} (หน้าเว็บดักจับด้วย <code>try...catch</code> ทำให้จอไม่ขาวค้าง)</span>
-        </div>
-      )}
-
-      {/* Dashboard & JSON Side-by-Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Rendered Electrical Dashboard */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
-          <div className="flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-400 uppercase tracking-wider">Line A Live Dashboard</span>
-            <span className="font-mono text-[11px] text-slate-500">อัปเดตล่าสุด: {apiData.updatedAt}</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl border border-indigo-500/40 bg-indigo-950/30">
-              <span className="text-[10px] text-indigo-300 font-bold block mb-1">VOLTAGE (V)</span>
-              <div className="text-3xl font-black font-mono text-white">{apiData.electric.voltage} <span className="text-xs font-normal text-slate-400">V</span></div>
-              <span className="text-[10px] text-emerald-400 font-mono mt-1 block">data.electric.voltage</span>
-            </div>
-
-            <div className="p-4 rounded-xl border border-teal-500/40 bg-teal-950/30">
-              <span className="text-[10px] text-teal-300 font-bold block mb-1">CURRENT (A)</span>
-              <div className="text-3xl font-black font-mono text-white">{apiData.electric.current} <span className="text-xs font-normal text-slate-400">A</span></div>
-              <span className="text-[10px] text-emerald-400 font-mono mt-1 block">data.electric.current</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-sky-500/30 bg-sky-950/20 flex items-center justify-between text-xs">
-            <div>
-              <span className="text-[10px] text-sky-400 font-bold uppercase block">Water Flow Sensor</span>
-              <span className="font-mono font-bold text-white text-base">{apiData.water.flow} m³/h</span>
-            </div>
-            <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded">data.water.flow</span>
-          </div>
-        </div>
-
-        {/* Right: Interactive JSON Tree Inspector */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-3">
-          <div className="flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-400 uppercase tracking-wider">Raw JSON Response</span>
-            <span className="text-[10px] text-slate-500 font-mono">Content-Type: application/json</span>
-          </div>
-
-          <pre className="p-4 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 leading-relaxed overflow-x-auto m-0">
-            <code>{jsonString}</code>
-          </pre>
-
-          <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400">
-            💡 <strong>วิธีแกะ JSON ของระบบ:</strong> สังเกตว่า <code>voltage</code> อยู่ซ้อนใน <code>electric</code> ดังนั้นโค้ด JavaScript ที่ถูกต้องคือ <code>data.electric.voltage</code> (ห้ามเขียน <code>data.voltage</code> ตรงๆ เพราะจะได้ค่า <code>undefined</code>)
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =========================================================================
-// SIMULATOR 5: Webhook Alert & Anti-Double-Submit Simulator (Workshop 4 Engine)
-// =========================================================================
-export function WebhookNotificationSimulator() {
-  const { isDark } = useTheme();
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Machine Initialized', message: 'Machine M-01 Online', time: '10:00:00' }
-  ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [debounceEnabled, setDebounceEnabled] = useState(true);
-  const [rapidClickCount, setRapidClickCount] = useState(0);
-
-  const handleSendWebhook = () => {
-    if (debounceEnabled && isSubmitting) return;
-
-    if (debounceEnabled) {
-      setIsSubmitting(true);
-      setTimeout(() => setIsSubmitting(false), 3000); // 3-second lockout
-    }
-
-    const newAlert = {
-      id: Date.now(),
-      title: '🚨 Start Triggered',
-      message: `Operator pushed START on Line A (Attempt #${notifications.length + 1})`,
-      time: new Date().toLocaleTimeString('th-TH')
-    };
-
-    setNotifications(prev => [newAlert, ...prev.slice(0, 4)]);
-  };
-
-  const handleSpamClick = () => {
-    setRapidClickCount(prev => prev + 1);
-    handleSendWebhook();
-  };
-
-  return (
-    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
-      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
-    }`}>
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
-        <div>
-          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            <FiBell className="w-5 h-5 text-amber-500" />
-            ตัวจำลองยิง Webhook แจ้งเตือน &amp; ป้องกันการส่งซ้ำ (Workshop 4 Sandbox)
-          </h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            จำลองการส่งข้อมูลแบบ HTTP POST ไปยัง Webhook ของ Telegram / Teams พร้อมระบบล็อกปุ่มป้องกันกดเบิ้ล (Debounce Lock)
-          </p>
-        </div>
-
-        <button
-          onClick={() => setDebounceEnabled(!debounceEnabled)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 ${
-            debounceEnabled 
-              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' 
-              : 'bg-rose-500/20 border-rose-500/40 text-rose-300'
-          }`}
-        >
-          🛡️ ระบบล็อกปุ่มกันกดซ้ำ: {debounceEnabled ? 'เปิดใช้งาน (Safe)' : 'ปิด (เสี่ยงแจ้งเตือนเบิ้ล)'}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Transmitter Controls */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-4">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <FiSend className="w-4 h-4 text-amber-400" /> ฝั่งหน้าเว็บผู้ส่ง (Client-Side POST)
-          </h4>
-
-          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs font-mono">
-            <span className="text-slate-500 block text-[10px]">WEBHOOK ENDPOINT:</span>
-            <div className="text-amber-300 truncate">POST https://oem.sncformer.com/api/notify</div>
-            <div className="text-slate-400 text-[11px] pt-1">
-              Body: <code>{JSON.stringify({ title: "Start Machine", message: "Line A RUNNING" })}</code>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleSpamClick}
-              disabled={debounceEnabled && isSubmitting}
-              className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                debounceEnabled && isSubmitting
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                  : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-600/20'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <FiRefreshCw className="w-4 h-4 animate-spin" /> กำลังส่ง... (ล็อกปุ่ม 3 วินาที)
-                </>
-              ) : (
-                <>
-                  <FiBell className="w-4 h-4" /> กดปุ่ม START แล้วยิง Webhook
-                </>
-              )}
-            </button>
-            <p className="text-[11px] text-slate-400 m-0 text-center">
-              ลองคลิกปุ่มรัวๆ: {!debounceEnabled ? '⚠️ ระวัง! ข้อความแจ้งเตือนจะเด้งซ้ำรัวๆ ในกลุ่มแชต' : '✅ ระบบจะกันไม่ให้ส่งซ้ำอย่างชาญฉลาด'}
-            </p>
-          </div>
-        </div>
-
-        {/* Right: Simulated Notification Tray */}
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-3">
-          <div className="flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-400 uppercase tracking-wider">กล่องข้อความแจ้งเตือนหน้าห้อง / แชต</span>
-            <span className="text-[10px] text-emerald-400 font-mono">Webhook Receiver Live</span>
-          </div>
-
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {notifications.map((msg) => (
+            {['Voltage (231.4 V)', 'Current (15.6 A)', 'Power (3.61 kW)', 'Frequency (50.0 Hz)'].map((title, idx) => (
               <div 
-                key={msg.id} 
-                className="p-3 rounded-xl border border-amber-500/30 bg-amber-950/20 text-xs space-y-1 animate-fadeIn"
+                key={idx}
+                className="p-4 rounded-xl bg-slate-950 border border-slate-800 shadow-md transition-all flex flex-col justify-between"
+                style={{ flex: `1 1 ${cardMinWidth}px` }}
               >
-                <div className="flex justify-between items-center font-bold text-amber-300">
-                  <span>{msg.title}</span>
-                  <span className="text-[10px] text-slate-500 font-mono">{msg.time}</span>
-                </div>
-                <p className="text-slate-300 m-0 text-[11px]">{msg.message}</p>
+                <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">{title.split(' ')[0]}</span>
+                <div className="text-2xl font-black font-mono text-cyan-400 my-2">{title.split('(')[1]?.replace(')', '')}</div>
+                <div className="text-[10px] text-emerald-400 font-mono">● Active Sensor</div>
               </div>
             ))}
           </div>
@@ -1124,7 +759,380 @@ export function WebhookNotificationSimulator() {
 }
 
 // =========================================================================
-// SIMULATOR 6: Automated Test Case & Boundary Evaluator (Module 5 Engine)
+// INTERACTIVE COMPANION 5: Smart Control Cabinet DOM State Machine (Workshop 2)
+// =========================================================================
+export function ControlCabinetDomSimulator() {
+  const { isDark } = useTheme();
+  const [isRunning, setIsRunning] = useState(false);
+  const [voltage, setVoltage] = useState(220);
+  const [lastDomCode, setLastDomCode] = useState('// เริ่มต้นระบบ: รอรับคำสั่งจากผู้ใช้');
+
+  const isOvervoltage = voltage > 240;
+
+  const handleStart = () => {
+    setIsRunning(true);
+    setLastDomCode(
+      `// สั่งเปิดเครื่อง:\nconst statusBadge = document.getElementById("status-badge");\nstatusBadge.textContent = "RUNNING";\nstatusBadge.classList.replace("bg-slate-800", "bg-emerald-600");`
+    );
+  };
+
+  const handleStop = () => {
+    setIsRunning(false);
+    setLastDomCode(
+      `// สั่งหยุดเครื่อง:\nconst statusBadge = document.getElementById("status-badge");\nstatusBadge.textContent = "STOPPED";\nstatusBadge.classList.replace("bg-emerald-600", "bg-slate-800");`
+    );
+  };
+
+  const handleVoltChange = (newV) => {
+    setVoltage(newV);
+    if (newV > 240) {
+      setLastDomCode(
+        `// ตรวจพบแรงดันเกิน (>240V!):\nif (voltage > 240) {\n  alarmLight.classList.add("bg-rose-600", "animate-ping");\n  alertBox.textContent = "ALARM: Overvoltage detected!";\n}`
+      );
+    } else {
+      setLastDomCode(
+        `// ปรับแรงดันปกติ:\nvoltDisplay.textContent = "${newV} V";`
+      );
+    }
+  };
+
+  return (
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+            INTERACTIVE AID #5 · WORKSHOP 2 ENGINE
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            ตู้ควบคุมไฟฟ้าจำลอง &amp; การควบคุม DOM (Control Cabinet &amp; DOM State)
+          </h3>
+        </div>
+        <span className="text-xs text-slate-400">
+          ทดลองกด Start/Stop และเลื่อนแรงดันเพื่อดูคำสั่ง DOM ที่เบื้องหลังทำงาน
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Physical Cabinet UI */}
+        <div className="lg:col-span-7 p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <span className="font-mono text-xs font-bold text-slate-300">ตู้ควบคุมไฟ MAIN-CB-01</span>
+            <div className="flex items-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded text-xs font-mono font-black ${
+                isRunning ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
+              }`}>
+                {isRunning ? 'RUNNING' : 'STOPPED'}
+              </span>
+              <span className={`w-3.5 h-3.5 rounded-full ${
+                isOvervoltage ? 'bg-rose-500 animate-ping' : 'bg-slate-700'
+              }`} title={isOvervoltage ? 'Overvoltage Alarm!' : 'Normal'}></span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <span className="text-[10px] text-slate-400 font-bold block mb-1 uppercase">แรงดันไฟฟ้า (Voltage)</span>
+              <div className={`text-3xl font-black font-mono ${isOvervoltage ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`}>
+                {voltage} V
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {isOvervoltage ? '⚠️ OVER LIMIT (>240V)' : '● ปลอดภัย (220-240V)'}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <span className="text-[10px] text-slate-400 font-bold block mb-1 uppercase">สถานะเครื่องจักร</span>
+              <div className={`text-2xl font-black font-mono mt-1 ${isRunning ? 'text-emerald-400' : 'text-slate-400'}`}>
+                {isRunning ? 'ACTIVE' : 'STANDBY'}
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {isRunning ? 'โหลด 14.8 A' : 'กระแส 0 A'}
+              </span>
+            </div>
+          </div>
+
+          {/* Slider */}
+          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5 text-xs">
+            <div className="flex justify-between font-bold text-slate-300">
+              <span>ปรับแรงดันไฟฟ้าจำลอง (Voltage Slider):</span>
+              <span className="font-mono text-cyan-400">{voltage} V</span>
+            </div>
+            <input
+              type="range"
+              min="180"
+              max="270"
+              step="2"
+              value={voltage}
+              onChange={e => handleVoltChange(Number(e.target.value))}
+              className="w-full accent-cyan-500 cursor-pointer"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleStart}
+              disabled={isRunning}
+              className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-black text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+            >
+              <FiPlay /> START
+            </button>
+            <button
+              onClick={handleStop}
+              disabled={!isRunning}
+              className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white font-black text-sm border border-slate-700 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+            >
+              <FiSquare /> STOP
+            </button>
+          </div>
+        </div>
+
+        {/* Real-Time DOM Inspection Code */}
+        <div className="lg:col-span-5 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+          <div className="flex items-center gap-2 text-cyan-400 font-mono font-bold border-b border-slate-800 pb-2">
+            <FiTerminal /> คำสั่ง DOM Manipulation ที่ทำงานจริง:
+          </div>
+          <pre className="p-3.5 rounded-lg bg-slate-900 text-slate-200 font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap border border-slate-800">
+            <code>{lastDomCode}</code>
+          </pre>
+          <p className="text-[11px] text-slate-400 leading-relaxed m-0">
+            ใน Workshop 2 นักเรียนจะได้เขียน JavaScript เชื่อมต่อ <code>document.getElementById()</code>, ดักฟังเหตุการณ์ด้วย <code>addEventListener("click")</code>, และเปลี่ยนคลาสสีด้วย <code>classList.add/remove</code> แบบนี้เป๊ะๆ
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================================
+// INTERACTIVE COMPANION 6: REST API Waiter & HTTP Methods Simulator
+// =========================================================================
+export function RestApiWaiterSimulator() {
+  const { isDark } = useTheme();
+  const [method, setMethod] = useState('GET');
+  const [response, setResponse] = useState({
+    status: 200,
+    statusText: 'OK',
+    data: { meterId: "MTR-01", voltage: 231.4, current: 15.6, status: "NORMAL" }
+  });
+
+  const handleSendRequest = (m) => {
+    setMethod(m);
+    if (m === 'GET') {
+      setResponse({
+        status: 200,
+        statusText: 'OK',
+        data: { meterId: "MTR-01", voltage: 231.4, current: 15.6, timestamp: new Date().toLocaleTimeString() }
+      });
+    } else if (m === 'POST') {
+      setResponse({
+        status: 201,
+        statusText: 'Created',
+        data: { success: true, message: "สร้างบันทึกการแจ้งเตือนสำเร็จ", alertId: "ALM-99" }
+      });
+    } else if (m === 'PUT') {
+      setResponse({
+        status: 200,
+        statusText: 'OK',
+        data: { success: true, message: "อัปเดตสถานะเครื่องจักรเป็น MAINTENANCE สำเร็จ" }
+      });
+    } else if (m === 'DELETE') {
+      setResponse({
+        status: 204,
+        statusText: 'No Content',
+        data: null
+      });
+    }
+  };
+
+  return (
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            INTERACTIVE AID #6 · RFC 9110 HTTP METHODS
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            ตัวจำลอง REST API &amp; บริกรร้านอาหาร (GET, POST, PUT, DELETE)
+          </h3>
+        </div>
+        <span className="text-xs text-slate-400">
+          อุปมาอุปไมย: ลูกค้า (Client) ⇄ บริกร (API Request) ⇄ ครัว (Server/DB)
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Request Controls */}
+        <div className="lg:col-span-5 space-y-3">
+          <span className="text-xs font-bold text-slate-300 block">เลือกคำสั่ง HTTP Method ที่ต้องการส่ง:</span>
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono font-bold">
+            <button
+              onClick={() => handleSendRequest('GET')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                method === 'GET' ? 'bg-emerald-600 text-white border-emerald-400 shadow-md' : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-sm">GET</div>
+              <div className="text-[10px] font-sans font-normal opacity-90 mt-0.5">ขอดูเมนู/อ่านข้อมูล (ค่าน้ำ-ไฟ)</div>
+            </button>
+            <button
+              onClick={() => handleSendRequest('POST')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                method === 'POST' ? 'bg-amber-600 text-white border-amber-400 shadow-md' : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-sm">POST</div>
+              <div className="text-[10px] font-sans font-normal opacity-90 mt-0.5">สั่งอาหารใหม่/ยิง Webhook แจ้งเตือน</div>
+            </button>
+            <button
+              onClick={() => handleSendRequest('PUT')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                method === 'PUT' ? 'bg-sky-600 text-white border-sky-400 shadow-md' : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-sm">PUT / PATCH</div>
+              <div className="text-[10px] font-sans font-normal opacity-90 mt-0.5">ขอเปลี่ยนออร์เดอร์/อัปเดตสถานะ</div>
+            </button>
+            <button
+              onClick={() => handleSendRequest('DELETE')}
+              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                method === 'DELETE' ? 'bg-rose-600 text-white border-rose-400 shadow-md' : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-sm">DELETE</div>
+              <div className="text-[10px] font-sans font-normal opacity-90 mt-0.5">ขอยกเลิก/ลบข้อมูลรายการ</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Live HTTP Response Viewer */}
+        <div className="lg:col-span-7 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs font-mono">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span className="text-slate-400">Response จากเซิร์ฟเวอร์:</span>
+            <span className={`px-2.5 py-0.5 rounded font-black ${
+              response.status >= 200 && response.status < 300 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300'
+            }`}>
+              HTTP {response.status} {response.statusText}
+            </span>
+          </div>
+
+          <pre className="p-3.5 rounded-lg bg-slate-900 text-slate-200 overflow-x-auto m-0 leading-relaxed">
+            <code>{JSON.stringify(response.data, null, 2)}</code>
+          </pre>
+
+          <div className="text-[11px] font-sans text-slate-400">
+            {method === 'GET' && '💡 GET มีคุณสมบัติ Safe & Idempotent: ส่งซ้ำกี่ครั้งก็ไม่มีการเปลี่ยนแปลงข้อมูลในระบบ'}
+            {method === 'POST' && '⚠️ POST ไม่ Idempotent: หากพนักงานกดปุ่มเบิ้ล อาจส่งข้อความแจ้งเตือนซ้ำ ต้องป้องกันด้วย Cooldown Lock'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================================
+// INTERACTIVE COMPANION 7: Polling vs Webhook Live Comparison
+// =========================================================================
+export function PollingVsWebhookSimulator() {
+  const { isDark } = useTheme();
+  const [pollCount, setPollCount] = useState(0);
+  const [webhookCount, setWebhookCount] = useState(0);
+  const [isPolling, setIsPolling] = useState(false);
+  const [lastEvent, setLastEvent] = useState(null);
+
+  useEffect(() => {
+    let timer;
+    if (isPolling) {
+      timer = setInterval(() => {
+        setPollCount(c => c + 1);
+      }, 1500);
+    }
+    return () => clearInterval(timer);
+  }, [isPolling]);
+
+  const triggerAlarmEvent = () => {
+    setWebhookCount(w => w + 1);
+    setLastEvent({
+      time: new Date().toLocaleTimeString(),
+      text: '🚨 OVERHEAT DETECTED! มอเตอร์อุณหภูมิเกิน 80°C'
+    });
+  };
+
+  return (
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
+      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
+    }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            INTERACTIVE AID #7 · REAL-TIME STRATEGY
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            เปรียบเทียบกลไก Polling (ถามเรื่อยๆ) vs Webhook (มีเหตุก็ค่อยส่ง)
+          </h3>
+        </div>
+
+        <button
+          onClick={() => setIsPolling(!isPolling)}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-black shadow-md cursor-pointer transition-all ${
+            isPolling ? 'bg-rose-600 text-white' : 'bg-indigo-600 text-white'
+          }`}
+        >
+          {isPolling ? '⏸️ หยุด Polling' : '▶️ เริ่มจำลอง Polling ทุก 1.5s'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Polling Card */}
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span className="font-bold text-indigo-300">1. Polling (Client ขอข้อมูลเรื่อยๆ)</span>
+            <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold">
+              ยิงไปแล้ว: {pollCount} ครั้ง
+            </span>
+          </div>
+          <p className="text-slate-300 leading-relaxed m-0">
+            Client ใช้ <code>setInterval(loadData, 5000)</code> ยิงถาม Server ตลอดเวลา แม้ค่าเซนเซอร์จะไม่เปลี่ยนเลยก็ตาม (กินแบนด์วิดท์แต่เข้าใจและเขียนง่ายสุด)
+          </p>
+          <div className="p-2.5 rounded-lg bg-slate-900 font-mono text-[11px] text-slate-400">
+            HTTP GET /api/meter → 200 OK (ถามซ้ำทุกรอบ)
+          </div>
+        </div>
+
+        {/* Webhook Card */}
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span className="font-bold text-emerald-300">2. Webhook (Event-Driven แจ้งเตือน)</span>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+              แจ้งเตือนแล้ว: {webhookCount} ครั้ง
+            </span>
+          </div>
+          <p className="text-slate-300 leading-relaxed m-0">
+            ระบบจะไม่ส่งอะไรเลยจนกว่าจะเกิดเหตุการณ์วิกฤต (Event) เช่น อุณหภูมิเกินลิมิต จึงจะส่ง <code>POST JSON</code> ออกไปทันที
+          </p>
+          <button
+            onClick={triggerAlarmEvent}
+            className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-all active:scale-95"
+          >
+            ⚡ กดจำลองเซนเซอร์ร้อง Alarm (ยิง Webhook 1 ครั้ง)
+          </button>
+          {lastEvent && (
+            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-[11px]">
+              [{lastEvent.time}] {lastEvent.text}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================================
+// INTERACTIVE COMPANION 8: Boundary Value Analysis & Automated Testing (Mod 5)
 // =========================================================================
 export function AutomatedTestCaseEvaluator() {
   const { isDark } = useTheme();
@@ -1132,11 +1140,11 @@ export function AutomatedTestCaseEvaluator() {
   const [target, setTarget] = useState(1200);
 
   const officialCases = [
-    { id: 'TC-01', desc: 'ยอดผลิตปกติ (Normal Case)', target: 1200, actual: 1104, expectedStatus: 'ปกติ', expClass: 'ok' },
-    { id: 'TC-02', desc: 'ค่าขอบบนพอดี 85.0% (Boundary Case)', target: 1200, actual: 1020, expectedStatus: 'ปกติ', expClass: 'ok' },
-    { id: 'TC-03', desc: 'ค่าขอบล่างพอดี 60.0% (Boundary Case)', target: 1200, actual: 720, expectedStatus: 'เฝ้าระวัง', expClass: 'warn' },
-    { id: 'TC-04', desc: 'ยอดต่ำกว่าเป้าหมาย (Sub-target Alarm)', target: 1200, actual: 599, expectedStatus: 'ต่ำกว่าเป้า', expClass: 'bad' },
-    { id: 'TC-05', desc: 'เป้าหมายเป็น 0 (Invalid Target Error)', target: 0, actual: 50, expectedStatus: 'ไม่มีข้อมูล', expClass: 'off' },
+    { id: 'TC-01', desc: 'ยอดผลิตปกติ (Normal Case 92.0%)', target: 1200, actual: 1104, expectedStatus: 'ปกติ' },
+    { id: 'TC-02', desc: 'ค่าขอบบนพอดี 85.0% (Boundary Case)', target: 1200, actual: 1020, expectedStatus: 'ปกติ' },
+    { id: 'TC-03', desc: 'ค่าขอบล่างพอดี 60.0% (Boundary Case)', target: 1200, actual: 720, expectedStatus: 'เฝ้าระวัง' },
+    { id: 'TC-04', desc: 'ยอดต่ำกว่าเป้าหมาย (Sub-target Alarm 49.9%)', target: 1200, actual: 599, expectedStatus: 'ต่ำกว่าเป้า' },
+    { id: 'TC-05', desc: 'เป้าหมายเป็น 0 (Invalid Target Error)', target: 0, actual: 50, expectedStatus: 'ไม่มีข้อมูล' }
   ];
 
   const calculatePerf = (act, tgt) => {
@@ -1150,25 +1158,25 @@ export function AutomatedTestCaseEvaluator() {
   const currentResult = calculatePerf(actual, target);
 
   return (
-    <div className={`border rounded-2xl p-4 sm:p-6 space-y-6 transition-all ${
+    <div className={`border rounded-2xl p-4 sm:p-6 space-y-5 transition-all ${
       isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-md'
     }`}>
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div>
-          <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            <FiCheckSquare className="w-5 h-5 text-orange-500" />
-            เครื่องมือทดสอบเงื่อนไข Performance &amp; วิเคราะห์ค่าขอบ (Boundary Value Lab)
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/20 text-orange-300 border border-orange-500/30">
+            INTERACTIVE AID #8 · BOUNDARY VALUE ANALYSIS (BVA)
+          </span>
+          <h3 className={`text-base sm:text-lg font-black mt-1 m-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            เครื่องมือทดสอบเงื่อนไข Performance &amp; วิเคราะห์ค่าขอบเขต (BVA Suite)
           </h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            ฝึกวิเคราะห์ Test Cases สำหรับการคำนวณประสิทธิภาพไลน์ผลิต (เตรียมความพร้อมสำหรับสอบปฏิบัติ)
-          </p>
         </div>
+        <span className="text-xs text-slate-400">
+          จุดตัดเกณฑ์สำคัญ: 85.0% (ปกติ) และ 60.0% (เฝ้าระวัง)
+        </span>
       </div>
 
-      {/* Interactive Custom Test Runner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
+      {/* Live Custom Inputs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs">
         <div className="space-y-1.5">
           <label className="font-bold text-slate-300">ยอดผลิตเป้าหมาย (Target):</label>
           <input
@@ -1191,7 +1199,7 @@ export function AutomatedTestCaseEvaluator() {
 
         <div className="space-y-1.5 flex flex-col justify-end">
           <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center font-mono">
-            <span>ผลคำนวณ:</span>
+            <span>ผลคำนวณสด:</span>
             <span className={`font-black text-sm ${
               currentResult.cls === 'ok' ? 'text-emerald-400' :
               currentResult.cls === 'warn' ? 'text-amber-400' :
@@ -1203,876 +1211,128 @@ export function AutomatedTestCaseEvaluator() {
         </div>
       </div>
 
-      {/* Suite of 5 Standard Test Cases */}
-      <div className="space-y-3">
-        <span className="text-xs font-bold text-slate-400">ชุดการทดสอบมาตรฐาน 5 กรณี (Automated Test Suite):</span>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden font-mono">
-            <thead className="bg-slate-950 text-slate-400 uppercase text-[10px]">
-              <tr>
-                <th className="p-2.5">Case ID</th>
-                <th className="p-2.5">คำอธิบายกรณีทดสอบ</th>
-                <th className="p-2.5">Target</th>
-                <th className="p-2.5">Actual</th>
-                <th className="p-2.5">ผลลัพธ์ที่คำนวณได้</th>
-                <th className="p-2.5">สถานะที่คาดหวัง</th>
-                <th className="p-2.5">ผลการตรวจ</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80 bg-slate-900/60 text-slate-300">
-              {officialCases.map((tc) => {
-                const res = calculatePerf(tc.actual, tc.target);
-                const isPass = res.status === tc.expectedStatus;
-                return (
-                  <tr key={tc.id} className="hover:bg-slate-800/40">
-                    <td className="p-2.5 font-bold text-indigo-400">{tc.id}</td>
-                    <td className="p-2.5 font-sans">{tc.desc}</td>
-                    <td className="p-2.5">{tc.target}</td>
-                    <td className="p-2.5">{tc.actual}</td>
-                    <td className="p-2.5 font-bold">{res.perf !== null ? `${res.perf}%` : 'null'}</td>
-                    <td className="p-2.5 font-sans font-bold">{tc.expectedStatus}</td>
-                    <td className="p-2.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        isPass ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                      }`}>
-                        {isPass ? 'PASS ✓' : 'FAIL ✗'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* 5 Standard Test Cases */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden font-mono">
+          <thead className="bg-slate-950 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th className="p-2.5">Case ID</th>
+              <th className="p-2.5">คำอธิบายกรณีทดสอบ</th>
+              <th className="p-2.5">Target</th>
+              <th className="p-2.5">Actual</th>
+              <th className="p-2.5">ผลลัพธ์ที่คำนวณ</th>
+              <th className="p-2.5">สถานะที่คาดหวัง</th>
+              <th className="p-2.5">ผลตรวจ</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 bg-slate-900/60 text-slate-300">
+            {officialCases.map((tc) => {
+              const res = calculatePerf(tc.actual, tc.target);
+              const isPass = res.status === tc.expectedStatus;
+              return (
+                <tr key={tc.id} className="hover:bg-slate-800/40">
+                  <td className="p-2.5 font-bold text-indigo-400">{tc.id}</td>
+                  <td className="p-2.5 font-sans">{tc.desc}</td>
+                  <td className="p-2.5">{tc.target}</td>
+                  <td className="p-2.5">{tc.actual}</td>
+                  <td className="p-2.5 font-bold">{res.perf !== null ? `${res.perf}%` : 'null'}</td>
+                  <td className="p-2.5 font-sans font-bold">{tc.expectedStatus}</td>
+                  <td className="p-2.5">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      isPass ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                    }`}>
+                      {isPass ? 'PASS ✓' : 'FAIL ✗'}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
 // =========================================================================
-// SHARED FULL-CURRICULUM COMPONENTS (102 Slides + 98 Images + 16 Examples + 4 Workshops + Day 4 Exam)
+// REUSABLE WORKSHOP SUMMARY CARD
 // =========================================================================
-
-function TeachingKitQuickDrawer({ defaultTab = 'script', dayLabel = 'ครบทั้ง 4 วัน' }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="rounded-2xl border-2 border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-950/40 via-indigo-950/40 to-slate-900 overflow-hidden shadow-xl">
-      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shrink-0 shadow-lg shadow-fuchsia-500/20">
-            🎓
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base sm:text-lg font-black text-white m-0">
-                ชุดคู่มือผู้สอน &amp; สื่อการสอนฉบับสมบูรณ์ (Complete Teaching Kit Hub)
-              </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40">
-                102 สไลด์ · 14 บททบทวน · 16 ตัวอย่างโค้ด · 4 Workshop · ข้อสอบจริง
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 mt-1 m-0 leading-relaxed">
-              รวบรวมทุกไฟล์จากชุดสื่อการสอนต้นฉบับ: เช็กลิสต์เตรียมสอน, บทพูดรายสไลด์ 102 หน้าพร้อมโหมดสอนทีละหน้า, สรุปทบทวนผู้สอน 14 หัวข้อ + ตารางแก้บั๊ก F12, สื่อจำลอง 4 ชิ้น, Pre/Post-test 40 ข้อ และเฉลย Workshop/ข้อสอบ ({dayLabel})
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white shadow-lg shadow-fuchsia-600/20 flex items-center gap-2 shrink-0 cursor-pointer transition-all"
-        >
-          {open ? (
-            <>
-              <FiChevronUp className="w-4 h-4" /> ซ่อนชุดคู่มือผู้สอน
-            </>
-          ) : (
-            <>
-              <FiBookOpen className="w-4 h-4" /> เปิดชุดคู่มือผู้สอน 6 แท็บเต็มรูปแบบ
-            </>
-          )}
-        </button>
-      </div>
-
-      {open && (
-        <div className="p-4 sm:p-6 border-t border-fuchsia-500/30 bg-slate-950/90">
-          <EnterpriseTeachingKitHub initialTab={defaultTab} />
-        </div>
-      )}
-    </div>
+function WorkshopGuideCard({ workshopId, title, duration, goal, folder, starterCount, solutionCount }) {
+  const [showSolution, setShowSolution] = useState(false);
+  const w = ENTERPRISE_WORKSHOPS_DATA?.workshops?.find(item => 
+    item.id === workshopId || item.id === `Workshop ${workshopId.replace('w', '')}`
   );
-}
-
-function ModuleSlidesDeckViewer({ moduleId, moduleLabel }) {
-  const slides = ENTERPRISE_SLIDES_102.filter((s) => s.moduleId === moduleId);
-  const [viewMode, setViewMode] = useState('deck'); // 'deck' | 'all'
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [search, setSearch] = useState('');
-  const [showSpeakerNotes, setShowSpeakerNotes] = useState(true);
-
-  if (!slides.length) return null;
-
-  const activeSlide = slides[currentIdx] || slides[0];
-  const filteredSlides = slides.filter((s) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      String(s.n) === q ||
-      (s.title && s.title.toLowerCase().includes(q)) ||
-      (s.say && s.say.toLowerCase().includes(q)) ||
-      (s.tip && s.tip.toLowerCase().includes(q)) ||
-      (s.textBlocks && s.textBlocks.some((t) => t.toLowerCase().includes(q)))
-    );
-  });
-
-  return (
-    <section className="rounded-2xl border border-indigo-500/40 bg-slate-900/95 overflow-hidden shadow-2xl">
-      {/* Header Bar */}
-      <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-950/90 via-slate-900 to-slate-900 border-b border-indigo-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-              📊 สไลด์ต้นฉบับครบทุกหน้า ({slides[0].n}–{slides[slides.length - 1].n})
-            </span>
-            <span className="text-xs font-bold text-amber-300">
-              รวม {slides.length} สไลด์ · พร้อมภาพประกอบจากสไลด์จริง &amp; บทพูดผู้สอน
-            </span>
-          </div>
-          <h2 className="text-lg sm:text-xl font-black text-white mt-1 m-0">
-            สไลด์การสอนและบทพูดวิทยากรประจำ{moduleLabel}
-          </h2>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowSpeakerNotes(!showSpeakerNotes)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
-              showSpeakerNotes
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
-            }`}
-          >
-            {showSpeakerNotes ? <FiEye className="w-3.5 h-3.5" /> : <FiEyeOff className="w-3.5 h-3.5" />}
-            {showSpeakerNotes ? 'แสดงบทพูดผู้สอน (ON)' : 'ซ่อนบทพูดผู้สอน (OFF)'}
-          </button>
-
-          <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800">
-            <button
-              type="button"
-              onClick={() => setViewMode('deck')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                viewMode === 'deck' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🖥️ ดูทีละสไลด์ (Slide Deck)
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                viewMode === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              📜 เรียงทุกสไลด์ ({slides.length} หน้า)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {viewMode === 'deck' ? (
-        <div className="p-4 sm:p-6 space-y-5">
-          {/* Slide Number Selector Strip */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
-            {slides.map((s, idx) => (
-              <button
-                key={s.n}
-                type="button"
-                onClick={() => setCurrentIdx(idx)}
-                className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold shrink-0 cursor-pointer transition-all ${
-                  idx === currentIdx
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30 scale-105'
-                    : 'bg-slate-800/90 text-slate-400 hover:bg-slate-700 hover:text-white'
-                }`}
-                title={`สไลด์ ${s.n}: ${s.title}`}
-              >
-                #{s.n}
-              </button>
-            ))}
-          </div>
-
-          {/* Active Slide Card */}
-          <div className="rounded-2xl bg-slate-950 border border-slate-800 p-5 sm:p-6 space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-xl bg-indigo-600 text-white font-mono text-sm font-black">
-                  Slide {activeSlide.n} / 102
-                </span>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-black text-white m-0">{activeSlide.title}</h3>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Day {activeSlide.day} · หน้าที่ {currentIdx + 1} จาก {slides.length} ในโมดูลนี้
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {activeSlide.time && (
-                  <span className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs font-bold">
-                    ⏱️ เวลาแนะนำ: {activeSlide.time}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  disabled={currentIdx === 0}
-                  onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <FiChevronLeft /> ก่อนหน้า
-                </button>
-                <button
-                  type="button"
-                  disabled={currentIdx === slides.length - 1}
-                  onClick={() => setCurrentIdx((i) => Math.min(slides.length - 1, i + 1))}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  ถัดไป <FiChevronRight />
-                </button>
-              </div>
-            </div>
-
-            {/* Slide Content & Visuals Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              {/* Left: Slide Text, Bullets, Tables, and Slide Images */}
-              <div className={`${showSpeakerNotes ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4`}>
-                {activeSlide.textBlocks && activeSlide.textBlocks.length > 0 && (
-                  <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
-                    <div className="text-[11px] font-mono uppercase tracking-wider text-indigo-400 font-bold">
-                      📌 เนื้อหาบนสไลด์ (Slide Content)
-                    </div>
-                    <ul className="space-y-1.5 text-xs sm:text-sm text-slate-200 list-disc list-inside leading-relaxed">
-                      {activeSlide.textBlocks.map((tb, idx) => (
-                        <li key={idx}>{Array.isArray(tb) ? tb.join(' ') : tb}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {activeSlide.tables &&
-                  activeSlide.tables.map((tbl, tIdx) => (
-                    <div key={tIdx} className="overflow-x-auto rounded-xl border border-slate-800">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-900 text-indigo-300">
-                          <tr>
-                            {tbl[0]?.map((cell, cIdx) => (
-                              <th key={cIdx} className="p-2.5 border-b border-slate-800 font-bold">
-                                {cell}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/80 bg-slate-950 text-slate-300">
-                          {tbl.slice(1).map((row, rIdx) => (
-                            <tr key={rIdx} className="hover:bg-slate-900/40">
-                              {row.map((cell, cIdx) => (
-                                <td key={cIdx} className="p-2.5">
-                                  {cell}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-
-                {activeSlide.images && activeSlide.images.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
-                      🖼️ ภาพประกอบและไดอะแกรมจากสไลด์จริง ({activeSlide.images.length} ภาพ)
-                    </div>
-                    <div
-                      className={`grid gap-3 ${
-                        activeSlide.images.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
-                      }`}
-                    >
-                      {activeSlide.images.map((img, iIdx) => (
-                        <div
-                          key={iIdx}
-                          className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 p-2 flex items-center justify-center"
-                        >
-                          <img
-                            src={`./images/enterprise_slides/${img}`}
-                            alt={`Slide ${activeSlide.n} visual ${iIdx + 1}`}
-                            className="max-h-80 w-auto object-contain rounded-lg"
-                            loading="lazy"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right: Speaker Notes (Say / Ask / Tip) */}
-              {showSpeakerNotes && (
-                <div className="lg:col-span-5 space-y-3">
-                  <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/30 space-y-2">
-                    <div className="text-xs font-black text-indigo-300 uppercase tracking-wider">
-                      🎙️ บทพูดผู้สอน (Say)
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed m-0 whitespace-pre-line">
-                      {activeSlide.say || 'อธิบายเนื้อหาตามหัวข้อบนสไลด์และเชื่อมโยงกับบริบทโรงงานจริง'}
-                    </p>
-                  </div>
-
-                  {activeSlide.ask && (
-                    <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1.5">
-                      <div className="text-xs font-black text-amber-300 uppercase tracking-wider">
-                        ❓ คำถามชวนผู้เรียนคิด (Ask)
-                      </div>
-                      <p className="text-xs sm:text-sm text-amber-100 leading-relaxed m-0">
-                        {activeSlide.ask}
-                      </p>
-                    </div>
-                  )}
-
-                  {activeSlide.tip && (
-                    <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-1.5">
-                      <div className="text-xs font-black text-emerald-300 uppercase tracking-wider">
-                        💡 เทคนิคการสอน / จุดเน้นหน้าห้อง (Tip)
-                      </div>
-                      <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed m-0">
-                        {activeSlide.tip}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* All Slides List View */
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative w-full sm:w-96">
-              <FiSearch className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="ค้นหาเลขสไลด์, หัวข้อ, หรือคำในบทพูด..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
-              />
-            </div>
-            <span className="text-xs text-slate-400 font-mono">
-              แสดง {filteredSlides.length} จาก {slides.length} สไลด์
-            </span>
-          </div>
-
-          <div className="space-y-4 max-h-[850px] overflow-y-auto pr-1">
-            {filteredSlides.map((s) => (
-              <div
-                key={s.n}
-                className="p-4 sm:p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-mono text-xs font-black">
-                      สไลด์ {s.n}
-                    </span>
-                    <h4 className="text-base font-black text-white m-0">{s.title}</h4>
-                  </div>
-                  {s.time && (
-                    <span className="text-xs font-mono text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
-                      ⏱️ {s.time}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                  <div className={`${showSpeakerNotes ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-3`}>
-                    {s.textBlocks && s.textBlocks.length > 0 && (
-                      <ul className="text-xs text-slate-200 space-y-1 list-disc list-inside bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-                        {s.textBlocks.map((tb, idx) => (
-                          <li key={idx}>{Array.isArray(tb) ? tb.join(' ') : tb}</li>
-                        ))}
-                      </ul>
-                    )}
-
-                    {s.tables &&
-                      s.tables.map((tbl, tIdx) => (
-                        <div key={tIdx} className="overflow-x-auto rounded-xl border border-slate-800">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-slate-900 text-indigo-300">
-                              <tr>
-                                {tbl[0]?.map((c, cIdx) => (
-                                  <th key={cIdx} className="p-2 border-b border-slate-800">
-                                    {c}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-800 bg-slate-950 text-slate-300">
-                              {tbl.slice(1).map((r, rIdx) => (
-                                <tr key={rIdx}>
-                                  {r.map((c, cIdx) => (
-                                    <td key={cIdx} className="p-2">
-                                      {c}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ))}
-
-                    {s.images && s.images.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {s.images.map((img, iIdx) => (
-                          <div
-                            key={iIdx}
-                            className="rounded-xl overflow-hidden border border-slate-800 bg-slate-900 p-2 flex items-center justify-center"
-                          >
-                            <img
-                              src={`./images/enterprise_slides/${img}`}
-                              alt={`Slide ${s.n}`}
-                              className="max-h-56 w-auto object-contain rounded"
-                              loading="lazy"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {showSpeakerNotes && (
-                    <div className="lg:col-span-5 space-y-2 text-xs">
-                      <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/30 text-slate-200">
-                        <strong className="text-indigo-300 block mb-1">💬 บทพูด (Say):</strong>
-                        {s.say}
-                      </div>
-                      {s.ask && (
-                        <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-100">
-                          <strong className="text-amber-300 block mb-1">❓ คำถามชวนคิด (Ask):</strong>
-                          {s.ask}
-                        </div>
-                      )}
-                      {s.tip && (
-                        <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-100">
-                          <strong className="text-emerald-300 block mb-1">💡 เทคนิคผู้สอน (Tip):</strong>
-                          {s.tip}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ModuleDeepTheorySection({ reviewIds = [], sectionTitle }) {
-  const articles = ENTERPRISE_INSTRUCTOR_REVIEW_14.filter((item) => reviewIds.includes(item.id));
-  if (!articles.length) return null;
-
-  return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-xl font-black text-white flex items-center gap-2.5 m-0">
-          <span className="px-2.5 py-1 rounded-lg bg-fuchsia-600/30 text-fuchsia-300 text-xs font-mono border border-fuchsia-500/40">
-            DEEP-DIVE KNOWLEDGE
-          </span>
-          {sectionTitle}
-        </h2>
-        <span className="text-xs text-slate-400 font-mono">
-          สรุปเนื้อหาเจาะลึก + โค้ดต้นแบบ + จุดที่ผู้เรียนมักพลาดบ่อยในห้องแล็บ
-        </span>
-      </div>
-
-      <div className="space-y-5">
-        {articles.map((art) => (
-          <div
-            key={art.id}
-            className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-lg"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="px-2.5 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 font-mono text-xs font-bold border border-fuchsia-500/30">
-                  {art.tag}
-                </span>
-                <h3 className="text-lg font-black text-white m-0">{art.title}</h3>
-              </div>
-              <span className="text-xs font-mono text-amber-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-                📌 {art.useIn}
-              </span>
-            </div>
-
-            {art.lead && (
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed bg-slate-950/70 p-3.5 rounded-xl border-l-4 border-fuchsia-500 m-0">
-                {art.lead}
-              </p>
-            )}
-
-            {art.flowline && (
-              <div className="flex flex-wrap items-center gap-2 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-300">
-                {art.flowline.map((node, idx) => (
-                  <React.Fragment key={idx}>
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700">
-                      {node}
-                    </span>
-                    {idx < art.flowline.length - 1 && <span className="text-slate-500">→</span>}
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
-
-            {art.cards && art.cards.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {art.cards.map((c, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-4 rounded-xl border space-y-2 ${
-                      c.variant === 'trap'
-                        ? 'bg-amber-950/20 border-amber-500/40'
-                        : 'bg-slate-950/80 border-slate-800'
-                    }`}
-                  >
-                    <h4
-                      className={`text-sm font-black m-0 ${
-                        c.variant === 'trap' ? 'text-amber-300' : 'text-indigo-300'
-                      }`}
-                    >
-                      {c.title}
-                    </h4>
-                    {c.text && <p className="text-xs text-slate-300 leading-relaxed m-0">{c.text}</p>}
-                    {c.bullets && (
-                      <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside leading-relaxed">
-                        {c.bullets.map((b, bIdx) => (
-                          <li key={bIdx}>{b}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {c.code && <CodeBlock code={c.code} language="javascript / html" />}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {art.table && (
-              <div className="overflow-x-auto rounded-xl border border-slate-800">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 text-indigo-300 font-bold">
-                    <tr>
-                      {art.table.headers.map((h, hIdx) => (
-                        <th key={hIdx} className="p-3 border-b border-slate-800">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800 bg-slate-900/60 text-slate-300">
-                    {art.table.rows.map((row, rIdx) => (
-                      <tr key={rIdx} className="hover:bg-slate-800/40">
-                        {row.map((cell, cIdx) => (
-                          <td
-                            key={cIdx}
-                            className={`p-3 ${cIdx === 0 ? 'font-mono font-bold text-amber-300' : ''}`}
-                          >
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {art.faqs && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {art.faqs.map((f, fIdx) => (
-                  <div
-                    key={fIdx}
-                    className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs"
-                  >
-                    <div className="font-bold text-amber-300">❓ {f.q}</div>
-                    <div className="text-slate-300 leading-relaxed">💡 {f.a}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {art.selfCheck && (
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-emerald-300">
-                  ✅ คำถามทบทวนความเข้าใจ 10 ข้อพร้อมคำตอบ:
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {art.selfCheck.map((sc, sIdx) => (
-                    <div
-                      key={sIdx}
-                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1 text-xs"
-                    >
-                      <div className="font-bold text-white">
-                        {sIdx + 1}. {sc.q}
-                      </div>
-                      <div className="text-emerald-300 leading-relaxed">↳ {sc.a}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ModuleCodeExamplesViewer({ moduleId, title }) {
-  const examples = ENTERPRISE_CODE_EXAMPLES_16.filter((ex) => ex.moduleId === moduleId);
-  const [selectedFile, setSelectedFile] = useState(examples[0]?.file || '');
-
-  if (!examples.length) return null;
-  const activeEx = examples.find((e) => e.file === selectedFile) || examples[0];
-
-  return (
-    <section className="rounded-2xl border border-cyan-500/40 bg-slate-900/90 p-5 sm:p-6 space-y-4 shadow-xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[11px] font-mono font-bold mb-1">
-            💻 CODE EXAMPLES ({examples.length} ไฟล์จากโฟลเดอร์ examples/)
-          </div>
-          <h2 className="text-lg sm:text-xl font-black text-white m-0">{title}</h2>
-        </div>
-        <span className="text-xs text-slate-400">
-          คลิกเลือกไฟล์ตัวอย่างเพื่อดูโค้ดฉบับเต็มและคัดลอกไปรันทดสอบ
-        </span>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {examples.map((ex) => (
-          <button
-            key={ex.file}
-            type="button"
-            onClick={() => setSelectedFile(ex.file)}
-            className={`px-3 py-2 rounded-xl text-xs font-mono font-bold border cursor-pointer transition-all ${
-              activeEx.file === ex.file
-                ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-500/20'
-                : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600'
-            }`}
-          >
-            📄 {ex.file}
-          </button>
-        ))}
-      </div>
-
-      {activeEx && (
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <span className="text-sm font-black text-cyan-300">{activeEx.title}</span>
-              <span className="ml-2 text-xs font-mono text-slate-400">({activeEx.slides})</span>
-            </div>
-            <span className="text-xs text-slate-300">{activeEx.desc}</span>
-          </div>
-          <CodeBlock code={activeEx.code} language={activeEx.file} />
-        </div>
-      )}
-    </section>
-  );
-}
-
-function WorkshopFullLabSheet({ workshopId }) {
-  const workshops = ENTERPRISE_WORKSHOPS_DATA?.workshops || [];
-  const w = workshops.find((item) => 
-    item.id === workshopId || 
-    item.id.toLowerCase() === workshopId.toLowerCase() ||
-    item.id.replace(/\s+/g, '').toLowerCase() === workshopId.toLowerCase() ||
-    (workshopId === 'w1' && item.id === 'Workshop 1') ||
-    (workshopId === 'w2' && item.id === 'Workshop 2') ||
-    (workshopId === 'w3' && item.id === 'Workshop 3') ||
-    (workshopId === 'w4' && item.id === 'Workshop 4')
-  );
-  const [codeTab, setCodeTab] = useState('starter'); // 'starter' | 'solution' | 'mockapi'
 
   if (!w) return null;
 
-  const starterEntries = Object.entries(w.starterFiles || {});
-  const solutionEntries = Object.entries(w.solutionFiles || {});
-  const hasMockApi = w.id === 'Workshop 3' || w.id === 'Workshop 4' || workshopId === 'w3' || workshopId === 'w4';
-
   return (
-    <section className="rounded-2xl border-2 border-emerald-500/40 bg-slate-900/95 overflow-hidden shadow-2xl">
-      <div className="p-5 sm:p-6 bg-gradient-to-r from-emerald-950/90 via-teal-950/70 to-slate-900 border-b border-emerald-500/30 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-xs font-black border border-emerald-500/40">
-            🛠️ HANDS-ON WORKSHOP LAB SHEET · {w.day}
+    <div className="rounded-2xl border-2 border-emerald-500/40 bg-slate-900/90 p-5 sm:p-6 space-y-4 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-emerald-600/30 text-emerald-400 flex items-center justify-center font-black text-sm border border-emerald-500/40">
+            🛠️
           </span>
-          <span className="text-xs font-mono text-amber-300 bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800">
-            ⏱️ เวลาทำแล็บ: {w.duration} · โฟลเดอร์: {w.folder}
-          </span>
+          <div>
+            <h3 className="text-base sm:text-lg font-black text-white m-0">{w.title}</h3>
+            <span className="text-xs text-slate-400 font-mono">
+              โฟลเดอร์: {w.folder} · เวลาปฏิบัติการ: {w.duration}
+            </span>
+          </div>
         </div>
-        <h2 className="text-xl sm:text-2xl font-black text-white m-0">{w.title}</h2>
-        <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed m-0">
-          <strong>เป้าหมาย (Goal):</strong> {w.goal}
-        </p>
+
+        <button
+          onClick={() => setShowSolution(!showSolution)}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-black cursor-pointer transition-all border ${
+            showSolution
+              ? 'bg-emerald-600 text-white border-emerald-400'
+              : 'bg-slate-800 text-emerald-300 border-slate-700 hover:border-slate-600'
+          }`}
+        >
+          {showSolution ? '🔑 ซ่อนเฉลย' : '🔑 ดูโค้ดเฉลย (Solution)'}
+        </button>
       </div>
 
-      <div className="p-5 sm:p-6 space-y-6">
-        {/* Steps & Spec Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-6 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-            <h3 className="text-sm font-black text-emerald-400 m-0">
-              📋 ขั้นตอนการลงมือทำทีละขั้น (Step-by-Step Instructions)
-            </h3>
-            <ol className="text-xs sm:text-sm text-slate-200 space-y-2 list-decimal list-inside leading-relaxed">
-              {(w.steps || []).map((st, idx) => (
-                <li key={idx} className="pl-1">
-                  {st}
-                </li>
-              ))}
-            </ol>
-          </div>
+      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed m-0">
+        <strong>เป้าหมาย (Goal):</strong> {w.goal}
+      </p>
 
-          <div className="lg:col-span-6 space-y-4">
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-              <h3 className="text-sm font-black text-cyan-400 m-0">
-                📐 ข้อกำหนดทางเทคนิค (Technical Specification)
-              </h3>
-              <div className="divide-y divide-slate-800 text-xs">
-                {(w.spec || []).map(([k, v], idx) => (
-                  <div key={idx} className="py-2 flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <span className="font-bold text-slate-300">{k}</span>
-                    <span className="font-mono text-cyan-300 sm:text-right">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
-              <h3 className="text-sm font-black text-emerald-300 m-0">
-                ✅ เกณฑ์ตรวจงาน "ทำเสร็จเมื่อ" (Definition of Done)
-              </h3>
-              <ul className="text-xs text-slate-200 space-y-1.5 list-disc list-inside">
-                {(w.doneWhen || []).map((dw, idx) => (
-                  <li key={idx}>{dw}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+      {/* Steps & Criteria */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <span className="font-bold text-emerald-400 block">📋 ขั้นตอนการปฏิบัติ:</span>
+          <ol className="space-y-1.5 text-slate-300 list-decimal list-inside leading-relaxed">
+            {(w.steps || []).map((st, idx) => (
+              <li key={idx}>{st}</li>
+            ))}
+          </ol>
         </div>
 
-        {/* Hints & Stretch Goals */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          {w.hints && w.hints.length > 0 && (
-            <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-1.5">
-              <div className="font-black text-amber-300">💡 คำใบ้และจุดสังเกต (Hints):</div>
-              <ul className="space-y-1 text-amber-100 list-disc list-inside">
-                {w.hints.map((h, idx) => (
-                  <li key={idx}>{h}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {w.stretch && w.stretch.length > 0 && (
-            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 space-y-1.5">
-              <div className="font-black text-indigo-300">🚀 โจทย์ท้าทายเพิ่มเติมสำหรับคนที่เสร็จเร็ว (Stretch Goals):</div>
-              <ul className="space-y-1 text-indigo-100 list-disc list-inside">
-                {w.stretch.map((st, idx) => (
-                  <li key={idx}>{st}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        {/* Starter & Solution Code Switcher */}
-        <div className="space-y-4 pt-2 border-t border-slate-800">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setCodeTab('starter')}
-                className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                  codeTab === 'starter'
-                    ? 'bg-cyan-600 text-white shadow-md'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                📂 โค้ดตั้งต้นสำหรับผู้เรียน (starter/ · {starterEntries.length} ไฟล์)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCodeTab('solution')}
-                className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                  codeTab === 'solution'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                🔑 เฉลยฉบับสมบูรณ์สำหรับผู้สอน (solution/ · {solutionEntries.length} ไฟล์)
-              </button>
-              {hasMockApi && (
-                <button
-                  type="button"
-                  onClick={() => setCodeTab('mockapi')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                    codeTab === 'mockapi'
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  🐍 เซิร์ฟเวอร์จำลอง Python (mock_api.py)
-                </button>
-              )}
-            </div>
-          </div>
-
-          {codeTab === 'starter' && (
-            <div className="space-y-4">
-              {starterEntries.map(([fname, content]) => (
-                <div key={fname}>
-                  <div className="text-xs font-mono font-bold text-cyan-300 mb-1">
-                    📄 {w.folder}/starter/{fname}
-                  </div>
-                  <CodeBlock code={content} language={`starter/${fname}`} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {codeTab === 'solution' && (
-            <div className="space-y-4">
-              {solutionEntries.map(([fname, content]) => (
-                <div key={fname}>
-                  <div className="text-xs font-mono font-bold text-emerald-300 mb-1">
-                    ✅ {w.folder}/solution/{fname}
-                  </div>
-                  <CodeBlock code={content} language={`solution/${fname}`} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {codeTab === 'mockapi' && hasMockApi && (
-            <div>
-              <div className="text-xs font-mono font-bold text-purple-300 mb-1">
-                🐍 workshops/mock-api/mock_api.py (รันด้วยคำสั่ง python mock_api.py เปิดพอร์ต http://localhost:8000)
-              </div>
-              <CodeBlock code={ENTERPRISE_WORKSHOPS_DATA.mockApiPy} language="mock_api.py" />
-            </div>
-          )}
+        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <span className="font-bold text-cyan-400 block">✅ ทำเสร็จเมื่อ (Definition of Done):</span>
+          <ul className="space-y-1.5 text-slate-300 list-disc list-inside leading-relaxed">
+            {(w.doneWhen || []).map((dw, idx) => (
+              <li key={idx}>{dw}</li>
+            ))}
+          </ul>
         </div>
       </div>
-    </section>
+
+      {showSolution && (
+        <div className="pt-3 border-t border-slate-800 space-y-3">
+          <div className="text-xs font-bold text-emerald-300">
+            เฉลยสมบูรณ์ (Solution Code):
+          </div>
+          {Object.entries(w.solutionFiles || {}).map(([fname, code]) => (
+            <div key={fname}>
+              <div className="text-xs font-mono font-bold text-emerald-400 mb-1">
+                ✅ {w.folder}/solution/{fname}
+              </div>
+              <CodeBlock code={code} language={`solution/${fname}`} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2085,30 +1345,63 @@ export function EnterpriseAppMod1() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-violet-950/70 via-indigo-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-violet-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold mb-3 border border-violet-500/30">
-          <FiLayers className="w-4 h-4" /> โมดูลที่ 1 (Module 1) · วันที่ 1 ภาคเช้า · สไลด์ 1–24
+          <FiLayers className="w-4 h-4" /> โมดูลที่ 1 (Module 1) · วันที่ 1 ภาคเช้า
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Enterprise System &amp; Digital Industry Landscape (สถาปัตยกรรมระบบองค์กร IT/OT, ISA-95 &amp; JSON)
+        <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
+          Enterprise System &amp; Digital Industry Landscape
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          ทำความเข้าใจสถาปัตยกรรมระบบองค์กรดิจิทัล การหลอมรวมระหว่างเทคโนโลยีสารสนเทศ (IT) และเทคโนโลยีปฏิบัติการหน้างาน (OT) ตามโครงสร้างมาตรฐาน IEC 62264 (ISA-95), สถาปัตยกรรม Client-Server, และโครงสร้างข้อมูล JSON (RFC 8259)
+          สถาปัตยกรรมระบบองค์กรดิจิทัล, การหลอมรวมระหว่างเทคโนโลยีสารสนเทศ (IT) และเทคโนโลยีปฏิบัติการหน้างาน (OT) ตามมาตรฐาน ISA-95 (IEC 62264), สถาปัตยกรรม Client-Server และโครงสร้างข้อมูล JSON
         </p>
       </div>
 
-      {/* Quick Open Full 6-Tab Teaching Kit */}
-      <TeachingKitQuickDrawer defaultTab="prep" dayLabel="วันที่ 1 ภาคเช้า · สไลด์ 1–24" />
+      {/* 1.1 ISA-95 & IT/OT Convergence Section */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-violet-600/30 text-violet-400 flex items-center justify-center text-sm font-black border border-violet-500/40">1</span>
+          1.1 สถาปัตยกรรมระบบอุตสาหกรรม (ISA-95) &amp; ความต่างระหว่าง IT กับ OT
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          ในโรงงานอุตสาหกรรมยุคใหม่ เราแบ่งระบบออกเป็น 5 ระดับตามมาตรฐาน <strong>ISA-95 (IEC 62264)</strong> โดยมีข้อกำหนดเรื่องความปลอดภัยและเวลาตอบสนองที่ต่างกันโดยสิ้นเชิง: 
+          <strong> ฝั่ง OT (Level 0–2)</strong> เน้นความพร้อมใช้งานและความปลอดภัยทางกายภาพ (Availability &amp; Safety) ตอบสนองระดับมิลลิวินาที 
+          ส่วน <strong>ฝั่ง IT (Level 4)</strong> เน้นการบริหารข้อมูล วางแผนทรัพยากร (Confidentiality &amp; Integrity) 
+          และมี <strong>Level 3 (MES)</strong> ทำหน้าที่เป็นสะพานเชื่อมระหว่างสองโลก
+        </p>
 
-      {/* Complete Slide Deck Viewer for Module 1 (Slides 1-24 + Images + Speaker Script) */}
-      <ModuleSlidesDeckViewer moduleId="m1" moduleLabel="โมดูลที่ 1 (วันที่ 1 ภาคเช้า: สไลด์ 1–24)" />
+        {/* Companion Interactive Aid #1: ISA-95 Pyramid */}
+        <Isa95PyramidExplorer />
+      </section>
 
-      {/* Deep-Dive Theory from Teaching Kit Review (#rv-arch, #rv-json) */}
-      <ModuleDeepTheorySection
-        reviewIds={['rv-arch', 'rv-json']}
-        sectionTitle="เจาะลึกสถาปัตยกรรม IT/OT · ISA-95 · Client-Server และโครงสร้าง JSON (RFC 8259)"
-      />
+      {/* 1.2 Industrial UX/UI Principles */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-pink-600/30 text-pink-400 flex items-center justify-center text-sm font-black border border-pink-500/40">2</span>
+          1.2 หลักการออกแบบหน้าจอโรงงาน (Industrial UX/UI &amp; IEC 60204-1)
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          หน้าจอควบคุมในโรงงานไม่ใช่แค่เรื่องความสวยงาม แต่เกี่ยวกับ <strong>ความปลอดภัยและเวลาตัดสินใจใน 5 วินาที</strong>:
+          สีแดงใช้เฉพาะเหตุฉุกเฉิน (E-Stop/Fault), สีเหลืองสำหรับค่าเตือนก่อนเกินพิกัด, สีเขียวสำหรับการทำงานปกติ, 
+          และขนาดปุ่มสัมผัสต้องไม่ต่ำกว่า <strong>44 × 44 พิกเซล</strong> เพื่อให้พนักงานสวมถุงมือสามารถกดได้แม่นยำ ไม่กดพลาด (Touch Hitbox Accuracy)
+        </p>
 
-      {/* Interactive Simulator 1: Industrial HMI Color & Gloved Touch Validator */}
-      <IndustrialHmiValidatorSimulator />
+        {/* Companion Interactive Aid #2: HMI Validator */}
+        <IndustrialHmiValidatorSimulator />
+      </section>
+
+      {/* 1.3 JSON Data Format */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">3</span>
+          1.3 โครงสร้างข้อมูล JSON สำหรับระบบอุตสาหกรรม (RFC 8259)
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          JSON (JavaScript Object Notation) คือภาษากลางที่ใช้แลกเปลี่ยนข้อมูลระหว่างเครื่องจักร, Edge Gateway, ระบบ MES และหน้าเว็บ Dashboard 
+          ทดลองคลิกที่คีย์ต่างๆ ด้านล่างเพื่อดูวิธีการเขียนคำสั่ง JavaScript ในการเข้าถึงข้อมูลตัวเลขและอาร์เรย์
+        </p>
+
+        {/* Companion Interactive Aid #3: JSON Explorer */}
+        <JsonPathInteractiveExplorer />
+      </section>
     </div>
   );
 }
@@ -2122,39 +1415,84 @@ export function EnterpriseAppMod2() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-pink-950/70 via-rose-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-pink-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold mb-3 border border-pink-500/30">
-          <FiLayout className="w-4 h-4" /> โมดูลที่ 2 (Module 2) · วันที่ 1 ภาคบ่าย · สไลด์ 25–35 · Workshop 1
+          <FiLayout className="w-4 h-4" /> โมดูลที่ 2 (Module 2) · วันที่ 1 ภาคบ่าย
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Industrial UX/UI &amp; Modern Layout Design (Semantic HTML5, CSS Box Model &amp; Flexbox)
+        <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
+          Industrial UX/UI &amp; Modern Layout Design (HTML5 &amp; Flexbox)
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          การออกแบบหน้าจอควบคุมและแดชบอร์ดอุตสาหกรรมตามหลักการมองเห็น 5 วินาที, มาตรฐานสี IEC 60204-1, โครงสร้าง Semantic HTML5, CSS Flexbox และลงมือทำแล็บจริง Workshop 1: จัดหน้าระบบวัดไฟฟ้า (Electrical Meter UI)
+          การวางโครงสร้างหน้าจอ Dashboard ด้วย Semantic HTML5, CSS Box Model, ระบบจัด Layout แบบยืดหยุ่น (Flexbox) และลงมือทำ Workshop 1: Electrical Meter UI
         </p>
       </div>
 
-      {/* Quick Open Full 6-Tab Teaching Kit */}
-      <TeachingKitQuickDrawer defaultTab="script" dayLabel="วันที่ 1 ภาคบ่าย · สไลด์ 25–35 + Workshop 1" />
+      {/* 2.1 Semantic HTML5 */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-pink-600/30 text-pink-400 flex items-center justify-center text-sm font-black border border-pink-500/40">1</span>
+          2.1 โครงสร้าง Semantic HTML5 สำหรับระบบแสดงผล Dashboard
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          เลิกใช้ <code>&lt;div&gt;</code> ครอบทุกอย่าง (Div Soup) แต่ใช้แท็กที่มีความหมายเชิงโครงสร้างตามมาตรฐานสากล:
+          <code>&lt;header&gt;</code> สำหรับระบุชื่อโรงงานและไลน์การผลิต, 
+          <code>&lt;main&gt;</code> ครอบส่วนเนื้อหาแสดงผลค่าวัด, 
+          และ <code>&lt;section&gt;</code> หรือ <code>&lt;article&gt;</code> สำหรับการ์ดแสดงค่าแต่ละตัว
+        </p>
 
-      {/* Complete Slide Deck Viewer for Module 2 (Slides 25-35 + Images + Speaker Script) */}
-      <ModuleSlidesDeckViewer moduleId="m2" moduleLabel="โมดูลที่ 2 (วันที่ 1 ภาคบ่าย: สไลด์ 25–35)" />
+        <CodeBlock
+          code={`<!-- โครงสร้าง Semantic HTML5 สำหรับหน้าจอ Electrical Meter -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electrical Meter Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Electrical Meter — Line A</h1>
+    <span class="status-badge">ONLINE</span>
+  </header>
 
-      {/* Deep-Dive Theory (#rv-html, #rv-css, #rv-f12) */}
-      <ModuleDeepTheorySection
-        reviewIds={['rv-html', 'rv-css', 'rv-f12']}
-        sectionTitle="เจาะลึก Semantic HTML5 · CSS Box Model &amp; Flexbox · และตารางแก้ปัญหาด้วย F12 DevTools"
+  <main class="meter-grid">
+    <article class="meter-card">
+      <h2>Voltage</h2>
+      <p class="value">231.4 <span class="unit">V</span></p>
+    </article>
+    <article class="meter-card">
+      <h2>Current</h2>
+      <p class="value">15.6 <span class="unit">A</span></p>
+    </article>
+  </main>
+</body>
+</html>`}
+          language="html"
+        />
+      </section>
+
+      {/* 2.2 Flexbox Simulator */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-sm font-black border border-indigo-500/40">2</span>
+          2.2 ออกแบบ Layout แบบยืดหยุ่นด้วย CSS Flexbox
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          ในโรงงานอุตสาหกรรม หน้าจอควบคุมต้องเปิดดูได้ทั้งบนแท็บเล็ตประจำตัวช่าง, โน้ตบุ๊กหัวหน้างาน, และจอโทรทัศน์แขวนเพดาน (Andon Display) 
+          ทดลองปรับคุณสมบัติ <code>flex-wrap</code>, <code>gap</code> และสลับขนาดหน้าจอด้านล่างเพื่อดูการตัดบรรทัดของการ์ดจริง
+        </p>
+
+        {/* Companion Interactive Aid #4: Flexbox Playground */}
+        <IndustrialFlexboxSimulator />
+      </section>
+
+      {/* 2.3 Workshop 1 Lab Guide */}
+      <WorkshopGuideCard
+        workshopId="w1"
+        title="Workshop 1: สร้างหน้าจอวัดค่าไฟฟ้า (Electrical Meter UI)"
+        duration="14:00 - 15:45 (1 ชั่วโมง 45 นาที)"
+        goal="สร้างหน้าเว็บแดชบอร์ดมิเตอร์ไฟฟ้าที่มีโครงสร้าง Semantic HTML5 และจัด Layout ด้วย Flexbox ให้สวยงามทั้งบนมือถือและจอโรงงาน"
+        folder="workshops/w1-meter-ui"
       />
-
-      {/* Code Examples 01 to 07 */}
-      <ModuleCodeExamplesViewer
-        moduleId="m2"
-        title="ไฟล์ตัวอย่างโค้ด HTML5, CSS Flexbox &amp; พื้นฐานการผูก элемент (ไฟล์ 01–07)"
-      />
-
-      {/* Simulator 2: Industrial Flexbox Playground */}
-      <IndustrialFlexboxSimulator />
-
-      {/* Full Workshop 1 Lab Sheet + Starter & Solution Code */}
-      <WorkshopFullLabSheet workshopId="w1" />
     </div>
   );
 }
@@ -2168,47 +1506,68 @@ export function EnterpriseAppMod3() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-blue-950/70 via-cyan-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-blue-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold mb-3 border border-blue-500/30">
-          <FiCode className="w-4 h-4" /> โมดูลที่ 3 (Module 3) · วันที่ 2 เต็มวัน · สไลด์ 36–71 · Workshop 2
+          <FiCode className="w-4 h-4" /> โมดูลที่ 3 (Module 3) · วันที่ 2 เต็มวัน
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          JavaScript Programming Logic, DOM Manipulation, Events &amp; Fetch API
+        <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
+          JavaScript Programming Logic, DOM &amp; State Control
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          ควบคุมตรรกะของแอปพลิเคชันด้วย JavaScript ES6+: ตัวแปร เงื่อนไข ฟังก์ชัน อาร์เรย์ อ็อบเจกต์, การเข้าถึงและเปลี่ยนค่า DOM (`getElementById`, `textContent`, `classList`), การดักฟังเหตุการณ์ (`addEventListener`), พื้นฐาน HTTP/REST API และลงมือทำ Workshop 2: ตู้ควบคุมไฟอัจฉริยะ (Control Cabinet)
+          ควบคุมตรรกะของแอปพลิเคชันด้วย JavaScript ES6+: ตัวแปร เงื่อนไข ฟังก์ชัน อาร์เรย์, การดักฟังเหตุการณ์ (`addEventListener`), การอัปเดตหน้าจอผ่าน DOM และลงมือทำ Workshop 2: ตู้ควบคุมไฟอัจฉริยะ (Smart Control Cabinet)
         </p>
       </div>
 
-      {/* Quick Open Full 6-Tab Teaching Kit */}
-      <TeachingKitQuickDrawer defaultTab="lab" dayLabel="วันที่ 2 · สไลด์ 36–71 + Workshop 2" />
-
-      {/* Complete Slide Deck Viewer for Module 3 (Slides 36-71 + Images + Speaker Script) */}
-      <ModuleSlidesDeckViewer moduleId="m3" moduleLabel="โมดูลที่ 3 (วันที่ 2: สไลด์ 36–71)" />
-
-      {/* Deep-Dive Theory (#rv-dom, #rv-http, #rv-fetch) */}
-      <ModuleDeepTheorySection
-        reviewIds={['rv-dom', 'rv-http', 'rv-fetch']}
-        sectionTitle="เจาะลึก DOM &amp; Events · มาตรฐาน HTTP Methods (RFC 9110) · และ Fetch async/await"
-      />
-
-      {/* Code Examples 08 to 12 */}
-      <ModuleCodeExamplesViewer
-        moduleId="m3"
-        title="ไฟล์ตัวอย่างโค้ด JSON, Async/Await, Fetch GET/POST และ Polling (ไฟล์ 08–12)"
-      />
-
-      {/* Simulator 3: Control Cabinet DOM Simulator */}
-      <ControlCabinetDomSimulator />
-
-      {/* Interactive 4 Visual Teaching Labs from Teaching Kit */}
-      <section className="space-y-3">
-        <h2 className="text-xl font-black text-white flex items-center gap-2 m-0">
-          <span>🧪</span> สื่อจำลองเข้าใจง่าย 4 ชิ้น (API บริกรร้านอาหาร · JSON Path · DOM টিละบรรทัด · Polling vs Webhook)
+      {/* 3.1 JavaScript Logic & Clean Code */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center text-sm font-black border border-blue-500/40">1</span>
+          3.1 กฎเหล็ก JavaScript สำหรับซอฟต์แวร์โรงงาน
         </h2>
-        <TeachingKitVisualLabs />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+            <strong className="text-sky-400 block font-bold">1. const นำหน้าเสมอ</strong>
+            <p className="text-slate-300 m-0 leading-relaxed">
+              ใช้ <code>const</code> เป็นค่าเริ่มต้นสำหรับค่าคงที่ เช่น <code>const MAX_VOLT = 240;</code> และใช้ <code>let</code> เมื่อค่านั้นต้องเปลี่ยนตามเซนเซอร์ ห้ามใช้ <code>var</code> เด็ดขาด
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+            <strong className="text-amber-400 block font-bold">2. Strict Equality (===)</strong>
+            <p className="text-slate-300 m-0 leading-relaxed">
+              ใช้ <code>===</code> เสมอเพื่อตรวจสอบทั้งค่าและชนิดข้อมูล เช่น <code>status === "RUNNING"</code> ป้องกันข้อผิดพลาดแบบ Silent Bug
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+            <strong className="text-emerald-400 block font-bold">3. DOM Caching</strong>
+            <p className="text-slate-300 m-0 leading-relaxed">
+              ค้นหา Element ด้วย <code>getElementById()</code> เก็บใส่ตัวแปรไว้ล่วงหน้าด้านบน ห้ามเรียกซ้ำๆ ใน Loop หรือในฟังก์ชัน Timer
+            </p>
+          </div>
+        </div>
       </section>
 
-      {/* Full Workshop 2 Lab Sheet + Starter & Solution Code */}
-      <WorkshopFullLabSheet workshopId="w2" />
+      {/* 3.2 Smart Control Cabinet Simulator */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-cyan-600/30 text-cyan-400 flex items-center justify-center text-sm font-black border border-cyan-500/40">2</span>
+          3.2 การสั่งงานหน้าจอผ่าน DOM (Document Object Model)
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          เมื่อเซนเซอร์ส่งค่ามาหรือพนักงานกดปุ่ม JavaScript จะเปลี่ยนเนื้อหาข้อความด้วย <code>textContent</code> 
+          และเปลี่ยนสีการ์ดหรือสถานะไฟเตือนด้วย <code>classList.add/remove/toggle</code> 
+          ทดลองกดเล่นในห้องแล็บจำลองด้านล่าง:
+        </p>
+
+        {/* Companion Interactive Aid #5: Control Cabinet */}
+        <ControlCabinetDomSimulator />
+      </section>
+
+      {/* 3.3 Workshop 2 Lab Guide */}
+      <WorkshopGuideCard
+        workshopId="w2"
+        title="Workshop 2: ตู้ควบคุมไฟฟ้าอัจฉริยะ (Smart Control Cabinet)"
+        duration="14:00 - 15:45 (1 ชั่วโมง 45 นาที)"
+        goal="เขียน JavaScript ควบคุมตู้สวิตช์ไฟจำลอง: ดักฟังปุ่ม Start/Stop, แสดงแรงดันไฟฟ้า, และแจ้งเตือนไฟกระพริบเมื่อแรงดันเกิน 240V"
+        folder="workshops/w2-cabinet"
+      />
     </div>
   );
 }
@@ -2222,45 +1581,64 @@ export function EnterpriseAppMod4() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-emerald-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-3 border border-emerald-500/30">
-          <FiActivity className="w-4 h-4" /> โมดูลที่ 4 (Module 4) · วันที่ 3 เต็มวัน · สไลด์ 72–90 · Workshop 3 &amp; 4
+          <FiActivity className="w-4 h-4" /> โมดูลที่ 4 (Module 4) · วันที่ 3 เต็มวัน
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Application Integration, Real-Time Polling, Webhook &amp; Python Backend (Flask)
+        <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
+          Application Integration, REST APIs &amp; Webhook Automation
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          การบูรณาการระบบแบบครบวงจร (End-to-End): ดึงค่ามิเตอร์น้ำ-ไฟจาก REST API แบบ Real-Time Polling (`setInterval`), การส่งแจ้งเตือนฉุกเฉินผ่าน Webhook (`POST JSON`), การป้องกันการยิงแจ้งเตือนซ้ำ (Debounce/Cooldown), และการสร้างเซิร์ฟเวอร์ API ด้วย Python Flask (Workshop 3 &amp; Workshop 4)
+          การเชื่อมต่อระบบผ่าน RESTful APIs, การดึงข้อมูลแบบ Asynchronous (Fetch &amp; Async/Await), กลยุทธ์ Real-Time Polling, การส่งแจ้งเตือน Webhook และลงมือทำ Workshop 3 &amp; 4
         </p>
       </div>
 
-      {/* Quick Open Full 6-Tab Teaching Kit */}
-      <TeachingKitQuickDrawer defaultTab="review" dayLabel="วันที่ 3 · สไลด์ 72–90 + Workshop 3 & 4" />
+      {/* 4.1 REST API & Waiter Analogy */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-sm font-black border border-emerald-500/40">1</span>
+          4.1 สถาปัตยกรรม REST API &amp; HTTP Methods ตามมาตรฐาน RFC 9110
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          เปรียบเสมือนบริกรในร้านอาหารที่นำคำสั่งของลูกค้า (Client) ไปบอกแม่ครัว (Server) และนำอาหาร (Data JSON) กลับมาเสิร์ฟ 
+          ทดลองกดส่งคำสั่ง HTTP Method แต่ละชนิดด้านล่างเพื่อดูข้อมูลจำลองที่เซิร์ฟเวอร์ตอบกลับมา:
+        </p>
 
-      {/* Complete Slide Deck Viewer for Module 4 (Slides 72-90 + Images + Speaker Script) */}
-      <ModuleSlidesDeckViewer moduleId="m4" moduleLabel="โมดูลที่ 4 (วันที่ 3: สไลด์ 72–90)" />
+        {/* Companion Interactive Aid #6: REST API Waiter */}
+        <RestApiWaiterSimulator />
+      </section>
 
-      {/* Deep-Dive Theory (#rv-poll, #rv-flask, #rv-e2e) */}
-      <ModuleDeepTheorySection
-        reviewIds={['rv-poll', 'rv-flask', 'rv-e2e']}
-        sectionTitle="เจาะลึก Polling vs Webhook · การสร้าง Backend ด้วย Python Flask · และการเชื่อมระบบ End-to-End"
-      />
+      {/* 4.2 Polling vs Webhook */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-teal-600/30 text-teal-400 flex items-center justify-center text-sm font-black border border-teal-500/40">2</span>
+          4.2 การอัปเดตข้อมูลแบบ Real-Time: Polling vs Webhook
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          ในระบบมอนิเตอร์ไลน์ผลิต เราใช้ <strong>Polling (setInterval)</strong> สำหรับดึงค่ามิเตอร์ที่ต้องอัปเดตต่อเนื่องทุก 5 วินาที 
+          และใช้ <strong>Webhook (POST Notification)</strong> เมื่อเกิดเหตุฉุกเฉิน (Event-Driven) เพื่อแจ้งเตือนเข้าแชตทันที
+        </p>
 
-      {/* Code Examples 13 to 14 */}
-      <ModuleCodeExamplesViewer
-        moduleId="m4"
-        title="ไฟล์ตัวอย่างโค้ด Webhook Notification &amp; Python Flask API (ไฟล์ 13–14)"
-      />
+        {/* Companion Interactive Aid #7: Polling vs Webhook */}
+        <PollingVsWebhookSimulator />
+      </section>
 
-      {/* Simulator 4: Live REST API & JSON Tree */}
-      <RestApiJsonTreeSimulator />
+      {/* 4.3 Workshop 3 & 4 Lab Guides */}
+      <div className="space-y-4">
+        <WorkshopGuideCard
+          workshopId="w3"
+          title="Workshop 3: ดึงข้อมูลมิเตอร์ไฟฟ้าผ่าน REST API (Live Polling)"
+          duration="10:45 - 12:00 (1 ชั่วโมง 15 นาที)"
+          goal="ใช้ fetch() และ async/await ดึงข้อมูลค่าน้ำ-ไฟจาก Mock API มาแสดงบนหน้าเว็บ และตั้งเวลาอัปเดตอัตโนมัติทุก 5 วินาที"
+          folder="workshops/w3-fetch-data"
+        />
 
-      {/* Simulator 5: Webhook Notification Sandbox */}
-      <WebhookNotificationSimulator />
-
-      {/* Full Workshop 3 Lab Sheet */}
-      <WorkshopFullLabSheet workshopId="w3" />
-
-      {/* Full Workshop 4 Lab Sheet */}
-      <WorkshopFullLabSheet workshopId="w4" />
+        <WorkshopGuideCard
+          workshopId="w4"
+          title="Workshop 4: ระบบส่งการแจ้งเตือนฉุกเฉินผ่าน Webhook"
+          duration="14:00 - 15:45 (1 ชั่วโมง 45 นาที)"
+          goal="สร้างปุ่มแจ้งเตือนฉุกเฉิน ยิง HTTP POST เข้า Webhook พร้อมระบบ Debounce Lock ป้องกันพนักงานกดปุ่มเบิ้ล"
+          folder="workshops/w4-alert-webhook"
+        />
+      </div>
     </div>
   );
 }
@@ -2269,371 +1647,201 @@ export function EnterpriseAppMod4() {
 // MODULE 5: Software QA & Day 4 Formal Examination Center (Day 4)
 // =========================================================================
 export function EnterpriseAppMod5() {
-  const [examTab, setExamTab] = useState('theory'); // 'theory' | 'practical' | 'templates'
-  const [showTheoryAnswers, setShowTheoryAnswers] = useState(true);
-  const [showPracticalSolution, setShowPracticalSolution] = useState(false);
+  const [examTab, setExamTab] = useState('rules'); // 'rules' | 'theory' | 'practical' | 'templates'
+  const [showTheoryAnswers, setShowTheoryAnswers] = useState(false);
 
   return (
     <div className="space-y-8 text-slate-200">
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-amber-950/70 via-orange-950/50 to-slate-900 p-6 md:p-8 rounded-2xl border border-amber-500/30 shadow-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold mb-3 border border-amber-500/30">
-          <FiAward className="w-4 h-4" /> โมดูลที่ 5 (Module 5) · วันที่ 4 · สไลด์ 91–102 · สอบวัดผล &amp; UAT
+          <FiAward className="w-4 h-4" /> โมดูลที่ 5 (Module 5) · วันที่ 4 เต็มวัน
         </div>
-        <h1 className="text-2xl md:text-3xl font-black text-white mb-3">
-          Software Testing (Unit / Integration / UAT) &amp; Day 4 Official Examination Center
+        <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
+          Software QA Standards &amp; Formal Examination Center
         </h1>
         <p className="text-slate-300 text-sm md:text-base leading-relaxed m-0">
-          การรับประกันคุณภาพซอฟต์แวร์ (Software QA), การออกแบบ Test Cases และวิเคราะห์ค่าขอบเขต (Boundary Value Analysis), การตรวจรับงานโดยผู้ใช้จริง (UAT Showcase), พร้อมชุดข้อสอบจริงประจำวันที่ 4 ครบชุด (ข้อสอบทฤษฎี 32 ข้อ + ข้อสอบปฏิบัติ &ldquo;The Performance Update&rdquo; + เฉลยและเกณฑ์การให้คะแนน Rubric)
+          การออกแบบกรณีทดสอบ (Test Cases), การวิเคราะห์ค่าขอบเขต (Boundary Value Analysis), การตรวจรับงานจริง (UAT Showcase) และศูนย์ข้อมูลการสอบวัดผลจริงประจำวันที่ 4
         </p>
       </div>
 
-      {/* Quick Open Full 6-Tab Teaching Kit */}
-      <TeachingKitQuickDrawer defaultTab="code" dayLabel="วันที่ 4 · สไลด์ 91–102 + ข้อสอบทฤษฎี/ปฏิบัติ & UAT" />
+      {/* 5.1 QA & Boundary Value Analysis */}
+      <section className="bg-slate-900/80 p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5 m-0">
+          <span className="w-7 h-7 rounded-lg bg-orange-600/30 text-orange-400 flex items-center justify-center text-sm font-black border border-orange-500/40">1</span>
+          5.1 การออกแบบกรณีทดสอบและการวิเคราะห์ค่าขอบเขต (Boundary Value Analysis)
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+          บั๊กในระบบโรงงานมักไม่ได้เกิดที่ค่าปกติ แต่เกิดที่ <strong>"ค่าขอบเขต (Boundaries)"</strong> 
+          เช่น เกณฑ์ผ่าน 85.0% พอดี หรือยอดผลิตเป็น 0 
+          ทดลองป้อนตัวเลขยอดผลิตในเครื่องมือทดสอบด้านล่างเพื่อดูผลการรัน Test Cases ทั้ง 5 กรณี:
+        </p>
 
-      {/* Complete Slide Deck Viewer for Module 5 (Slides 91-102 + Images + Speaker Script) */}
-      <ModuleSlidesDeckViewer moduleId="m5" moduleLabel="โมดูลที่ 5 (วันที่ 4: สไลด์ 91–102)" />
+        {/* Companion Interactive Aid #8: BVA Simulator */}
+        <AutomatedTestCaseEvaluator />
+      </section>
 
-      {/* Deep-Dive Theory (#rv-test, #rv-faq, #rv-quiz) */}
-      <ModuleDeepTheorySection
-        reviewIds={['rv-test', 'rv-faq', 'rv-quiz']}
-        sectionTitle="เจาะลึก Software Testing &amp; UAT · คำถามที่ผู้เรียนมักถามบ่อย · และคำถามทบทวนผู้สอน 10 ข้อ"
-      />
-
-      {/* Code Examples 15 to 16 */}
-      <ModuleCodeExamplesViewer
-        moduleId="m5"
-        title="ไฟล์ตัวอย่างโค้ด Error Handling (try/catch) &amp; Automated Testing (ไฟล์ 15–16)"
-      />
-
-      {/* Boundary Value Simulator */}
-      <AutomatedTestCaseEvaluator />
-
-      {/* COMPLETE DAY 4 OFFICIAL EXAM & UAT CENTER */}
-      <section className="rounded-2xl border-2 border-amber-500/50 bg-slate-900/95 overflow-hidden shadow-2xl">
-        <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-950/90 via-orange-950/80 to-slate-900 border-b border-amber-500/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* 5.2 Official Day 4 Exam Protocol & Resources */}
+      <section className="bg-slate-900/90 p-5 sm:p-6 rounded-2xl border-2 border-amber-500/40 space-y-5 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
-            <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-mono text-xs font-black border border-amber-500/40">
-              🏆 DAY 4 OFFICIAL EXAM &amp; UAT ARCHIVE (ครบทุกไฟล์ 100%)
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              DAY 4 OFFICIAL EXAM &amp; UAT
             </span>
-            <h2 className="text-xl sm:text-2xl font-black text-white mt-2 m-0">
-              คลังข้อสอบวัดผลจริงประจำวันที่ 4 · เกณฑ์การตรวจให้คะแนน &amp; เอกสาร UAT
+            <h2 className="text-lg sm:text-xl font-black text-white mt-1 m-0">
+              5.2 ศูนย์ข้อมูลและระเบียบการสอบวัดผลจริงประจำวันที่ 4
             </h2>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             <button
-              type="button"
+              onClick={() => setExamTab('rules')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                examTab === 'rules' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'
+              }`}
+            >
+              📅 ตารางและระเบียบการสอบ
+            </button>
+            <button
               onClick={() => setExamTab('theory')}
-              className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                examTab === 'theory'
-                  ? 'bg-amber-500 text-slate-950 shadow-lg'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                examTab === 'theory' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'
               }`}
             >
-              📝 1. ข้อสอบทฤษฎี (30 ปรนัย + 2 อัตนัย = 40 คะแนน)
+              📝 แนวข้อสอบทฤษฎี (32 ข้อ)
             </button>
             <button
-              type="button"
               onClick={() => setExamTab('practical')}
-              className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                examTab === 'practical'
-                  ? 'bg-amber-500 text-slate-950 shadow-lg'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                examTab === 'practical' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'
               }`}
             >
-              💻 2. ข้อสอบปฏิบัติ The Performance Update (60 คะแนน)
+              💻 ภารกิจสอบปฏิบัติ The Performance Update
             </button>
             <button
-              type="button"
               onClick={() => setExamTab('templates')}
-              className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                examTab === 'templates'
-                  ? 'bg-amber-500 text-slate-950 shadow-lg'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                examTab === 'templates' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-300'
               }`}
             >
-              📋 3. ใบตรวจรับงาน UAT Checklist &amp; Test Report
+              📋 แบบฟอร์มตรวจรับงาน (UAT)
             </button>
           </div>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-6">
-          {examTab === 'theory' && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-950 border border-slate-800">
-                <div>
-                  <h3 className="text-base font-black text-white m-0">
-                    {ENTERPRISE_THEORY_EXAM.title} ({ENTERPRISE_THEORY_EXAM.duration} · {ENTERPRISE_THEORY_EXAM.totalMarks})
-                  </h3>
-                  <p className="text-xs text-slate-400 m-0 mt-1">
-                    ตอนที่ 1: ปรนัย 4 ตัวเลือก จำนวน 30 ข้อ (30 คะแนน) · ตอนที่ 2: อัตนัยเขียนตอบ 2 ข้อ (10 คะแนน)
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTheoryAnswers(!showTheoryAnswers)}
-                  className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                    showTheoryAnswers
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  {showTheoryAnswers ? '🔑 ซ่อนเฉลยคำตอบ' : '🔑 แสดงเฉลยคำตอบทั้งหมด'}
-                </button>
-              </div>
-
-              {/* 30 Multiple Choice Questions */}
-              <div className="space-y-3 max-h-[800px] overflow-y-auto pr-1">
-                {(ENTERPRISE_THEORY_EXAM.mcQuestions || []).map((q) => (
-                  <div
-                    key={q.n}
-                    className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-bold text-white text-sm">
-                        ข้อที่ {q.n}. {q.q}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold">
-                        {q.clo} · {q.topic}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {(q.choices || []).map((ch, cIdx) => {
-                        const letter = ['A', 'B', 'C', 'D'][cIdx];
-                        const isAns = showTheoryAnswers && letter === q.ans;
-                        return (
-                          <div
-                            key={cIdx}
-                            className={`p-2.5 rounded-lg border ${
-                              isAns
-                                ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300 font-bold'
-                                : 'bg-slate-900/70 border-slate-800 text-slate-300'
-                            }`}
-                          >
-                            {letter}. {ch} {isAns && '✓ (คำตอบที่ถูก)'}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 2 Subjective Questions */}
-              <div className="space-y-4 pt-4 border-t border-slate-800">
-                <h4 className="text-base font-black text-amber-300 m-0">
-                  ✍️ ตอนที่ 2: ข้อสอบอัตนัย (2 ข้อ · 10 คะแนน) พร้อมแนวคำตอบและเกณฑ์ให้คะแนน
-                </h4>
-                {(ENTERPRISE_THEORY_EXAM.subjectiveQuestions || []).map((sq) => (
-                  <div
-                    key={sq.n}
-                    className="p-5 rounded-xl bg-slate-950 border border-amber-500/30 space-y-3 text-xs"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-black text-white">
-                        ข้อเขียนที่ {sq.n}: {sq.title}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold">
-                        {sq.marks} · {sq.clo}
-                      </span>
-                    </div>
-                    <p className="text-slate-300 leading-relaxed m-0">
-                      <strong>โจทย์สถานการณ์:</strong> {sq.scenario}
-                    </p>
-                    <ul className="space-y-1 text-slate-200 list-disc list-inside">
-                      {(sq.subQuestions || []).map((sub, idx) => (
-                        <li key={idx}>{sub}</li>
-                      ))}
-                    </ul>
-                    {showTheoryAnswers && (
-                      <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/40 space-y-2">
-                        <div className="font-black text-emerald-300">
-                          🔑 แนวคำตอบและเกณฑ์การให้คะแนน (Grading Rubric):
-                        </div>
-                        <ul className="space-y-1 text-emerald-100 list-disc list-inside">
-                          {(sq.answerGuide || []).map((ag, idx) => (
-                            <li key={idx}>{ag}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {examTab === 'practical' && (
-            <div className="space-y-6">
+        {/* Tab 1: Rules & Schedule */}
+        {examTab === 'rules' && (
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                <h3 className="text-lg font-black text-amber-300 m-0">
-                  {ENTERPRISE_PRACTICAL_EXAM.title} ({ENTERPRISE_PRACTICAL_EXAM.duration} · {ENTERPRISE_PRACTICAL_EXAM.totalScore})
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
-                  {ENTERPRISE_PRACTICAL_EXAM.scenario}
+                <span className="font-bold text-amber-300 block">1. สอบทฤษฎี (09:00 - 10:00)</span>
+                <p className="text-slate-300 m-0 leading-relaxed">
+                  • เวลา 60 นาที (ปิดหนังสือ ปิดคอมพิวเตอร์)<br />
+                  • ปรนัย 30 ข้อ (30 คะแนน) + อัตนัย 2 ข้อ (10 คะแนน)<br />
+                  • ครอบคลุม: ISA-95, HTML/CSS, JavaScript, JSON, REST APIs, และ Software Testing
                 </p>
               </div>
 
-              {/* 6 Tasks & 7 Rubrics */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                  <h4 className="text-sm font-black text-cyan-300 m-0">
-                    📌 ภารกิจสอบปฏิบัติ 6 ขั้นตอน (Tasks T1–T6)
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    {(ENTERPRISE_PRACTICAL_EXAM.tasks || []).map((t) => (
-                      <div key={t.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                        <div className="flex justify-between font-bold text-white">
-                          <span>
-                            {t.id}: {t.title} ({t.file})
-                          </span>
-                          <span className="text-amber-300 font-mono">{t.time}</span>
-                        </div>
-                        <p className="text-slate-300 mt-1 m-0">{t.detail}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                  <h4 className="text-sm font-black text-emerald-300 m-0">
-                    📊 เกณฑ์การตรวจให้คะแนน 7 หมวด (Rubric R1–R7 รวม 60 คะแนน)
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    {(ENTERPRISE_PRACTICAL_EXAM.rubric || []).map((r) => (
-                      <div key={r.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                        <div className="flex justify-between font-bold text-white">
-                          <span>
-                            {r.id}: {r.topic} ({r.clo})
-                          </span>
-                          <span className="text-emerald-300 font-mono">{r.full} คะแนน</span>
-                        </div>
-                        <p className="text-slate-400 mt-1 m-0">{r.passCriteria}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-orange-300 block">2. สอบปฏิบัติเดี่ยว (10:00 - 12:00)</span>
+                <p className="text-slate-300 m-0 leading-relaxed">
+                  • เวลา 120 นาที (60 คะแนน)<br />
+                  • พัฒนาหน้าจอ "The Performance Update" ต่อจากโฟลเดอร์ starter<br />
+                  • ห้ามปรึกษากัน ห้ามใช้ AI ช่วยเขียน (เปิดดูสไลด์และงานเก่าตัวเองได้)
+                </p>
               </div>
 
-              {/* Expected Output Table for 5 Sample JSONs */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <h4 className="text-sm font-black text-indigo-300 m-0">
-                  🧪 ตารางผลลัพธ์ที่ถูกต้องเมื่อสลับไฟล์ JSON ทั้ง 5 กรณี (สำหรับผู้สอนใช้ตรวจงาน)
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-slate-900 text-slate-300">
-                      <tr>
-                        <th className="p-2.5">ไฟล์ข้อมูลตัวอย่าง</th>
-                        <th className="p-2.5">Target</th>
-                        <th className="p-2.5">Actual</th>
-                        <th className="p-2.5">Performance</th>
-                        <th className="p-2.5">สถานะที่ต้องแสดง</th>
-                        <th className="p-2.5">ปุ่มส่งแจ้งเตือน</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800 text-slate-200">
-                      {(ENTERPRISE_PRACTICAL_EXAM.expectedSamples || []).map((row, idx) => (
-                        <tr key={idx}>
-                          {row.map((c, cIdx) => (
-                            <td key={cIdx} className="p-2.5">
-                              {c}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Practical Starter vs Solution Files */}
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-sm font-black text-white m-0">
-                    📂 โค้ดตั้งต้นสำหรับผู้เข้าสอบ (exam/practical/starter/) &amp; เฉลยผู้สอน (solution/)
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setShowPracticalSolution(!showPracticalSolution)}
-                    className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                      showPracticalSolution
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-800 text-amber-300 border border-amber-500/40'
-                    }`}
-                  >
-                    {showPracticalSolution
-                      ? '🔑 กำลังแสดง: เฉลยข้อสอบปฏิบัติ (solution/)'
-                      : '🔑 คลิกเพื่อเปิดดูเฉลยข้อสอบปฏิบัติ (solution/)'}
-                  </button>
-                </div>
-
-                {!showPracticalSolution ? (
-                  <div className="space-y-4">
-                    {Object.entries(ENTERPRISE_PRACTICAL_EXAM.starterFiles || {}).map(
-                      ([fname, content]) => (
-                        <div key={fname}>
-                          <div className="text-xs font-mono font-bold text-cyan-300 mb-1">
-                            📄 exam/practical/starter/{fname}
-                          </div>
-                          <CodeBlock code={content} language={`starter/${fname}`} />
-                        </div>
-                      )
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {Object.entries(ENTERPRISE_PRACTICAL_EXAM.solutionFiles || {}).map(
-                      ([fname, content]) => (
-                        <div key={fname}>
-                          <div className="text-xs font-mono font-bold text-emerald-300 mb-1">
-                            ✅ exam/practical/solution/{fname}
-                          </div>
-                          <CodeBlock code={content} language={`solution/${fname}`} />
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-bold text-emerald-300 block">3. UAT Showcase (13:00 - 15:00)</span>
+                <p className="text-slate-300 m-0 leading-relaxed">
+                  • กิจกรรมตรวจรับงานจริงระหว่างเพื่อนร่วมชั้น<br />
+                  • สลับเครื่องกันทดสอบตามแบบฟอร์ม UAT Checklist<br />
+                  • ลงชื่อยอมรับ (Accept) หรือแจ้งแก้ไข (Decline)
+                </p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {examTab === 'templates' && (
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-black text-emerald-300 mb-2">
-                  📋 1. แบบฟอร์มตรวจรับงานโดยผู้ใช้ (templates/uat-checklist.md)
-                </h4>
-                <CodeBlock
-                  code={ENTERPRISE_TEMPLATES_DATA.uatChecklistMd}
-                  language="templates/uat-checklist.md"
-                />
-              </div>
+        {/* Tab 2: Theory Questions Overview */}
+        {examTab === 'theory' && (
+          <div className="space-y-4 text-xs">
+            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <span className="font-bold text-white">
+                โครงสร้างข้อสอบทฤษฎี: ปรนัย 30 ข้อ (30 คะแนน) + อัตนัย 2 ข้อ (10 คะแนน)
+              </span>
+              <button
+                onClick={() => setShowTheoryAnswers(!showTheoryAnswers)}
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold border border-slate-700 cursor-pointer"
+              >
+                {showTheoryAnswers ? '🔑 ซ่อนเฉลย' : '🔑 แสดงเฉลยแนวคำตอบ'}
+              </button>
+            </div>
 
-              <div>
-                <h4 className="text-sm font-black text-cyan-300 mb-2">
-                  📋 2. แบบฟอร์มบันทึกผลการทดสอบ Test Cases (templates/test-report.md)
-                </h4>
-                <CodeBlock
-                  code={ENTERPRISE_TEMPLATES_DATA.testReportMd}
-                  language="templates/test-report.md"
-                />
-              </div>
-
-              <div>
-                <h4 className="text-sm font-black text-purple-300 mb-2">
-                  🧪 3. สคริปต์ทดสอบระบบอัตโนมัติ (templates/system-test-example.js)
-                </h4>
-                <CodeBlock
-                  code={ENTERPRISE_TEMPLATES_DATA.systemTestExampleJs}
-                  language="templates/system-test-example.js"
-                />
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {(ENTERPRISE_THEORY_EXAM.mcQuestions || []).slice(0, 10).map((q) => (
+                <div key={q.n} className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5">
+                  <div className="flex justify-between font-bold text-white">
+                    <span>ข้อที่ {q.n}. {q.q}</span>
+                    <span className="font-mono text-indigo-400 text-[10px]">{q.clo}</span>
+                  </div>
+                  {showTheoryAnswers && (
+                    <div className="text-emerald-400 font-bold text-[11px] bg-emerald-950/30 p-2 rounded border border-emerald-500/30">
+                      คำตอบที่ถูกต้อง: ตัวเลือก {q.ans}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="text-center text-slate-400 text-[11px] py-2">
+                (แสดงตัวอย่าง 10 ข้อแรก · สามารถเปิดดูข้อสอบเต็ม 32 ข้อได้ในแท็บที่ 6 ของหน้าต่างคู่มือวิทยากร)
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Tab 3: Practical Exam Tasks */}
+        {examTab === 'practical' && (
+          <div className="space-y-4 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+              <h4 className="font-black text-amber-300 m-0 mb-1">
+                โจทย์สอบปฏิบัติ: The Performance Update (ภารกิจ 6 ข้อ รวม 60 คะแนน)
+              </h4>
+              <p className="text-slate-300 m-0 leading-relaxed">
+                ให้นักเรียนพัฒนาหน้าจอ Line Performance ต่อจากไฟล์ที่กำหนด โดยต้องจัดหน้าจอ Flexbox (T1), ดึงข้อมูลด้วย fetch async/await (T2), คำนวณ Performance และตัดเกณฑ์สถานะ (T3), ตั้งเวลา Polling ทุก 10 วินาที (T4), ยิงแจ้งเตือน Webhook เมื่อต่ำกว่าเป้า (T5), และเขียนผลการทดสอบ Test Cases 5 กรณี (T6)
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(ENTERPRISE_PRACTICAL_EXAM.tasks || []).map((t) => (
+                <div key={t.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <div className="flex justify-between font-bold text-white">
+                    <span>{t.id}: {t.title}</span>
+                    <span className="text-amber-400 font-mono">{t.time}</span>
+                  </div>
+                  <p className="text-slate-300 m-0">{t.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: UAT Templates */}
+        {examTab === 'templates' && (
+          <div className="space-y-3 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <h4 className="font-black text-emerald-400 m-0">
+                แบบฟอร์มตรวจรับงานจริง (templates/uat-checklist.md)
+              </h4>
+              <p className="text-slate-300 m-0 leading-relaxed">
+                นักเรียนใช้เอกสารนี้ตรวจเช็คผลงานของเพื่อนในกิจกรรมบ่ายวันที่ 4:
+              </p>
+              <CodeBlock
+                code={ENTERPRISE_TEMPLATES_DATA.uatChecklistMd}
+                language="uat-checklist.md"
+              />
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
