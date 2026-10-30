@@ -8,6 +8,9 @@
 - Added visual cues for approaching/overdue loading dates (custom pastel rows with colored left borders) set to a 7-day warning threshold.
 - Enhanced table column alignment and added "Inspection Date" column for better context.
 - Implemented robust remove logic: simple removal for WAITING items, and strict force-confirmation for IN_PROGRESS/DONE items to protect QA data integrity while preserving Sales data.
+- **Advanced Search & Filtering:** Added a detailed search panel in the main NCR/CAR dashboard.
+- **Global Search Capability:** Added real-time text-based search filtering across all main tabs (Concession, QA/QC Schedule) to instantly search by Ticket No, PO, SKU, Week, Inspector, and DC Location.
+- **Interactive KPIs:** Made the KPI summary cards on the QA Schedule clickable so they can actively filter the data table in combination with the date filters.
 
 **QA/QC Calendar Redesign & Features Update:**
 - **Reorder Tabs:** `NCR/CAR` > `Concession` > `QA/QC Planner` > `QA/QC Schedule` for better workflow.
