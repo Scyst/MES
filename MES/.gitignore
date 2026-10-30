@@ -6,7 +6,6 @@ Media/
 docs/*
 !docs/blueprint/
 uploads/
-mcp_server/
 .vscode/
 # Agent temporary workspaces (not tracked)
 .agents/teamwork_preview_*/
