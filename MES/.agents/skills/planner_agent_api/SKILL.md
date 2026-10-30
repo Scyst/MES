@@ -8,8 +8,8 @@ description: "Allows Agents to interact with the MES Team Planner (Read Timeline
 This skill provides instructions for Agents to programmatically interact with the MES Team Planner system on behalf of the user. You can use this to report progress, add TODO items, or fetch the user's current workload.
 
 ## API Endpoint
-**URL:** `https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox/plannerAgent/api/agent_api.php`
-*(Note: Use `plannerAgent` for testing/agents, and `planner` for production once fully migrated.)*
+**URL:** `https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox/api/planner/agent_api.php`
+*(Note: Unified Team Planner Agent API hosted inside the self-contained `/Toolbox` SPA.)*
 
 ## Authentication
 The API currently bypasses session authentication for internal agent use. Instead, you MUST provide the `user` parameter to identify the target user. 
@@ -26,7 +26,7 @@ Retrieves all ongoing tasks and projects assigned to the user.
   - `user=Oat` (Replace with actual user AKA)
 - **Example Usage (curl):**
   ```bash
-  curl -k "https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox/plannerAgent/api/agent_api.php?action=get_timeline&user=Oat"
+  curl -k "https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox/api/planner/agent_api.php?action=get_timeline&user=Oat"
   ```
 - **Response Shape:**
   ```json

@@ -1,0 +1,23 @@
+DirectoryIndex index.html
+Options -MultiViews
+RewriteEngine On
+RewriteBase /iot-toolbox/sandbox-b9/Toolbox/
+
+# Legacy sub-paths compatibility (historical planner uploads & agent API)
+RewriteRule ^planner/api/uploads/(.*)$ /iot-toolbox/sandbox-b9/Toolbox_legacy/planner/api/uploads/$1 [L]
+RewriteRule ^plannerAgent/api/(.*)$ api/planner/$1 [QSA,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [QSA,L]
+
+# Prevent caching for the entry HTML
+<FilesMatch "\.(html)$">
+  FileETag None
+  <IfModule mod_headers.c>
+    Header unset ETag
+    Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+  </IfModule>
+</FilesMatch>

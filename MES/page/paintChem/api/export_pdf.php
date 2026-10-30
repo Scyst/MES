@@ -455,7 +455,7 @@ function renderSheetPage($header, $logs, $shift, $logDate, $isBlank, $stations, 
   <table class="doc-header">
     <tr>
       <td width="25%">
-          <img alt="SNC Logo" src="/iot-toolbox/sandbox-b9/Toolbox2/assets/logo.webp" style="height: 28px; object-fit: contain; margin-bottom: 2px;">
+          <img alt="SNC Logo" src="/iot-toolbox/sandbox-b9/Toolbox/assets/logo.webp" style="height: 28px; object-fit: contain; margin-bottom: 2px;">
           <div style="font-size:6.5pt;color:#555;margin-top:1px;">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด</div>
         </td>
       <td width="50%">

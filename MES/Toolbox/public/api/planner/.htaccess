@@ -1,0 +1,8 @@
+php_value upload_max_filesize 50M
+php_value post_max_size 55M
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^uploads/(.*)$ /iot-toolbox/sandbox-b9/Toolbox_legacy/planner/api/uploads/$1 [L]
+</IfModule>

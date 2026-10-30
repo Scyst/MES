@@ -762,7 +762,7 @@ $shiftDisplay = $selectedShift === 'DAY' ? 'กลางวัน (DAY)' : ($sel
     <tr>
       <td width="30%">
         <div class="logo-box">
-          <img src="/iot-toolbox/sandbox-b9/Toolbox2/assets/logo.webp" alt="SNC Logo" onerror="this.style.display='none'">
+          <img src="/iot-toolbox/sandbox-b9/Toolbox/assets/logo.webp" alt="SNC Logo" onerror="this.style.display='none'">
           <div>
             <div class="company-title">SNC FORMER PUBLIC CO., LTD.</div>
             <div class="company-sub">บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน) — Plant 2 (Zone B9)</div>

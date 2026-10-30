@@ -178,7 +178,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         renderServiceLink('Scan Barcode', 'ระบบสแกนบาร์โค้ด', '<i class="fas fa-barcode"></i>', '../scanBarcode/scanBarcodeUI.php', 'view_production', $themeProd);
                         renderServiceLink('Tag Printer', 'พิมพ์แท็กส่งงาน (WIP/FG)', '<i class="fas fa-print"></i>', '../production/label_printer.php', 'print_label', $themeProd);
                         renderServiceLink('Stop Causes', 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', '<i class="fas fa-ban"></i>', '../PE/peRequest.php', 'view_production', $themeProd);
-                        renderServiceLink('PAINT Chemical', 'ระบบบันทึกเคมีสี (Check Sheet)', '<i class="fas fa-flask"></i>', '/iot-toolbox/sandbox-b9/Toolbox2/index.html#/paint-chem', 'view_production', $themeProd);
+                        renderServiceLink('PAINT Chemical', 'ระบบบันทึกเคมีสี (Check Sheet)', '<i class="fas fa-flask"></i>', '/iot-toolbox/sandbox-b9/Toolbox/#/paint-chem', 'view_production', $themeProd);
                         ?>
                     </div>
                 </div>
@@ -268,9 +268,9 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                     <div class="service-grid">
                         <?php 
                         $themePrototype = 'text-success bg-success bg-opacity-10 border-success border';
-                        renderServiceLink('New MES Toolbox (SPA)', 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', '<i class="fas fa-rocket"></i>', 'https://oem.sncformer.com/iot-toolbox/sandbox-b9/Toolbox/index.html', '', $themePrototype);
+                        renderServiceLink('New MES Toolbox (SPA)', 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', '<i class="fas fa-rocket"></i>', '/iot-toolbox/sandbox-b9/Toolbox/#/', '', $themePrototype);
                         renderServiceLink('Learning Hub', 'ศูนย์การเรียนรู้และคู่มือออนไลน์', '<i class="fas fa-graduation-cap"></i>', '/iot-toolbox/sandbox-b9/LearningHub/index.html', '', $themePrototype);
-                        renderServiceLink('Team Planner', 'กระดานแผนงานและปฏิทินทีม (New)', '<i class="fas fa-calendar-check"></i>', '/iot-toolbox/sandbox-b9/Toolbox/planner/index.html', '', $themePrototype);
+                        renderServiceLink('Team Planner', 'กระดานแผนงานและปฏิทินทีม (New)', '<i class="fas fa-calendar-check"></i>', '/iot-toolbox/sandbox-b9/Toolbox/#/planner', '', $themePrototype);
                         ?>
                     </div>
                 </div>
