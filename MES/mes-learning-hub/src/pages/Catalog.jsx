@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { getAllMergedCourses, getCurrentUser } from '../data/communityStore';
@@ -24,6 +24,7 @@ import {
   FiTrendingUp,
   FiCheckCircle,
   FiChevronRight,
+  FiChevronLeft,
   FiTag,
   FiArrowRight,
   FiBookmark
@@ -90,6 +91,31 @@ export default function Catalog() {
   const flagshipCourses = useMemo(() => {
     return allCourses.filter(c => c.id === 'c-enterprise-app' || c.id === 'c-robot-automation' || c.id === 'c-machine-vision' || c.id === 'c-machine-vision-v2');
   }, [allCourses]);
+
+  const carouselRef = useRef(null);
+  const [activeCarouselIdx, setActiveCarouselIdx] = useState(0);
+
+  const handleCarouselScroll = () => {
+    if (!carouselRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
+    if (scrollWidth <= clientWidth + 5) {
+      setActiveCarouselIdx(0);
+      return;
+    }
+    const firstChild = carouselRef.current.children[0];
+    const cardWidth = firstChild ? firstChild.getBoundingClientRect().width + 16 : clientWidth / 3;
+    const idx = Math.round(scrollLeft / cardWidth);
+    setActiveCarouselIdx(Math.min(flagshipCourses.length - 1, Math.max(0, idx)));
+  };
+
+  const scrollToCarouselItem = (idx) => {
+    if (!carouselRef.current) return;
+    const targetChild = carouselRef.current.children[idx];
+    if (targetChild) {
+      targetChild.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+      setActiveCarouselIdx(idx);
+    }
+  };
 
   // Helper to parse duration hours
   const parseHours = (durationStr = '') => {
@@ -417,21 +443,63 @@ export default function Catalog() {
         </div>
       </div>
 
-      {/* 🌟 HERO SPOTLIGHT BANNER (Flagship Courses Showcase) */}
-      <div className="space-y-2">
+      {/* 🌟 HERO SPOTLIGHT BANNER (Flagship Courses Showcase with Game-Style Carousel) */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <h2 className={`text-xs font-bold uppercase tracking-wider ${
+            <span className="flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.8)]"></span>
+            <h2 className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${
               isDark ? 'text-amber-400' : 'text-amber-600'
             }`}>
               หลักสูตรแนะนำ (Recommended Courses)
             </h2>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">ระดับช่างเทคนิค & วิศวกร (Level 4 Expert Ready)</span>
+
+          {/* Gaming Style Left/Right Slider Controls */}
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline text-[11px] text-slate-400 font-medium">ระดับช่างเทคนิค & วิศวกร (Level 4 Expert Ready)</span>
+            <div className="flex items-center gap-1.5 ml-2">
+              <button 
+                onClick={() => scrollToCarouselItem(Math.max(0, activeCarouselIdx - 1))}
+                disabled={activeCarouselIdx === 0}
+                className={`p-1.5 rounded-xl border transition-all ${
+                  activeCarouselIdx === 0 
+                    ? 'opacity-30 cursor-not-allowed border-slate-700/50 text-slate-500' 
+                    : isDark 
+                      ? 'border-slate-700 hover:border-amber-400 text-slate-300 hover:text-amber-400 bg-slate-800/90 shadow-sm active:scale-95' 
+                      : 'border-slate-200 hover:border-amber-500 text-slate-700 hover:text-amber-600 bg-white shadow-sm active:scale-95'
+                }`}
+                title="ก่อนหน้า"
+                aria-label="Previous Course"
+              >
+                <FiChevronLeft className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => scrollToCarouselItem(Math.min(flagshipCourses.length - 1, activeCarouselIdx + 1))}
+                disabled={activeCarouselIdx >= flagshipCourses.length - 1}
+                className={`p-1.5 rounded-xl border transition-all ${
+                  activeCarouselIdx >= flagshipCourses.length - 1
+                    ? 'opacity-30 cursor-not-allowed border-slate-700/50 text-slate-500' 
+                    : isDark 
+                      ? 'border-slate-700 hover:border-amber-400 text-slate-300 hover:text-amber-400 bg-slate-800/90 shadow-sm active:scale-95' 
+                      : 'border-slate-200 hover:border-amber-500 text-slate-700 hover:text-amber-600 bg-white shadow-sm active:scale-95'
+                }`}
+                title="ถัดไป"
+                aria-label="Next Course"
+              >
+                <FiChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Carousel Viewport: Displays 3 cards on desktop (lg), 2 on tablet (md), 1 on mobile */}
+        <div 
+          ref={carouselRef}
+          onScroll={handleCarouselScroll}
+          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory py-1 px-0.5 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {flagshipCourses.map(course => {
             const isEnterprise = course.id === 'c-enterprise-app';
             const isRobot = course.id === 'c-robot-automation';
@@ -444,7 +512,7 @@ export default function Catalog() {
               <div 
                 key={course.id}
                 onClick={() => navigate(`/course/${course.id}`)}
-                className={`group cursor-pointer relative rounded-2xl p-5 border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 flex flex-col justify-between overflow-hidden ${
+                className={`snap-start flex-shrink-0 w-[86vw] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)] group cursor-pointer relative rounded-2xl p-5 border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 flex flex-col justify-between overflow-hidden select-none ${
                   isDark
                     ? isEnterprise
                       ? 'bg-gradient-to-br from-purple-950/80 via-slate-900 to-slate-900 border-purple-500/40 hover:border-purple-400'
@@ -452,19 +520,19 @@ export default function Catalog() {
                         ? 'bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-900 border-indigo-500/40 hover:border-indigo-400' 
                         : isVisionV2
                           ? 'bg-gradient-to-br from-cyan-950/80 via-slate-900 to-slate-900 border-cyan-500/40 hover:border-cyan-400'
-                          : 'bg-gradient-to-br from-fuchsia-950/80 via-slate-900 to-slate-900 border-fuchsia-500/40 hover:border-fuchsia-400'
+                          : 'bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-900 border-emerald-500/40 hover:border-emerald-400'
                     : isEnterprise
                       ? 'bg-gradient-to-br from-purple-50 via-white to-slate-50 border-purple-200 hover:border-purple-400 shadow-sm'
                       : isRobot
                         ? 'bg-gradient-to-br from-indigo-50 via-white to-slate-50 border-indigo-200 hover:border-indigo-400 shadow-sm'
                         : isVisionV2
                           ? 'bg-gradient-to-br from-cyan-50 via-white to-slate-50 border-cyan-200 hover:border-cyan-400 shadow-sm'
-                          : 'bg-gradient-to-br from-fuchsia-50 via-white to-slate-50 border-fuchsia-200 hover:border-fuchsia-400 shadow-sm'
+                          : 'bg-gradient-to-br from-emerald-50 via-white to-slate-50 border-emerald-200 hover:border-emerald-400 shadow-sm'
                 }`}
               >
                 {/* Background decorative glow */}
                 <div className={`absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl pointer-events-none opacity-30 ${
-                  isEnterprise ? 'bg-purple-500' : isRobot ? 'bg-indigo-500' : isVisionV2 ? 'bg-cyan-500' : 'bg-fuchsia-500'
+                  isEnterprise ? 'bg-purple-500' : isRobot ? 'bg-indigo-500' : isVisionV2 ? 'bg-cyan-500' : 'bg-emerald-500'
                 }`} />
 
                 <div className="relative z-10">
@@ -477,7 +545,7 @@ export default function Catalog() {
                             ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
                             : isVisionV2
                               ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                              : 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
+                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                       }`}>
                         <FiStar className="w-3 h-3 text-amber-400" />
                         <span>{course.featuredBadge || '⭐ แนะนำพิเศษ'}</span>
@@ -490,11 +558,11 @@ export default function Catalog() {
                     </div>
 
                     {isDone ? (
-                      <span className="bg-emerald-500/90 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="bg-emerald-500/90 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
                         <FiCheck className="w-3 h-3" /> ผ่านแล้ว 100%
                       </span>
                     ) : inProgress ? (
-                      <span className="bg-fuchsia-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-md">
+                      <span className="bg-fuchsia-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded-md shadow-sm">
                         กำลังเรียน {userStatus.progressPercent}%
                       </span>
                     ) : (
@@ -506,14 +574,14 @@ export default function Catalog() {
                     )}
                   </div>
 
-                  <h3 className={`text-base sm:text-lg font-black leading-snug mb-2 transition-colors ${
+                  <h3 className={`text-base sm:text-lg font-black leading-snug mb-2 transition-colors line-clamp-2 min-h-[3rem] ${
                     isEnterprise
                       ? 'group-hover:text-purple-400'
                       : isRobot 
                         ? 'group-hover:text-indigo-400' 
                         : isVisionV2 
                           ? 'group-hover:text-cyan-400' 
-                          : 'group-hover:text-fuchsia-400'
+                          : 'group-hover:text-emerald-400'
                   } ${
                     isDark ? 'text-white' : 'text-slate-900'
                   }`}>
@@ -543,11 +611,13 @@ export default function Catalog() {
                   </div>
 
                   <div className={`inline-flex items-center gap-1.5 font-bold text-xs px-3 py-1.5 rounded-xl transition-all shadow-md ${
-                    isRobot 
-                      ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white' 
-                      : isVisionV2
-                        ? 'bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white'
-                        : 'bg-gradient-to-r from-fuchsia-600 to-pink-600 hover:from-fuchsia-500 hover:to-pink-500 text-white'
+                    isEnterprise
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
+                      : isRobot 
+                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white' 
+                        : isVisionV2
+                          ? 'bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white'
+                          : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
                   }`}>
                     <span>{isDone ? 'ทบทวนวิชา' : inProgress ? 'เรียนต่อ' : 'เข้าสู่บทเรียน'}</span>
                     <FiArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
@@ -556,6 +626,35 @@ export default function Catalog() {
               </div>
             );
           })}
+        </div>
+
+        {/* 🎮 Game-Style Slide Pagination Dots (แท็บเลื่อนจุดๆ สไตล์เกม) */}
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-800/80 backdrop-blur-md shadow-inner">
+            {flagshipCourses.map((c, idx) => {
+              const isActive = idx === activeCarouselIdx;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => scrollToCarouselItem(idx)}
+                  className={`group relative flex items-center transition-all duration-300 focus:outline-none ${
+                    isActive ? 'scale-105' : 'hover:scale-125'
+                  }`}
+                  title={`${c.title} (สไลด์ที่ ${idx + 1})`}
+                >
+                  <span className={`block rounded-full transition-all duration-300 ${
+                    isActive
+                      ? 'w-7 h-2 bg-gradient-to-r from-amber-400 via-fuchsia-400 to-purple-500 shadow-[0_0_12px_rgba(245,158,11,0.8)]'
+                      : 'w-2 h-2 bg-slate-600 group-hover:bg-slate-400'
+                  }`} />
+                </button>
+              );
+            })}
+          </div>
+
+          <span className="text-[11px] font-mono text-slate-400 font-bold tracking-wider">
+            {activeCarouselIdx + 1} / {flagshipCourses.length}
+          </span>
         </div>
       </div>
 
