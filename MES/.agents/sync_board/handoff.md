@@ -62,9 +62,9 @@
 
 ## Actionable Next Steps (สำหรับตัวหลักที่ทำงาน & กะกลางคืนถัดไป)
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:**
-  1. อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (หากไม่มีข้อมูลลับ หรือแยกเข้า `.env` แล้ว) และคัดลอก Global Skills อื่นๆ (ถ้ามี) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git
-  2. ดึงไฟล์ใน `/MES/MES/page/AccessoriesInspection/` จาก FTP ลงมาเทียบกับใน Git (เผื่อเพื่อนอัปเดตโค้ดขึ้น FTP โดยตรง) โดยคงส่วนที่เก็บรูปใน `../../uploads/accessories_inspection/` เอาไว้
-  3. ตรวจสอบและดำเนินการต่อตาม **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ใน `MES/Toolbox2/ARCHITECTURE.md` (เริ่มจาก Layer 1: Shared UI/API Utilities -> Layer 2: User Management 100% Parity -> Layer 3: System Settings -> Layer 4: Full Profile Page)
+  1. [x] อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (ปรับค่าลับเข้า `process.env` และทำ Relative Path แล้ว) และคัดลอก Global Skill (`mes_frontend_expert`) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git (เสร็จสิ้น 2026-10-30)
+  2. [x] ดึงไฟล์ใน `/MES/MES/page/AccessoriesInspection/` ทั้ง 7 ไฟล์จาก FTP ลงมาเทียบกับใน Git — ยืนยันว่าไม่มีโค้ดใหม่กว่าบน FTP และคงส่วนที่เก็บรูปใน `../../uploads/accessories_inspection/` เอาไว้ครบถ้วน (เสร็จสิ้น 2026-10-30)
+  3. [ ] ตรวจสอบและดำเนินการต่อตาม **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ใน `MES/Toolbox2/ARCHITECTURE.md` (เริ่มจาก Layer 1: Shared UI/API Utilities -> Layer 2: User Management 100% Parity -> Layer 3: System Settings -> Layer 4: Full Profile Page)
 - [ ] **[สำหรับงานพิมพ์เขียวผู้บริหาร (Visual Blueprint Extension)]:**
   - หากผู้บริหารต้องการหน้าจอ Interactive Visual Blueprint (คล้ายผังไฟฟ้า/เครื่องจักรที่คลิกดูสถานะสดได้) ให้ Agent อ่าน `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (หัวข้อที่ 8) และใช้ข้อมูลโหนด/เส้นเชื่อมจาก `MES/docs/blueprint/blueprint_graph.json` สร้างโมดูล `MES/Toolbox2/src/modules/SystemBlueprint/` ได้ทันที
 

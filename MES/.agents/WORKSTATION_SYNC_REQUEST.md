@@ -9,19 +9,13 @@
 
 จากการตรวจสอบที่เครื่องบ้าน (`C:\Users\USER\Desktop\Project\MES`) พบว่าสกิลและกฎใน `MES/.agents/` ถูกซิงค์ลงมาเรียบร้อยแล้ว แต่ **Custom MCP Server (`mes-custom-mcp`)** และสกิล Global บางส่วนยังไม่ถูกซิงค์ผ่าน Git เนื่องจากติด `.gitignore`
 
-**คำสั่งสำหรับ Agent เครื่องหลักที่ทำงาน (เมื่อผู้ใช้เปิดงานตอนเช้า):**
-1. **ปลดล็อก `mcp_server/` ใน `MES/.gitignore`:**
-   - ในไฟล์ `MES/.gitignore` บรรทัดที่ 8 มีคำว่า `mcp_server/` อยู่ ทำให้โฟลเดอร์ `MES/mcp_server/index.mjs` ไม่ถูกส่งขึ้น Git
-   - กรุณาตรวจสอบว่าใน `MES/mcp_server/` มีรหัสผ่านที่ควรแยกเข้า `.env` หรือไม่ หากปลอดภัยหรือใช้ `.env` อยู่แล้ว ให้เอา `mcp_server/` ออกจาก `MES/.gitignore` (หรือเพิ่ม `!mcp_server/index.mjs` และ `!mcp_server/package.json`) แล้วทำการ `git add` และ `git push` ขึ้นมา
-2. **ตรวจสอบ Global Skills บนเครื่องที่ทำงาน:**
-   - ปัจจุบันใน `MES/.agents/skills/` มี 3 สกิลคือ:
-     - `backend_qa` (`mes-backend-qa`)
-     - `frontend_qa` (`mes-frontend-qa`)
-     - `planner_agent_api` (`planner-agent-api`)
-   - หากในเครื่องที่ทำงานมีสกิลเฉพาะของโปรเจ็ค MES เก็บไว้ที่ `C:\Users\<User>\.gemini\config\skills\` หรือในโฟลเดอร์อื่นที่ยังไม่ได้อยู่ใน `MES/.agents/skills/` กรุณาคัดลอกมาไว้ใน `MES/.agents/skills/` แล้ว Push ขึ้น Git เพื่อให้เครื่องที่บ้านดึงไปใช้งานได้ครบ 100%
-3. **ดึงโค้ดล่าสุดของ `AccessoriesInspection` จาก FTP มาเทียบ (เนื่องจากเพื่อนอัปขึ้น FTP โดยตรง):**
-   - เมื่อเชื่อมต่อ FTP ที่ทำงานได้แล้ว ให้ตรวจสอบไฟล์ใน `/MES/MES/page/AccessoriesInspection/` บน FTP เทียบกับใน Git เผื่อเพื่อนมีการอัปเดตโค้ดใหม่ขึ้น FTP โดยตรง
-   - **หมายเหตุ:** ตอนนี้ใน Git เราได้ปรับปรุง `upload_image.php` และ `script/accessoriesInspection.js` ให้ย้ายที่เก็บรูปจาก `MES/page/AccessoriesInspection/img/` ไปไว้ที่โฟลเดอร์กลาง **`MES/uploads/accessories_inspection/`** (เหมือนระบบอื่นๆ) พร้อม Fallback 3 ชั้นเรียบร้อยแล้ว เมื่อเทียบโค้ดของเพื่อนเสร็จแล้ว อย่าลืมคงส่วนที่ชี้ไป `../../uploads/accessories_inspection/` นี้ไว้ด้วย
+**คำสั่งสำหรับ Agent เครื่องหลักที่ทำงาน (เมื่อผู้ใช้เปิดงานตอนเช้า) — ✅ ดำเนินการเสร็จสิ้น (2026-10-30):**
+1. **[x] ปลดล็อก `mcp_server/` ใน `MES/.gitignore`:**
+   - ตรวจพบข้อมูล DB IP/User/Password และ Path แบบ Hardcode ใน `MES/mcp_server/index.mjs` จึงปรับให้ดึงจาก `process.env` (`DB_SERVER`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`) และ `path.join(__dirname, "../ProjectRules.md")` เรียบร้อยแล้วก่อนนำ `mcp_server/` ออกจาก `MES/.gitignore` และ Push ขึ้น Git
+2. **[x] ตรวจสอบ Global Skills บนเครื่องที่ทำงาน:**
+   - คัดลอกสกิล `mes-frontend-expert` จาก Global Plugin มาไว้ที่ `MES/.agents/skills/mes_frontend_expert/SKILL.md` และ Push ขึ้น Git เรียบร้อยแล้ว (รวมเป็น 4 สกิลหลักใน `MES/.agents/skills/`)
+3. **[x] ดึงโค้ดล่าสุดของ `AccessoriesInspection` จาก FTP มาเทียบ:**
+   - ดึงไฟล์ทั้ง 7 รายการจาก `/MES/MES/page/AccessoriesInspection/` บน FTP มาเทียบกับ Git แบบบรรทัดต่อบรรทัด ยืนยันว่าฝั่งเพื่อนไม่มีการแก้โค้ดเพิ่มเติมนอกเหนือจากใน Git และโค้ดใน Git ปัจจุบันใช้พาร์ทกลาง `../../uploads/accessories_inspection/` พร้อม Fallback 3 ชั้นครบถ้วนแล้ว
 
 ---
 
