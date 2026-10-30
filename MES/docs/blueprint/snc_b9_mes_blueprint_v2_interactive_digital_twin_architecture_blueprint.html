@@ -183,7 +183,7 @@
         <!-- Status Filter -->
         <select id="status-filter" aria-label="กรองตามสถานะโมดูล" class="bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-sky-400">
           <option value="ALL">ทุกสถานะ / ประเภทโหนด</option>
-          <option value="PORTED_SELF_CONTAINED">PORTED_SELF_CONTAINED (Toolbox2 SPA)</option>
+          <option value="PORTED_SELF_CONTAINED">PORTED_SELF_CONTAINED (Toolbox SPA)</option>
           <option value="ACTIVE_LEGACY_PHP">ACTIVE_LEGACY_PHP (MES Core PHP)</option>
           <option value="ACTIVE_REACT_SPA">ACTIVE_REACT_SPA (Learning Hub)</option>
           <option value="NEXT_FOUNDATION_PORT">NEXT_FOUNDATION_PORT (Next Port)</option>
@@ -339,7 +339,7 @@
     {
       "id": "L5_APPLICATIONS",
       "order": 5,
-      "name_th": "ระบบแอปพลิเคชันผู้ใช้งาน (Toolbox2 SPA, MES Core, Learning Hub)",
+      "name_th": "ระบบแอปพลิเคชันผู้ใช้งาน (Toolbox SPA, MES Core, Learning Hub)",
       "color": "#ef4444"
     }
   ],
@@ -417,7 +417,7 @@
       "domain": "DOM_HR_ACADEMY",
       "type": "external_system",
       "title": "ระบบสแกนนิ้วและฐานข้อมูลพนักงาน HR",
-      "path": "MES/Toolbox2/public/api/userManage.php?action=sync_manpower",
+      "path": "MES/Toolbox/public/api/userManage.php?action=sync_manpower",
       "protocol": "Stored Procedure Sync"
     },
     {
@@ -426,7 +426,7 @@
       "domain": "DOM_CORE_ADMIN",
       "type": "database_cluster",
       "title": "SQL Server 10.1.1.31 (IIOT_TOOLBOX)",
-      "path": "MES/Toolbox2/public/db.php",
+      "path": "MES/Toolbox/public/db.php",
       "core_tables": [
         "USERS",
         "SYS_ROLES",
@@ -496,12 +496,12 @@
       "domain": "DOM_CORE_ADMIN",
       "type": "security_gateway",
       "title": "Unified Session SSO + CSRF + Cross-Tab BroadcastChannel ('mes_auth_channel')",
-      "path": "MES/Toolbox2/src/shared/contexts/AuthContext.jsx",
+      "path": "MES/Toolbox/src/shared/contexts/AuthContext.jsx",
       "endpoints": [
-        "MES/Toolbox2/public/login.php",
-        "MES/Toolbox2/public/check.php",
-        "MES/Toolbox2/public/logout.php",
-        "MES/Toolbox2/public/utils/check_auth.php"
+        "MES/Toolbox/public/login.php",
+        "MES/Toolbox/public/check.php",
+        "MES/Toolbox/public/logout.php",
+        "MES/Toolbox/public/utils/check_auth.php"
       ]
     },
     {
@@ -510,8 +510,8 @@
       "domain": "DOM_HR_ACADEMY",
       "status": "PORTED_SELF_CONTAINED",
       "title": "TOOLBOX OS Home, Daily Log & Morning Brief (#/)",
-      "ui_path": "MES/Toolbox2/src/modules/Home/pages/HomeDashboard.jsx",
-      "api_path": "MES/Toolbox2/public/api/dailyLog/dailyLogManage.php",
+      "ui_path": "MES/Toolbox/src/modules/Home/pages/HomeDashboard.jsx",
+      "api_path": "MES/Toolbox/public/api/dailyLog/dailyLogManage.php",
       "tables": [
         "OPERATOR_DAILY_LOGS",
         "MANPOWER_DAILY_LOGS",
@@ -525,8 +525,8 @@
       "domain": "DOM_EXEC_FIN",
       "status": "PORTED_SELF_CONTAINED",
       "title": "Team Planner & Gantt Timeline (#/planner/*)",
-      "ui_path": "MES/Toolbox2/src/modules/TeamPlanner/TeamPlannerApp.jsx",
-      "api_path": "MES/Toolbox2/public/api/planner/",
+      "ui_path": "MES/Toolbox/src/modules/TeamPlanner/TeamPlannerApp.jsx",
+      "api_path": "MES/Toolbox/public/api/planner/",
       "tables": [
         "TeamPlanner_Tasks",
         "TeamPlanner_Projects",
@@ -541,8 +541,8 @@
       "domain": "DOM_STORE",
       "status": "PORTED_SELF_CONTAINED",
       "title": "Employee Shuttle Bus Booking (#/transport/*)",
-      "ui_path": "MES/Toolbox2/src/modules/Transport/TransportApp.jsx",
-      "api_path": "MES/Toolbox2/public/api/transport/",
+      "ui_path": "MES/Toolbox/src/modules/Transport/TransportApp.jsx",
+      "api_path": "MES/Toolbox/public/api/transport/",
       "tables": [
         "MANPOWER_EMPLOYEES"
       ]
@@ -553,8 +553,8 @@
       "domain": "DOM_PROD",
       "status": "PORTED_SELF_CONTAINED",
       "title": "Paint Line Chemical Control & SPC Analytics (#/paint-chem)",
-      "ui_path": "MES/Toolbox2/src/modules/PaintChem/pages/PaintChemEntryPage.jsx",
-      "api_path": "MES/Toolbox2/public/api/paintChem/",
+      "ui_path": "MES/Toolbox/src/modules/PaintChem/pages/PaintChemEntryPage.jsx",
+      "api_path": "MES/Toolbox/public/api/paintChem/",
       "tables": [
         "PAINT_CHEM_SHEET_HEADER",
         "PAINT_CHEM_LOG"
@@ -566,8 +566,8 @@
       "domain": "DOM_CORE_ADMIN",
       "status": "PORTED_SELF_CONTAINED",
       "title": "User & Role Permission Management (#/admin/users & AccountSettingsModal)",
-      "ui_path": "MES/Toolbox2/src/modules/Admin/pages/UserManagement.jsx",
-      "api_path": "MES/Toolbox2/public/api/userManage.php",
+      "ui_path": "MES/Toolbox/src/modules/Admin/pages/UserManagement.jsx",
+      "api_path": "MES/Toolbox/public/api/userManage.php",
       "tables": [
         "USERS",
         "SYS_ROLES",
@@ -662,7 +662,7 @@
       "status": "ACTIVE_LEGACY_PHP",
       "title": "Manpower Operations & 4D Employee Grading (IPH / 5S / Attendance / Learning)",
       "ui_path": "MES/page/manpower/employeeGrading.php",
-      "api_path": "MES/Toolbox2/public/api/manpower/api_my_performance.php",
+      "api_path": "MES/Toolbox/public/api/manpower/api_my_performance.php",
       "tables": [
         "MANPOWER_EMPLOYEES",
         "MANPOWER_DAILY_LOGS",
@@ -814,7 +814,7 @@
     // Helper: Status / Type Styling
     function getStatusBadge(node) {
       if (node.status === 'PORTED_SELF_CONTAINED') {
-        return { label: 'PORTED (Toolbox2 SPA)', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' };
+        return { label: 'PORTED (Toolbox SPA)', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35' };
       }
       if (node.status === 'ACTIVE_LEGACY_PHP') {
         return { label: 'ACTIVE (Legacy PHP)', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/35' };

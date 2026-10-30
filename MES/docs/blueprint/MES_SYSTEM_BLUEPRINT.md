@@ -39,7 +39,7 @@ flowchart TB
     end
 
     subgraph L5["💻 ชั้นที่ 5: ระบบแอปพลิเคชันผู้ใช้งาน 3 เสาหลัก (3 Core Application Pillars)"]
-        APP_TB2["🚀 1. TOOLBOX OS (MES/Toolbox2)\nReact 19 SPA (100% Self-Contained)\n[Home, Shuttle Bus, Team Planner, PaintChem, User Admin]"]
+        APP_TB2["🚀 1. TOOLBOX OS (MES/Toolbox)\nReact 19 SPA (100% Self-Contained)\n[Home, Shuttle Bus, Team Planner, PaintChem, User Admin]"]
         APP_PAGE["🏭 2. MES Core Modules (MES/page/*)\nPHP + Bootstrap 5 Industrial Modules\n[Production, Store, OEE, QMS, PE, Utility, Daily P&L, Sales]"]
         APP_LH["🎓 3. MES Learning Hub (MES/mes-learning-hub)\nInteractive Engineering Academy\n[AI Vision, Robotics, Welding, Machining, Electrical]"]
     end
@@ -70,25 +70,25 @@ flowchart TB
 │   ├── page/                           -> /MES/MES/page/                             -> โมดูลปฏิบัติการทั้ง 26 โมดูล
 │   ├── uploads/                        -> /MES/MES/uploads/                          -> โฟลเดอร์เก็บไฟล์แนบและรูปภาพทั้งหมด (แยกจากโค้ด)
 │   │
-│   ├── Toolbox2/ (dist/)               -> /Toolbox2/                                 -> .../sandbox-b9/Toolbox2/
-│   │   ├── index.html & assets/        -> /Toolbox2/index.html                       -> หน้าบ้าน React SPA (TOOLBOX OS)
-│   │   └── public/api/*                -> /Toolbox2/api/*                            -> หลังบ้าน PHP API ของ Toolbox2 (Self-Contained 100%)
+│   ├── Toolbox/ (dist/)               -> /Toolbox/                                 -> .../sandbox-b9/Toolbox/
+│   │   ├── index.html & assets/        -> /Toolbox/index.html                       -> หน้าบ้าน React SPA (TOOLBOX OS)
+│   │   └── public/api/*                -> /Toolbox/api/*                            -> หลังบ้าน PHP API ของ Toolbox (Self-Contained 100%)
 │   │
 │   ├── mes-learning-hub/ (dist/)       -> /LearningHub/                              -> .../sandbox-b9/LearningHub/
-│   └── mes-team-planner/ (dist/)       -> /Toolbox/planner/                          -> .../sandbox-b9/Toolbox/planner/ (คู่ขนานกับ #/planner ใน Toolbox2)
+│   └── mes-team-planner/ (dist/)       -> /Toolbox/planner/                          -> .../sandbox-b9/Toolbox/planner/ (คู่ขนานกับ #/planner ใน Toolbox)
 ```
 > **⚠️ กฎเหล็กด้านความปลอดภัยของไฟล์รูปภาพและไฟล์อัปโหลด:**  
-> ห้ามเก็บรูปภาพที่ผู้ใช้อัปโหลดไว้ปะปนในโฟลเดอร์โค้ด (`MES/page/<module>/img/`) เด็ดขาด เพราะเวลา Deploy หรือสำรองข้อมูลอาจเผลอลบทับ ให้เก็บไว้ใน `/MES/MES/uploads/<module_name>/` หรือ `/Toolbox2/uploads/` เสมอ
+> ห้ามเก็บรูปภาพที่ผู้ใช้อัปโหลดไว้ปะปนในโฟลเดอร์โค้ด (`MES/page/<module>/img/`) เด็ดขาด เพราะเวลา Deploy หรือสำรองข้อมูลอาจเผลอลบทับ ให้เก็บไว้ใน `/MES/MES/uploads/<module_name>/` หรือ `/Toolbox/uploads/` เสมอ
 
 ---
 
 ## 3. พิมพ์เขียวระบบความปลอดภัย การยืนยันตัวตน และการซิงค์ข้ามแท็บ (Security, SSO & Cross-Tab Sync)
 
-ระบบทั้งหมด (`MES/page`, `Toolbox2`, `LearningHub`, `TeamPlanner`) ใช้ **PHP Session (`$_SESSION['user']`) ร่วมกันบนโดเมนเดียวกัน** และสื่อสารข้ามแท็บแบบเรียลไทม์ผ่าน `BroadcastChannel('mes_auth_channel')`:
+ระบบทั้งหมด (`MES/page`, `Toolbox`, `LearningHub`, `TeamPlanner`) ใช้ **PHP Session (`$_SESSION['user']`) ร่วมกันบนโดเมนเดียวกัน** และสื่อสารข้ามแท็บแบบเรียลไทม์ผ่าน `BroadcastChannel('mes_auth_channel')`:
 
 ```mermaid
 sequenceDiagram
-    participant TabA as แท็บที่ 1 (เช่น Toolbox2 #/planner)
+    participant TabA as แท็บที่ 1 (เช่น Toolbox #/planner)
     participant TabB as แท็บที่ 2 (เช่น MES/page หรือ LearningHub)
     participant BC as BroadcastChannel ('mes_auth_channel')
     participant API as Backend Auth (login.php / check.php / logout.php)
@@ -128,7 +128,7 @@ sequenceDiagram
 | 3 | **Tag Printer (WIP/FG)** (พิมพ์ป้ายแท็กสินค้า) | `MES/page/production/label_printer.php` | `page/production/api/inventoryManage.php` | `LOT_SERIALS`, `ITEMS`, `MANUFACTURING_ROUTES` | พิมพ์ใบชี้บ่งชิ้นงาน (QR/Barcode Tag) สำหรับแปะพาเลท WIP และ FG |
 | 4 | **OEE Dashboard & Shopfloor** (วัดประสิทธิภาพเครื่องจักร) | `MES/page/OEE_Dashboard/` (`OEE_Dashboard.php`, `OEE_Shopfloor.php`) | `page/OEE_Dashboard/api/oeeDashboardApi.php`, `oeeShopfloorApi.php` | `STOP_CAUSES`, `STOCK_TRANSACTIONS`, `sp_CalculateOEE_Dashboard_PieChart`, `sp_CalculateOEE_Hourly_Trend` | คำนวณค่า Availability, Performance, Quality (OEE) รายชั่วโมง/รายวัน และบันทึกสาเหตุเครื่องจักรหยุด |
 | 5 | **Scan Barcode** (สแกนบาร์โค้ดรับ-จ่าย) | `MES/page/scanBarcode/scanBarcodeUI.php` | `page/scanBarcode/api/scanManage.php` | `BARCODE_SCAN_DATA`, `QR_SCAN_JOBS`, `ITEMS`, `LOCATIONS` | สแกนบาร์โค้ดตรวจสอบและบันทึกการเคลื่อนย้ายชิ้นงานหน้างาน |
-| 6 | **Paint Line Chemical Control** (บันทึกเคมีสี & SPC) | `MES/Toolbox2/src/modules/PaintChem/` (`#/paint-chem`) | `Toolbox2/public/api/paintChem/*.php` (10 ไฟล์) | `PAINT_CHEM_SHEET_HEADER`, `PAINT_CHEM_LOG` | **(พอร์ตเข้า Toolbox2 แล้ว 100%)** บันทึกค่าพารามิเตอร์บ่อเคมีสี 10 สถานี 6 ช่วงเวลา พร้อมกราฟ SPC วิเคราะห์แนวโน้มและพิมพ์ใบตรวจเช็ค PDF |
+| 6 | **Paint Line Chemical Control** (บันทึกเคมีสี & SPC) | `MES/Toolbox/src/modules/PaintChem/` (`#/paint-chem`) | `Toolbox/public/api/paintChem/*.php` (10 ไฟล์) | `PAINT_CHEM_SHEET_HEADER`, `PAINT_CHEM_LOG` | **(พอร์ตเข้า Toolbox แล้ว 100%)** บันทึกค่าพารามิเตอร์บ่อเคมีสี 10 สถานี 6 ช่วงเวลา พร้อมกราฟ SPC วิเคราะห์แนวโน้มและพิมพ์ใบตรวจเช็ค PDF |
 | 7 | **Daily Production Meeting** (ประชุมแผนผลิตประจำวัน) | `MES/page/planning/daily_meeting.php` | `page/planning/api/dailyMeetingApi.php` | `DAILY_MEETINGS` | บันทึกสรุปวาระการประชุมวางแผนการผลิตประจำวันและติดตามประเด็นค้างคา |
 
 ---
@@ -139,7 +139,7 @@ sequenceDiagram
 | 8 | **Store & Warehouse Management** (ระบบบริหารคลังสินค้าครบวงจร) | `MES/page/storeManagement/` (`storeDashboard.php`, `inventoryDashboard.php`, `warehouse_operations.php`, `rmReceiving.php`, `cycleCount.php`, `materialReq.php`) | `page/storeManagement/api/api_store.php` *(Single Source of Truth 72 Actions)* | `INVENTORY_ONHAND`, `STOCK_TRANSACTIONS`, `STOCK_TRANSFER_ORDERS`, `LOCATIONS`, `INVENTORY_CYCLE_COUNTS` | ศูนย์กลางคลังสินค้า: รับวัตถุดิบ (RM Receiving), เบิกจ่ายพัสดุ (Material Req), ตรวจนับสต็อกบนมือถือแบบ Visual Map (Blind Cycle Count), และอนุมัติยอดปรับปรุงสต็อก |
 | 9 | **Forklift Booking & Tracking** (จองและติดตามรถโฟร์คลิฟต์) | `MES/page/forklift/` (`forkliftUI.php`, `forkliftMapUI.php`, `forkliftDashboard.php`) | `page/forklift/api/forkliftManage.php`, `hardwareTracking.php`, `webTracking.php` | `FORKLIFTS`, `FORKLIFT_BOOKINGS` | ระบบจองคิวใช้งานรถโฟร์คลิฟต์ แสดงพิกัดสถานะรถบนแผนผังโรงงาน และติดตามการใช้งาน |
 | 10 | **Fleet Log (Transport & Logistics)** (บัญชีเที่ยวรถขนส่งสินค้า) | `MES/page/fleetLog/fleetLog.php` | `page/fleetLog/api/apiFleetLog.php` | `FLEET_LOGS` (ตารางบันทึกเที่ยวรถขนส่ง) | บันทึกเที่ยวรถขนส่งวัตถุดิบและสินค้าสำเร็จรูป คำนวณค่าขนส่งและติดตามสถานะรถบรรทุก |
-| 11 | **Employee Shuttle Bus** (ระบบจองรถรับ-ส่งพนักงาน) | `MES/Toolbox2/src/modules/Transport/` (`#/transport/*`) | `Toolbox2/public/api/transport/*.php` | ตารางระบบจองรถรับส่ง (`Transport_*`), `MANPOWER_EMPLOYEES` | **(พอร์ตเข้า Toolbox2 แล้ว 100%)** ระบบจองที่นั่งรถรับ-ส่งพนักงาน สแกนตั๋ว QR Code สำหรับคนขับ และระบบคำนวณค่าใช้จ่ายรถรับส่ง |
+| 11 | **Employee Shuttle Bus** (ระบบจองรถรับ-ส่งพนักงาน) | `MES/Toolbox/src/modules/Transport/` (`#/transport/*`) | `Toolbox/public/api/transport/*.php` | ตารางระบบจองรถรับส่ง (`Transport_*`), `MANPOWER_EMPLOYEES` | **(พอร์ตเข้า Toolbox แล้ว 100%)** ระบบจองที่นั่งรถรับ-ส่งพนักงาน สแกนตั๋ว QR Code สำหรับคนขับ และระบบคำนวณค่าใช้จ่ายรถรับส่ง |
 | 12 | **Loading Report (C-TPAT)** (รายงานตรวจสอบตู้สินค้า & พอร์ทัลลูกค้า) | `MES/page/loadingReport/` (`loading_report.php`, `customerPortal.php`) | `page/loadingReport/api/manage_loading.php`, `customerViewAPI.php` | `LOADING_REPORTS`, `LOADING_PHOTOS`, `LOADING_INSPECTION_RESULTS`, `SALES_ORDERS` | ถ่ายรูปและตรวจเช็คสภาพตู้คอนเทนเนอร์ตามมาตรฐานความปลอดภัย C-TPAT พร้อมหน้า Public Tracking ให้ลูกค้าตรวจสอบสถานะได้ |
 | 13 | **Sales & Shipping Tracking** (ติดตาม PO และแผนโหลดสินค้า) | `MES/page/sales/` (`salesDashboard.php`, `shipping_loading.php`) | `page/sales/api/manage_sales_orders.php`, `manage_shipping.php`, `forecast_rm.php` | `SALES_ORDERS`, `ITEMS`, `PRODUCT_BOM` | ติดตามสถานะคำสั่งซื้อของลูกค้า (PO), วางแผนการจัดส่งสินค้า (Shipping Loading), และพยากรณ์ความต้องการใช้วัตถุดิบ (RM Forecast) |
 
@@ -161,8 +161,8 @@ sequenceDiagram
 ### 👥 หมวด D: ระบบทรัพยากรบุคคล การประเมินเกรด 4 มิติ และสมุดบันทึกกะ (HR, 4D Grading & Academy)
 | ลำดับ | ชื่อโมดูล | พาร์ทโค้ดหลัก | ไฟล์ API หลังบ้าน | ตารางฐานข้อมูลหลัก | หน้าที่และความเชื่อมโยง |
 | :---: | :--- | :--- | :--- | :--- | :--- |
-| 21 | **Manpower & 4D Employee Grading** (จัดการกำลังคนและประเมินเกรด 4 มิติ) | `MES/page/manpower/` (`manpowerUI.php`, `employeeGrading.php`, `gradingTrend.php`, `skillMatrix.php`, `holidayUI.php`) | `page/manpower/api/*.php` (9 ไฟล์) + `Toolbox2/public/api/manpower/api_my_performance.php` | `MANPOWER_EMPLOYEES`, `MANPOWER_DAILY_LOGS`, `MANPOWER_SHIFTS`, `EMPLOYEE_GRADES`, `EMP_SKILLS`, `MANPOWER_CALENDAR` | จัดการอัตรากำลังคนรายวัน คำนวณค่าแรง (Normal + OT) และประเมินเกรดพนักงาน 4 มิติ (**1. ค่าผลงาน IPH**, **2. 5ส**, **3. การมาทำงาน**, **4. การเรียนรู้ Learning Hub**) |
-| 22 | **Daily Log & Mood Insight** (สมุดบันทึกกะและวิเคราะห์ความรู้สึกพนักงาน) | `MES/Toolbox2/src/modules/Home/` (`#/`) & `MES/page/dailyLog/moodReport.php` | `Toolbox2/public/api/dailyLog/dailyLogManage.php` & `page/dailyLog/api/moodReportAPI.php` | `OPERATOR_DAILY_LOGS` | พนักงานบันทึกความรู้สึก (Mood 1-5) และปัญหาหน้างาน 3 ช่วงเวลา (เริ่มงาน/พักเที่ยง/เลิกงาน) พร้อมระบบให้หัวหน้างานตอบกลับและสรุป Morning Brief |
+| 21 | **Manpower & 4D Employee Grading** (จัดการกำลังคนและประเมินเกรด 4 มิติ) | `MES/page/manpower/` (`manpowerUI.php`, `employeeGrading.php`, `gradingTrend.php`, `skillMatrix.php`, `holidayUI.php`) | `page/manpower/api/*.php` (9 ไฟล์) + `Toolbox/public/api/manpower/api_my_performance.php` | `MANPOWER_EMPLOYEES`, `MANPOWER_DAILY_LOGS`, `MANPOWER_SHIFTS`, `EMPLOYEE_GRADES`, `EMP_SKILLS`, `MANPOWER_CALENDAR` | จัดการอัตรากำลังคนรายวัน คำนวณค่าแรง (Normal + OT) และประเมินเกรดพนักงาน 4 มิติ (**1. ค่าผลงาน IPH**, **2. 5ส**, **3. การมาทำงาน**, **4. การเรียนรู้ Learning Hub**) |
+| 22 | **Daily Log & Mood Insight** (สมุดบันทึกกะและวิเคราะห์ความรู้สึกพนักงาน) | `MES/Toolbox/src/modules/Home/` (`#/`) & `MES/page/dailyLog/moodReport.php` | `Toolbox/public/api/dailyLog/dailyLogManage.php` & `page/dailyLog/api/moodReportAPI.php` | `OPERATOR_DAILY_LOGS` | พนักงานบันทึกความรู้สึก (Mood 1-5) และปัญหาหน้างาน 3 ช่วงเวลา (เริ่มงาน/พักเที่ยง/เลิกงาน) พร้อมระบบให้หัวหน้างานตอบกลับและสรุป Morning Brief |
 | 23 | **MES Learning Hub (Engineering Academy)** (ศูนย์ฝึกอบรมและสอบวัดผลวิศวกรรม) | `MES/mes-learning-hub/` (`/LearningHub`) | เชื่อมต่อ API บันทึกผลสอบลง DB | `LEARNING_RECORDS`, `EMP_SKILLS` | หลักสูตร Interactive Masterclass (AI Machine Vision, Industrial Robotics, Welding, Machining, Electrical, Heat Exchanger) พร้อม Interactive Simulators และระบบสอบวัดผลที่ส่งคะแนนเข้าเกรดมิติที่ 4 อัตโนมัติ |
 
 ---
@@ -174,13 +174,13 @@ sequenceDiagram
 | 25 | **Daily P&L (Profit & Loss)** (งบกำไรขาดทุนรายวัน) | `MES/page/dailyPL/` (`pl_entry.php`, `pl_setting.php`) | `page/dailyPL/api/manage_pl_entry.php`, `manage_pl_master.php` | `PL_STRUCTURE`, `DAILY_PL_ENTRIES`, `MONTHLY_PL_TARGETS`, `sp_GetPLEntryData_WithTargets`, `sp_GetPLReport_Range` | บันทึกและคำนวณงบกำไรขาดทุนรายวันของโรงงาน เทียบกับเป้าหมายรายเดือน (Monthly Target) |
 | 26 | **Auto Invoice & Finance** (ระบบออกอินวอยซ์และใบแพ็คกิ้งลิสต์) | `MES/page/autoInvoice/` (`finance_dashboard.php`, `print_ci.php`, `print_pl.php`) | `page/autoInvoice/api/api_invoice.php` | `FINANCE_INVOICES`, `FINANCE_INVOICE_DETAILS`, `sp_Finance_ImportInvoice` | นำเข้าข้อมูลและพิมพ์เอกสาร Commercial Invoice (CI) และ Packing List (PL) มาตรฐานส่งออก |
 | 27 | **Document Center** (ศูนย์กลางคู่มือและเอกสารโรงงาน) | `MES/page/documentCenter/documentCenterUI.php` | `page/documentCenter/api/documentCenterAPI.php`, `view_document.php` | `DOCUMENTS`, `DOCUMENT_ACCESS_LOGS` | จัดเก็บคู่มือการทำงาน (WI/SOP) เอกสารคุณภาพ และบันทึกประวัติการเข้าอ่านเอกสารของพนักงาน |
-| 28 | **MES Team Planner** (กระดานแผนงาน ไทม์ไลน์ Gantt และปฏิทินทีม) | `MES/Toolbox2/src/modules/TeamPlanner/` (`#/planner/*`) & `MES/mes-team-planner/` | `Toolbox2/public/api/planner/*.php` (22 ไฟล์) | `TeamPlanner_Tasks`, `TeamPlanner_Projects`, `TeamPlanner_Spaces`, `TeamPlanner_Events`, `TeamPlanner_Activities` | **(พอร์ตเข้า Toolbox2 แล้ว 100%)** ระบบบริหารจัดการโปรเจ็ค ตาราง Gantt Timeline ไร้ช่องว่าง (Zero-Gap Protocol), แชททีม, คลังไฟล์, เชื่อมต่อ GitHub Commits และมี `agent_api.php` ให้ AI Agent บันทึกงานอัตโนมัติ |
+| 28 | **MES Team Planner** (กระดานแผนงาน ไทม์ไลน์ Gantt และปฏิทินทีม) | `MES/Toolbox/src/modules/TeamPlanner/` (`#/planner/*`) & `MES/mes-team-planner/` | `Toolbox/public/api/planner/*.php` (22 ไฟล์) | `TeamPlanner_Tasks`, `TeamPlanner_Projects`, `TeamPlanner_Spaces`, `TeamPlanner_Events`, `TeamPlanner_Activities` | **(พอร์ตเข้า Toolbox แล้ว 100%)** ระบบบริหารจัดการโปรเจ็ค ตาราง Gantt Timeline ไร้ช่องว่าง (Zero-Gap Protocol), แชททีม, คลังไฟล์, เชื่อมต่อ GitHub Commits และมี `agent_api.php` ให้ AI Agent บันทึกงานอัตโนมัติ |
 
 ---
 
 ### ⚙️ หมวด F: ระบบตั้งค่าข้อมูลหลักและผู้ดูแลระบบ (Core Master Data & System Admin)
 - **`systemSettings` (`MES/page/systemSettings/systemSettings.php`):** จัดการข้อมูลหลัก 5 ส่วน ได้แก่ **Item Master (`ITEMS`)**, **BOM Manager (`PRODUCT_BOM`)**, **Locations (`LOCATIONS`)**, **Line Schedules (`LINE_SCHEDULES`)**, และ **SAP Valuation (`sap_staging_inventory` / `sap_staging_costs`)**
-- **`userManage` & `profile` (`MES/Toolbox2/src/modules/Admin/` & `AccountSettingsModal.jsx`):** จัดการบัญชีผู้ใช้งาน สิทธิ์ RBAC/PBAC ซิงค์รายชื่อพนักงานจาก HR Manpower (`sp_SyncExistingUsersFromManpower`) และตรวจสอบประวัติ `SYSTEM_LOGS`
+- **`userManage` & `profile` (`MES/Toolbox/src/modules/Admin/` & `AccountSettingsModal.jsx`):** จัดการบัญชีผู้ใช้งาน สิทธิ์ RBAC/PBAC ซิงค์รายชื่อพนักงานจาก HR Manpower (`sp_SyncExistingUsersFromManpower`) และตรวจสอบประวัติ `SYSTEM_LOGS`
 
 ---
 
@@ -232,17 +232,17 @@ erDiagram
 1. ตรวจสอบว่าเซิร์ฟเวอร์ SQL Server ที่ IP `10.1.1.31` (ฐานข้อมูล `IIOT_TOOLBOX`) ยังออนไลน์อยู่หรือไม่
 2. ตรวจสอบไฟล์ตั้งค่าการเชื่อมต่อที่:
    - ระบบหลัก (`MES/page`): `MES/config/config.php` และ `MES/config/.env`
-   - ระบบใหม่ (`Toolbox2`): `MES/Toolbox2/public/config.php` และ `MES/Toolbox2/public/.env`
+   - ระบบใหม่ (`Toolbox`): `MES/Toolbox/public/config.php` และ `MES/Toolbox/public/.env`
 
 ### กรณีที่ 2: พนักงานล็อกอินเข้าได้แต่กดปุ่มไม่ได้ หรือขึ้น `Permission Denied (403)`
 1. เข้าไปที่หน้า **User Manager** (`/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php` หรือ `#/admin/users`)
 2. ตรวจสอบ `Role` ของพนักงาน และดูที่แท็บ **Roles & Permissions Matrix** ว่า Role นั้นได้รับสิทธิ์ (`perm_code`) หรือยัง
 3. หากต้องการให้สิทธิ์เฉพาะคน ให้กดปุ่ม **Edit User** แล้วติ๊กเพิ่มสิทธิ์รายบุคคล (`SYS_USER_PERMISSIONS`)
 
-### กรณีที่ 3: ต้องการแก้ไขโค้ดและอัปเดตระบบ `Toolbox2` ขึ้นเซิร์ฟเวอร์จริง
-1. เปิด Terminal ที่โฟลเดอร์ `MES/Toolbox2`
+### กรณีที่ 3: ต้องการแก้ไขโค้ดและอัปเดตระบบ `Toolbox` ขึ้นเซิร์ฟเวอร์จริง
+1. เปิด Terminal ที่โฟลเดอร์ `MES/Toolbox`
 2. รันคำสั่ง `npm run build` (Vite จะคอมไพล์ React และก๊อปปี้ไฟล์ PHP API ใน `public/api/*` ทั้งหมดไปไว้ในโฟลเดอร์ `dist/` อัตโนมัติ)
-3. อัปโหลดไฟล์ใน `MES/Toolbox2/dist/` ขึ้นไปยัง `/Toolbox2/` บน FTP Server (หรือรัน `node upload.cjs`)
+3. อัปโหลดไฟล์ใน `MES/Toolbox/dist/` ขึ้นไปยัง `/Toolbox/` บน FTP Server (หรือรัน `node upload.cjs`)
 
 ---
 
@@ -253,5 +253,5 @@ erDiagram
 
 **วิธีให้ AI Agent หรือทีมงานพัฒนาต่อเป็นหน้าเว็บ Visual Blueprint:**
 - ไฟล์ `blueprint_graph.json` เก็บข้อมูลทุกส่วนของโรงงานในรูปแบบ `nodes` (ฮาร์ดแวร์/ไฟฟ้า, ตาราง DB, API, โมดูลทั้ง 28 ตัว) และ `edges` (เส้นทางการไหลของข้อมูล)
-- สามารถนำเข้าไลบรารี **React Flow (`@xyflow/react`)** หรือ **Mermaid / D3.js** เพื่อสร้างโมดูล `#/blueprint` ใน `MES/Toolbox2` ที่ผู้บริหารสามารถคลิกที่ **"มิเตอร์ไฟฟ้า"** หรือ **"การผลิต"** แล้วเห็นเส้นวิ่งเชื่อมไปยังตารางฐานข้อมูลและหน้าจอรายงานที่เกี่ยวข้องได้แบบเรียลไทม์ทันที
+- สามารถนำเข้าไลบรารี **React Flow (`@xyflow/react`)** หรือ **Mermaid / D3.js** เพื่อสร้างโมดูล `#/blueprint` ใน `MES/Toolbox` ที่ผู้บริหารสามารถคลิกที่ **"มิเตอร์ไฟฟ้า"** หรือ **"การผลิต"** แล้วเห็นเส้นวิ่งเชื่อมไปยังตารางฐานข้อมูลและหน้าจอรายงานที่เกี่ยวข้องได้แบบเรียลไทม์ทันที
 

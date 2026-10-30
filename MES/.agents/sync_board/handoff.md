@@ -64,14 +64,15 @@
 - [ ] **[สำหรับตัวหลักที่ทำงานพรุ่งนี้เช้า]:**
   1. [x] อ่านไฟล์ `MES/.agents/WORKSTATION_SYNC_REQUEST.md` เพื่อนำ `MES/mcp_server/index.mjs` ออกจาก `.gitignore` (ปรับค่าลับเข้า `process.env` และทำ Relative Path แล้ว) และคัดลอก Global Skill (`mes_frontend_expert`) เข้ามาใน `MES/.agents/skills/` แล้ว Push ขึ้น Git (เสร็จสิ้น 2026-10-30)
   2. [x] ดึงไฟล์ใน `/MES/MES/page/AccessoriesInspection/` ทั้ง 7 ไฟล์จาก FTP ลงมาเทียบกับใน Git — ยืนยันว่าไม่มีโค้ดใหม่กว่าบน FTP และคงส่วนที่เก็บรูปใน `../../uploads/accessories_inspection/` เอาไว้ครบถ้วน (เสร็จสิ้น 2026-10-30)
-  3. [ ] ตรวจสอบและดำเนินการต่อตาม **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ใน `MES/Toolbox2/ARCHITECTURE.md` (เริ่มจาก Layer 1: Shared UI/API Utilities -> Layer 2: User Management 100% Parity -> Layer 3: System Settings -> Layer 4: Full Profile Page)
+  3. [x] เปลี่ยนชื่อโปรเจ็ค `MES/Toolbox2` เป็น `MES/Toolbox` ให้ตรงกับพาร์ทจริงใหม่บน FTP (`/Toolbox` -> `/iot-toolbox/sandbox-b9/Toolbox/#/`) ย้ายของเก่าไปสำรองที่ `/Toolbox_legacy` และตั้ง Smart Redirect จาก `/Toolbox2`, `/Toolbox/planner`, `/Toolbox/plannerAgent`, และ `/transport-system` เข้าสู่ `/Toolbox/#/...` ครบถ้วน (เสร็จสิ้น 2026-10-30)
+  4. [ ] ตรวจสอบและดำเนินการต่อตาม **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ใน `MES/Toolbox/ARCHITECTURE.md` (เริ่มจาก Layer 1: Shared UI/API Utilities -> Layer 2: User Management 100% Parity -> Layer 3: System Settings -> Layer 4: Full Profile Page)
 - [ ] **[สำหรับงานพิมพ์เขียวผู้บริหาร (Visual Blueprint Extension)]:**
-  - หากผู้บริหารต้องการหน้าจอ Interactive Visual Blueprint (คล้ายผังไฟฟ้า/เครื่องจักรที่คลิกดูสถานะสดได้) ให้ Agent อ่าน `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (หัวข้อที่ 8) และใช้ข้อมูลโหนด/เส้นเชื่อมจาก `MES/docs/blueprint/blueprint_graph.json` สร้างโมดูล `MES/Toolbox2/src/modules/SystemBlueprint/` ได้ทันที
+  - หากผู้บริหารต้องการหน้าจอ Interactive Visual Blueprint (คล้ายผังไฟฟ้า/เครื่องจักรที่คลิกดูสถานะสดได้) ให้ Agent อ่าน `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (หัวข้อที่ 8) และใช้ข้อมูลโหนด/เส้นเชื่อมจาก `MES/docs/blueprint/blueprint_graph.json` สร้างโมดูล `MES/Toolbox/src/modules/SystemBlueprint/` ได้ทันที
 
 ## Exact Files to Modify / Reference
 - `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (พิมพ์เขียวแม่บทของระบบ MES & คู่มือส่งมอบงานผู้บริหาร)
 - `MES/docs/blueprint/blueprint_graph.json` (Machine-Readable Node/Edge Graph Schema สำหรับสร้าง Visual Blueprint)
-- `MES/Toolbox2/ARCHITECTURE.md` (สถาปัตยกรรม 100% Self-Contained & แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น)
+- `MES/Toolbox/ARCHITECTURE.md` (สถาปัตยกรรม 100% Self-Contained & แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น)
 - `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และบันทึกการลบ/รวมศูนย์ API)
 - `MES/.agents/ftp_structure.md` (โครงสร้างพาร์ทบน FTP Server)
 - `MES/page/storeManagement/api/api_store.php` (Single Source of Truth API ของระบบคลังสินค้า)
