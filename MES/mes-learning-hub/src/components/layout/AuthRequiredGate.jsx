@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiLock, FiShield, FiLogIn, FiLayers, FiCheckCircle, FiEye } from 'react-icons/fi';
-import { getCurrentUser, fetchRealUserSession, getMesLoginUrl, saveCurrentUser } from '../../data/communityStore';
+import { getCurrentUser, fetchRealUserSession, getMesLoginUrl, isUserInstructorOrAdmin } from '../../data/communityStore';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function AuthRequiredGate({ children, featureName = 'ข้อมูลภายในและประวัติสมรรถนะบุคลากร' }) {
+export default function AuthRequiredGate({ children, featureName = 'ข้อมูลภายในและประวัติสมรรถนะบุคลากร', requireTrainerOrAdmin = false }) {
   const { isDark } = useTheme();
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [checking, setChecking] = useState(() => !getCurrentUser().isLoggedInReal);
-  const [isDemoMode, setIsDemoMode] = useState(() => {
-    return typeof window !== 'undefined' && (
-      window.location.search.includes('preview=1') ||
-      sessionStorage.getItem('mes_preview_mode') === '1'
-    );
-  });
 
   useEffect(() => {
     let mounted = true;
@@ -43,24 +37,15 @@ export default function AuthRequiredGate({ children, featureName = 'ข้อม
     };
   }, []);
 
-  const handleEnableDemoMode = () => {
-    sessionStorage.setItem('mes_preview_mode', '1');
-    const demoUser = {
-      id: '1096902163',
-      emp_id: '1096902163',
-      name: 'ณภัทร นุ่มทอง',
-      department: 'ฝ่ายผลิตและวิศวกรรม (Production & PE)',
-      role: 'Lead Enterprise Architect & Full Stack Developer',
-      isLoggedInReal: true,
-      can_view_grading: true,
-      exp: 450
-    };
-    saveCurrentUser(demoUser);
-    setCurrentUser(demoUser);
-    setIsDemoMode(true);
-  };
+  const isAuthenticated = Boolean(currentUser && currentUser.isLoggedInReal);
+  const isAuthorizedTrainer = Boolean(isAuthenticated && isUserInstructorOrAdmin(currentUser));
 
-  if (isDemoMode || (currentUser && currentUser.isLoggedInReal)) {
+  // If page requires trainer/admin role
+  if (requireTrainerOrAdmin) {
+    if (isAuthorizedTrainer) {
+      return children;
+    }
+  } else if (isAuthenticated) {
     return children;
   }
 
@@ -72,6 +57,59 @@ export default function AuthRequiredGate({ children, featureName = 'ข้อม
           <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             กำลังตรวจสอบสิทธิ์การเข้าใช้งานจากระบบหลัก MES...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // View when user is logged in as regular student, but route requires Trainer/Admin role
+  if (requireTrainerOrAdmin && isAuthenticated && !isAuthorizedTrainer) {
+    return (
+      <div className="min-h-[78vh] flex items-center justify-center px-4 py-12">
+        <div
+          className={`w-full max-w-lg mx-auto rounded-2xl border p-6 sm:p-8 shadow-xl transition-all ${
+            isDark
+              ? 'bg-slate-800/90 border-amber-500/40 text-slate-100 shadow-slate-950/50'
+              : 'bg-white border-amber-300 text-slate-800 shadow-slate-200/80'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-red-500/20 border border-amber-500/40 flex items-center justify-center">
+              <FiLock className={`w-6 h-6 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+            </div>
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                isDark
+                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              }`}
+            >
+              <FiShield className="w-3.5 h-3.5" />
+              <span>สงวนสิทธิ์เฉพาะวิทยากร & ผู้ดูแลระบบ</span>
+            </span>
+          </div>
+
+          <h2 className={`text-xl font-black mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            สิทธิ์การใช้งานไม่เพียงพอ
+          </h2>
+          <p className={`text-sm font-semibold mb-4 ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+            ส่วนงาน: {featureName}
+          </p>
+
+          <p className={`text-sm leading-relaxed mb-6 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            ท่านเข้าสู่ระบบในชื่อ <strong>{currentUser?.name}</strong> (ตำแหน่ง: {currentUser?.role || 'นักเรียน/พนักงานทั่วไป'}) 
+            ระบบได้จำกัดสิทธิ์การสร้าง แก้ไข และจัดการข้อมูลหลักสูตรไว้สำหรับคณะอาจารย์และวิทยากรผู้สอนเท่านั้น
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              to="/"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 shadow-lg shadow-fuchsia-600/20 transition-all"
+            >
+              <FiLayers className="w-4 h-4" />
+              <span>กลับสู่หน้าหลักสูตร</span>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -140,20 +178,6 @@ export default function AuthRequiredGate({ children, featureName = 'ข้อม
             <FiLogIn className="w-4 h-4" />
             <span>เข้าสู่ระบบ MES</span>
           </a>
-
-          <button
-            type="button"
-            onClick={handleEnableDemoMode}
-            className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold border transition-all ${
-              isDark
-                ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-300'
-                : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm'
-            }`}
-            title="เปิดพรีวิวสำหรับใช้ในการประชุมหรือนำเสนอโดยไม่ต้องเชื่อมต่อระบบล็อกอินหลัก"
-          >
-            <FiEye className="w-4 h-4 text-amber-400" />
-            <span>โหมดนำเสนอ (Demo Mode)</span>
-          </button>
 
           <Link
             to="/"

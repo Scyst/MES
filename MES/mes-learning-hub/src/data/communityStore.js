@@ -39,9 +39,53 @@ export const GUEST_USER = {
   exp: 0,
   isLoggedInReal: false,
   isAdmin: false,
+  isTrainer: false,
   can_view_grading: false,
   grading: null
 };
+
+/**
+ * ตรวจสอบว่าผู้ใช้งานมีสิทธิ์ระดับ ผู้สอน (Instructor/Trainer) หรือ ผู้ดูแลระบบ (Admin) หรือไม่
+ * สิทธิ์นี้อนุญาตให้:
+ * 1. เปิดดูคู่มือผู้สอน แผนการสอน 4 วัน สคริปต์ 102 สไลด์ และเฉลยข้อสอบ (Teaching Kit / Trainer Guide)
+ * 2. สร้าง แก้ไข และลบเนื้อหาหลักสูตร (Course Builder)
+ */
+export function isUserInstructorOrAdmin(user) {
+  if (!user || !user.isLoggedInReal) return false;
+
+  // 1. ตรวจสอบค่า Boolean ชัดเจน
+  if (user.isAdmin === true || user.is_admin === true) return true;
+  if (user.isTrainer === true || user.is_trainer === true) return true;
+
+  // 2. ตรวจสอบ System Role (sys_role)
+  const sysRoleLower = String(user.sys_role || '').toLowerCase();
+  const privilegedSysRoles = ['creator', 'admin', 'supervisor', 'manager', 'trainer', 'instructor'];
+  if (privilegedSysRoles.includes(sysRoleLower)) {
+    return true;
+  }
+
+  // 3. ตรวจสอบตำแหน่งหรือชื่อ (รองรับทั้งภาษาไทยและอังกฤษ)
+  const roleLower = String(user.role || '').toLowerCase();
+  const nameLower = String(user.name || '').toLowerCase();
+  const privilegedKeywords = [
+    'admin',
+    'creator',
+    'trainer',
+    'instructor',
+    'teacher',
+    'professor',
+    'architect',
+    'manager',
+    'วิทยากร',
+    'ผู้สอน',
+    'อาจารย์',
+    'ผู้ดูแลระบบ',
+    'ผู้จัดการ',
+    'หัวหน้า'
+  ];
+
+  return privilegedKeywords.some(kw => roleLower.includes(kw) || nameLower.includes(kw));
+}
 
 const DEFAULT_USER = GUEST_USER;
 
@@ -263,7 +307,7 @@ function buildSyncedUserFromApi(u, grading = null) {
     u.can_view_grading ?? ['creator', 'admin', 'manager'].includes(sysRoleLower)
   );
 
-  return {
+  const candidateUser = {
     id: realUserId,
     emp_id: u.emp_id || u.username || 'EMP-MES',
     username: u.username || u.emp_id || '',
@@ -276,10 +320,13 @@ function buildSyncedUserFromApi(u, grading = null) {
     avatar: u.profile_picture || getUserAvatarSvg(u.name || u.fullname || u.username || 'MES'),
     exp: exp,
     isLoggedInReal: true,
-    isAdmin: Boolean(u.is_admin ?? true),
+    isAdmin: Boolean(u.is_admin === true || ['creator', 'admin'].includes(sysRoleLower)),
     can_view_grading: canViewGrading,
     grading: canViewGrading ? grading : null
   };
+
+  candidateUser.isTrainer = isUserInstructorOrAdmin(candidateUser);
+  return candidateUser;
 }
 
 function syncBackendCoursesToLocal(synchedUser, backendCourses) {

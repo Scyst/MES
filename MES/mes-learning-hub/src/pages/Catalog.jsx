@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { getAllMergedCourses, getCurrentUser } from '../data/communityStore';
+import { getAllMergedCourses, getCurrentUser, isUserInstructorOrAdmin } from '../data/communityStore';
 import { getUserCourseStatus } from '../data/trainingAuditStore';
 import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { CURATED_TRACKS } from '../data/courses';
@@ -66,6 +66,7 @@ export default function Catalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('featured');
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const canManageCourses = isUserInstructorOrAdmin(currentUser);
 
   useEffect(() => {
     const handleUserUpdated = (e) => {
@@ -358,7 +359,7 @@ export default function Catalog() {
                 <span>{course.modules?.length || 0} บทเรียน</span>
               </span>
               <div className="flex items-center gap-2">
-                {currentUser?.isLoggedInReal && (
+                {canManageCourses && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -429,7 +430,7 @@ export default function Catalog() {
             <span>เนื้อหา <strong className="text-cyan-500 font-black">{totalModulesCount}</strong> บทเรียน</span>
           </div>
 
-          {currentUser?.isLoggedInReal && (
+          {canManageCourses && (
             <button
               type="button"
               onClick={() => navigate('/admin/course-builder')}

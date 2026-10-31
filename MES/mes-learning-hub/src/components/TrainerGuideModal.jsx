@@ -19,6 +19,8 @@ import {
 } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext';
 import EnterpriseTeachingKitHub from './EnterpriseTeachingKitHub';
+import { getCurrentUser, isUserInstructorOrAdmin, getMesLoginUrl } from '../data/communityStore';
+import { FiLock } from 'react-icons/fi';
 
 export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machine-vision' }) {
   const { isDark } = useTheme();
@@ -30,6 +32,53 @@ export default function TrainerGuideModal({ isOpen, onClose, courseId = 'c-machi
   }, [courseId]);
 
   if (!isOpen) return null;
+
+  const currentUser = getCurrentUser();
+  const isAuthorized = isUserInstructorOrAdmin(currentUser);
+
+  if (!isAuthorized) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+        <div className={`relative w-full max-w-md border rounded-3xl p-6 sm:p-8 shadow-2xl transition-all ${
+          isDark ? 'bg-slate-900 border-amber-500/40 text-slate-100' : 'bg-white border-amber-300 text-slate-800'
+        }`}>
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-5 mx-auto">
+            <FiLock className="w-7 h-7 text-amber-400" />
+          </div>
+          <h3 className="text-lg font-black text-center mb-2">
+            สงวนสิทธิ์เฉพาะวิทยากรและผู้สอน
+          </h3>
+          <p className="text-xs text-center text-slate-400 mb-6 leading-relaxed">
+            ชุดคู่มือผู้สอน บทพูดประกอบสไลด์ 102 สไลด์ แผนการสอน 4 วัน และเฉลยข้อสอบ/เกณฑ์การประเมิน 
+            สงวนไว้สำหรับคณะอาจารย์และวิทยากรผู้สอนเท่านั้น นักเรียนและบุคคลทั่วไปไม่สามารถเข้าถึงได้
+          </p>
+          <div className="flex flex-col gap-2.5">
+            {!currentUser?.isLoggedInReal ? (
+              <a
+                href={getMesLoginUrl()}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20"
+              >
+                <span>เข้าสู่ระบบด้วยบัญชีวิทยากร MES</span>
+              </a>
+            ) : (
+              <p className="text-[11px] text-center text-amber-400/90 font-medium bg-amber-500/10 py-2 rounded-lg border border-amber-500/20">
+                บัญชีปัจจุบัน: {currentUser.name} ({currentUser.role || 'สิทธิ์ผู้เรียน'})
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className={`w-full py-2.5 px-4 rounded-xl border text-xs font-semibold transition-colors ${
+                isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300' : 'border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              ปิดหน้าต่าง
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isVision = selectedCourse === 'c-machine-vision';
 

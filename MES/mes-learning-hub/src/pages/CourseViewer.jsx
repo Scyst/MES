@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCourseById, addExp, getUserGrading, getCurrentUser } from '../data/communityStore';
+import { getCourseById, addExp, getUserGrading, getCurrentUser, isUserInstructorOrAdmin } from '../data/communityStore';
 import { 
   getUserModuleProgress, 
   markModuleCompleted, 
@@ -69,6 +69,7 @@ export default function CourseViewer() {
   const [latestExamScore, setLatestExamScore] = useState(null);
   const [userGrading, setUserGrading] = useState(() => getUserGrading());
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const isTrainerOrAdmin = isUserInstructorOrAdmin(currentUser);
   const [isMobileSyllabusOpen, setIsMobileSyllabusOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const contentTopRef = useRef(null);
@@ -1028,28 +1029,32 @@ export default function CourseViewer() {
               >
                 <FiZap className="w-4 h-4 text-cyan-400 dark:text-cyan-300" />
               </button>
-              <button
-                onClick={() => setIsTrainerGuideOpen(true)}
-                className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
-                  isDark
-                    ? 'bg-purple-950/70 hover:bg-purple-900/90 text-purple-200 border-purple-500/40 hover:border-purple-400'
-                    : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300'
-                }`}
-                title="คู่มือวิทยากรและแผนการสอน 3 วัน"
-              >
-                <FiBookOpen className="w-4 h-4 text-purple-400 dark:text-purple-300" />
-              </button>
-              <button
-                onClick={() => navigate(`/admin/course-builder?courseId=${course.id}`)}
-                className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
-                  isDark
-                    ? 'bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border-slate-700/80'
-                    : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
-                }`}
-                title="แก้ไขหลักสูตรนี้"
-              >
-                <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
-              </button>
+              {isTrainerOrAdmin && (
+                <button
+                  onClick={() => setIsTrainerGuideOpen(true)}
+                  className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
+                    isDark
+                      ? 'bg-purple-950/70 hover:bg-purple-900/90 text-purple-200 border-purple-500/40 hover:border-purple-400'
+                      : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300'
+                  }`}
+                  title="คู่มือวิทยากรและแผนการสอน 4 วัน (Teaching Kit)"
+                >
+                  <FiBookOpen className="w-4 h-4 text-purple-400 dark:text-purple-300" />
+                </button>
+              )}
+              {isTrainerOrAdmin && (
+                <button
+                  onClick={() => navigate(`/admin/course-builder?courseId=${course.id}`)}
+                  className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border-slate-700/80'
+                      : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
+                  }`}
+                  title="แก้ไขหลักสูตรนี้ (Course Studio)"
+                >
+                  <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
+                </button>
+              )}
               <button
                 onClick={() => setIsDesktopSidebarOpen(false)}
                 className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
@@ -1302,17 +1307,19 @@ export default function CourseViewer() {
                   <FiZap className="w-3.5 h-3.5" />
                   <span>คลังคำย่อ/สูตร</span>
                 </button>
-                <button
-                  onClick={() => {
-                    setIsMobileSyllabusOpen(false);
-                    setIsTrainerGuideOpen(true);
-                  }}
-                  className={`font-bold underline flex items-center gap-1 ${
-                    isDark ? 'text-purple-300 hover:text-purple-200' : 'text-purple-700 hover:text-purple-900'
-                  }`}
-                >
-                  <span>📘 แผน 3 วัน</span>
-                </button>
+                {isTrainerOrAdmin && (
+                  <button
+                    onClick={() => {
+                      setIsMobileSyllabusOpen(false);
+                      setIsTrainerGuideOpen(true);
+                    }}
+                    className={`font-bold underline flex items-center gap-1 ${
+                      isDark ? 'text-purple-300 hover:text-purple-200' : 'text-purple-700 hover:text-purple-900'
+                    }`}
+                  >
+                    <span>📘 แผน 4 วัน</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1498,7 +1505,7 @@ export default function CourseViewer() {
               </span>
             </button>
 
-            {(course?.id === 'c-enterprise-app' || course?.id === 'c-machine-vision') && (
+            {isTrainerOrAdmin && (course?.id === 'c-enterprise-app' || course?.id === 'c-machine-vision') && (
               <button
                 onClick={() => setIsTrainerGuideOpen(true)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-2 shadow-md group cursor-pointer ${
@@ -1901,12 +1908,14 @@ export default function CourseViewer() {
         }}
       />
 
-      {/* 3-Day Trainer Delivery Guide Modal */}
-      <TrainerGuideModal
-        isOpen={isTrainerGuideOpen}
-        onClose={() => setIsTrainerGuideOpen(false)}
-        courseId={course?.id}
-      />
+      {/* 4-Day Trainer Delivery Guide Modal */}
+      {isTrainerOrAdmin && (
+        <TrainerGuideModal
+          isOpen={isTrainerGuideOpen}
+          onClose={() => setIsTrainerGuideOpen(false)}
+          courseId={course?.id}
+        />
+      )}
 
       {/* Engineering Glossary & Formulas Reference Modal */}
       <IndustrialGlossaryModal

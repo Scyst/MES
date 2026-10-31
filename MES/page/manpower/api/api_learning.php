@@ -299,6 +299,11 @@ try {
         $department = $empData['department_api'] ?? $line;
         $profilePic = $dbUser['profile_picture'] ?? $sessionUser['profile_picture'] ?? null;
         $isAdmin = in_array(strtolower($sysRole), ['creator', 'admin', 'supervisor'], true);
+        $isTrainer = $isAdmin
+            || in_array(strtolower($sysRole), ['trainer', 'instructor', 'teacher'], true)
+            || mb_strpos(mb_strtolower($position, 'UTF-8'), 'วิทยากร', 0, 'UTF-8') !== false
+            || mb_strpos(mb_strtolower($position, 'UTF-8'), 'อาจารย์', 0, 'UTF-8') !== false
+            || mb_strpos(mb_strtolower($position, 'UTF-8'), 'ผู้สอน', 0, 'UTF-8') !== false;
 
         // ดึงผลการประเมินเกรด 4 มิติล่าสุดจาก EMPLOYEE_GRADES
         $stmtGrade = $pdo->prepare("
@@ -370,6 +375,7 @@ try {
                     'profile_picture'  => $profilePic,
                     'is_logged_in_real'=> true,
                     'is_admin'         => $isAdmin,
+                    'is_trainer'       => $isTrainer,
                     'can_view_grading' => $canViewGrading,
                     'skill_count'      => $effectiveSkillCount,
                     'passed_courses'   => $passedCoursesCount,

@@ -82,7 +82,10 @@ function AppLayout() {
           <Route
             path="/admin/course-builder"
             element={
-              <AuthRequiredGate featureName="ระบบจัดการและสร้างหลักสูตรมาตรฐานโรงงาน (Admin Course Studio)">
+              <AuthRequiredGate 
+                featureName="ระบบจัดการและสร้างหลักสูตรมาตรฐานโรงงาน (Admin Course Studio)"
+                requireTrainerOrAdmin={true}
+              >
                 <CourseBuilder />
               </AuthRequiredGate>
             }

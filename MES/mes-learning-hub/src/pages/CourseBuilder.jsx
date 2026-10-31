@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { saveCustomCourse, getCurrentUser, calculateRank, addExp, fetchRealUserSession, getCourseById } from '../data/communityStore';
+import { saveCustomCourse, getCurrentUser, calculateRank, addExp, fetchRealUserSession, getCourseById, isUserInstructorOrAdmin } from '../data/communityStore';
+import { FiLock } from 'react-icons/fi';
 import { compressImage } from '../data/imageCompressor';
 import { CATEGORY_OFFLINE_IMAGES, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { 
@@ -401,6 +402,32 @@ export default function CourseBuilder() {
       setIsSubmitting(false);
     }
   };
+
+  const isAuthorized = isUserInstructorOrAdmin(currentUser);
+
+  if (!isAuthorized) {
+    return (
+      <div className="learning-container max-w-2xl py-12">
+        <div className="bg-slate-800/95 border border-amber-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
+            <FiLock className="w-7 h-7 text-amber-400" />
+          </div>
+          <h2 className="text-xl font-black text-white">สงวนสิทธิ์เฉพาะวิทยากรและผู้ดูแลระบบ</h2>
+          <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
+            ระบบสร้างและแก้ไขหลักสูตรมาตรฐานโรงงาน (Course Studio) สงวนไว้สำหรับคณะอาจารย์ วิทยากร หรือ Admin เท่านั้น บัญชีของท่าน ({currentUser?.name || 'ผู้เรียน'}) ไม่มีสิทธิ์ในการแก้ไขหรือเปลี่ยนแปลงเนื้อหาหลักสูตร
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-fuchsia-600/20"
+            >
+              กลับสู่หน้ารายการหลักสูตร
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="learning-container max-w-5xl">
