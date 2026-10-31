@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import {
   FiCheckSquare,
   FiBookOpen,
@@ -691,6 +692,7 @@ export function TeachingKitVisualLabs() {
 // MAIN TEACHING KIT HUB COMPONENT (All 6 Tabs)
 // ============================================================================
 export default function EnterpriseTeachingKitHub({ initialTab = 'prep' }) {
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Checklist state persisted in localStorage
@@ -785,23 +787,46 @@ export default function EnterpriseTeachingKitHub({ initialTab = 'prep' }) {
 
   return (
     <div className="space-y-6 text-slate-200">
-      {/* Top Banner matching teaching-kit/index.html */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-950/80 via-slate-900 to-indigo-950/80 border border-rose-500/30 shadow-xl">
-        <div className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-1">
-          ชุดสอนวิชา App · SNC / 99 Industrial Solutions (Complete Teaching Kit)
+      {/* Top Banner matching teaching-kit/index.html with High-Contrast Adaptive Theme */}
+      <div className={`teaching-kit-banner p-5 rounded-2xl border shadow-xl transition-all ${
+        isDark
+          ? 'teaching-kit-banner-dark bg-gradient-to-r from-rose-950/90 via-slate-900 to-indigo-950/90 border-rose-500/40 text-white'
+          : 'teaching-kit-banner-light bg-gradient-to-r from-rose-50 via-purple-50/70 to-indigo-50 border-rose-300/80 text-slate-900 shadow-md'
+      }`}>
+        <div className={`text-xs font-extrabold uppercase tracking-wider mb-1.5 flex items-center gap-2 ${
+          isDark ? 'text-rose-300' : 'text-rose-700'
+        }`}>
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          <span>ชุดสอนวิชา APP · SNC / 99 INDUSTRIAL SOLUTIONS (COMPLETE TEACHING KIT)</span>
         </div>
-        <h2 className="text-xl md:text-2xl font-black text-white mb-2">
+        <h2 className={`banner-title text-xl md:text-2xl font-black mb-2.5 tracking-tight ${
+          isDark ? 'text-white' : 'text-slate-900'
+        }`}>
           การออกแบบ พัฒนา และบูรณาการแอปพลิเคชันระดับองค์กร (Enterprise Application)
         </h2>
-        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-300">
-          <span>หลักสูตร <strong className="text-white">4 วัน</strong> · จันทร์–พฤหัส <strong className="text-white">09:00–16:00</strong></span>
-          <span>ทฤษฎี <strong className="text-white">12</strong> · ปฏิบัติ <strong className="text-white">6</strong> · สอบ <strong className="text-white">6</strong> ชั่วโมง (รวม 24 ชม.)</span>
-          <span>สไลด์จริง <strong className="text-amber-300">102 หน้า</strong> · โค้ดตัวอย่าง <strong className="text-cyan-300">16 ไฟล์</strong> · Workshop <strong className="text-emerald-300">4 ข้อ</strong></span>
+        <div className={`flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium ${
+          isDark ? 'text-slate-200' : 'text-slate-700'
+        }`}>
+          <span>หลักสูตร <strong className={isDark ? 'text-white font-extrabold' : 'text-slate-950 font-black'}>4 วัน</strong> · จันทร์–พฤหัส <strong className={isDark ? 'text-white font-extrabold' : 'text-slate-950 font-black'}>09:00–16:00</strong></span>
+          <span>ทฤษฎี <strong className={isDark ? 'text-white font-extrabold' : 'text-slate-950 font-black'}>12</strong> · ปฏิบัติ <strong className={isDark ? 'text-white font-extrabold' : 'text-slate-950 font-black'}>6</strong> · สอบ <strong className={isDark ? 'text-white font-extrabold' : 'text-slate-950 font-black'}>6</strong> ชั่วโมง (รวม 24 ชม.)</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold border shadow-sm ${
+              isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-100 text-amber-900 border-amber-300'
+            }`}>สไลด์จริง 102 หน้า</span>
+            <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold border shadow-sm ${
+              isDark ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-cyan-100 text-cyan-900 border-cyan-300'
+            }`}>โค้ดตัวอย่าง 16 ไฟล์</span>
+            <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold border shadow-sm ${
+              isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+            }`}>Workshop 4 ข้อ</span>
+          </div>
         </div>
       </div>
 
       {/* Sticky Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 p-2 rounded-2xl bg-slate-900/95 border border-slate-800 sticky top-2 z-20 backdrop-blur-md shadow-lg">
+      <div className={`flex flex-wrap gap-2 p-2 rounded-2xl border sticky top-2 z-20 backdrop-blur-md shadow-lg transition-all ${
+        isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200 shadow-slate-200/50'
+      }`}>
         {TABS.map(t => (
           <button
             key={t.id}
@@ -810,7 +835,9 @@ export default function EnterpriseTeachingKitHub({ initialTab = 'prep' }) {
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === t.id
                 ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+                : isDark
+                  ? 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             {t.label}

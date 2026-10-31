@@ -1116,6 +1116,7 @@ body.theme-light {
 .theme-light [class*="bg-gradient-to-r"][class*="from-purple-950"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-fuchsia-950"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-emerald-950"],
+.theme-light [class*="bg-gradient-to-r"][class*="from-rose-950"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-teal-950"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-slate-800"],
 .theme-light [class*="bg-gradient-to-r"][class*="from-slate-900"],
@@ -1215,6 +1216,37 @@ body.theme-light {
 .theme-light td.text-white,
 .theme-light th.text-white {
   color: #0f172a !important;
+}
+
+/* Teaching Kit Banner High-Contrast Guard (Eliminates Dark-on-Dark or Washed Out Text) */
+.teaching-kit-banner-dark,
+.theme-light .teaching-kit-banner-dark {
+  background-image: linear-gradient(to right, rgba(76, 5, 25, 0.95), #0f172a, rgba(30, 27, 75, 0.95)) !important;
+  border-color: rgba(244, 63, 94, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.teaching-kit-banner-dark h2,
+.teaching-kit-banner-dark .banner-title,
+.theme-light .teaching-kit-banner-dark h2,
+.theme-light .teaching-kit-banner-dark .banner-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.teaching-kit-banner-light,
+.theme-light .teaching-kit-banner-light {
+  background-image: linear-gradient(to right, #fff1f2, #faf5ff, #eef2ff) !important;
+  border-color: #fecdd3 !important;
+  color: #0f172a !important;
+}
+
+.teaching-kit-banner-light h2,
+.teaching-kit-banner-light .banner-title,
+.theme-light .teaching-kit-banner-light h2,
+.theme-light .teaching-kit-banner-light .banner-title {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
 }
 
 /* Tables in Light Mode */
