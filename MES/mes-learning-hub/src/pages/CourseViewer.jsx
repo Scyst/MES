@@ -39,6 +39,58 @@ import CertificateModal from '../components/CertificateModal';
 import TrainerGuideModal from '../components/TrainerGuideModal';
 import IndustrialGlossaryModal from '../components/IndustrialGlossaryModal';
 
+function getExamModeDetails(courseId, mode) {
+  if (courseId === 'c-enterprise-app') {
+    if (mode === 'expert') {
+      return {
+        badge: '🔥 โหมดสายเทพ (Expert)',
+        count: '40 ข้อ',
+        title: 'ระดับสถาปนิกและผู้นำเทคโนโลยี (Level 4 Architect)',
+        desc: 'ข้อสอบขั้นสูง 40 ข้อ ครอบคลุม High Availability, Distributed Microservices, OPC-UA/MQTT Edge Streaming, Zero-Trust Defense และ Fault-Tolerant Architectures'
+      };
+    }
+    return {
+      badge: '⚡ โหมดปกติ (Standard)',
+      count: '20 ข้อ',
+      title: 'ระดับวิศวกรซอฟต์แวร์โรงงาน (Level 3 Specialist)',
+      desc: 'เน้นสถาปัตยกรรม Web App, RESTful API, State Management, JWT/CSRF Security และ SQL Transactions (เกณฑ์ผ่าน 80% = ถูกต้อง ≥ 16 ข้อ)'
+    };
+  }
+
+  if (courseId === 'c-machine-vision' || courseId === 'c-machine-vision-v2') {
+    if (mode === 'expert') {
+      return {
+        badge: '🔥 โหมดสายเทพ (Expert)',
+        count: '40 ข้อ',
+        title: 'ระดับผู้เชี่ยวชาญ AI & Edge Computing (Level 4)',
+        desc: 'ข้อสอบขั้นสูง 40 ข้อ ครอบคลุม Edge NPU, Deep Learning (PatchCore), Photometric Stereo, Coaxial Illumination และ High-Speed Inspection'
+      };
+    }
+    return {
+      badge: '⚡ โหมดปกติ (Standard)',
+      count: '20 ข้อ',
+      title: 'ระดับช่างตรวจวัดและวิศวกรวิชั่น (Level 3)',
+      desc: 'เน้นพื้นฐานกล้องอุตสาหกรรม, เลนส์, แสงสว่าง, การตั้งค่า Exposure/Gain และการตรวจจับข้อบกพร่องพื้นฐาน (เกณฑ์ผ่าน 80% = ถูกต้อง ≥ 16 ข้อ)'
+    };
+  }
+
+  // Default / Robot Automation
+  if (mode === 'expert') {
+    return {
+      badge: '🔥 โหมดสายเทพ (Expert)',
+      count: '40 ข้อ',
+      title: 'ระดับวิศวกรระบบอัตโนมัติ (Level 4)',
+      desc: 'ข้อสอบขั้นสูง 40 ข้อ ครอบคลุมคณิตศาสตร์ Kinematics, Offset, Matrix Palletizing และการเขียนโปรแกรมเชิงลึก'
+    };
+  }
+  return {
+    badge: '⚡ โหมดปกติ (Standard)',
+    count: '20 ข้อ',
+    title: 'ระดับมาตรฐานช่างโรงงาน (Level 3)',
+    desc: 'เน้นพื้นฐานความปลอดภัย โครงสร้าง I/O และคำสั่งเคลื่อนที่หลักที่พบบ่อย (เกณฑ์ผ่าน 80% = ถูกต้อง ≥ 16 ข้อ)'
+  };
+}
+
 export default function CourseViewer() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -786,13 +838,17 @@ export default function CourseViewer() {
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              🟢 โหมดปกติ (Standard)
+                              {getExamModeDetails(course?.id, 'standard').badge}
                             </span>
-                            <span className="text-xs font-mono font-bold text-emerald-400">20 ข้อ</span>
+                            <span className="text-xs font-mono font-bold text-emerald-400">
+                              {getExamModeDetails(course?.id, 'standard').count}
+                            </span>
                           </div>
-                          <h4 className="text-sm font-bold text-white mt-1">ระดับพนักงานและช่างเทคนิค</h4>
+                          <h4 className="text-sm font-bold text-white mt-1">
+                            {getExamModeDetails(course?.id, 'standard').title}
+                          </h4>
                           <p className="text-[11px] text-slate-400 mt-1 leading-snug">
-                            เน้นความปลอดภัย สัญญาณ I/O และขั้นตอนการปฏิบัติงานหน้างานจริง (เกณฑ์ผ่าน 80% = ตอบถูก ≥ 16 ข้อ)
+                            {getExamModeDetails(course?.id, 'standard').desc}
                           </p>
                         </button>
 
@@ -814,13 +870,17 @@ export default function CourseViewer() {
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              🔥 โหมดสายเทพ (Expert)
+                              {getExamModeDetails(course?.id, 'expert').badge}
                             </span>
-                            <span className="text-xs font-mono font-bold text-amber-400">40 ข้อ</span>
+                            <span className="text-xs font-mono font-bold text-amber-400">
+                              {getExamModeDetails(course?.id, 'expert').count}
+                            </span>
                           </div>
-                          <h4 className="text-sm font-bold text-white mt-1">ระดับวิศวกรและผู้เชี่ยวชาญ</h4>
+                          <h4 className="text-sm font-bold text-white mt-1">
+                            {getExamModeDetails(course?.id, 'expert').title}
+                          </h4>
                           <p className="text-[11px] text-slate-400 mt-1 leading-snug">
-                            ข้อสอบเต็มชุด 40 ข้อ ครอบคลุมคณิตศาสตร์ Kinematics, Offset, Matrix Palletizing และความปลอดภัยสากล
+                            {getExamModeDetails(course?.id, 'expert').desc}
                           </p>
                         </button>
                       </div>

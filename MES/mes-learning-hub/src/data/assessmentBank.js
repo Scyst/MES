@@ -20,6 +20,11 @@ import {
   ROBOT_EXAM_STANDARD,
   ROBOT_EXAM_EXPERT
 } from './robotExam';
+import {
+  ENTERPRISE_APP_EXAM_STANDARD,
+  ENTERPRISE_APP_EXAM_EXPERT,
+  ENTERPRISE_APP_EXAM
+} from './enterpriseAppExam';
 
 /**
  * MODULE_CHECKPOINTS
@@ -2148,81 +2153,8 @@ export const MASTER_ASSESSMENTS = {
   // --- 7 Official Industry 4.0 Courses Master Assessments (99 Industrial Solutions) ---
   // =========================================================================
 
-  // 1. Enterprise Application Design, Development & Integration
-  'c-enterprise-app': [
-    {
-      id: 'ent-q1',
-      question: 'ในสถาปัตยกรรมระบบองค์กรยุคอุตสาหกรรม 4.0 การเชื่อมต่อข้อมูลระหว่างเครื่องจักรหน้างาน (OT) กับระบบบริหารจัดการ (IT) มักอาศัยระบบใดเป็นสะพานเชื่อมหลัก?',
-      options: [
-        'A: ระบบ MES (Manufacturing Execution System) ร่วมกับ Edge Gateway / RESTful APIs',
-        'B: ระบบบันทึกบัญชีแยกประเภทสมุดเงินสด',
-        'C: การเดินสายโทรศัพท์บ้านแบบแอนะล็อก',
-        'D: การจดบันทึกลงสมุดบันทึกรายวัน'
-      ],
-      correctAnswer: 0,
-      explanation: 'ระบบ MES และ Edge Gateway ทำหน้าที่รวบรวมข้อมูลสัญญาณจาก PLC/เซนเซอร์ แล้วแปลงเป็นรูปแบบ JSON ส่งผ่าน Web API ขึ้นสู่ระบบ ERP ระดับองค์กร'
-    },
-    {
-      id: 'ent-q2',
-      question: 'ข้อใดคือหลักการออกแบบส่วนติดต่อผู้ใช้งาน (UX/UI) ที่ถูกต้องสำหรับหน้าจอเครื่องจักรในโรงงาน (Operator Cockpit)?',
-      options: [
-        'A: ใช้ปุ่มขนาดเล็กมากเพื่อบรรจุข้อมูลให้ได้มากที่สุดบนหน้าจอเดียว',
-        'B: ปุ่มสัมผัสต้องมีขนาดไม่ต่ำกว่า 44×44px, ใช้คู่สี Contrast สูง, และมีปุ่มลัดเลือกตัวเลขเพื่อลดการพิมพ์ผิด',
-        'C: ใช้พื้นหลังสีขาวสะท้อนแสงจ้าเพื่อประหยัดพลังงานจอ',
-        'D: แสดงข้อความแจ้งเตือนสีแดงเต็มหน้าจอพร้อมกันทุกสถานะ'
-      ],
-      correctAnswer: 1,
-      explanation: 'Operator-Centered Design กำหนดให้ปุ่มสัมผัสมีขนาดขั้นต่ำ 44×44px มองเห็นชัดเจน ป้องกันการกดผิดพลาดแม้พนักงานสวมถุงมือปฏิบัติงาน'
-    },
-    {
-      id: 'ent-q3',
-      question: 'ในการประมวลผลข้อมูล JSON ของระบบผลิต Array Method ใดใน JavaScript ที่เหมาะสมที่สุดสำหรับการหายอดรวมของเสีย (Total Defects)?',
-      options: [
-        'A: Array.prototype.reduce()',
-        'B: Array.prototype.pop()',
-        'C: Array.prototype.shift()',
-        'D: Array.prototype.splice()'
-      ],
-      correctAnswer: 0,
-      explanation: 'ฟังก์ชัน reduce() ใช้สำหรับวนลูปสะสมค่า (Accumulate) จากแต่ละ Element ใน Array เพื่อสรุปผลเป็นผลรวมเดี่ยวได้อย่างมีประสิทธิภาพ'
-    },
-    {
-      id: 'ent-q4',
-      question: 'โปรโตคอล MQTT มีข้อได้เปรียบประการใดในการรับส่งข้อมูลจากเซนเซอร์เครื่องจักร (IoT Telemetry) เมื่อเทียบกับ HTTP ทั่วไป?',
-      options: [
-        'A: ขนาด Header น้ำหนักเบามาก (Lightweight) และทำงานแบบ Publish/Subscribe จึงประหยัดแบนด์วิดท์เครือข่ายโรงงาน',
-        'B: ต้องใช้สายเคเบิลขนาดใหญ่กว่า',
-        'C: สามารถส่งกระแสไฟฟ้าแรงดันสูงผ่านสายแลนได้',
-        'D: ไม่รองรับการเชื่อมต่อแบบไร้สาย'
-      ],
-      correctAnswer: 0,
-      explanation: 'MQTT ออกแบบมาเพื่อ IoT โดยเฉพาะ มี Header เพียงไม่กี่ไบต์ และใช้โมเดล Pub/Sub เหมาะกับการส่งข้อมูลอุณหภูมิหรือการสั่นสะเทือนต่อเนื่อง'
-    },
-    {
-      id: 'ent-q5',
-      question: 'กระบวนการทดสอบยอมรับของผู้ใช้งาน (User Acceptance Testing: UAT) ก่อน Go-Live มีจุดประสงค์เพื่อสิ่งใด?',
-      options: [
-        'A: เพื่อให้ผู้ใช้งานจริงในสายการผลิตทดสอบขั้นตอนการทำงานและยืนยันว่าระบบตอบโจทย์การใช้งานหน้างานได้ 100%',
-        'B: เพื่อหาข้ออ้างในการชะลอการส่งมอบงาน',
-        'C: เพื่อทดสอบว่าคอมพิวเตอร์ทนความร้อนได้กี่องศา',
-        'D: เป็นเพียงการตรวจดูความสวยงามของโลโก้เท่านั้น'
-      ],
-      correctAnswer: 0,
-      explanation: 'UAT เป็นขั้นตอนสำคัญที่ให้ผู้ใช้จริงทดสอบทั้ง Normal Case, Boundary Case, และ Error Case เพื่อยืนยันความพร้อมก่อนนำระบบไปใช้งานจริงในโรงงาน'
-    },
-    {
-      id: 'ent-q6',
-      question: 'ข้อใดคือหลักปฏิบัติตามมาตรฐานความปลอดภัยและ PDPA ในการพัฒนาแอปพลิเคชันโรงงานที่พนักงานเข้าถึงผ่านโทรศัพท์ส่วนตัว (BYOD)?',
-      options: [
-        'A: บันทึกรหัสผ่านและข้อมูลเงินเดือนของทุกคนลงใน localStorage เพื่อความสะดวกในการเปิดดูออฟไลน์',
-        'B: ห้ามเก็บข้อมูลลับทางธุรกิจและข้อมูลส่วนบุคคลใน Client Storage และใช้ Parameterized Query ป้องกัน SQL Injection',
-        'C: ปิดการใช้งานรหัสผ่านเพื่อความรวดเร็วในการเข้าสู่ระบบ',
-        'D: ให้พนักงานแชร์บัญชีผู้ใช้งานร่วมกันทั้งโรงงาน'
-      ],
-      correctAnswer: 1,
-      explanation: 'การเก็บข้อมูลสำคัญใน localStorage บนอุปกรณ์ส่วนตัวมีความเสี่ยงสูงต่อข้อมูลรั่วไหลเมื่อโทรศัพท์สูญหาย และการใช้ Parameterized Query เป็นมาตรฐานป้องกันการโจมตีฐานข้อมูล'
-    }
-  ],
+  // 1. Enterprise Application Design, Development & Integration (30 Official Theory Certification Questions)
+  'c-enterprise-app': ENTERPRISE_APP_EXAM,
 
   // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories
   'c-machine-vision': MACHINE_VISION_EXAM,
@@ -2534,13 +2466,15 @@ export function getModuleCheckpoint(course, module, moduleIndex = 0) {
 export const MASTER_ASSESSMENTS_STANDARD = {
   'c-robot-automation': ROBOT_EXAM_STANDARD,
   'c-machine-vision': MACHINE_VISION_EXAM_STANDARD,
-  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM_STANDARD
+  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM_STANDARD,
+  'c-enterprise-app': ENTERPRISE_APP_EXAM_STANDARD
 };
 
 export const MASTER_ASSESSMENTS_EXPERT = {
   'c-robot-automation': ROBOT_EXAM_EXPERT,
   'c-machine-vision': MACHINE_VISION_EXAM_EXPERT,
-  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM_EXPERT
+  'c-machine-vision-v2': MACHINE_VISION_V2_EXAM_EXPERT,
+  'c-enterprise-app': ENTERPRISE_APP_EXAM_EXPERT
 };
 
 /**
