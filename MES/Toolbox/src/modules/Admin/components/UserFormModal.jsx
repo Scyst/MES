@@ -182,14 +182,14 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in-up">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-fade-in-up">
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-gray-800">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/70 dark:bg-slate-800/50">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
             {isEditMode ? 'แก้ไขข้อมูลผู้ใช้งาน' : 'เพิ่มผู้ใช้งานใหม่'}
           </h2>
-          <button onClick={() => onClose()} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+          <button onClick={() => onClose()} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -200,57 +200,57 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
 
             {/* Left Col: User Info */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2 text-blue-800">ข้อมูลพื้นฐาน</h3>
+              <h3 className="text-base font-semibold border-b border-slate-200 dark:border-slate-700 pb-2 text-blue-700 dark:text-blue-400">ข้อมูลพื้นฐาน</h3>
 
               {!isEditMode && (
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ค้นหาจากระบบ HR (Emp ID)</label>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ค้นหาจากระบบ HR (Emp ID)</label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors shadow-2xs"
                       value={searchEmpId}
                       onChange={e => setSearchEmpId(e.target.value)}
                       placeholder="เช่น 12345"
                     />
                   </div>
-                  <button type="button" onClick={handleSearchEmp} className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg border hover:bg-slate-200 transition-colors">
-                    <Search size={20} />
+                  <button type="button" onClick={handleSearchEmp} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-2xs">
+                    <Search size={18} />
                   </button>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Username <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Username <span className="text-red-500">*</span></label>
                   <input required name="username" value={formData.username} onChange={handleChange} readOnly={isEditMode}
-                    className={`w-full px-3 py-2 border rounded-lg outline-none ${isEditMode ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}`} />
+                    className={`w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm transition-colors shadow-2xs outline-none ${isEditMode ? 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}`} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password {isEditMode && <span className="text-xs font-normal text-gray-500">(ปล่อยว่างถ้าไม่เปลี่ยน)</span>} {!isEditMode && <span className="text-red-500">*</span>}
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                    Password {isEditMode && <span className="text-[11px] font-normal text-slate-400">(เว้นว่างถ้าไม่เปลี่ยน)</span>} {!isEditMode && <span className="text-red-500">*</span>}
                   </label>
                   <input type="password" required={!isEditMode} name="password" value={formData.password} onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล (Fullname)</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ชื่อ-นามสกุล (Fullname)</label>
                 <input type="text" name="fullname" value={formData.fullname} onChange={handleChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">รหัสพนักงาน (Emp ID)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">รหัสพนักงาน (Emp ID)</label>
                   <input type="text" name="emp_id" value={formData.emp_id} onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">บทบาท (Role) <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">บทบาท (Role) <span className="text-red-500">*</span></label>
                   <select name="role" value={formData.role} onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs">
                     <option value="operator">OPERATOR</option>
                     <option value="supervisor">SUPERVISOR</option>
                     <option value="planner">PLANNER</option>
@@ -265,12 +265,12 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ไลน์ผลิต / พื้นที่ (Line / Area)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ไลน์ผลิต / พื้นที่ (Line / Area)</label>
                   <select
                     name="line"
                     value={formData.line}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs"
                   >
                     <option value="">-- ไม่ระบุ (None) --</option>
                     <option value="ALL">ทุกไลน์ผลิต / พื้นที่ (All Lines & Areas)</option>
@@ -283,17 +283,17 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">กลุ่มทีม (Team Group)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">กลุ่มทีม (Team Group)</label>
                   <input type="text" name="team_group" value={formData.team_group} onChange={handleChange} placeholder="เช่น A, B"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทบัญชี (Account Type)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ประเภทบัญชี (Account Type)</label>
                   <select name="account_type" value={formData.account_type} onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs">
                     <option value="employee">พนักงาน (Employee)</option>
                     <option value="trainee">ผู้เข้าอบรม (Trainee)</option>
                     <option value="contractor">ผู้รับเหมา/QC (Contractor)</option>
@@ -302,48 +302,48 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">วันหมดอายุ (Expires At)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">วันหมดอายุ (Expires At)</label>
                   <input type="date" name="expires_at" value={formData.expires_at} onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                  <p className="text-[11px] text-gray-400 mt-1">เว้นว่างไว้หากไม่มีวันหมดอายุ (Permanent)</p>
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">เว้นว่างไว้หากไม่มีวันหมดอายุ (Permanent)</p>
                 </div>
               </div>
             </div>
 
             {/* Right Col: Permissions (PBAC) */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2 text-indigo-800 flex items-center gap-2">
-                <Shield size={20} />
+              <h3 className="text-base font-semibold border-b border-slate-200 dark:border-slate-700 pb-2 text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
+                <Shield size={18} />
                 สิทธิ์การเข้าถึง (PBAC Overrides)
               </h3>
 
-              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm text-indigo-700 flex gap-2 items-start">
-                <Info size={18} className="shrink-0 mt-0.5" />
-                <p>สิทธิ์พื้นฐานจะถูกกำหนดโดย <b>Role</b> อัตโนมัติ (ช่องที่ติ๊กถูกและเป็นสีเทา) หากต้องการเพิ่มสิทธิ์เฉพาะบุคคล ให้ติ๊กเลือกเพิ่มเติมในตารางนี้</p>
+              <div className="bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3 text-xs text-indigo-700 dark:text-indigo-300 flex gap-2.5 items-start">
+                <Info size={16} className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" />
+                <p className="leading-relaxed">สิทธิ์พื้นฐานจะถูกกำหนดโดย <b>Role</b> อัตโนมัติ (ช่องที่ติ๊กถูกและเป็นสีเทา) หากต้องการเพิ่มสิทธิ์เฉพาะบุคคล ให้ติ๊กเลือกเพิ่มเติมในตารางนี้</p>
               </div>
 
-              <div className="bg-white border rounded-xl overflow-hidden h-[450px] overflow-y-auto">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden h-[450px] overflow-y-auto shadow-2xs">
                 {permLoading ? (
                   <div className="flex justify-center items-center h-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm border-collapse">
-                    <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10 shadow-2xs border-b border-slate-200 dark:border-slate-700">
                       <tr>
-                        <th className="px-4 py-2 border-b w-12 text-center">✓</th>
-                        <th className="px-4 py-2 border-b">Permission (สิทธิ์)</th>
-                        <th className="px-4 py-2 border-b">Description (รายละเอียด)</th>
+                        <th className="px-4 py-2.5 w-12 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">✓</th>
+                        <th className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Permission (สิทธิ์)</th>
+                        <th className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Description (รายละเอียด)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {Object.keys(groupedPerms).length === 0 ? (
-                        <tr><td colSpan="3" className="text-center py-4 text-gray-500">No permissions found in database.</td></tr>
+                        <tr><td colSpan="3" className="text-center py-4 text-slate-400">No permissions found in database.</td></tr>
                       ) : (
                         Object.keys(groupedPerms).map(module => (
                           <React.Fragment key={module}>
-                            <tr className="bg-slate-50">
-                              <td colSpan="3" className="px-4 py-2 font-bold text-slate-700 text-xs tracking-wider uppercase">
+                            <tr className="bg-slate-50/80 dark:bg-slate-850">
+                              <td colSpan="3" className="px-4 py-2 font-bold text-slate-700 dark:text-slate-300 text-xs tracking-wider uppercase">
                                 Module: {module}
                               </td>
                             </tr>
@@ -353,23 +353,23 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                               const isGranted = hasRolePerm || hasUserPerm;
 
                               return (
-                                <tr key={perm.perm_code} className="hover:bg-indigo-50/30 transition-colors">
-                                  <td className="px-4 py-2 text-center">
+                                <tr key={perm.perm_code} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-colors">
+                                  <td className="px-4 py-2.5 text-center">
                                     <input
                                       type="checkbox"
-                                      className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 disabled:opacity-50"
+                                      className="w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 disabled:opacity-50"
                                       checked={isGranted}
                                       disabled={hasRolePerm} // cannot uncheck role perms here
                                       onChange={() => handleTogglePermission(perm.perm_code)}
                                     />
                                   </td>
-                                  <td className="px-4 py-2 font-mono text-xs text-indigo-900 bg-indigo-50/50">
+                                  <td className="px-4 py-2.5 font-mono text-xs text-indigo-900 dark:text-indigo-300 bg-indigo-50/40 dark:bg-indigo-950/20">
                                     {perm.perm_code}
                                   </td>
-                                  <td className="px-4 py-2 text-gray-600">
+                                  <td className="px-4 py-2.5 text-xs text-slate-600 dark:text-slate-300">
                                     {perm.description}
-                                    {hasRolePerm && <span className="ml-2 inline-block bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded">by Role</span>}
-                                    {hasUserPerm && <span className="ml-2 inline-block bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded">by PBAC</span>}
+                                    {hasRolePerm && <span className="ml-2 inline-block bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded">by Role</span>}
+                                    {hasUserPerm && <span className="ml-2 inline-block bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] px-1.5 py-0.5 rounded">by PBAC</span>}
                                   </td>
                                 </tr>
                               );
@@ -387,15 +387,15 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
-          <button type="button" onClick={() => onClose()} className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 bg-slate-50/70 dark:bg-slate-800/50">
+          <button type="button" onClick={() => onClose()} className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-2xs">
             ยกเลิก (Cancel)
           </button>
           <button
             type="submit"
             form="userForm"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70"
+            className="flex items-center gap-2 px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-2xs disabled:opacity-70"
           >
             {loading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Save size={18} />}
             {isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้งาน'}

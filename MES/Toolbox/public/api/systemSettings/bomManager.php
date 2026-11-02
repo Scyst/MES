@@ -56,6 +56,7 @@ try {
         // =========================================================================
         // [1] READ OPERATIONS (NOLOCK)
         // =========================================================================
+        case 'get_fgs_with_bom':
         case 'get_all_fgs_with_bom':
             $sql = "
                 WITH LatestBOM AS (
@@ -119,7 +120,7 @@ try {
 
         case 'get_bom_components':
             $fg_id = (int)($_GET['fg_item_id'] ?? 0);
-            $version = (int)($_GET['bom_version'] ?? 0);
+            $version = (int)($_GET['bom_version'] ?? $_GET['version'] ?? 0);
             if (!$fg_id) throw new Exception("FG Item ID is required.");
 
             $versionCondition = $version > 0 ? "AND b.bom_version = ?" : "AND b.bom_status = 'ACTIVE'";
@@ -187,6 +188,7 @@ try {
         // =========================================================================
         // [2] WRITE OPERATIONS (TRANSACTIONS)
         // =========================================================================
+        case 'add_component':
         case 'add_bom_component':
             $fg_id = (int)($input['fg_item_id'] ?? 0);
             $comp_id = (int)($input['component_item_id'] ?? 0);
@@ -227,6 +229,7 @@ try {
             }
             break;
 
+        case 'update_component':
         case 'update_bom_component':
             $bom_id = (int)($input['bom_id'] ?? 0);
             $qty = (float)($input['quantity_required'] ?? 0);
@@ -245,6 +248,7 @@ try {
             echo json_encode(['success' => true, 'message' => 'อัปเดตปริมาณเรียบร้อย']);
             break;
 
+        case 'delete_component':
         case 'delete_bom_component':
             $bom_id = (int)($input['bom_id'] ?? 0);
             if ($bom_id <= 0) throw new Exception("Invalid BOM ID.");
@@ -304,6 +308,7 @@ try {
             echo json_encode(['success' => true, 'message' => "Successfully deleted {$count} BOM(s)."]);
             break;
 
+        case 'rollup_cost':
         case 'rollup_bom_cost':
             $fg_id = (int)($input['fg_item_id'] ?? 0);  
             $bom_version = (int)($input['bom_version'] ?? 0);
@@ -352,6 +357,7 @@ try {
             }
             break;
 
+        case 'create_revision':
         case 'create_bom_revision':
             $fg_id = (int)($input['fg_item_id'] ?? 0);
             $ecn_no = trim($input['ecn_number'] ?? '');
@@ -396,6 +402,7 @@ try {
             }
             break;
 
+        case 'approve_revision':
         case 'approve_bom_revision':
             $fg_id = (int)($input['fg_item_id'] ?? 0);
             $version = (int)($input['bom_version'] ?? 0);

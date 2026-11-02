@@ -26,6 +26,7 @@ $currentUser = $_SESSION['user'];
 
 try {
     switch ($action) {
+        case 'read':
         case 'get_locations':
             $sql = "
                 SELECT 
@@ -38,6 +39,7 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
+        case 'save':
         case 'save_location':
             $id = (int)($input['location_id'] ?? 0);
             $name = trim($input['location_name'] ?? '');
@@ -84,6 +86,20 @@ try {
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => $msg]);
+            break;
+
+        case 'delete':
+        case 'delete_location':
+            $id = (int)($input['location_id'] ?? $_GET['location_id'] ?? 0);
+            if ($id <= 0) {
+                throw new Exception("Location ID is required.");
+            }
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("UPDATE " . LOCATIONS_TABLE . " SET is_active = 0 WHERE location_id = ?");
+            $stmt->execute([$id]);
+            writeLog($pdo, 'DELETE_LOCATION', 'SYSTEM_SETTINGS', $id, null, ['location_id' => $id], "Deactivated Location ID: $id");
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Location deactivated successfully.']);
             break;
 
         default:

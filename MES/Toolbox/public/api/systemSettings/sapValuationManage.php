@@ -24,6 +24,7 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 try {
     switch ($action) {
+        case 'read':
         case 'get_valuation':
             // Query staging tables synced from SAP to avoid long queries on the linked server.
             $sql = "
@@ -100,6 +101,7 @@ try {
             ]);
             break;
 
+        case 'sync':
         case 'sync_costs':
             $input = json_decode(file_get_contents('php://input'), true);
             $sap_nos = $input['sap_nos'] ?? [];

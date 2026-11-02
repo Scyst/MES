@@ -29,9 +29,10 @@ try {
         // =====================================================================
         // [1] ITEM MASTER DATA
         // =====================================================================
+        case 'audit_trail':
         case 'get_audit_trail':
-            $target_id = $input['target_id'] ?? $_GET['target_id'] ?? '';
-            $target_sap = $input['target_sap'] ?? $_GET['target_sap'] ?? '';
+            $target_id = $input['target_id'] ?? $_GET['target_id'] ?? $input['item_id'] ?? $_GET['item_id'] ?? '';
+            $target_sap = $input['target_sap'] ?? $_GET['target_sap'] ?? $input['sap_no'] ?? $_GET['sap_no'] ?? '';
             
             if (!$target_id && !$target_sap) throw new Exception("Required target ID");
             
@@ -52,6 +53,7 @@ try {
             echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             break;
 
+        case 'get_item':
         case 'get_item_by_sap':
             $sap_no = $_GET['sap_no'] ?? '';
             if (empty($sap_no)) {
@@ -68,16 +70,19 @@ try {
             }
             break;
 
+        case 'read':
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $limit = isset($_GET['limit']) && intval($_GET['limit']) === -1 ? 999999 : 50;
+            $rawLimit = isset($_GET['limit']) ? intval($_GET['limit']) : 50;
+            $limit = ($rawLimit === -1) ? 999999 : max(1, min(2000, $rawLimit));
             $startRow = ($page - 1) * $limit;
             $endRow = $startRow + $limit;
 
             $searchTerm = $_GET['search'] ?? '';
-            $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] === 'true';
+            $status = strtolower(trim($_GET['status'] ?? ''));
+            $showInactive = ($status === 'inactive') || (isset($_GET['show_inactive']) && $_GET['show_inactive'] === 'true');
             $filter_model = $_GET['filter_model'] ?? '';
-            $filter_material = $_GET['filter_material'] ?? ''; 
+            $filter_material = $_GET['filter_material'] ?? $_GET['type'] ?? ''; 
             $filter_sub_material = $_GET['filter_sub_material'] ?? '';
 
             $params = [];
@@ -120,7 +125,13 @@ try {
                 $params[] = '%' . $filter_model . '%';
             }
 
-            if (!$showInactive) {
+            if ($status === 'inactive') {
+                $conditions[] = "i.is_active = 0";
+            } else if ($status === 'active') {
+                $conditions[] = "i.is_active = 1";
+            } else if ($status === 'all') {
+                // Show both active and inactive
+            } else if (!$showInactive) {
                 $conditions[] = "i.is_active = 1";
             }
             
@@ -196,8 +207,9 @@ try {
             echo json_encode(['success' => true, 'data' => $items, 'total' => $total, 'page' => $page]);
             break;
 
+        case 'delete':
         case 'delete_item':
-            $id = $input['item_id'] ?? 0;
+            $id = $input['item_id'] ?? $_GET['item_id'] ?? 0;
             if (!$id) throw new Exception("Item ID is required.");
 
             $sql = "UPDATE " . ITEMS_TABLE . " SET is_active = 0 WHERE item_id = ?";
@@ -212,8 +224,9 @@ try {
             }
             break;
 
+        case 'restore':
         case 'restore_item':
-            $id = $input['item_id'] ?? 0;
+            $id = $input['item_id'] ?? $_GET['item_id'] ?? 0;
             if (!$id) throw new Exception("Item ID is required.");
 
             $sql = "UPDATE " . ITEMS_TABLE . " SET is_active = 1 WHERE item_id = ?";
@@ -228,6 +241,8 @@ try {
             }
             break;
 
+        case 'save':
+        case 'save_item':
         case 'save_item_and_routes':
             if (!hasPermission('manage_items') && !hasRole(['admin', 'creator'])) {
                 http_response_code(403);
@@ -235,8 +250,8 @@ try {
                 exit;
             }
 
-            $item_details = $input['item_details'] ?? [];
-            $routes_data = $input['routes_data'] ?? [];
+            $item_details = $input['item_details'] ?? $input;
+            $routes_data = $input['routes_data'] ?? $input['routes'] ?? [];
 
             if (empty($item_details['sap_no']) || empty($item_details['part_no'])) {
                 throw new Exception("SAP No. and Part No. are required.");
@@ -362,6 +377,7 @@ try {
         // =====================================================================
         // [2] ROUTE MANAGEMENT
         // =====================================================================
+        case 'read_routes':
         case 'get_item_routes':
             $item_id = $_GET['item_id'] ?? 0;
             if (!$item_id) {
@@ -399,6 +415,7 @@ try {
         // =====================================================================
         // [3] UTILITIES (DROPDOWNS)
         // =====================================================================
+        case 'read_lines':
         case 'get_lines':
             $sql = "SELECT DISTINCT RTRIM(LTRIM(line)) as line FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line IS NOT NULL AND line != '' ORDER BY line ASC";
             $stmt = $pdo->prepare($sql);
@@ -407,6 +424,7 @@ try {
             echo json_encode(['success' => true, 'data' => $lines]);
             break;
 
+        case 'read_models':
         case 'get_models':
             $searchTerm = $_GET['search'] ?? '';
             $sql = "SELECT DISTINCT RTRIM(LTRIM(model)) as model FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE model IS NOT NULL AND model != ''";
@@ -426,6 +444,7 @@ try {
         // =====================================================================
         // [4] BULK IMPORT 
         // =====================================================================
+        case 'bulk_import':
         case 'unified_bulk_import':
             if (!hasPermission('manage_items') && !hasRole(['admin', 'creator'])) {
                 http_response_code(403);

@@ -122,15 +122,22 @@ export function FeedbackProvider({ children }) {
     [dismissToast]
   );
 
-  const toast = useMemo(
-    () => ({
-      success: (message) => pushToast('success', message),
-      error: (message) => pushToast('error', message),
-      warning: (message) => pushToast('warning', message),
-      info: (message) => pushToast('info', message),
-    }),
-    [pushToast]
-  );
+  const toast = useMemo(() => {
+    const fn = (message, type = 'info') => {
+      // Support both showToast(message, type) and showToast(type, message)
+      if (['success', 'error', 'warning', 'info'].includes(message)) {
+        pushToast(message, type);
+      } else {
+        pushToast(type, message);
+      }
+    };
+    fn.showToast = fn;
+    fn.success = (message) => pushToast('success', message);
+    fn.error = (message) => pushToast('error', message);
+    fn.warning = (message) => pushToast('warning', message);
+    fn.info = (message) => pushToast('info', message);
+    return fn;
+  }, [pushToast]);
 
   const resolveConfirm = useCallback((accepted) => {
     confirmResolverRef.current?.(accepted);
