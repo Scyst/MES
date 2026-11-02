@@ -93,5 +93,21 @@ MES/Toolbox/
 - [x] **3.6 Authorization & Cutover**: รวมระบบตรวจสอบสิทธิ์แบบไฮบริด (Hybrid PBAC & Role Fallback) ทั้ง Frontend/Backend และสลับลิงก์เมนู `System Settings` ใน Sidebar และ HomeDashboard เข้าสู่ `#/system-settings` เต็มตัว 100%
 
 ### ชั้นที่ 4: หน้าจัดการโปรไฟล์ผู้ใช้งานเต็มรูปแบบ (`Full Profile Page` — `#/profile`)
-- [ ] **4.1 Full Welfare & Personal Info Form:**
+- [x] **4.1 Full Welfare & Personal Info Form:**
   - ต่อยอดจาก `AccountSettingsModal.jsx` ให้รองรับข้อมูลสวัสดิการพนักงานครบทุกฟิลด์ตาม `MES/page/profile/profileUI.php` (วิธีเดินทาง `commute_method`, ทะเบียนรถ `vehicle_registration`, ไซส์เสื้อ/รองเท้า `shirt_size`/`shoe_size`, วันเกิด `date_of_birth`, สถานะสมรส/บุตร, ที่อยู่ปัจจุบัน)
+- [x] **4.2 4D Performance & Competencies Evaluation:**
+  - แสดงผลเกรดการประเมิน 4 มิติ (Overall Grade, IPH, 5S, Attendance, Learning Hub) พร้อมกราฟแนวโน้ม Recharts และตารางประวัติย้อนหลัง
+- [x] **4.3 Security & Display Preferences:**
+  - ฟอร์มเปลี่ยนรหัสผ่านยืนยันตัวตน, สลับโหมดสีสว่าง/มืด (Light/Dark) และภาษาที่ต้องการใช้งาน
+- [x] **4.4 Activity Logs & Avatar Photo Upload:**
+  - อัปโหลดรูปโปรไฟล์ด้วยกล้อง/เลือกไฟล์ พร้อมบันทึกประวัติการเข้าใช้งานล่าสุด 20 รายการ
+- [x] **4.5 Navigation Cutover:**
+  - สลับลิงก์โปรไฟล์ใน Profile Dropdown (Header) และเพิ่มเมนูใน `DesktopSidebar.jsx` เข้าสู่ `#/profile` เต็มรูปแบบ 100%
+
+---
+
+## 🏁 สรุปผลการดำเนินงานแผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (Complete 4-Layer Foundation)
+- [x] **Layer 1: Shared UI & API Core Utilities** — Complete
+- [x] **Layer 2: User Management & PBAC Permission Matrix (Parity 100%)** — Complete
+- [x] **Layer 3: System Settings & Master Data (Parity 100%)** — Complete
+- [x] **Layer 4: Full Profile & 4D Performance Evaluation (Parity 100%)** — Complete

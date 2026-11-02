@@ -373,11 +373,22 @@ export default function AppLayout() {
                     type="button"
                     onClick={() => {
                       setIsProfileDropdownOpen(false);
+                      navigate('/profile');
+                    }}
+                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700 cursor-pointer"
+                  >
+                    <User size={16} /> <span>โปรไฟล์และผลงาน (4D Profile)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
                       setIsAccountModalOpen(true);
                     }}
                     className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 transition-colors border-t border-gray-100 dark:border-gray-700 cursor-pointer"
                   >
-                    <Settings size={16} /> <span>ตั้งค่าบัญชี</span>
+                    <Settings size={16} /> <span>ตั้งค่าบัญชีแบบด่วน</span>
                   </button>
 
                   <button

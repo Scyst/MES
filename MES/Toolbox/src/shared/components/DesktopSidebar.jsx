@@ -4,7 +4,7 @@ import {
   Home, Activity, ShoppingCart, Truck, Bus, Calendar, FolderOpen,
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
-  Camera, Settings, Users, MonitorPlay, Zap, Heart, Search, FlaskConical,
+  Camera, Settings, Users, User, MonitorPlay, Zap, Heart, Search, FlaskConical,
   Grid, Factory, ShieldCheck, Briefcase, X
 } from 'lucide-react';
 
@@ -14,6 +14,7 @@ export const MENU_DATA = [
     sectionIcon: Grid,
     items: [
       { name: 'TOOLBOX OS (Home)', icon: Home, to: '/' },
+      { name: 'My Profile (โปรไฟล์ & 4D)', icon: User, to: '/profile' },
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
       { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },

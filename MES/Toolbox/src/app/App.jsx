@@ -9,6 +9,7 @@ import { FeedbackProvider } from '../shared/contexts/FeedbackContext';
 const HomeDashboard = lazy(() => import('../modules/Home/pages/HomeDashboard'));
 const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const SystemSettingsPage = lazy(() => import('../modules/SystemSettings/pages/SystemSettingsPage'));
+const ProfilePage = lazy(() => import('../modules/Profile/pages/ProfilePage'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
 const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
 const TransportApp = lazy(() => import('../modules/Transport/TransportApp'));
@@ -81,6 +82,13 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบตั้งค่าข้อมูลหลัก...</div>}>
                     <SystemSettingsPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+              <Route path="profile" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโปรไฟล์ผู้ใช้งาน...</div>}>
+                    <ProfilePage />
                   </Suspense>
                 </ErrorBoundary>
               } />
