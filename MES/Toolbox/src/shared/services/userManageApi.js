@@ -5,6 +5,8 @@ const API_URL = `${import.meta.env.BASE_URL}api/userManage.php`;
 const getApi = (url, params) => apiGet(url, params);
 const postApi = (url, data) => apiPost(url, data);
 
+let cachedLinesPromise = null;
+
 export const userManageApi = {
   getUsers: async () => {
     return getApi(API_URL, { action: 'read' });
@@ -89,9 +91,16 @@ export const userManageApi = {
     return postApi(`${API_URL}?action=extend_expiry`, { id, days, expires_at });
   },
 
-  getLines: async () => {
+  getLines: async (forceRefresh = false) => {
+    if (!forceRefresh && cachedLinesPromise) {
+      return cachedLinesPromise;
+    }
     const regUrl = `${import.meta.env.BASE_URL}api/register.php`;
-    return getApi(regUrl, { action: 'lines' });
+    cachedLinesPromise = getApi(regUrl, { action: 'lines' }).catch(err => {
+      cachedLinesPromise = null;
+      throw err;
+    });
+    return cachedLinesPromise;
   },
 
   register: async (payload) => {

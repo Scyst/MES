@@ -19,6 +19,7 @@ require_once __DIR__ . '/../utils/logger.php';
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'lines';
     if ($action === 'lines') {
+        header("Cache-Control: public, max-age=300, stale-while-revalidate=60");
         try {
             $stmt = $pdo->query("SELECT DISTINCT line_name FROM (
                 SELECT RTRIM(LTRIM(production_line)) AS line_name FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line IS NOT NULL AND production_line <> '' AND is_active = 1
