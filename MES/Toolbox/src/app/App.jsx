@@ -4,6 +4,7 @@ import AppLayout from '../shared/components/AppLayout';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../shared/contexts/AuthContext';
 import { FeedbackProvider } from '../shared/contexts/FeedbackContext';
+import { LanguageProvider } from '../shared/contexts/LanguageContext';
 
 // 🚀 Lazy Loading โมดูลต่างๆ
 const HomeDashboard = lazy(() => import('../modules/Home/pages/HomeDashboard'));
@@ -29,9 +30,10 @@ const ProtectedRoute = ({ children }) => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <FeedbackProvider>
-      <HashRouter>
-        <AuthProvider>
+      <LanguageProvider>
+        <FeedbackProvider>
+          <HashRouter>
+            <AuthProvider>
           <Routes>
             <Route path="/login" element={
               <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">กำลังโหลด...</div>}>
@@ -107,6 +109,7 @@ export default function App() {
         </AuthProvider>
       </HashRouter>
       </FeedbackProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

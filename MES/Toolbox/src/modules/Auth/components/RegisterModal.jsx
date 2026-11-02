@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { X, GraduationCap, Building2, Key, CheckCircle, ArrowRight, BookOpen, Clock } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
+import { useLanguage } from '../../../shared/contexts/LanguageContext';
+import LanguageSelector from '../../../shared/components/LanguageSelector';
 
 export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
   const toast = useToast();
+  const { t, lang } = useLanguage();
   const [activeTab, setActiveTab] = useState('trainee'); // 'trainee' | 'workforce'
   const [loading, setLoading] = useState(false);
   const [registeredResult, setRegisteredResult] = useState(null);
@@ -124,19 +127,22 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
         <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
           <div>
             <h2 className="text-lg font-bold text-white">
-              ลงทะเบียนผู้ใช้งาน
+              {t('modalTitle')}
             </h2>
             <p className="text-slate-400 text-xs mt-0.5">
-              ระบบศูนย์เรียนรู้และแพลตฟอร์มโรงงาน SNC Former B9
+              {t('modalSubtitle')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <button
+              type="button"
+              onClick={handleClose}
+              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Content Section */}
@@ -148,7 +154,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
             <div className="space-y-1.5">
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                {registeredResult.auto_approved ? 'ลงทะเบียนสำเร็จ' : 'ยื่นคำขอเรียบร้อย'}
+                {registeredResult.auto_approved ? t('successTrainee') : t('successWorkforce')}
               </h3>
               <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
                 {registeredResult.message}
@@ -157,17 +163,19 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 text-left max-w-sm mx-auto space-y-2 border border-slate-200 dark:border-slate-700 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">ชื่อผู้ใช้:</span>
+                <span className="text-slate-500">{t('username')}:</span>
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{registeredResult.username}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">ประเภท:</span>
+                <span className="text-slate-500">{t('accountTypeLabel')}</span>
                 <span className="font-semibold text-blue-600 dark:text-blue-400 capitalize">{registeredResult.account_type}</span>
               </div>
               {registeredResult.expires_at && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">อายุการใช้งาน:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">ถึง {new Date(registeredResult.expires_at).toLocaleDateString('th-TH')}</span>
+                  <span className="text-slate-500">{t('validUntil')}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    {t('untilDate')} {new Date(registeredResult.expires_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'en' ? 'en-US' : 'th-TH')}
+                  </span>
                 </div>
               )}
             </div>
@@ -180,7 +188,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
               }}
               className="w-full max-w-sm mx-auto py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
             >
-              <span>เข้าสู่ระบบ</span>
+              <span>{t('goToSignIn')}</span>
               <ArrowRight size={16} />
             </button>
           </div>
@@ -198,7 +206,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                 }`}
               >
                 <GraduationCap size={16} />
-                <span>ผู้เข้าอบรม (Trainee)</span>
+                <span>{t('tabTrainee')}</span>
               </button>
 
               <button
@@ -211,7 +219,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                 }`}
               >
                 <Building2 size={16} />
-                <span>พนักงาน / ผู้รับเหมา</span>
+                <span>{t('tabWorkforce')}</span>
               </button>
             </div>
 
@@ -220,13 +228,13 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
               <form onSubmit={handleTraineeSubmit} autoComplete="off" className="px-6 py-3 space-y-3.5">
                 <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-950/30 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-900/40">
                   <BookOpen size={14} className="shrink-0 text-blue-600" />
-                  <span>กรอกรหัสห้องเรียนที่ได้รับจากผู้สอนเพื่อเปิดใช้งานบัญชีทันที</span>
+                  <span>{t('traineeTip')}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      ชื่อ-นามสกุล <span className="text-red-500">*</span>
+                      {t('fullname')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -240,7 +248,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      เบอร์โทรศัพท์
+                      {t('phone')}
                     </label>
                     <input
                       type="tel"
@@ -253,7 +261,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span>
+                      {t('username')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -268,7 +276,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      รหัสผ่าน <span className="text-red-500">*</span>
+                      {t('password')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -283,7 +291,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      สถาบัน / หน่วยงาน
+                      {t('organization')}
                     </label>
                     <input
                       type="text"
@@ -297,13 +305,13 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   <div>
                     <label className="block text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
                       <Key size={13} />
-                      รหัสห้องเรียน (Class Code) <span className="text-red-500">*</span>
+                      {t('classCode')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="class_code"
                       required
-                      placeholder="ระบุรหัสที่ได้รับจากผู้สอน"
+                      placeholder={t('classCodePlaceholder')}
                       value={traineeForm.class_code}
                       onChange={handleTraineeChange}
                       className="w-full px-3 py-2 rounded-lg border-2 border-blue-400 dark:border-blue-600 bg-blue-50/40 dark:bg-blue-950/20 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase font-bold placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs"
@@ -322,7 +330,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                     ) : (
                       <>
                         <GraduationCap size={17} />
-                        <span>ลงทะเบียนเข้าสู่ระบบ</span>
+                        <span>{t('submitTrainee')}</span>
                       </>
                     )}
                   </button>
@@ -335,13 +343,13 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
               <form onSubmit={handleWorkforceSubmit} autoComplete="off" className="px-6 py-3 space-y-3.5">
                 <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-900/40">
                   <Clock size={14} className="shrink-0 text-amber-600" />
-                  <span>คำขอจะถูกส่งให้ผู้ดูแลระบบ (Admin) ตรวจสอบและอนุมัติสิทธิ์</span>
+                  <span>{t('workforceTip')}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      ประเภทผู้ใช้งาน <span className="text-red-500">*</span>
+                      {t('accountType')} <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="account_type"
@@ -349,16 +357,16 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="employee">พนักงานโรงงาน / สัญญาจ้าง</option>
-                      <option value="contractor">ผู้รับเหมา / QC ส่งตัว</option>
-                      <option value="customer">ลูกค้า / ตรวจประเมิน</option>
-                      <option value="executive">ผู้บริหารส่วนกลาง</option>
+                      <option value="employee">{t('accountTypeEmployee')}</option>
+                      <option value="contractor">{t('accountTypeContractor')}</option>
+                      <option value="customer">{t('accountTypeCustomer')}</option>
+                      <option value="executive">{t('accountTypeExecutive')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      บทบาท / หน้าที่ <span className="text-red-500">*</span>
+                      {t('requestedRole')} <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="role"
@@ -366,20 +374,20 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="operator">พนักงานฝ่ายผลิต (Operator)</option>
-                      <option value="supervisor">หัวหน้าไลน์ (Supervisor)</option>
-                      <option value="qc">ฝ่ายตรวจสอบคุณภาพ (QC)</option>
-                      <option value="maintenance">ช่างซ่อมบำรุง / PE</option>
-                      <option value="planner">เจ้าหน้าที่วางแผน (Planner)</option>
-                      <option value="contractor">ผู้รับเหมา / ช่างเฉพาะกิจ</option>
-                      <option value="customer">ลูกค้า / ผู้ตรวจประเมิน</option>
-                      <option value="executive">ผู้บริหารส่วนกลาง</option>
+                      <option value="operator">{t('roleOperator')}</option>
+                      <option value="supervisor">{t('roleSupervisor')}</option>
+                      <option value="qc">{t('roleQc')}</option>
+                      <option value="maintenance">{t('roleMaintenance')}</option>
+                      <option value="planner">{t('rolePlanner')}</option>
+                      <option value="contractor">{t('roleContractor')}</option>
+                      <option value="customer">{t('roleCustomer')}</option>
+                      <option value="executive">{t('roleExecutive')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      ชื่อ-นามสกุล <span className="text-red-500">*</span>
+                      {t('fullname')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -393,7 +401,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      รหัสพนักงาน (ถ้ามี)
+                      {t('empId')}
                     </label>
                     <input
                       type="text"
@@ -406,7 +414,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      ไลน์ผลิต / พื้นที่
+                      {t('line')}
                     </label>
                     <select
                       name="line"
@@ -422,13 +430,13 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                       <option value="LINE 6">LINE 6</option>
                       <option value="STORE">WAREHOUSE / STORE</option>
                       <option value="MAINTENANCE">PE / MAINTENANCE</option>
-                      <option value="ALL">ทุกไลน์ผลิต (All Lines)</option>
+                      <option value="ALL">{t('lineAll')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      เบอร์โทรศัพท์
+                      {t('phone')}
                     </label>
                     <input
                       type="tel"
@@ -441,7 +449,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span>
+                      {t('username')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -456,7 +464,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                      รหัสผ่าน <span className="text-red-500">*</span>
+                      {t('password')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -472,13 +480,13 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                    เหตุผลในการขอใช้งาน <span className="text-red-500">*</span>
+                    {t('purpose')} <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     name="request_reason"
                     rows={2}
                     required
-                    placeholder="ระบุวัตถุประสงค์สั้นๆ เพื่อให้แอดมินพิจารณาอนุมัติ"
+                    placeholder={t('purposePlaceholder')}
                     value={workforceForm.request_reason}
                     onChange={handleWorkforceChange}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none placeholder:text-slate-400 placeholder:text-xs"
@@ -496,7 +504,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                     ) : (
                       <>
                         <Building2 size={17} />
-                        <span>ส่งคำขอเปิดใช้งานบัญชี</span>
+                        <span>{t('submitWorkforce')}</span>
                       </>
                     )}
                   </button>

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
+import { useLanguage } from '../../../shared/contexts/LanguageContext';
+import LanguageSelector from '../../../shared/components/LanguageSelector';
 import { LogIn, AlertCircle, UserPlus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RegisterModal from '../components/RegisterModal';
 
 export default function Login() {
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -60,15 +63,18 @@ export default function Login() {
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200/80 dark:border-slate-800">
         {/* Header Section */}
-        <div className="bg-slate-900 p-8 text-center text-white">
+        <div className="bg-slate-900 p-8 text-center text-white relative">
+          <div className="absolute top-4 right-4">
+            <LanguageSelector />
+          </div>
           <img
             src={`${import.meta.env.BASE_URL}assets/logo.webp`}
             alt="SNC Logo"
             className="h-12 mx-auto mb-4 object-contain"
           />
-          <h1 className="text-2xl font-bold tracking-tight">TOOLBOX OS</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน)
+          <h1 className="text-2xl font-bold tracking-tight">{t('appTitle')}</h1>
+          <p className="text-slate-400 text-xs mt-1">
+            {t('companyName')}
           </p>
         </div>
 
@@ -84,12 +90,12 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                ชื่อผู้ใช้งาน (Username)
+                {t('username')}
               </label>
               <input
                 type="text"
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="กรอกชื่อผู้ใช้งาน"
+                placeholder={t('usernamePlaceholder')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -98,12 +104,12 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                รหัสผ่าน (Password)
+                {t('password')}
               </label>
               <input
                 type="password"
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="กรอกรหัสผ่าน"
+                placeholder={t('passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -121,7 +127,7 @@ export default function Login() {
               ) : (
                 <>
                   <LogIn size={20} />
-                  <span>เข้าสู่ระบบ</span>
+                  <span>{t('signIn')}</span>
                 </>
               )}
             </button>
@@ -130,7 +136,7 @@ export default function Login() {
           {/* Registration Section */}
           <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              ยังไม่มีบัญชีผู้ใช้งาน หรือเป็นผู้เข้าอบรมคลาสเรียน?
+              {t('noAccountPrompt')}
             </p>
             <button
               type="button"
@@ -138,7 +144,7 @@ export default function Login() {
               className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:border-blue-400"
             >
               <UserPlus size={16} className="text-blue-600 dark:text-blue-400" />
-              <span>ลงทะเบียนบัญชีใหม่ / สมาชิกเข้าอบรม</span>
+              <span>{t('registerButton')}</span>
             </button>
           </div>
         </div>
