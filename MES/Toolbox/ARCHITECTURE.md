@@ -85,11 +85,12 @@ MES/Toolbox/
 
 ### ชั้นที่ 3: ศูนย์ตั้งค่าข้อมูลหลักของโรงงาน (`System Settings & Master Data` — `#/system-settings`)
 พอร์ตโมดูล `MES/page/systemSettings` และ API ทั้ง 6 ไฟล์เข้าสู่ `MES/Toolbox/src/modules/SystemSettings/` และ `public/api/systemSettings/` ครอบคลุม 5 แท็บหลัก:
-- [ ] **3.1 Item Master (`ITEMS`)**: ทะเบียนสินค้า วัตถุดิบ และต้นทุนมาตรฐาน
-- [ ] **3.2 BOM Manager (`PRODUCT_BOM`)**: สูตรการผลิต (Bill of Materials) + นำเข้า/ส่งออก Excel
-- [ ] **3.3 Locations (`LOCATIONS`)**: พิกัดและโซนคลังสินค้า
-- [ ] **3.4 Line Schedules (`LINE_SCHEDULES`)**: ตารางเวลาทำงานและกะของแต่ละไลน์ผลิต
-- [ ] **3.5 SAP Valuation (`sap_staging_*` vs `ITEMS`)**: แดชบอร์ดเทียบต้นทุนและสต็อกระหว่าง SAP กับ MES พร้อมปุ่ม Sync ต้นทุน
+- [x] **3.1 Item Master (`ITEMS`)**: ทะเบียนสินค้า วัตถุดิบ และต้นทุนมาตรฐาน พร้อม Modal จัดการ 3 แท็บ (ข้อมูลพื้นฐาน, โลจิสติกส์ & ต้นทุน, เส้นทางผลิต), Where-Used, Activity Log และ Bulk Import Excel (SheetJS)
+- [x] **3.2 BOM Manager (`PRODUCT_BOM`)**: สูตรการผลิต (Bill of Materials) แบ่งตามเวอร์ชัน, เพิ่ม/ลบ/แก้ไขชิ้นส่วน, คำนวณ Rollup Standard Cost, ออกเอกสาร ECN สร้าง Revision Draft, อนุมัติสูตร Active, คัดลอกสูตร Copy BOM และส่งออก Excel
+- [x] **3.3 Locations (`LOCATIONS`)**: พิกัดและโซนคลังสินค้า (RM, SEMI, FG, STORE, MAINTENANCE, TOOL) ผูกไลน์ผลิต และสลับสถานะ Active
+- [x] **3.4 Line Schedules (`LINE_SCHEDULES`)**: ตารางเวลาทำงานและกะของแต่ละไลน์ผลิต คำนวณเวลาทำงานสุทธิ (Net Working Minutes) หักเวลาพักเบรกสำหรับคิด OEE
+- [x] **3.5 SAP Valuation (`sap_staging_*` vs `ITEMS`)**: แดชบอร์ดวิเคราะห์เปรียบเทียบมูลค่าคลังสินค้าและต้นทุนระหว่าง SAP ERP กับ MES พร้อมปุ่ม Sync SAP Costs to MES บันทึกทับลง Item Master อัตโนมัติ
+- [x] **3.6 Authorization & Cutover**: รวมระบบตรวจสอบสิทธิ์แบบไฮบริด (Hybrid PBAC & Role Fallback) ทั้ง Frontend/Backend และสลับลิงก์เมนู `System Settings` ใน Sidebar และ HomeDashboard เข้าสู่ `#/system-settings` เต็มตัว 100%
 
 ### ชั้นที่ 4: หน้าจัดการโปรไฟล์ผู้ใช้งานเต็มรูปแบบ (`Full Profile Page` — `#/profile`)
 - [ ] **4.1 Full Welfare & Personal Info Form:**

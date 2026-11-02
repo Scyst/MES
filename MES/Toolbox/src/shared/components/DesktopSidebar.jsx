@@ -68,7 +68,7 @@ export const MENU_DATA = [
     title: 'SYSTEM ADMIN',
     sectionIcon: Settings,
     items: [
-      { name: 'System Settings', icon: Settings, href: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php', external: true },
+      { name: 'System Settings', icon: Settings, to: '/system-settings' },
       { name: 'User Manager', icon: Users, to: '/admin/users' },
     ]
   }
