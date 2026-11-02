@@ -29,6 +29,17 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
   const [loading, setLoading] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
   const [searchEmpId, setSearchEmpId] = useState('');
+  const [availableLines, setAvailableLines] = useState([]);
+
+  useEffect(() => {
+    userManageApi.getLines()
+      .then(res => {
+        if (res && res.success && Array.isArray(res.data)) {
+          setAvailableLines(res.data);
+        }
+      })
+      .catch(err => console.warn('Could not load lines:', err));
+  }, []);
 
   // Setup initial form state
   useEffect(() => {
@@ -254,9 +265,22 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ไลน์ผลิต (Line)</label>
-                  <input type="text" name="line" value={formData.line} onChange={handleChange} placeholder="เช่น L1, PRESS"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ไลน์ผลิต / พื้นที่ (Line / Area)</label>
+                  <select
+                    name="line"
+                    value={formData.line}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                  >
+                    <option value="">-- ไม่ระบุ (None) --</option>
+                    <option value="ALL">ทุกไลน์ผลิต / พื้นที่ (All Lines & Areas)</option>
+                    {availableLines.map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                    {formData.line && formData.line !== 'ALL' && !availableLines.includes(formData.line) && (
+                      <option value={formData.line}>{formData.line}</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">กลุ่มทีม (Team Group)</label>

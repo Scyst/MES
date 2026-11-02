@@ -58,6 +58,24 @@ try {
             echo json_encode(['success' => true, 'data' => $pendingUsers, 'count' => count($pendingUsers)]);
             break;
 
+        case 'get_lines':
+            $stmt = $pdo->query("SELECT DISTINCT line_name FROM (
+                SELECT RTRIM(LTRIM(production_line)) AS line_name FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line IS NOT NULL AND production_line <> '' AND is_active = 1
+                UNION
+                SELECT RTRIM(LTRIM(line)) AS line_name FROM dbo.LINE_SCHEDULES WITH (NOLOCK) WHERE line IS NOT NULL AND line <> '' AND is_active = 1
+                UNION
+                SELECT RTRIM(LTRIM(line)) AS line_name FROM dbo.PE_MACHINES WITH (NOLOCK) WHERE line IS NOT NULL AND line <> '' AND is_active = 1
+                UNION
+                SELECT RTRIM(LTRIM(line)) AS line_name FROM dbo.USERS WITH (NOLOCK) WHERE line IS NOT NULL AND line <> '' AND line NOT LIKE 'LINE %'
+                UNION
+                SELECT RTRIM(LTRIM(location_name)) AS line_name FROM dbo.LOCATIONS WITH (NOLOCK) WHERE is_active = 1 AND location_name IN ('Warehouse', 'Store', 'Store PE', 'Shipping', 'MT Shop')
+            ) AS src
+            WHERE line_name <> '' AND line_name IS NOT NULL
+            ORDER BY line_name ASC");
+            $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $lines]);
+            break;
+
         case 'approve_user':
             $targetId = (int)($input['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing target user ID.");

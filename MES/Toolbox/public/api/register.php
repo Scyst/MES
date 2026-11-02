@@ -12,14 +12,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../utils/logger.php';
+
+// Public GET Endpoint: Provide live production lines and factory areas from DB
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $action = $_GET['action'] ?? 'lines';
+    if ($action === 'lines') {
+        try {
+            $stmt = $pdo->query("SELECT DISTINCT line_name FROM (
+                SELECT RTRIM(LTRIM(production_line)) AS line_name FROM dbo.LOCATIONS WITH (NOLOCK) WHERE production_line IS NOT NULL AND production_line <> '' AND is_active = 1
+                UNION
+                SELECT RTRIM(LTRIM(line)) AS line_name FROM dbo.LINE_SCHEDULES WITH (NOLOCK) WHERE line IS NOT NULL AND line <> '' AND is_active = 1
+                UNION
+                SELECT RTRIM(LTRIM(line)) AS line_name FROM dbo.PE_MACHINES WITH (NOLOCK) WHERE line IS NOT NULL AND line <> '' AND is_active = 1
+                UNION
+                SELECT RTRIM(LTRIM(line)) AS line_name FROM dbo.USERS WITH (NOLOCK) WHERE line IS NOT NULL AND line <> '' AND line NOT LIKE 'LINE %'
+                UNION
+                SELECT RTRIM(LTRIM(location_name)) AS line_name FROM dbo.LOCATIONS WITH (NOLOCK) WHERE is_active = 1 AND location_name IN ('Warehouse', 'Store', 'Store PE', 'Shipping', 'MT Shop')
+            ) AS src
+            WHERE line_name <> '' AND line_name IS NOT NULL
+            ORDER BY line_name ASC");
+            $lines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $lines]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to query production lines: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method Not Allowed']);
     exit;
 }
-
-require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../utils/logger.php';
 
 // Valid Class Codes for Trainee Fast-Track (Auto-Approved)
 $VALID_CLASS_CODES = [

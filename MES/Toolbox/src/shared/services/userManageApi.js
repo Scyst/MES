@@ -89,6 +89,11 @@ export const userManageApi = {
     return postApi(`${API_URL}?action=extend_expiry`, { id, days, expires_at });
   },
 
+  getLines: async () => {
+    const regUrl = `${import.meta.env.BASE_URL}api/register.php`;
+    return getApi(regUrl, { action: 'lines' });
+  },
+
   register: async (payload) => {
     const regUrl = `${import.meta.env.BASE_URL}api/register.php`;
     return postApi(regUrl, payload);

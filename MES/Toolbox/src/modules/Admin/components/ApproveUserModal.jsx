@@ -16,11 +16,22 @@ export default function ApproveUserModal({ isOpen, onClose, pendingUser, onAppro
   });
   const [loading, setLoading] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
+  const [availableLines, setAvailableLines] = useState([]);
+
+  useEffect(() => {
+    userManageApi.getLines()
+      .then(res => {
+        if (res && res.success && Array.isArray(res.data)) {
+          setAvailableLines(res.data);
+        }
+      })
+      .catch(err => console.warn('Could not load lines:', err));
+  }, []);
 
   useEffect(() => {
     if (pendingUser) {
       setRole(pendingUser.role || 'operator');
-      setLine(pendingUser.line || 'LINE 1');
+      setLine(pendingUser.line || 'ASSEMBLY');
       if (pendingUser.account_type === 'trainee') {
         setExpiryOption('30_days');
       } else if (pendingUser.account_type === 'contractor') {
@@ -215,15 +226,13 @@ export default function ApproveUserModal({ isOpen, onClose, pendingUser, onAppro
                 onChange={(e) => setLine(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
               >
-                <option value="LINE 1">LINE 1</option>
-                <option value="LINE 2">LINE 2</option>
-                <option value="LINE 3">LINE 3</option>
-                <option value="LINE 4">LINE 4</option>
-                <option value="LINE 5">LINE 5</option>
-                <option value="LINE 6">LINE 6</option>
-                <option value="STORE">WAREHOUSE / STORE</option>
-                <option value="MAINTENANCE">PE / MAINTENANCE</option>
-                <option value="ALL">ทุกไลน์ผลิต (All Lines)</option>
+                <option value="ALL">ทุกไลน์ผลิต / พื้นที่ (All Lines & Areas)</option>
+                {availableLines.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+                {line && line !== 'ALL' && !availableLines.includes(line) && (
+                  <option value={line}>{line}</option>
+                )}
               </select>
             </div>
 

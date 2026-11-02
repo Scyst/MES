@@ -1,9 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, GraduationCap, Building2, Key, CheckCircle, ArrowRight, BookOpen, Clock } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
 import { useLanguage } from '../../../shared/contexts/LanguageContext';
 import LanguageSelector from '../../../shared/components/LanguageSelector';
+
+const DEFAULT_LINES = [
+  'ASSEMBLY',
+  'BEND',
+  'CHECK',
+  'DL.Pipe',
+  'Facility & Utility',
+  'IT',
+  'LASER',
+  'MANAGEMENT - OEM1',
+  'MT/PE',
+  'OFFICE',
+  'PAINT',
+  'PAINT B11',
+  'PRESS',
+  'QA/QC',
+  'Retrofit & Robot D-DL',
+  'SCM',
+  'Shipping',
+  'SPOT',
+  'ST/WH',
+  'Store',
+  'Warehouse'
+];
 
 export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
   const toast = useToast();
@@ -11,6 +35,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
   const [activeTab, setActiveTab] = useState('trainee'); // 'trainee' | 'workforce'
   const [loading, setLoading] = useState(false);
   const [registeredResult, setRegisteredResult] = useState(null);
+  const [availableLines, setAvailableLines] = useState(DEFAULT_LINES);
 
   // Trainee Form
   const [traineeForm, setTraineeForm] = useState({
@@ -31,11 +56,29 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
     emp_id: '',
     account_type: 'employee',
     role: 'operator',
-    line: 'LINE 1',
+    line: 'ASSEMBLY',
     company_name: '',
     request_reason: '',
     requested_permissions: []
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    userManageApi.getLines()
+      .then(res => {
+        if (isMounted && res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setAvailableLines(res.data);
+          setWorkforceForm(prev => ({
+            ...prev,
+            line: prev.line === 'LINE 1' || !prev.line ? res.data[0] : prev.line
+          }));
+        }
+      })
+      .catch(err => {
+        console.warn('Could not load live lines from database, using defaults:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -422,15 +465,10 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="LINE 1">LINE 1</option>
-                      <option value="LINE 2">LINE 2</option>
-                      <option value="LINE 3">LINE 3</option>
-                      <option value="LINE 4">LINE 4</option>
-                      <option value="LINE 5">LINE 5</option>
-                      <option value="LINE 6">LINE 6</option>
-                      <option value="STORE">WAREHOUSE / STORE</option>
-                      <option value="MAINTENANCE">PE / MAINTENANCE</option>
                       <option value="ALL">{t('lineAll')}</option>
+                      {availableLines.map((lineOption) => (
+                        <option key={lineOption} value={lineOption}>{lineOption}</option>
+                      ))}
                     </select>
                   </div>
 
