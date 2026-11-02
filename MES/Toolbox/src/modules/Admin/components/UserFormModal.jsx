@@ -15,7 +15,9 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
     emp_id: '',
     role: 'operator',
     line: '',
-    team_group: ''
+    team_group: '',
+    account_type: 'employee',
+    expires_at: ''
   });
 
   const [permissions, setPermissions] = useState({
@@ -39,7 +41,9 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
         emp_id: userData.emp_id || '',
         role: userData.role || 'operator',
         line: userData.line || '',
-        team_group: userData.team_group || ''
+        team_group: userData.team_group || '',
+        account_type: userData.account_type || 'employee',
+        expires_at: userData.expires_at ? userData.expires_at.slice(0, 10) : ''
       });
       fetchPermissions(userData.id, userData.role);
     } else {
@@ -51,7 +55,9 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
         emp_id: '',
         role: 'operator',
         line: '',
-        team_group: ''
+        team_group: '',
+        account_type: 'employee',
+        expires_at: ''
       });
       fetchPermissions(0, 'operator');
     }
@@ -61,11 +67,12 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
     setPermLoading(true);
     try {
       const res = await userManageApi.getPermissions(userId, roleCode);
-      if (res.success) {
+      if (res && res.success) {
+        const payload = res.data || res;
         setPermissions({
-          all: res.data.all || [],
-          rolePerms: res.data.role_perms || [],
-          userPerms: res.data.user_perms || []
+          all: payload.all || [],
+          rolePerms: payload.role_perms || [],
+          userPerms: payload.user_perms || []
         });
       }
     } catch (e) {
@@ -155,7 +162,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
   if (!isOpen) return null;
 
   // Group permissions by module
-  const groupedPerms = permissions.all.reduce((acc, perm) => {
+  const groupedPerms = (permissions.all || []).reduce((acc, perm) => {
     const mod = perm.module_name || 'General';
     if (!acc[mod]) acc[mod] = [];
     acc[mod].push(perm);
@@ -233,10 +240,14 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                   <label className="block text-sm font-medium text-gray-700 mb-1">บทบาท (Role) <span className="text-red-500">*</span></label>
                   <select name="role" value={formData.role} onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    <option value="operator">Operator</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="planner">Planner</option>
-                    <option value="admin">Admin</option>
+                    <option value="operator">OPERATOR</option>
+                    <option value="supervisor">SUPERVISOR</option>
+                    <option value="planner">PLANNER</option>
+                    <option value="trainee">TRAINEE (ผู้เข้าอบรม)</option>
+                    <option value="contractor">CONTRACTOR (ผู้รับเหมา)</option>
+                    <option value="customer">CUSTOMER (ลูกค้า)</option>
+                    <option value="executive">EXECUTIVE (ผู้บริหาร)</option>
+                    <option value="admin">ADMIN</option>
                   </select>
                 </div>
               </div>
@@ -251,6 +262,26 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                   <label className="block text-sm font-medium text-gray-700 mb-1">กลุ่มทีม (Team Group)</label>
                   <input type="text" name="team_group" value={formData.team_group} onChange={handleChange} placeholder="เช่น A, B"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทบัญชี (Account Type)</label>
+                  <select name="account_type" value={formData.account_type} onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    <option value="employee">พนักงาน (Employee)</option>
+                    <option value="trainee">ผู้เข้าอบรม (Trainee)</option>
+                    <option value="contractor">ผู้รับเหมา/QC (Contractor)</option>
+                    <option value="customer">ลูกค้า (Customer)</option>
+                    <option value="executive">ผู้บริหาร (Executive)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">วันหมดอายุ (Expires At)</label>
+                  <input type="date" name="expires_at" value={formData.expires_at} onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <p className="text-[11px] text-gray-400 mt-1">เว้นว่างไว้หากไม่มีวันหมดอายุ (Permanent)</p>
                 </div>
               </div>
             </div>

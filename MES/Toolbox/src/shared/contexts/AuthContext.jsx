@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }) => {
           const isCheckEndpoint = reqUrl.includes('check.php') || reqUrl.includes('login.php');
           if (error.response.status === 401 && !isCheckEndpoint) {
             performLocalLogoutRedirect(true);
-          } else if (error.response.status === 403) {
+          } else if (error.response.status === 403 && !isCheckEndpoint) {
             alert(
               error.response.data?.message ||
                 'Permission Denied: คุณไม่มีสิทธิ์เข้าถึงข้อมูลหรือฟังก์ชันนี้'

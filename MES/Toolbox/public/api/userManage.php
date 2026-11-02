@@ -297,6 +297,18 @@ try {
                     }
                 }
 
+                if (array_key_exists('expires_at', $input)) {
+                    $expVal = !empty($input['expires_at']) ? $input['expires_at'] : null;
+                    $updExp = $pdo->prepare("UPDATE " . USERS_TABLE . " SET expires_at = ? WHERE id = ?");
+                    $updExp->execute([$expVal, $targetId]);
+                }
+
+                if (!empty($input['account_type'])) {
+                    $accType = trim($input['account_type']);
+                    $updAcc = $pdo->prepare("UPDATE " . USERS_TABLE . " SET account_type = ? WHERE id = ?");
+                    $updAcc->execute([$accType, $targetId]);
+                }
+
                 echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             }
             break;
@@ -362,8 +374,15 @@ try {
                 $userPerms = $stmtUser->fetchAll(PDO::FETCH_COLUMN);
             }
             
+            $resultData = [
+                'all' => $allPerms, 
+                'role_perms' => $rolePerms, 
+                'user_perms' => $userPerms
+            ];
+            
             echo json_encode([
                 'success' => true, 
+                'data' => $resultData,
                 'all' => $allPerms, 
                 'role_perms' => $rolePerms, 
                 'user_perms' => $userPerms

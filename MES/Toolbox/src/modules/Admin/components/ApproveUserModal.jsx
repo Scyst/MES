@@ -36,11 +36,12 @@ export default function ApproveUserModal({ isOpen, onClose, pendingUser, onAppro
     setPermLoading(true);
     try {
       const res = await userManageApi.getPermissions(userId, roleCode);
-      if (res.success) {
+      if (res && res.success) {
+        const payload = res.data || res;
         setPermissions({
-          all: res.data.all || [],
-          rolePerms: res.data.role_perms || [],
-          userPerms: res.data.user_perms || []
+          all: payload.all || [],
+          rolePerms: payload.role_perms || [],
+          userPerms: payload.user_perms || []
         });
       }
     } catch (e) {
@@ -251,6 +252,7 @@ export default function ApproveUserModal({ isOpen, onClose, pendingUser, onAppro
               </label>
               <input
                 type="date"
+                min={new Date().toISOString().split('T')[0]}
                 value={customExpiry}
                 onChange={(e) => setCustomExpiry(e.target.value)}
                 className="px-3 py-1.5 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-sm outline-none"
