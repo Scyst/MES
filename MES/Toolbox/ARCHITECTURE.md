@@ -77,11 +77,11 @@ MES/Toolbox/
   - คอมโพเนนต์ตารางมาตรฐานโรงงาน (`w-full`, ค้นหา Debounce 300ms, กรอง, เรียงลำดับ, แบ่งหน้า, และ Export Excel) เพื่อใช้ซ้ำในทุกโมดูล (`src/shared/components/DataTable.jsx`, `Pagination.jsx`) พร้อมปรับใช้จริงใน `UserManagement.jsx` แล้ว
 
 ### ชั้นที่ 2: อัปเกรดระบบจัดการผู้ใช้งานและสิทธิ์ (`Admin / User Management` — `#/admin/users`) ให้ครบ 100%
-- [ ] **2.1 Backend Parity (`public/api/userManage.php`):**
+- [x] **2.1 Backend Parity (`public/api/userManage.php`):**
   - เพิ่ม Action `reset_password_default` (รีเซ็ตรหัสผ่านเป็น `123456` ในคลิกเดียว) และอัปเดต `action=read` ให้ดึง `profile_picture`, `pwd_changed_at`, `last_login` เหมือน `MES/page/userManage/api/userManage.php`
-- [ ] **2.2 Frontend Parity (`src/modules/Admin/pages/UserManagement.jsx`):**
+- [x] **2.2 Frontend Parity (`src/modules/Admin/pages/UserManagement.jsx`):**
   - แสดงรูปโปรไฟล์ (`profile_picture`), เวลาเข้าใช้งานล่าสุด (`last_login`), วันที่เปลี่ยนรหัสผ่าน (`pwd_changed_at`), และปุ่ม Reset Password ในตารางผู้ใช้งาน
-  - เมื่อทดสอบผ่านด้วย Puppeteer 100% ให้สลับลิงก์ **User Manager** ใน `HomeDashboard.jsx` และ `DesktopSidebar.jsx` มาใช้ `#/admin/users` ของ `Toolbox` เต็มตัว
+  - สลับลิงก์ **User Manager** ใน `HomeDashboard.jsx` และ `DesktopSidebar.jsx` มาใช้ `#/admin/users` ของ `Toolbox` เต็มตัว 100% พร้อมทดสอบ Build ผ่านสมบูรณ์
 
 ### ชั้นที่ 3: ศูนย์ตั้งค่าข้อมูลหลักของโรงงาน (`System Settings & Master Data` — `#/system-settings`)
 พอร์ตโมดูล `MES/page/systemSettings` และ API ทั้ง 6 ไฟล์เข้าสู่ `MES/Toolbox/src/modules/SystemSettings/` และ `public/api/systemSettings/` ครอบคลุม 5 แท็บหลัก:

@@ -69,7 +69,7 @@ export const MENU_DATA = [
     sectionIcon: Settings,
     items: [
       { name: 'System Settings', icon: Settings, href: '/iot-toolbox/sandbox-b9/MES/MES/page/systemSettings/systemSettings.php', external: true },
-      { name: 'User Manager', icon: Users, href: '/iot-toolbox/sandbox-b9/MES/MES/page/userManage/userManageUI.php', external: true },
+      { name: 'User Manager', icon: Users, to: '/admin/users' },
     ]
   }
 ];
@@ -103,9 +103,8 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
               {section.sectionIcon && <section.sectionIcon size={16} />}
             </div>
             <span
-              className={`ml-3 truncate whitespace-nowrap flex-1 text-left ${
-                isMobileDrawer ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'
-              }`}
+              className={`ml-3 truncate whitespace-nowrap flex-1 text-left ${isMobileDrawer ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'
+                }`}
             >
               {section.title}
             </span>
@@ -138,11 +137,10 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
                         />
                       </div>
                       <span
-                        className={`ml-3 truncate whitespace-nowrap ${
-                          isMobileDrawer
+                        className={`ml-3 truncate whitespace-nowrap ${isMobileDrawer
                             ? 'opacity-100'
                             : 'opacity-0 group-hover:opacity-100 transition-opacity'
-                        }`}
+                          }`}
                       >
                         {item.name}
                       </span>
@@ -157,28 +155,25 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
                     onClick={() => {
                       if (isMobileDrawer && onCloseMobile) onCloseMobile();
                     }}
-                    className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${
-                      isActive
+                    className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${isActive
                         ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
-                    }`}
+                      }`}
                   >
                     <div className="min-w-[20px] flex items-center justify-center">
                       <Icon
                         size={20}
-                        className={`${
-                          isActive
+                        className={`${isActive
                             ? 'text-blue-600 dark:text-blue-400'
                             : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
-                        } transition-colors`}
+                          } transition-colors`}
                       />
                     </div>
                     <span
-                      className={`ml-3 truncate whitespace-nowrap ${
-                        isMobileDrawer
+                      className={`ml-3 truncate whitespace-nowrap ${isMobileDrawer
                           ? 'opacity-100'
                           : 'opacity-0 group-hover:opacity-100 transition-opacity'
-                      }`}
+                        }`}
                     >
                       {item.name}
                     </span>

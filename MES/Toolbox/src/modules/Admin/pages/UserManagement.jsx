@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, RefreshCw, UserCheck, UserX, Edit, Shield, Users as UsersIcon, Key, History } from 'lucide-react';
+import {
+  Plus,
+  RefreshCw,
+  UserCheck,
+  UserX,
+  Edit,
+  Shield,
+  Users as UsersIcon,
+  Key,
+  History,
+  AlertTriangle,
+  Clock,
+} from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
 import DataTable from '../../../shared/components/DataTable';
@@ -8,13 +20,60 @@ import RolesPermissionsTab from '../components/RolesPermissionsTab';
 import AuditLogsTab from '../components/AuditLogsTab';
 
 const ROLE_BADGE_CLASSES = {
-  admin: 'bg-purple-100 text-purple-700',
-  supervisor: 'bg-blue-100 text-blue-700',
+  admin: 'bg-purple-100 text-purple-700 border border-purple-200',
+  supervisor: 'bg-blue-100 text-blue-700 border border-blue-200',
+  operator: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  manager: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
 };
 
 const TAB_BUTTON_BASE = 'pb-3 flex items-center gap-2 font-medium transition-colors min-h-[44px]';
 const tabClasses = (isActive) =>
   `${TAB_BUTTON_BASE} ${isActive ? 'border-b-2 border-blue-600 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`;
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
+function UserAvatar({ user }) {
+  const [imgError, setImgError] = useState(false);
+  const initial = (user.fullname || user.username || '?').charAt(0).toUpperCase();
+
+  if (user.profile_picture && !imgError) {
+    return (
+      <img
+        src={user.profile_picture}
+        alt={user.username}
+        onError={() => setImgError(true)}
+        className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+        user.is_active == 1
+          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+          : 'bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+      }`}
+    >
+      {initial}
+    </div>
+  );
+}
 
 export default function UserManagement() {
   const toast = useToast();
@@ -95,6 +154,27 @@ export default function UserManagement() {
     }
   }, [confirm, toast, fetchUsers]);
 
+  const handleResetPassword = useCallback(async (user) => {
+    const accepted = await confirm({
+      title: 'รีเซ็ตรหัสผ่านเริ่มต้น',
+      message: `คุณต้องการรีเซ็ตรหัสผ่านสำหรับผู้ใช้งาน @${user.username} (${user.fullname || user.emp_id || ''}) เป็นรหัสเริ่มต้น "123456" ใช่หรือไม่?`,
+      danger: true,
+    });
+    if (!accepted) return;
+
+    try {
+      const result = await userManageApi.resetPasswordDefault(user.id);
+      if (result.success) {
+        toast.success(result.message || 'รีเซ็ตรหัสผ่านเป็น 123456 เรียบร้อยแล้ว');
+        fetchUsers();
+      } else {
+        toast.error(result.message || 'ไม่สามารถรีเซ็ตรหัสผ่านได้');
+      }
+    } catch (error) {
+      console.error('Reset password failed:', error);
+    }
+  }, [confirm, toast, fetchUsers]);
+
   const openAddModal = () => {
     setEditingUser(null);
     setIsModalOpen(true);
@@ -113,83 +193,157 @@ export default function UserManagement() {
 
   // Extract unique roles for the filter dropdown
   const uniqueRoles = useMemo(() => {
-    return [...new Set(users.map(u => u.role).filter(Boolean))].sort();
+    return [...new Set(users.map((u) => u.role).filter(Boolean))].sort();
   }, [users]);
 
   // Role/status filters are applied here; free-text search is handled by DataTable
   const filteredUsers = useMemo(() => {
-    return users.filter(user => {
+    return users.filter((user) => {
       const matchesRole = roleFilter ? user.role === roleFilter : true;
-      const matchesStatus = statusFilter === '' ? true : (statusFilter === 'active' ? user.is_active == 1 : user.is_active == 0);
+      const matchesStatus =
+        statusFilter === ''
+          ? true
+          : statusFilter === 'active'
+          ? user.is_active == 1
+          : user.is_active == 0;
       return matchesRole && matchesStatus;
     });
   }, [users, roleFilter, statusFilter]);
 
-  const userColumns = useMemo(() => [
-    { key: 'username', header: 'Username', render: (user) => <span className="font-medium text-gray-900 dark:text-white">{user.username}</span> },
-    { key: 'emp_id', header: 'Emp ID', accessor: (user) => user.emp_id || '-' },
-    { key: 'fullname', header: 'Name' },
-    {
-      key: 'role',
-      header: 'Role',
-      accessor: (user) => (user.role ? user.role.toUpperCase() : 'UNKNOWN'),
-      render: (user) => (
-        <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${ROLE_BADGE_CLASSES[user.role] || 'bg-gray-100 text-gray-700'}`}>
-          {user.role ? user.role.toUpperCase() : 'UNKNOWN'}
-        </span>
-      ),
-    },
-    {
-      key: 'line',
-      header: 'Line / Team',
-      accessor: (user) => `${user.line || 'No Line'}${user.team_group ? ` (${user.team_group})` : ''}`,
-    },
-    {
-      key: 'is_active',
-      header: 'Status',
-      accessor: (user) => (user.is_active == 1 ? 'Active' : 'Inactive'),
-      render: (user) => user.is_active == 1 ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600">
-          <UserCheck size={14} /> Active
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-600">
-          <UserX size={14} /> Inactive
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      sortable: false,
-      exportable: false,
-      render: (user) => (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => openEditModal(user)}
-            className="flex h-11 w-11 items-center justify-center rounded bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100"
-            title="Edit User & Permissions"
-            aria-label="แก้ไขผู้ใช้งานและสิทธิ์"
-          >
-            <Edit size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleToggleStatus(user.id, user.is_active == 1)}
-            className={`flex h-11 w-11 items-center justify-center rounded transition-colors ${user.is_active == 1
-                ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+  const userColumns = useMemo(
+    () => [
+      {
+        key: 'fullname',
+        header: 'ผู้ใช้งาน (User)',
+        accessor: (user) => `${user.fullname || ''} ${user.username || ''} ${user.emp_id || ''}`,
+        render: (user) => (
+          <div className="flex items-center gap-3">
+            <UserAvatar user={user} />
+            <div>
+              <div className="font-semibold text-gray-900 dark:text-white leading-tight">
+                {user.fullname || '-'}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span className="font-mono text-blue-600 dark:text-blue-400 font-medium">@{user.username}</span>
+                <span>•</span>
+                <span>รหัส: {user.emp_id || '-'}</span>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'role',
+        header: 'ตำแหน่ง & ไลน์ (Role & Line)',
+        accessor: (user) => `${user.role || ''} ${user.line || ''} ${user.team_group || ''}`,
+        render: (user) => (
+          <div>
+            <span
+              className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
+                ROLE_BADGE_CLASSES[user.role] || 'bg-gray-100 text-gray-700'
               }`}
-            title={user.is_active == 1 ? 'Disable User' : 'Enable User'}
-            aria-label={user.is_active == 1 ? 'ปิดการใช้งานผู้ใช้' : 'เปิดการใช้งานผู้ใช้'}
-          >
-            {user.is_active == 1 ? <UserX size={16} /> : <UserCheck size={16} />}
-          </button>
-        </div>
-      ),
-    },
-  ], [openEditModal, handleToggleStatus]);
+            >
+              {user.role ? user.role.toUpperCase() : 'UNKNOWN'}
+            </span>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {user.line || 'No Line'}
+              {user.team_group ? ` • ${user.team_group}` : ''}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'security_activity',
+        header: 'ความปลอดภัย & การเข้าใช้งาน',
+        accessor: (user) =>
+          `${user.pwd_changed_at || ''} ${user.last_login || ''} ${user.is_auto_generated == 1 ? 'System' : 'Manual'}`,
+        render: (user) => (
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  user.is_auto_generated == 1
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}
+              >
+                {user.is_auto_generated == 1 ? 'System' : 'Manual'}
+              </span>
+              {user.pwd_changed_at ? (
+                <span className="text-gray-500 flex items-center gap-1" title={`เปลี่ยนรหัสล่าสุด: ${user.pwd_changed_at}`}>
+                  <Key size={11} className="text-gray-400" /> {formatDate(user.pwd_changed_at)}
+                </span>
+              ) : (
+                <span className="text-amber-600 font-medium flex items-center gap-1" title="ยังไม่เคยเปลี่ยนรหัสผ่าน">
+                  <AlertTriangle size={11} /> ยังไม่เปลี่ยนรหัส
+                </span>
+              )}
+            </div>
+            <div className="text-gray-400 flex items-center gap-1">
+              <Clock size={11} /> {user.last_login ? `ใช้งาน: ${formatDate(user.last_login)}` : 'ยังไม่เคยเข้าสู่ระบบ'}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'is_active',
+        header: 'สถานะ (Status)',
+        accessor: (user) => (user.is_active == 1 ? 'Active' : 'Inactive'),
+        render: (user) =>
+          user.is_active == 1 ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600">
+              <UserCheck size={14} /> Active
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600">
+              <UserX size={14} /> Inactive
+            </span>
+          ),
+      },
+      {
+        key: 'actions',
+        header: 'จัดการ (Actions)',
+        sortable: false,
+        exportable: false,
+        render: (user) => (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => openEditModal(user)}
+              className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100"
+              title="แก้ไขผู้ใช้งานและสิทธิ์"
+              aria-label="แก้ไขผู้ใช้งานและสิทธิ์"
+            >
+              <Edit size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleResetPassword(user)}
+              className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-50 text-amber-600 transition-colors hover:bg-amber-100"
+              title="รีเซ็ตรหัสผ่านเริ่มต้น (123456)"
+              aria-label="รีเซ็ตรหัสผ่านเริ่มต้น"
+            >
+              <Key size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleStatus(user.id, user.is_active == 1)}
+              className={`flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
+                user.is_active == 1
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+              }`}
+              title={user.is_active == 1 ? 'ปิดการใช้งานผู้ใช้' : 'เปิดการใช้งานผู้ใช้'}
+              aria-label={user.is_active == 1 ? 'ปิดการใช้งานผู้ใช้' : 'เปิดการใช้งานผู้ใช้'}
+            >
+              {user.is_active == 1 ? <UserX size={16} /> : <UserCheck size={16} />}
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [openEditModal, handleToggleStatus, handleResetPassword]
+  );
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -208,7 +362,7 @@ export default function UserManagement() {
             disabled={syncing}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 px-4 min-h-[44px] rounded-lg font-medium border border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50"
           >
-            <RefreshCw size={18} className={syncing ? "animate-spin" : ""} />
+            <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Syncing...' : 'Sync Manpower'}
           </button>
 
@@ -258,7 +412,11 @@ export default function UserManagement() {
                   aria-label="กรองตามระดับผู้ใช้งาน"
                 >
                   <option value="">ทุกระดับ (All Roles)</option>
-                  {uniqueRoles.map((role) => <option key={role} value={role}>{role.toUpperCase()}</option>)}
+                  {uniqueRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {role.toUpperCase()}
+                    </option>
+                  ))}
                 </select>
                 <select
                   className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

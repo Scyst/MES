@@ -35,7 +35,9 @@ try {
 
     switch ($action) {
         case 'read':
-            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, is_active, is_auto_generated, created_at 
+            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, 
+                                        is_active, is_auto_generated, created_at,
+                                        profile_picture, pwd_changed_at, last_login 
                                  FROM " . USERS_TABLE . " 
                                  WHERE role != 'creator' 
                                  ORDER BY is_active DESC, role ASC, id ASC");
@@ -185,10 +187,38 @@ try {
             }
             break;
 
+        case 'reset_password_default':
+            $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
+            if (!$targetId) throw new Exception("Missing user ID.");
+            
+            // Security Check
+            $stmtRoleCheck = $pdo->prepare("SELECT role FROM " . USERS_TABLE . " WHERE id = ?");
+            $stmtRoleCheck->execute([$targetId]);
+            $targetRole = $stmtRoleCheck->fetchColumn();
+            
+            if ($targetRole === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
+            if ($targetRole === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
+            
+            // Default password is 123456
+            $hashedPassword = password_hash('123456', PASSWORD_DEFAULT);
+            $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
+            $stmtPwd->execute([$targetId, $hashedPassword, $actionBy]);
+            
+            echo json_encode(['success' => true, 'message' => 'Password reset to 123456 successfully.']);
+            break;
+
         case 'toggle_status':
             $targetId = (int)($input['id'] ?? $_GET['id'] ?? 0);
             if (!$targetId) throw new Exception("Missing user ID.");
             if ($targetId === (int)$currentUser['id']) throw new Exception("You cannot disable your own account.");
+            
+            // Security Check
+            $stmtRoleCheck = $pdo->prepare("SELECT role FROM " . USERS_TABLE . " WHERE id = ?");
+            $stmtRoleCheck->execute([$targetId]);
+            $targetRole = $stmtRoleCheck->fetchColumn();
+            
+            if ($targetRole === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
+            if ($targetRole === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
             
             $stmtToggle = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='TOGGLE_STATUS', @UserId=?, @ActionBy=?");
             $stmtToggle->execute([$targetId, $actionBy]);

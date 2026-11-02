@@ -30,6 +30,10 @@ export const userManageApi = {
     return postApi(`${API_URL}?action=toggle_status`, { id });
   },
 
+  resetPasswordDefault: async (id) => {
+    return postApi(`${API_URL}?action=reset_password_default`, { id });
+  },
+
   getPermissions: async (id = 0, role = '') => {
     return getApi(API_URL, { 
       action: 'get_permissions', 
