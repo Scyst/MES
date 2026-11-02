@@ -71,5 +71,26 @@ export const userManageApi = {
 
   getLogs: async (filters) => {
     return getApi(API_URL, { action: 'logs', ...filters });
+  },
+
+  getPendingApprovals: async () => {
+    return getApi(API_URL, { action: 'pending_approvals', _t: Date.now() });
+  },
+
+  approveUser: async ({ id, role, line, expires_at, permissions }) => {
+    return postApi(`${API_URL}?action=approve_user`, { id, role, line, expires_at, permissions });
+  },
+
+  rejectUser: async ({ id, reason }) => {
+    return postApi(`${API_URL}?action=reject_user`, { id, reason });
+  },
+
+  extendExpiry: async ({ id, days, expires_at }) => {
+    return postApi(`${API_URL}?action=extend_expiry`, { id, days, expires_at });
+  },
+
+  register: async (payload) => {
+    const regUrl = `${import.meta.env.BASE_URL}api/register.php`;
+    return postApi(regUrl, payload);
   }
 };

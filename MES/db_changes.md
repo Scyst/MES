@@ -4,6 +4,45 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-02 — Self-Service Registration, Account Lifecycle & Hybrid PBAC Schema
+
+**Agent:** Antigravity  
+**Feature:** ปรับปรุงโครงสร้างฐานข้อมูลรองรับระบบสมัครสมาชิก (Self-Service Registration), การอนุมัติเปิดใช้งาน (Approval Gate), บัญชีชั่วคราวพร้อมวันหมดอายุ (Temporary / Expiring Accounts), และระบบสิทธิ์ผสมผสาน Hybrid RBAC/PBAC ครอบคลุมทั้งบุคคลภายในและภายนอกโรงงาน (Trainees, Contractors, Customers, HQ Executives)
+
+### Schema Alterations
+
+#### 1. dbo.USERS
+- เพิ่มคอลัมน์รองรับประเภทบัญชีและวงจรการอนุมัติ:
+  - account_type VARCHAR(20) NOT NULL DEFAULT 'employee' (employee, trainee, contractor, customer, executive)
+  - approval_status VARCHAR(20) NOT NULL DEFAULT 'approved' (approved, pending, rejected)
+  - expires_at DATETIME NULL (วันหมดอายุสำหรับบัญชีชั่วคราว)
+  - company_name NVARCHAR(200) NULL (ชื่อบริษัท / สังกัดภายนอก / รหัสคลาส)
+  - request_reason NVARCHAR(500) NULL (เหตุผลและวัตถุประสงค์ในการขอเข้าใช้งาน)
+  - approved_by VARCHAR(100) NULL (ชื่อผู้กดยืนยันอนุมัติคำขอ)
+  - approved_at DATETIME NULL (วันเวลาที่ได้รับการอนุมัติ)
+
+#### 2. dbo.SYS_ROLES
+- เพิ่ม Role ใหม่ 4 กลุ่ม:
+  - executive (HQ Executive - ผู้บริหารส่วนกลาง / Read-Only Dashboard)
+  - contractor (Contractor - ทีมงานภายนอก / ช่างสัญญาจ้างเฉพาะกิจ)
+  - customer (Customer - ลูกค้าภายนอก / ตรวจรับสินค้าและรายงานตู้)
+  - trainee (Trainee - ผู้เข้าอบรม / ศูนย์การเรียนรู้ Learning Hub)
+
+#### 3. dbo.SYS_PERMISSIONS
+- เพิ่มสิทธิ์การเข้าถึงสำหรับโมดูลใหม่:
+  - view_learning_hub (module: ACADEMY - เข้าดูบทเรียนใน Learning Hub)
+  - take_exam_learning_hub (module: ACADEMY - ทำแบบทดสอบและข้อสอบใบรับรอง)
+  - view_transport (module: TRANSPORT - ดูตารางและสายรถรับส่งพนักงาน)
+  - book_transport (module: TRANSPORT - จองที่นั่งรถรับส่ง)
+  - view_planner (module: PLANNING - ดูแดชบอร์ดแผนงาน Team Planner)
+  - manage_planner (module: PLANNING - สร้างและแก้ไขแผนงาน Team Planner)
+
+#### 4. dbo.SYS_ROLE_PERMISSIONS
+- ผูกสิทธิ์เริ่มต้น (Baseline Templates) ให้กับ Role ใหม่ทั้งหมด รวมถึงสิทธิ์บริการส่วนกลาง (Transport / Learning Hub / Planner) ให้กับ Operator และ Supervisor
+
+---
+
+
 ## 2026-10-27 — Paint Chem Clear False Out-of-Range on Rinse Water pH (Conta_WR1..4)
 
 **Agent:** Antigravity  

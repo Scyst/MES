@@ -5,7 +5,7 @@ import {
   Store, Warehouse, Package, MapPin, ShieldCheck,
   ShieldAlert, Wrench, HeartPulse, ChevronRight,
   Settings, Users, DollarSign, FileText, Zap, Sun, Calendar, Rocket,
-  Video, Cuboid, Star, FlaskConical
+  Video, Cuboid, Star, FlaskConical, GraduationCap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
@@ -155,6 +155,7 @@ export default function HomeDashboard() {
 
   const commonServices = [
     { title: 'My Profile & 4D', desc: 'ข้อมูลส่วนตัวและผลการประเมิน 4 มิติ', icon: Users, colorClass: 'bg-gray-100 text-gray-700', to: '/profile' },
+    { title: 'MES Learning Hub', desc: 'ศูนย์การเรียนรู้ & สอบวัดผล (Academy)', icon: GraduationCap, colorClass: 'bg-indigo-100 text-indigo-700', to: '/iot-toolbox/sandbox-b9/LearningHub/' },
     { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php' },
     { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟร์คลิฟต์', icon: Truck, colorClass: 'bg-gray-100 text-gray-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php' },
@@ -285,72 +286,114 @@ export default function HomeDashboard() {
 
       <div className="flex flex-col gap-6 lg:col-span-7 lg:pl-6 lg:border-l lg:border-gray-100 dark:lg:border-gray-800 lg:h-full lg:overflow-y-auto custom-scrollbar pb-24 lg:pb-8 lg:-mr-6 lg:pr-8">
 
+        {/* Trainee Academy Welcome Banner */}
+        {user.role === 'trainee' && (
+          <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 rounded-2xl p-6 text-white shadow-xl space-y-4 border border-blue-500/30">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-white/15 rounded-xl backdrop-blur-sm">
+                <GraduationCap size={32} className="text-blue-200" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">ยินดีต้อนรับสู่ MES Learning Hub!</h2>
+                <p className="text-blue-100 text-sm">หลักสูตรวิศวกรรมโรงงานและระบบการผลิตอัจฉริยะ (SNC Former B9)</p>
+              </div>
+            </div>
+            <p className="text-sm text-blue-100/90 leading-relaxed">
+              บัญชีของคุณเปิดใช้งานในฐานะ <b>ผู้เข้าอบรม (Trainee)</b> เรียบร้อยแล้ว สามารถเข้าศึกษาบทเรียน ทำแบบฝึกหัด และเข้าสอบวัดระดับความรู้เพื่อบันทึกประวัติทักษะได้ทันที
+            </p>
+            <div className="pt-1 flex flex-wrap gap-3">
+              <a
+                href="/iot-toolbox/sandbox-b9/LearningHub/"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-800 font-bold rounded-xl shadow-md hover:bg-blue-50 transition-all cursor-pointer"
+              >
+                <span>เข้าสู่ศูนย์เรียนรู้ Learning Hub</span>
+                <ChevronRight size={18} />
+              </a>
+              <Link
+                to="/profile"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white/15 hover:bg-white/20 text-white font-medium rounded-xl transition-all cursor-pointer border border-white/20"
+              >
+                <Users size={18} />
+                <span>ดูโปรไฟล์และผลงาน</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Common Services */}
         <section>
           <SectionLabel label="COMMON SERVICES" subLabel="บริการส่วนกลาง & แจ้งเรื่อง" borderColor="bg-gray-400" textColor="text-gray-600 dark:text-gray-400" />
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filterByRole(commonServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+            {filterByRole(user.role === 'trainee' 
+              ? commonServices.filter(s => ['My Profile & 4D', 'MES Learning Hub'].includes(s.title))
+              : commonServices
+            ).map(svc => <ServiceCard key={svc.title} {...svc} />)}
           </div>
         </section>
 
-        <section>
-          <SectionLabel label="PRODUCTION" subLabel="ปฏิบัติการผลิต" borderColor="bg-blue-500" textColor="text-blue-600" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filterByRole(productionServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-          </div>
-        </section>
+        {user.role !== 'trainee' && (
+          <>
+            <section>
+              <SectionLabel label="PRODUCTION" subLabel="ปฏิบัติการผลิต" borderColor="bg-blue-500" textColor="text-blue-600" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {filterByRole(productionServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+              </div>
+            </section>
 
-        {filterByRole(warehouseServices).length > 0 && (
-          <section>
-            <SectionLabel label="WAREHOUSE & LOGISTICS" subLabel="คลังสินค้าและจัดส่ง" borderColor="bg-orange-500" textColor="text-orange-600" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filterByRole(warehouseServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
-        )}
+            {filterByRole(warehouseServices).length > 0 && (
+              <section>
+                <SectionLabel label="WAREHOUSE & LOGISTICS" subLabel="คลังสินค้าและจัดส่ง" borderColor="bg-orange-500" textColor="text-orange-600" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {filterByRole(warehouseServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+                </div>
+              </section>
+            )}
 
-        {filterByRole(qualityServices).length > 0 && (
-          <section>
-            <SectionLabel label="QUALITY & MAINTENANCE" subLabel="คุณภาพและซ่อมบำรุง" borderColor="bg-red-500" textColor="text-red-600" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filterByRole(qualityServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
-        )}
+            {filterByRole(qualityServices).length > 0 && (
+              <section>
+                <SectionLabel label="QUALITY & MAINTENANCE" subLabel="คุณภาพและซ่อมบำรุง" borderColor="bg-red-500" textColor="text-red-600" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {filterByRole(qualityServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+                </div>
+              </section>
+            )}
 
-        {filterByRole(executiveServices).length > 0 && (
-          <section>
-            <SectionLabel label="EXECUTIVE & MANAGEMENT" subLabel="บริหารจัดการ" borderColor="bg-green-500" textColor="text-green-700" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filterByRole(executiveServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
-        )}
+            {filterByRole(executiveServices).length > 0 && (
+              <section>
+                <SectionLabel label="EXECUTIVE & MANAGEMENT" subLabel="บริหารจัดการ" borderColor="bg-green-500" textColor="text-green-700" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {filterByRole(executiveServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+                </div>
+              </section>
+            )}
 
-        {filterByRole(systemAdminServices).length > 0 && (
-          <section>
-            <SectionLabel label="SYSTEM ADMINISTRATION" subLabel="จัดการระบบ" borderColor="bg-gray-500" textColor="text-gray-700 dark:text-gray-400" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filterByRole(systemAdminServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
-        )}
+            {filterByRole(systemAdminServices).length > 0 && (
+              <section>
+                <SectionLabel label="SYSTEM ADMINISTRATION" subLabel="จัดการระบบ" borderColor="bg-gray-500" textColor="text-gray-700 dark:text-gray-400" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {filterByRole(systemAdminServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+                </div>
+              </section>
+            )}
 
-        {filterByRole(sandboxServices).length > 0 && (
-          <section>
-            <SectionLabel label="SANDBOX (TEST ENVIRONMENT)" subLabel="ระบบทดสอบ" borderColor="bg-yellow-500" textColor="text-yellow-600 dark:text-yellow-500" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filterByRole(sandboxServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
-        )}
+            {filterByRole(sandboxServices).length > 0 && (
+              <section>
+                <SectionLabel label="SANDBOX (TEST ENVIRONMENT)" subLabel="ระบบทดสอบ" borderColor="bg-yellow-500" textColor="text-yellow-600 dark:text-yellow-500" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {filterByRole(sandboxServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+                </div>
+              </section>
+            )}
 
-        {filterByRole(prototypeServices).length > 0 && (
-          <section>
-            <SectionLabel label="✨ NEW SYSTEM PROTOTYPE ✨" subLabel="ต้นแบบระบบใหม่" borderColor="bg-purple-500" textColor="text-purple-600 dark:text-purple-400" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filterByRole(prototypeServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
+            {filterByRole(prototypeServices).length > 0 && (
+              <section>
+                <SectionLabel label="✨ NEW SYSTEM PROTOTYPE ✨" subLabel="ต้นแบบระบบใหม่" borderColor="bg-purple-500" textColor="text-purple-600 dark:text-purple-400" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {filterByRole(prototypeServices).map(svc => <ServiceCard key={svc.title} {...svc} />)}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
 

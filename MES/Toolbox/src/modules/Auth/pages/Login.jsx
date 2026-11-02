@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
-import { LogIn, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle, UserPlus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import RegisterModal from '../components/RegisterModal';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const { user, login, checkAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,8 +127,32 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          {/* Registration Section */}
+          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              ยังไม่มีบัญชีผู้ใช้งาน หรือเป็นผู้เข้าอบรมคลาสเรียน?
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsRegisterOpen(true)}
+              className="w-full py-2.5 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:border-blue-400"
+            >
+              <UserPlus size={16} className="text-blue-600 dark:text-blue-400" />
+              <span>ลงทะเบียนบัญชีใหม่ / สมาชิกเข้าอบรม</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Register Modal */}
+      <RegisterModal
+        isOpen={isRegisterOpen}
+        onClose={() => setIsRegisterOpen(false)}
+        onRegisterSuccess={(newUsername) => {
+          if (newUsername) setUsername(newUsername);
+        }}
+      />
     </div>
   );
 }

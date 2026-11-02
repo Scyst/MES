@@ -23,6 +23,26 @@ if (!defined('ALLOW_GUEST_ACCESS') && !isset($_SESSION['user'])) {
     }
 }
 
+// Check session expiration for temporary/guest accounts
+if (isset($_SESSION['user']) && !empty($_SESSION['user']['expires_at'])) {
+    if (strtotime($_SESSION['user']['expires_at']) < time()) {
+        unset($_SESSION['user']);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        if (isApiRequest()) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'บัญชีผู้ใช้นี้หมดอายุการใช้งานแล้ว กรุณาติดต่อผู้ดูแลระบบ', 'is_expired' => true]);
+            exit;
+        } else {
+            $loginUrl = defined('BASE_URL') ? BASE_URL . '/#/login' : '/iot-toolbox/sandbox-b9/Toolbox/#/login'; 
+            header("Location: " . $loginUrl . "?expired=1");
+            exit;
+        }
+    }
+}
+
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); 
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
   "blueprint_id": "SNC-B9-MES-BLUEPRINT-V2",
-  "updated_at": "2026-10-29",
+  "updated_at": "2026-11-02",
   "organization": "บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน) - B9",
   "description": "Machine-readable Node & Edge Graph Schema for rendering an Interactive Visual Blueprint (React Flow / D3 / Digital Twin) covering Hardware/Electrical/IoT, External ERP/HR, SQL Server Database, PHP APIs, and all 28 MES Modules.",
   "layers": [
@@ -98,12 +98,13 @@
       "layer": "L4_API_GATEWAY",
       "domain": "DOM_CORE_ADMIN",
       "type": "security_gateway",
-      "title": "Unified Session SSO + CSRF + Cross-Tab BroadcastChannel ('mes_auth_channel')",
+      "title": "Unified Session SSO + CSRF + Hybrid RBAC/PBAC Matrix + Self-Service Registration Lifecycle",
       "path": "MES/Toolbox/src/shared/contexts/AuthContext.jsx",
       "endpoints": [
         "MES/Toolbox/public/login.php",
         "MES/Toolbox/public/check.php",
         "MES/Toolbox/public/logout.php",
+        "MES/Toolbox/public/api/register.php",
         "MES/Toolbox/public/utils/check_auth.php"
       ]
     },
@@ -152,7 +153,7 @@
       "layer": "L5_APPLICATIONS",
       "domain": "DOM_CORE_ADMIN",
       "status": "PORTED_SELF_CONTAINED",
-      "title": "User & Role Permission Management (#/admin/users & AccountSettingsModal)",
+      "title": "User Management, PBAC Matrix & Pending Registration Approvals (#/admin/users)",
       "ui_path": "MES/Toolbox/src/modules/Admin/pages/UserManagement.jsx",
       "api_path": "MES/Toolbox/public/api/userManage.php",
       "tables": ["USERS", "SYS_ROLES", "SYS_PERMISSIONS", "SYS_ROLE_PERMISSIONS", "SYS_USER_PERMISSIONS", "SYSTEM_LOGS"]
@@ -228,13 +229,23 @@
       "tables": ["LEARNING_RECORDS", "EMP_SKILLS"]
     },
     {
+      "id": "mod_toolbox2_profile",
+      "layer": "L5_APPLICATIONS",
+      "domain": "DOM_HR_ACADEMY",
+      "status": "PORTED_SELF_CONTAINED",
+      "title": "Full Employee Profile & 4D Performance Evaluation (#/profile)",
+      "ui_path": "MES/Toolbox/src/modules/Profile/pages/ProfilePage.jsx",
+      "api_path": "MES/Toolbox/public/api/profile/",
+      "tables": ["USERS", "MANPOWER_EMPLOYEES", "EMPLOYEE_GRADES", "SYSTEM_LOGS"]
+    },
+    {
       "id": "mod_system_settings",
       "layer": "L5_APPLICATIONS",
       "domain": "DOM_CORE_ADMIN",
-      "status": "NEXT_FOUNDATION_PORT",
+      "status": "PORTED_SELF_CONTAINED",
       "title": "System Settings & Master Data (Item Master, BOM, Locations, SAP Valuation)",
-      "ui_path": "MES/page/systemSettings/systemSettings.php",
-      "api_path": "MES/page/systemSettings/api/sapValuationManage.php",
+      "ui_path": "MES/Toolbox/src/modules/SystemSettings/pages/SystemSettingsPage.jsx",
+      "api_path": "MES/Toolbox/public/api/systemSettings/",
       "tables": ["ITEMS", "PRODUCT_BOM", "LOCATIONS", "LINE_SCHEDULES", "sap_staging_inventory", "sap_staging_costs"]
     }
   ],
@@ -250,6 +261,9 @@
     { "from": "gw_auth_sso", "to": "mod_toolbox2_transport", "label": "SSO Session & Cross-Tab Sync" },
     { "from": "gw_auth_sso", "to": "mod_toolbox2_paintchem", "label": "SSO Session & Cross-Tab Sync" },
     { "from": "gw_auth_sso", "to": "mod_learning_hub", "label": "SSO Session & 4D Grading Sync" },
+    { "from": "gw_auth_sso", "to": "mod_toolbox2_admin", "label": "RBAC & Individual PBAC Permissions" },
+    { "from": "gw_auth_sso", "to": "mod_toolbox2_profile", "label": "SSO Session & 4D Performance Sync" },
+    { "from": "gw_auth_sso", "to": "mod_system_settings", "label": "PBAC Master Data Access Control" },
     { "from": "mod_page_production", "to": "mod_page_manpower", "label": "ส่งยอดผลิต FG คำนวณค่าผลงานรายบุคคล (IPH)" },
     { "from": "mod_learning_hub", "to": "mod_page_manpower", "label": "ส่งผลสอบผ่านหลักสูตรเข้าเกรดมิติที่ 4 (Learning)" },
     { "from": "hw_electric_mqtt", "to": "mod_page_utility_exec", "label": "คำนวณต้นทุนค่าไฟ/ค่าแก๊สรายวันเข้า Daily P&L" }

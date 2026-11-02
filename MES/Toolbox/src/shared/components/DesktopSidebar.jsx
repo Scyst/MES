@@ -5,8 +5,9 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, MonitorPlay, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export const MENU_DATA = [
   {
@@ -15,6 +16,7 @@ export const MENU_DATA = [
     items: [
       { name: 'TOOLBOX OS (Home)', icon: Home, to: '/' },
       { name: 'My Profile (โปรไฟล์ & 4D)', icon: User, to: '/profile' },
+      { name: 'MES Learning Hub (ศูนย์เรียนรู้)', icon: GraduationCap, href: '/iot-toolbox/sandbox-b9/LearningHub/', external: true },
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
       { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
@@ -76,6 +78,7 @@ export const MENU_DATA = [
 ];
 
 export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) {
+  const { user } = useAuth();
   const [expanded, setExpanded] = useState({ GENERAL: true, PRODUCTION: true });
   const [search, setSearch] = useState('');
   const location = useLocation();
@@ -84,12 +87,21 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
     setExpanded((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
-  const renderMenuSections = (isMobileDrawer = false) =>
-    MENU_DATA.map((section, sIdx) => {
-      const filteredItems = section.items.filter((item) =>
-        item.name.toLowerCase().includes(search.toLowerCase())
-      );
-      if (filteredItems.length === 0 && search) return null;
+  const renderMenuSections = (isMobileDrawer = false) => {
+    const isTrainee = user?.role === 'trainee';
+    const isSystemAdmin = user?.role === 'admin' || user?.role === 'creator' || user?.permissions?.includes('manage_users') || user?.permissions?.includes('manage_settings');
+
+    return MENU_DATA.map((section, sIdx) => {
+      if (isTrainee && section.title !== 'GENERAL') return null;
+      if (section.title === 'SYSTEM ADMIN' && !isSystemAdmin) return null;
+
+      const filteredItems = section.items.filter((item) => {
+        if (isTrainee && !['TOOLBOX OS (Home)', 'My Profile (โปรไฟล์ & 4D)', 'MES Learning Hub (ศูนย์เรียนรู้)'].includes(item.name)) {
+          return false;
+        }
+        return item.name.toLowerCase().includes(search.toLowerCase());
+      });
+      if (filteredItems.length === 0) return null;
 
       const isExpanded = expanded[section.title] || search !== '';
 
@@ -186,6 +198,7 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
         </div>
       );
     });
+  };
 
   return (
     <>

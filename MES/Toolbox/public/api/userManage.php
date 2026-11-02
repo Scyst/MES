@@ -35,14 +35,128 @@ try {
 
     switch ($action) {
         case 'read':
-            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, 
+            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, phone,
                                         is_active, is_auto_generated, created_at,
-                                        profile_picture, pwd_changed_at, last_login 
+                                        profile_picture, pwd_changed_at, last_login,
+                                        account_type, approval_status, expires_at, company_name,
+                                        request_reason, approved_by, approved_at
                                  FROM " . USERS_TABLE . " 
-                                 WHERE role != 'creator' 
+                                 WHERE role != 'creator' AND (approval_status IS NULL OR approval_status != 'pending')
                                  ORDER BY is_active DESC, role ASC, id ASC");
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'data' => $users]);
+            break;
+
+        case 'pending_approvals':
+            $stmt = $pdo->query("SELECT id, username, fullname, role, line, team_group, emp_id, phone,
+                                        account_type, approval_status, expires_at, company_name,
+                                        request_reason, created_at
+                                 FROM " . USERS_TABLE . " 
+                                 WHERE approval_status = 'pending'
+                                 ORDER BY created_at DESC, id DESC");
+            $pendingUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $pendingUsers, 'count' => count($pendingUsers)]);
+            break;
+
+        case 'approve_user':
+            $targetId = (int)($input['id'] ?? 0);
+            if (!$targetId) throw new Exception("Missing target user ID.");
+
+            $assignedRole = trim($input['role'] ?? 'operator');
+            $assignedLine = trim($input['line'] ?? '');
+            $expiresAt = !empty($input['expires_at']) ? $input['expires_at'] : null;
+            $perms = isset($input['permissions']) && is_array($input['permissions']) ? $input['permissions'] : [];
+
+            $userCheck = $pdo->prepare("SELECT username, approval_status FROM " . USERS_TABLE . " WHERE id = ?");
+            $userCheck->execute([$targetId]);
+            $userData = $userCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$userData) throw new Exception("User not found.");
+
+            $updateStmt = $pdo->prepare("UPDATE " . USERS_TABLE . " SET 
+                approval_status = 'approved',
+                role = ?,
+                line = ?,
+                expires_at = ?,
+                is_active = 1,
+                approved_by = ?,
+                approved_at = GETDATE()
+                WHERE id = ?");
+            $updateStmt->execute([
+                $assignedRole,
+                $assignedLine ?: null,
+                $expiresAt,
+                $actionBy,
+                $targetId
+            ]);
+
+            $delStmt = $pdo->prepare("DELETE FROM dbo.SYS_USER_PERMISSIONS WHERE user_id = ?");
+            $delStmt->execute([$targetId]);
+
+            if (!empty($perms)) {
+                $insPerm = $pdo->prepare("INSERT INTO dbo.SYS_USER_PERMISSIONS (user_id, perm_code, granted_by, granted_at) VALUES (?, ?, ?, GETDATE())");
+                foreach ($perms as $p) {
+                    $insPerm->execute([$targetId, $p, $actionBy]);
+                }
+            }
+
+            writeLog($pdo, 'APPROVE_USER', 'USER_MANAGE', $userData['username'], null, [
+                'role' => $assignedRole,
+                'line' => $assignedLine,
+                'expires_at' => $expiresAt,
+                'permissions_count' => count($perms)
+            ], "Approved user registration by $actionBy");
+
+            echo json_encode(['success' => true, 'message' => "อนุมัติบัญชีผู้ใช้ '{$userData['username']}' สำเร็จ"]);
+            break;
+
+        case 'reject_user':
+            $targetId = (int)($input['id'] ?? 0);
+            if (!$targetId) throw new Exception("Missing target user ID.");
+            $rejectReason = trim($input['reason'] ?? 'ไม่ผ่านการอนุมัติ');
+
+            $userCheck = $pdo->prepare("SELECT username FROM " . USERS_TABLE . " WHERE id = ?");
+            $userCheck->execute([$targetId]);
+            $userData = $userCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$userData) throw new Exception("User not found.");
+
+            $updateStmt = $pdo->prepare("UPDATE " . USERS_TABLE . " SET 
+                approval_status = 'rejected',
+                is_active = 0,
+                approved_by = ?,
+                approved_at = GETDATE(),
+                request_reason = ?
+                WHERE id = ?");
+            $updateStmt->execute([$actionBy, $rejectReason, $targetId]);
+
+            writeLog($pdo, 'REJECT_USER', 'USER_MANAGE', $userData['username'], null, ['reason' => $rejectReason], "Rejected user registration by $actionBy");
+
+            echo json_encode(['success' => true, 'message' => "ปฏิเสธคำขอของ '{$userData['username']}' เรียบร้อยแล้ว"]);
+            break;
+
+        case 'extend_expiry':
+            $targetId = (int)($input['id'] ?? 0);
+            if (!$targetId) throw new Exception("Missing target user ID.");
+            $newExpiresAt = $input['expires_at'] ?? null;
+            $addDays = (int)($input['days'] ?? 0);
+
+            if ($addDays > 0) {
+                $updateStmt = $pdo->prepare("UPDATE " . USERS_TABLE . " SET 
+                    expires_at = DATEADD(day, ?, ISNULL(expires_at, GETDATE()))
+                    WHERE id = ?");
+                $updateStmt->execute([$addDays, $targetId]);
+            } else if ($newExpiresAt) {
+                $updateStmt = $pdo->prepare("UPDATE " . USERS_TABLE . " SET expires_at = ? WHERE id = ?");
+                $updateStmt->execute([$newExpiresAt, $targetId]);
+            } else {
+                throw new Exception("Invalid expiry parameters.");
+            }
+
+            writeLog($pdo, 'EXTEND_EXPIRY', 'USER_MANAGE', (string)$targetId, null, [
+                'days' => $addDays,
+                'new_expires_at' => $newExpiresAt
+            ], "Extended user expiry by $actionBy");
+
+            echo json_encode(['success' => true, 'message' => 'ปรับปรุงวันหมดอายุเรียบร้อยแล้ว']);
             break;
 
         case 'sync_manpower':

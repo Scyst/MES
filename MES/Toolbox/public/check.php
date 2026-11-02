@@ -4,6 +4,20 @@ header('Content-Type: application/json; charset=utf-8');
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 
 if (isset($_SESSION['user'])) {
+    if (!empty($_SESSION['user']['expires_at']) && strtotime($_SESSION['user']['expires_at']) < time()) {
+        unset($_SESSION['user']);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        echo json_encode([
+            'success' => false,
+            'authenticated' => false,
+            'is_expired' => true,
+            'message' => 'บัญชีผู้ใช้นี้หมดอายุการใช้งานแล้ว'
+        ]);
+        exit;
+    }
+
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }

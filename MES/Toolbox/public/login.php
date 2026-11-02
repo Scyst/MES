@@ -26,7 +26,8 @@ if (empty($username) || empty($password)) {
 
 try {
     $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, u.fullname, u.team_group,
-                   u.profile_picture, u.theme_preference, u.preferred_lang, m.position 
+                   u.profile_picture, u.theme_preference, u.preferred_lang,
+                   u.account_type, u.approval_status, u.expires_at, u.company_name, m.position 
             FROM " . USERS_TABLE . " u
             LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " m ON u.emp_id = m.emp_id
             WHERE u.username = ? AND u.is_active = 1";
@@ -36,6 +37,36 @@ try {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password'])) {
+        // 1. Check Approval Status
+        if (!empty($user['approval_status']) && $user['approval_status'] === 'pending') {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'บัญชีของท่านอยู่ระหว่างรอการอนุมัติจากผู้ดูแลระบบ กรุณารอการตรวจสอบ'
+            ]);
+            exit;
+        }
+
+        if (!empty($user['approval_status']) && $user['approval_status'] === 'rejected') {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'คำขอเปิดใช้งานบัญชีนี้ไม่ได้รับการอนุมัติ กรุณาติดต่อผู้ดูแลระบบ'
+            ]);
+            exit;
+        }
+
+        // 2. Check Expiration Date
+        if (!empty($user['expires_at']) && strtotime($user['expires_at']) < time()) {
+            http_response_code(403);
+            $expiredDate = date('d/m/Y H:i', strtotime($user['expires_at']));
+            echo json_encode([
+                'success' => false, 
+                'message' => "บัญชีผู้ใช้นี้หมดอายุการใช้งานแล้วเมื่อ {$expiredDate} กรุณาติดต่อผู้ดูแลระบบหรือผู้สอน"
+            ]);
+            exit;
+        }
+
         session_regenerate_id(true);
         
         $displayName = !empty($user['fullname']) ? $user['fullname'] : $user['username'];
@@ -63,6 +94,10 @@ try {
             'profile_picture'  => $user['profile_picture'] ?? null,
             'theme_preference' => $user['theme_preference'] ?? 'light',
             'preferred_lang'   => $user['preferred_lang']   ?? 'th',
+            'account_type'     => $user['account_type']     ?? 'employee',
+            'approval_status'  => $user['approval_status']  ?? 'approved',
+            'expires_at'       => $user['expires_at']       ?? null,
+            'company_name'     => $user['company_name']     ?? null,
             'permissions'      => $permissions
         ];
 

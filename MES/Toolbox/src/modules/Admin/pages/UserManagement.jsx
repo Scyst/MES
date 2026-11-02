@@ -18,12 +18,21 @@ import DataTable from '../../../shared/components/DataTable';
 import UserFormModal from '../components/UserFormModal';
 import RolesPermissionsTab from '../components/RolesPermissionsTab';
 import AuditLogsTab from '../components/AuditLogsTab';
+import PendingApprovalsTab from '../components/PendingApprovalsTab';
+import ApproveUserModal from '../components/ApproveUserModal';
 
 const ROLE_BADGE_CLASSES = {
   admin: 'bg-purple-100 text-purple-700 border border-purple-200',
   supervisor: 'bg-blue-100 text-blue-700 border border-blue-200',
   operator: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
   manager: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+  qc: 'bg-orange-100 text-orange-700 border border-orange-200',
+  maintenance: 'bg-slate-100 text-slate-700 border border-slate-200',
+  planner: 'bg-cyan-100 text-cyan-700 border border-cyan-200',
+  trainee: 'bg-teal-100 text-teal-700 border border-teal-200',
+  contractor: 'bg-amber-100 text-amber-700 border border-amber-200',
+  customer: 'bg-sky-100 text-sky-700 border border-sky-200',
+  executive: 'bg-rose-100 text-rose-700 border border-rose-200',
 };
 
 const TAB_BUTTON_BASE = 'pb-3 flex items-center gap-2 font-medium transition-colors min-h-[44px]';
@@ -89,6 +98,11 @@ export default function UserManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
+  // Pending Approvals State
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [approveModalUser, setApproveModalUser] = useState(null);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -105,9 +119,24 @@ export default function UserManagement() {
     }
   }, [toast]);
 
+  const fetchPendingUsers = useCallback(async () => {
+    setPendingLoading(true);
+    try {
+      const res = await userManageApi.getPendingApprovals();
+      if (res.success) {
+        setPendingUsers(Array.isArray(res.data) ? res.data : []);
+      }
+    } catch (error) {
+      console.error('Failed to load pending users:', error);
+    } finally {
+      setPendingLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchPendingUsers();
+  }, [fetchUsers, fetchPendingUsers]);
 
   const handleSyncManpower = async () => {
     const accepted = await confirm({
@@ -238,16 +267,24 @@ export default function UserManagement() {
         accessor: (user) => `${user.role || ''} ${user.line || ''} ${user.team_group || ''}`,
         render: (user) => (
           <div>
-            <span
-              className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
-                ROLE_BADGE_CLASSES[user.role] || 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              {user.role ? user.role.toUpperCase() : 'UNKNOWN'}
-            </span>
+            <div className="flex items-center gap-1 flex-wrap">
+              <span
+                className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
+                  ROLE_BADGE_CLASSES[user.role] || 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {user.role ? user.role.toUpperCase() : 'UNKNOWN'}
+              </span>
+              {user.account_type && user.account_type !== 'employee' && (
+                <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200">
+                  {user.account_type}
+                </span>
+              )}
+            </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {user.line || 'No Line'}
               {user.team_group ? ` • ${user.team_group}` : ''}
+              {user.company_name ? ` • ${user.company_name}` : ''}
             </div>
           </div>
         ),
@@ -282,6 +319,19 @@ export default function UserManagement() {
             <div className="text-gray-400 flex items-center gap-1">
               <Clock size={11} /> {user.last_login ? `ใช้งาน: ${formatDate(user.last_login)}` : 'ยังไม่เคยเข้าสู่ระบบ'}
             </div>
+            {user.expires_at && (
+              <div className="flex items-center gap-1 mt-0.5 font-medium">
+                {new Date(user.expires_at).getTime() < Date.now() ? (
+                  <span className="text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
+                    <AlertTriangle size={11} /> หมดอายุแล้ว ({formatDate(user.expires_at)})
+                  </span>
+                ) : (
+                  <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Clock size={11} /> หมดอายุ: {formatDate(user.expires_at)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         ),
       },
@@ -381,6 +431,15 @@ export default function UserManagement() {
         <button onClick={() => setActiveTab('users')} className={tabClasses(activeTab === 'users')}>
           <UsersIcon size={18} /> Users List
         </button>
+        <button onClick={() => setActiveTab('pending')} className={tabClasses(activeTab === 'pending')}>
+          <UserCheck size={18} />
+          <span>คำขอรออนุมัติ (Pending)</span>
+          {pendingUsers.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-red-500 text-white animate-pulse">
+              {pendingUsers.length}
+            </span>
+          )}
+        </button>
         <button onClick={() => setActiveTab('roles')} className={tabClasses(activeTab === 'roles')}>
           <Key size={18} /> Roles & Permissions
         </button>
@@ -393,6 +452,14 @@ export default function UserManagement() {
       <div className="mt-4">
         {activeTab === 'roles' && <RolesPermissionsTab />}
         {activeTab === 'logs' && <AuditLogsTab />}
+        {activeTab === 'pending' && (
+          <PendingApprovalsTab
+            pendingUsers={pendingUsers}
+            loading={pendingLoading}
+            onRefresh={fetchPendingUsers}
+            onApproveClick={(u) => setApproveModalUser(u)}
+          />
+        )}
 
         {activeTab === 'users' && (
           <DataTable
@@ -439,6 +506,18 @@ export default function UserManagement() {
           isOpen={isModalOpen}
           onClose={closeModal}
           userData={editingUser}
+        />
+      )}
+
+      {approveModalUser && (
+        <ApproveUserModal
+          isOpen={!!approveModalUser}
+          onClose={() => setApproveModalUser(null)}
+          pendingUser={approveModalUser}
+          onApproved={() => {
+            fetchPendingUsers();
+            fetchUsers();
+          }}
         />
       )}
     </div>
