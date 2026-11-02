@@ -43,8 +43,11 @@ function useDebouncedValue(value, delayMs) {
 
 export default function DataTable({
   columns = [],
-  rows = [],
+  rows,
+  data,
   rowKey,
+  defaultSortKey = null,
+  defaultSortDirection = 'asc',
   loading = false,
   emptyMessage = 'ไม่พบข้อมูล',
   searchPlaceholder = 'ค้นหา...',
@@ -56,12 +59,13 @@ export default function DataTable({
 }) {
   const toast = useToast();
   const [searchInput, setSearchInput] = useState('');
-  const [sort, setSort] = useState({ key: null, direction: 'asc' });
+  const [sort, setSort] = useState({ key: defaultSortKey || null, direction: defaultSortDirection || 'asc' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const searchTerm = useDebouncedValue(searchInput, searchDebounceMs).trim().toLowerCase();
 
-  const safeRows = useMemo(() => Array.isArray(rows) ? rows : [], [rows]);
+  const effectiveRows = rows !== undefined ? rows : (data !== undefined ? data : []);
+  const safeRows = useMemo(() => (Array.isArray(effectiveRows) ? effectiveRows : []), [effectiveRows]);
 
   const filteredRows = useMemo(() => {
     if (!searchTerm) return safeRows;
@@ -86,6 +90,15 @@ export default function DataTable({
   const currentPage = Math.min(page, totalPages);
   const pageRows = (sortedRows || []).slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const getRowKey = (row, index) => {
+    if (typeof rowKey === 'function') return rowKey(row);
+    if (typeof rowKey === 'string' && row && row[rowKey] != null) return row[rowKey];
+    if (row && typeof row === 'object') {
+      return row.id ?? row.item_id ?? row.location_id ?? row.bom_id ?? row.sap_no ?? `row-${index}`;
+    }
+    return `row-${index}`;
+  };
+
   const handleSort = (column) => {
     if (column.sortable === false) return;
     setPage(1);
@@ -101,7 +114,12 @@ export default function DataTable({
       const { utils, writeFile } = await import('xlsx');
       const exportColumns = columns.filter((column) => column.exportable !== false);
       const records = sortedRows.map((row) =>
-        Object.fromEntries(exportColumns.map((column) => [column.header, readValue(column, row) ?? '']))
+        Object.fromEntries(
+          exportColumns.map((column) => [
+            column.header ?? column.label ?? column.title ?? column.key,
+            readValue(column, row) ?? '',
+          ])
+        )
       );
       const worksheet = utils.json_to_sheet(records);
       const workbook = utils.book_new();
@@ -155,6 +173,7 @@ export default function DataTable({
                 const isSorted = sort.key === column.key;
                 const SortIcon = !isSorted ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
                 const sortable = column.sortable !== false;
+                const headerText = column.header ?? column.label ?? column.title ?? '';
                 return (
                   <th
                     key={column.key}
@@ -164,11 +183,11 @@ export default function DataTable({
                   >
                     {sortable ? (
                       <button type="button" onClick={() => handleSort(column)} className="flex min-h-[44px] items-center gap-1 uppercase">
-                        {column.header}
+                        {headerText}
                         <SortIcon className={`h-3.5 w-3.5 ${isSorted ? 'text-blue-600' : 'opacity-40'}`} />
                       </button>
                     ) : (
-                      column.header
+                      headerText
                     )}
                   </th>
                 );
@@ -189,8 +208,8 @@ export default function DataTable({
                 </td>
               </tr>
             ) : (
-              pageRows.map((row) => (
-                <tr key={rowKey(row)} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              pageRows.map((row, index) => (
+                <tr key={getRowKey(row, index)} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                   {columns.map((column) => (
                     <td key={column.key} className={`px-4 py-3 text-gray-800 dark:text-gray-100 ${column.className || ''}`}>
                       {column.render ? column.render(row) : readValue(column, row)}

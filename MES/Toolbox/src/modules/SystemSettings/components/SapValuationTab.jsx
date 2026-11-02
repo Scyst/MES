@@ -396,7 +396,9 @@ export default function SapValuationTab() {
       {/* Valuation Items DataTable */}
       <DataTable
         columns={columns}
+        rows={filteredItems}
         data={filteredItems}
+        rowKey={(it) => it.Mat_No || it.sap_no}
         loading={loading}
         defaultSortKey="variance"
         defaultSortDirection="desc"

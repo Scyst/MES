@@ -258,7 +258,9 @@ export default function LineSchedulesTab({ lines = [] }) {
       {/* Schedules DataTable */}
       <DataTable
         columns={columns}
+        rows={filteredSchedules}
         data={filteredSchedules}
+        rowKey={(s) => s.id || `${s.line}-${s.shift_date}`}
         loading={loading}
         defaultSortKey="line"
         emptyMessage="ไม่พบข้อมูลตารางกะการผลิต"

@@ -289,7 +289,9 @@ export default function LocationsTab({ lines = [] }) {
       {/* Locations DataTable */}
       <DataTable
         columns={columns}
+        rows={filteredLocations}
         data={filteredLocations}
+        rowKey={(loc) => loc.location_id || loc.location_name}
         loading={loading}
         defaultSortKey="location_name"
         emptyMessage="ไม่พบข้อมูลตำแหน่งจัดเก็บสินค้า"

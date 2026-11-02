@@ -389,7 +389,9 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
       {/* Items DataTable */}
       <DataTable
         columns={columns}
+        rows={items}
         data={items}
+        rowKey={(it) => it.item_id || it.sap_no}
         loading={loading}
         defaultSortKey="sap_no"
         emptyMessage="ไม่พบข้อมูลสินค้าตรงตามเงื่อนไขที่เลือก"

@@ -564,7 +564,9 @@ export default function BomManagerTab({ lines = [], models = [] }) {
             {/* Components DataTable */}
             <DataTable
               columns={columns}
+              rows={components}
               data={components}
+              rowKey={(c) => c.bom_id || `${c.component_item_id}-${c.bom_version}`}
               loading={loadingComponents}
               defaultSortKey="component_sap_no"
               emptyMessage="ยังไม่มีรายการชิ้นส่วนในสูตรการผลิตนี้ คลิก 'เพิ่มชิ้นส่วน' เพื่อเริ่มกำหนดสูตร"

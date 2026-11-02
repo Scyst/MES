@@ -315,10 +315,10 @@ export default function HomeDashboard() {
   const isSearching = searchQuery.trim().length > 0;
 
   return (
-    <div className="w-full lg:h-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-stretch gap-5 xl:gap-6 pb-12 lg:pb-0 lg:overflow-hidden">
+    <div className="w-full lg:h-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-stretch gap-6 pb-12 lg:pb-0 lg:overflow-hidden">
 
       {/* Left Sidebar (Greeting, Performance, Daily Pulse, Calendar) */}
-      <div className="flex flex-col gap-4 lg:col-span-4 xl:col-span-3 2xl:col-span-3 lg:h-full lg:overflow-y-auto hidden-scrollbar pb-6 lg:pb-0 shrink-0">
+      <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-5 2xl:col-span-5 lg:h-full lg:overflow-y-auto hidden-scrollbar pb-6 lg:pb-0 shrink-0">
 
         {/* Greeting Card */}
         <div className="flex flex-col gap-3.5 p-4 xl:p-5 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-800 dark:to-slate-900 border border-slate-200/90 dark:border-slate-700 rounded-2xl shadow-xs border-l-4 border-l-blue-500">
@@ -379,8 +379,8 @@ export default function HomeDashboard() {
         />
       </div>
 
-      {/* Right Workspace (Search Bar, Categories, High-Density Multi-Column Grid) */}
-      <div className="flex flex-col gap-4 lg:col-span-8 xl:col-span-9 2xl:col-span-9 lg:pl-6 lg:border-l lg:border-slate-200/80 dark:lg:border-slate-800 lg:h-full lg:overflow-y-auto custom-scrollbar pb-24 lg:pb-8">
+      {/* Right Workspace (Search Bar, Categories, Responsive Grid) */}
+      <div className="flex flex-col gap-4 lg:col-span-7 xl:col-span-7 2xl:col-span-7 lg:pl-6 lg:border-l lg:border-slate-200/80 dark:lg:border-slate-800 lg:h-full lg:overflow-y-auto custom-scrollbar pb-24 lg:pb-8">
 
         {/* Trainee Academy Welcome Banner */}
         {user.role === 'trainee' && (
@@ -587,7 +587,7 @@ export default function HomeDashboard() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                 {searchResults.map(svc => <ServiceCard key={svc.title} {...svc} />)}
               </div>
             )}
@@ -614,7 +614,7 @@ export default function HomeDashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
               {portedSpaServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
             </div>
           </section>
@@ -659,7 +659,7 @@ export default function HomeDashboard() {
               }
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
               {(
                 selectedCategory === 'common' ? accessibleCommon :
                 selectedCategory === 'production' ? accessibleProduction :
@@ -679,7 +679,7 @@ export default function HomeDashboard() {
             {/* Common Services */}
             <section>
               <SectionLabel label="COMMON SERVICES" subLabel="บริการส่วนกลาง & บริหารทั่วไป" borderColor="bg-slate-400" textColor="text-slate-600 dark:text-slate-400" count={accessibleCommon.length} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                 {accessibleCommon.map(svc => <ServiceCard key={svc.title} {...svc} />)}
               </div>
             </section>
@@ -690,7 +690,7 @@ export default function HomeDashboard() {
                 {accessibleProduction.length > 0 && (
                   <section>
                     <SectionLabel label="PRODUCTION" subLabel="ปฏิบัติการผลิตและหน้าไลน์" borderColor="bg-blue-500" textColor="text-blue-600 dark:text-blue-400" count={accessibleProduction.length} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                       {accessibleProduction.map(svc => <ServiceCard key={svc.title} {...svc} />)}
                     </div>
                   </section>
@@ -700,7 +700,7 @@ export default function HomeDashboard() {
                 {accessibleWarehouse.length > 0 && (
                   <section>
                     <SectionLabel label="WAREHOUSE & LOGISTICS" subLabel="คลังสินค้า การรับเข้า และการจัดส่ง" borderColor="bg-orange-500" textColor="text-orange-600 dark:text-orange-400" count={accessibleWarehouse.length} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                       {accessibleWarehouse.map(svc => <ServiceCard key={svc.title} {...svc} />)}
                     </div>
                   </section>
@@ -710,7 +710,7 @@ export default function HomeDashboard() {
                 {accessibleQuality.length > 0 && (
                   <section>
                     <SectionLabel label="QUALITY & MAINTENANCE" subLabel="คุณภาพ การตรวจชิ้นส่วน และซ่อมบำรุง" borderColor="bg-red-500" textColor="text-red-600 dark:text-red-400" count={accessibleQuality.length} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                       {accessibleQuality.map(svc => <ServiceCard key={svc.title} {...svc} />)}
                     </div>
                   </section>
@@ -720,7 +720,7 @@ export default function HomeDashboard() {
                 {accessibleExecutive.length > 0 && (
                   <section>
                     <SectionLabel label="EXECUTIVE & MANAGEMENT" subLabel="บริหารจัดการ การเงิน และกำลังพล" borderColor="bg-emerald-500" textColor="text-emerald-700 dark:text-emerald-400" count={accessibleExecutive.length} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                       {accessibleExecutive.map(svc => <ServiceCard key={svc.title} {...svc} />)}
                     </div>
                   </section>
@@ -730,7 +730,7 @@ export default function HomeDashboard() {
                 {accessibleAdmin.length > 0 && (
                   <section>
                     <SectionLabel label="SYSTEM ADMINISTRATION" subLabel="จัดการผู้ใช้ สิทธิ์ และข้อมูลหลัก" borderColor="bg-purple-500" textColor="text-purple-600 dark:text-purple-400" count={accessibleAdmin.length} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                       {accessibleAdmin.map(svc => <ServiceCard key={svc.title} {...svc} />)}
                     </div>
                   </section>
@@ -740,7 +740,7 @@ export default function HomeDashboard() {
                 {accessibleSandbox.length > 0 && (
                   <section>
                     <SectionLabel label="SANDBOX (TEST ENVIRONMENT)" subLabel="ระบบทดสอบ" borderColor="bg-amber-500" textColor="text-amber-600 dark:text-amber-400" count={accessibleSandbox.length} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 xl:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                       {accessibleSandbox.map(svc => <ServiceCard key={svc.title} {...svc} />)}
                     </div>
                   </section>
