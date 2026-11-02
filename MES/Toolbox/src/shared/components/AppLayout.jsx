@@ -9,6 +9,7 @@ import {
   Coffee,
   Clock,
   Calendar as CalendarIcon,
+  User,
 } from 'lucide-react';
 import axios from 'axios';
 

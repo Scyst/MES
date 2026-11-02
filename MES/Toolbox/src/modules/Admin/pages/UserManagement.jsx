@@ -73,11 +73,10 @@ function UserAvatar({ user }) {
 
   return (
     <div
-      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
-        user.is_active == 1
+      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${user.is_active == 1
           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
           : 'bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-      }`}
+        }`}
     >
       {initial}
     </div>
@@ -233,8 +232,8 @@ export default function UserManagement() {
         statusFilter === ''
           ? true
           : statusFilter === 'active'
-          ? user.is_active == 1
-          : user.is_active == 0;
+            ? user.is_active == 1
+            : user.is_active == 0;
       return matchesRole && matchesStatus;
     });
   }, [users, roleFilter, statusFilter]);
@@ -269,9 +268,8 @@ export default function UserManagement() {
           <div>
             <div className="flex items-center gap-1 flex-wrap">
               <span
-                className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
-                  ROLE_BADGE_CLASSES[user.role] || 'bg-gray-100 text-gray-700'
-                }`}
+                className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${ROLE_BADGE_CLASSES[user.role] || 'bg-gray-100 text-gray-700'
+                  }`}
               >
                 {user.role ? user.role.toUpperCase() : 'UNKNOWN'}
               </span>
@@ -298,11 +296,10 @@ export default function UserManagement() {
           <div className="space-y-1 text-xs">
             <div className="flex items-center gap-1.5">
               <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                  user.is_auto_generated == 1
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${user.is_auto_generated == 1
                     ? 'bg-blue-50 text-blue-700 border border-blue-200'
                     : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
+                  }`}
               >
                 {user.is_auto_generated == 1 ? 'System' : 'Manual'}
               </span>
@@ -378,11 +375,10 @@ export default function UserManagement() {
             <button
               type="button"
               onClick={() => handleToggleStatus(user.id, user.is_active == 1)}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
-                user.is_active == 1
+              className={`flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${user.is_active == 1
                   ? 'bg-red-50 text-red-600 hover:bg-red-100'
                   : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-              }`}
+                }`}
               title={user.is_active == 1 ? 'ปิดการใช้งานผู้ใช้' : 'เปิดการใช้งานผู้ใช้'}
               aria-label={user.is_active == 1 ? 'ปิดการใช้งานผู้ใช้' : 'เปิดการใช้งานผู้ใช้'}
             >

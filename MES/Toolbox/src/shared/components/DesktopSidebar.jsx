@@ -151,8 +151,8 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
                       </div>
                       <span
                         className={`ml-3 truncate whitespace-nowrap ${isMobileDrawer
-                            ? 'opacity-100'
-                            : 'opacity-0 group-hover:opacity-100 transition-opacity'
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover:opacity-100 transition-opacity'
                           }`}
                       >
                         {item.name}
@@ -169,23 +169,23 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
                       if (isMobileDrawer && onCloseMobile) onCloseMobile();
                     }}
                     className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors group ${isActive
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                       }`}
                   >
                     <div className="min-w-[20px] flex items-center justify-center">
                       <Icon
                         size={20}
                         className={`${isActive
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                           } transition-colors`}
                       />
                     </div>
                     <span
                       className={`ml-3 truncate whitespace-nowrap ${isMobileDrawer
-                          ? 'opacity-100'
-                          : 'opacity-0 group-hover:opacity-100 transition-opacity'
+                        ? 'opacity-100'
+                        : 'opacity-0 group-hover:opacity-100 transition-opacity'
                         }`}
                     >
                       {item.name}

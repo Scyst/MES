@@ -16,8 +16,8 @@ export default function Login() {
   const from =
     (location.state?.from?.pathname
       ? location.state.from.pathname +
-        (location.state.from.search || '') +
-        (location.state.from.hash || '')
+      (location.state.from.search || '') +
+      (location.state.from.hash || '')
       : null) || '/';
 
   // Redirect automatically when `user` becomes authenticated (including via Cross-Tab Login Sync)
@@ -113,9 +113,8 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer ${
-                isLoading ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer ${isLoading ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
