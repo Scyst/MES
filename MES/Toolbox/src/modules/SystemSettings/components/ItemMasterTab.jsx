@@ -19,6 +19,7 @@ import {
   Barcode,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { systemSettingsApi } from '../../../shared/services/systemSettingsApi';
@@ -27,6 +28,7 @@ import ItemEditModal from './ItemEditModal';
 import ItemWhereUsedModal from './ItemWhereUsedModal';
 import ItemAuditModal from './ItemAuditModal';
 import ItemImportModal from './ItemImportModal';
+import SapSyncModal from './SapSyncModal';
 
 const TYPE_BADGE_CLASSES = {
   FG: 'bg-blue-600 text-white',
@@ -63,6 +65,7 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [auditItem, setAuditItem] = useState(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [sapSyncModalOpen, setSapSyncModalOpen] = useState(false);
 
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -360,6 +363,15 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={() => setSapSyncModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors"
+            title="ซิงค์และนำเข้ารหัสวัสดุใหม่จาก SAP Staging สู่ Item Master"
+          >
+            <Database className="w-3.5 h-3.5" />
+            Sync from SAP
+          </button>
+
+          <button
             onClick={handleExportExcel}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors"
           >
@@ -542,9 +554,8 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
                 return (
                   <tr
                     key={it.item_id || it.sap_no}
-                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
-                      !isActive ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/40' : ''
-                    }`}
+                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${!isActive ? 'opacity-60 bg-slate-50/40 dark:bg-slate-900/40' : ''
+                      }`}
                   >
                     {/* Item Identity (Sticky Left) */}
                     <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 px-3 py-1.5 border-r border-slate-200 dark:border-slate-700 shadow-2xs">
@@ -698,11 +709,10 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(it)}
-                          className={`p-1 rounded transition-colors ${
-                            isActive
+                          className={`p-1 rounded transition-colors ${isActive
                               ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
                               : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
-                          }`}
+                            }`}
                           title={isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                         >
                           {isActive ? <Trash2 className="w-3.5 h-3.5" /> : <RotateCcw className="w-3.5 h-3.5" />}
@@ -796,6 +806,12 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
       <ItemImportModal
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
+        onSuccess={fetchItems}
+      />
+
+      <SapSyncModal
+        isOpen={sapSyncModalOpen}
+        onClose={() => setSapSyncModalOpen(false)}
         onSuccess={fetchItems}
       />
     </div>

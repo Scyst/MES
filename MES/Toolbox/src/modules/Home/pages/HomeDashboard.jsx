@@ -323,25 +323,39 @@ export default function HomeDashboard() {
 
         {/* Greeting Card (Balanced, Crisp & Professional) */}
         <div className="flex flex-col gap-3 p-3.5 xl:p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-800 dark:to-slate-900 border border-slate-200/90 dark:border-slate-700 rounded-xl shadow-2xs border-l-4 border-l-blue-600">
-          <div className="flex justify-between items-start">
-            <div className="min-w-0 pr-2">
+          <div className="flex justify-between items-start gap-3">
+            {/* Left: User Identity */}
+            <div className="min-w-0 flex-1">
               <h1 className="text-lg xl:text-xl font-extrabold text-slate-800 dark:text-slate-100 truncate">
                 สวัสดี {user.fullname} 👋
               </h1>
-              <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5">
-                <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5">
+                <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs font-mono font-semibold">
                   ID: {user.emp_id}
                 </span>
-                <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs truncate max-w-[140px]" title={user.line}>
-                  {user.line}
-                </span>
-                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800 shadow-2xs font-semibold">
-                  {user.position}
+                {user.line && (
+                  <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs truncate max-w-[130px]" title={user.line}>
+                    {user.line}
+                  </span>
+                )}
+                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800 shadow-2xs font-semibold uppercase">
+                  {user.position || user.role || 'ADMIN'}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-1.5 shrink-0">
+            {/* Right: Operational Shift & Status Info (Eliminates Empty Space & Balances Layout) */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-col items-end text-right px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>{new Date().getHours() >= 8 && new Date().getHours() < 20 ? 'กะเช้า (Day Shift)' : 'กะดึก (Night Shift)'}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                  08:00 - 20:00 • Plant B9
+                </div>
+              </div>
+
               <NotificationMenu
                 unreadDates={data.unreadDates}
                 monthlyData={data.monthlyData}

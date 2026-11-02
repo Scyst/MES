@@ -65,7 +65,7 @@ try {
     $diffRows = $diffStmt->fetchAll(PDO::FETCH_ASSOC);
     $diffStmt->closeCursor();
 
-    $isDryRun = isset($_REQUEST['dry_run']) && $_REQUEST['dry_run'] == '1';
+    $isDryRun = (isset($_REQUEST['dry_run']) && $_REQUEST['dry_run'] == '1') || (($_REQUEST['action'] ?? '') === 'preview');
 
     $inserted     = 0;
     $updated      = 0;
@@ -139,6 +139,12 @@ try {
     echo json_encode([
         'success'        => true,
         'message'        => "$actionMsg. $inserted new items, $updated items updated.",
+        'data'           => [
+            'inserted'       => $inserted,
+            'updated'        => $updated,
+            'affected_items' => $affectedItems,
+            'is_dry_run'     => $isDryRun
+        ],
         'inserted'       => $inserted,
         'updated'        => $updated,
         'affected_items' => $affectedItems,
