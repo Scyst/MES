@@ -66,7 +66,11 @@ try {
                     FROM " . BOM_TABLE . " WITH (NOLOCK)
                 )
                 SELECT 
-                    b.fg_item_id, i.sap_no AS fg_sap_no, i.part_no AS fg_part_no, i.part_description AS fg_part_description,
+                    b.fg_item_id, b.fg_item_id AS item_id,
+                    i.sap_no AS fg_sap_no, i.sap_no,
+                    i.part_no AS fg_part_no, i.part_no,
+                    i.part_description AS fg_part_description, i.part_description,
+                    i.material_type, i.planned_output, 1 AS has_bom,
                     b.updated_by, FORMAT(b.updated_at, 'yyyy-MM-dd HH:mm') AS updated_at
                 FROM LatestBOM b
                 JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.fg_item_id = i.item_id
@@ -130,7 +134,11 @@ try {
                 SELECT 
                     b.bom_id, b.component_item_id, CAST(b.quantity_required AS FLOAT) AS quantity_required, 
                     b.line, b.model, b.bom_version, b.bom_status,
-                    i.sap_no, i.part_no, i.part_description, i.material_type, 
+                    i.sap_no, i.sap_no AS component_sap_no,
+                    i.part_no, i.part_no AS component_part_no,
+                    i.part_description, i.part_description AS component_description,
+                    i.material_type, 
+                    CAST(ISNULL(i.StandardPrice, ISNULL(i.Cost_Total, (ISNULL(i.Cost_RM, 0) + ISNULL(i.Cost_PKG, 0) + ISNULL(i.Cost_SUB, 0)))) AS FLOAT) AS StandardPrice,
                     CAST(i.Cost_RM AS FLOAT) AS Cost_RM, CAST(i.Cost_PKG AS FLOAT) AS Cost_PKG, CAST(i.Cost_SUB AS FLOAT) AS Cost_SUB
                 FROM " . BOM_TABLE . " b WITH (NOLOCK)
                 JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON b.component_item_id = i.item_id

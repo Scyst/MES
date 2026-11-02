@@ -14,6 +14,7 @@ import CalendarWidget from '../components/CalendarWidget';
 import MorningBriefModal from '../components/MorningBriefModal';
 import NotificationMenu from '../components/NotificationMenu';
 import LogModal from '../components/LogModal';
+import FactoryOperationsWidget from '../components/FactoryOperationsWidget';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
@@ -317,24 +318,24 @@ export default function HomeDashboard() {
   return (
     <div className="w-full lg:h-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-stretch gap-6 pb-12 lg:pb-0 lg:overflow-hidden">
 
-      {/* Left Sidebar (Greeting, Performance, Daily Pulse, Calendar) */}
-      <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-5 2xl:col-span-5 lg:h-full lg:overflow-y-auto hidden-scrollbar pb-6 lg:pb-0 shrink-0">
+      {/* Left Sidebar (Greeting, Performance, Daily Pulse, Calendar, Factory Operations) */}
+      <div className="flex flex-col gap-3.5 lg:col-span-5 xl:col-span-5 2xl:col-span-5 lg:h-full lg:overflow-y-auto hidden-scrollbar pb-6 lg:pb-0 shrink-0">
 
-        {/* Greeting Card */}
-        <div className="flex flex-col gap-3.5 p-4 xl:p-5 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-800 dark:to-slate-900 border border-slate-200/90 dark:border-slate-700 rounded-2xl shadow-xs border-l-4 border-l-blue-500">
+        {/* Greeting Card (Balanced, Crisp & Professional) */}
+        <div className="flex flex-col gap-3 p-3.5 xl:p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-800 dark:to-slate-900 border border-slate-200/90 dark:border-slate-700 rounded-xl shadow-2xs border-l-4 border-l-blue-600">
           <div className="flex justify-between items-start">
             <div className="min-w-0 pr-2">
-              <h1 className="text-xl xl:text-2xl font-extrabold text-slate-800 dark:text-slate-100 truncate">
+              <h1 className="text-lg xl:text-xl font-extrabold text-slate-800 dark:text-slate-100 truncate">
                 สวัสดี {user.fullname} 👋
               </h1>
-              <div className="flex flex-wrap gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 mt-2">
-                <span className="bg-white dark:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-600 shadow-2xs">
+              <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-1.5">
+                <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs">
                   ID: {user.emp_id}
                 </span>
-                <span className="bg-white dark:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-600 shadow-2xs truncate max-w-[140px]" title={user.line}>
+                <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600 shadow-2xs truncate max-w-[140px]" title={user.line}>
                   {user.line}
                 </span>
-                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800 shadow-2xs font-semibold">
+                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800 shadow-2xs font-semibold">
                   {user.position}
                 </span>
               </div>
@@ -352,13 +353,13 @@ export default function HomeDashboard() {
           {(data.userRole === 'admin' || data.userRole === 'creator') && (
             <button
               onClick={() => setBriefModalOpen(true)}
-              className="w-full mt-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white p-2.5 xl:p-3 rounded-xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 flex items-center justify-between cursor-pointer"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white p-2.5 rounded-lg transition-all shadow-2xs hover:shadow-sm hover:-translate-y-0.5 flex items-center justify-between cursor-pointer"
             >
-              <div className="flex items-center gap-2.5 text-xs xl:text-sm font-bold tracking-wide">
-                <Sun size={18} />
+              <div className="flex items-center gap-2 text-xs font-bold tracking-wide">
+                <Sun size={16} />
                 <span>ภาพรวมทีมงาน (Dashboard)</span>
               </div>
-              <ChevronRight size={18} className="opacity-80" />
+              <ChevronRight size={16} className="opacity-80" />
             </button>
           )}
         </div>
@@ -377,6 +378,9 @@ export default function HomeDashboard() {
           todayDate={todayStr}
           onLogSaved={loadInitialData}
         />
+
+        {/* Dynamic Height Factory Operations & Map Status */}
+        <FactoryOperationsWidget />
       </div>
 
       {/* Right Workspace (Search Bar, Categories, Responsive Grid) */}

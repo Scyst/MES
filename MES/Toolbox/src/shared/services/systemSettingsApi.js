@@ -81,7 +81,7 @@ export const systemSettingsApi = {
 
   // ================= BOM Manager =================
   getFgsWithBom: async () => {
-    return apiGet(BOM_API, { action: 'get_fgs_with_bom', _t: Date.now() });
+    return apiGet(BOM_API, { action: 'get_bom_master_list', _t: Date.now() });
   },
 
   getFgsWithoutBom: async (search = '') => {

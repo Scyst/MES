@@ -208,13 +208,14 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ค้นหาจากระบบ HR (Emp ID)</label>
                     <input
                       type="text"
-                      className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors shadow-2xs"
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                       value={searchEmpId}
                       onChange={e => setSearchEmpId(e.target.value)}
                       placeholder="เช่น 12345"
+                      autoComplete="off"
                     />
                   </div>
-                  <button type="button" onClick={handleSearchEmp} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-2xs">
+                  <button type="button" onClick={handleSearchEmp} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                     <Search size={18} />
                   </button>
                 </div>
@@ -223,34 +224,34 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Username <span className="text-red-500">*</span></label>
-                  <input required name="username" value={formData.username} onChange={handleChange} readOnly={isEditMode}
-                    className={`w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm transition-colors shadow-2xs outline-none ${isEditMode ? 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}`} />
+                  <input required name="username" value={formData.username} onChange={handleChange} readOnly={isEditMode} autoComplete="off"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm transition-all outline-none ${isEditMode ? 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500'}`} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                     Password {isEditMode && <span className="text-[11px] font-normal text-slate-400">(เว้นว่างถ้าไม่เปลี่ยน)</span>} {!isEditMode && <span className="text-red-500">*</span>}
                   </label>
-                  <input type="password" required={!isEditMode} name="password" value={formData.password} onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
+                  <input type="password" required={!isEditMode} name="password" value={formData.password} onChange={handleChange} autoComplete="new-password"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ชื่อ-นามสกุล (Fullname)</label>
-                <input type="text" name="fullname" value={formData.fullname} onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
+                <input type="text" name="fullname" value={formData.fullname} onChange={handleChange} autoComplete="off"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">รหัสพนักงาน (Emp ID)</label>
-                  <input type="text" name="emp_id" value={formData.emp_id} onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
+                  <input type="text" name="emp_id" value={formData.emp_id} onChange={handleChange} autoComplete="off"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">บทบาท (Role) <span className="text-red-500">*</span></label>
                   <select name="role" value={formData.role} onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs">
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all">
                     <option value="operator">OPERATOR</option>
                     <option value="supervisor">SUPERVISOR</option>
                     <option value="planner">PLANNER</option>
@@ -270,7 +271,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                     name="line"
                     value={formData.line}
                     onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   >
                     <option value="">-- ไม่ระบุ (None) --</option>
                     <option value="ALL">ทุกไลน์ผลิต / พื้นที่ (All Lines & Areas)</option>
@@ -284,8 +285,8 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">กลุ่มทีม (Team Group)</label>
-                  <input type="text" name="team_group" value={formData.team_group} onChange={handleChange} placeholder="เช่น A, B"
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
+                  <input type="text" name="team_group" value={formData.team_group} onChange={handleChange} placeholder="เช่น A, B" autoComplete="off"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" />
                 </div>
               </div>
 
@@ -293,7 +294,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">ประเภทบัญชี (Account Type)</label>
                   <select name="account_type" value={formData.account_type} onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs">
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all">
                     <option value="employee">พนักงาน (Employee)</option>
                     <option value="trainee">ผู้เข้าอบรม (Trainee)</option>
                     <option value="contractor">ผู้รับเหมา/QC (Contractor)</option>
@@ -304,7 +305,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">วันหมดอายุ (Expires At)</label>
                   <input type="date" name="expires_at" value={formData.expires_at} onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors shadow-2xs" />
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50/50 hover:bg-white focus:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-850 dark:focus:bg-slate-850 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" />
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">เว้นว่างไว้หากไม่มีวันหมดอายุ (Permanent)</p>
                 </div>
               </div>
