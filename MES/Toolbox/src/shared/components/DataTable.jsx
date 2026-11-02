@@ -42,8 +42,8 @@ function useDebouncedValue(value, delayMs) {
 }
 
 export default function DataTable({
-  columns,
-  rows,
+  columns = [],
+  rows = [],
   rowKey,
   loading = false,
   emptyMessage = 'ไม่พบข้อมูล',
@@ -61,15 +61,17 @@ export default function DataTable({
   const [pageSize, setPageSize] = useState(initialPageSize);
   const searchTerm = useDebouncedValue(searchInput, searchDebounceMs).trim().toLowerCase();
 
+  const safeRows = useMemo(() => Array.isArray(rows) ? rows : [], [rows]);
+
   const filteredRows = useMemo(() => {
-    if (!searchTerm) return rows;
-    return rows.filter((row) =>
+    if (!searchTerm) return safeRows;
+    return safeRows.filter((row) =>
       columns.some((column) => {
         const value = readValue(column, row);
         return value != null && String(value).toLowerCase().includes(searchTerm);
       })
     );
-  }, [rows, columns, searchTerm]);
+  }, [safeRows, columns, searchTerm]);
 
   const sortedRows = useMemo(() => {
     const sortColumn = columns.find((column) => column.key === sort.key);
@@ -80,9 +82,9 @@ export default function DataTable({
     );
   }, [filteredRows, columns, sort]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil((sortedRows?.length || 0) / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pageRows = sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pageRows = (sortedRows || []).slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleSort = (column) => {
     if (column.sortable === false) return;
