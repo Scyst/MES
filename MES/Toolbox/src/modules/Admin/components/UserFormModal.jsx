@@ -6,7 +6,7 @@ import { useToast } from '../../../shared/contexts/FeedbackContext';
 export default function UserFormModal({ isOpen, onClose, userData }) {
   const toast = useToast();
   const isEditMode = !!userData;
-  
+
   const [formData, setFormData] = useState({
     id: '',
     username: '',
@@ -131,7 +131,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     // Prepare payload
     const payload = {
       ...formData,
@@ -172,7 +172,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in-up">
-        
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <h2 className="text-xl font-bold text-gray-800">
@@ -186,17 +186,17 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
         {/* Body - 2 Columns */}
         <div className="flex-1 overflow-y-auto p-6">
           <form id="userForm" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
+
             {/* Left Col: User Info */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b pb-2 text-blue-800">ข้อมูลพื้นฐาน</h3>
-              
+
               {!isEditMode && (
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">ค้นหาจากระบบ HR (Emp ID)</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       value={searchEmpId}
                       onChange={e => setSearchEmpId(e.target.value)}
@@ -289,10 +289,10 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
             {/* Right Col: Permissions (PBAC) */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b pb-2 text-indigo-800 flex items-center gap-2">
-                <Shield size={20} /> 
+                <Shield size={20} />
                 สิทธิ์การเข้าถึง (PBAC Overrides)
               </h3>
-              
+
               <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm text-indigo-700 flex gap-2 items-start">
                 <Info size={18} className="shrink-0 mt-0.5" />
                 <p>สิทธิ์พื้นฐานจะถูกกำหนดโดย <b>Role</b> อัตโนมัติ (ช่องที่ติ๊กถูกและเป็นสีเทา) หากต้องการเพิ่มสิทธิ์เฉพาะบุคคล ให้ติ๊กเลือกเพิ่มเติมในตารางนี้</p>
@@ -327,12 +327,12 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                               const hasRolePerm = permissions.rolePerms.includes(perm.perm_code);
                               const hasUserPerm = permissions.userPerms.includes(perm.perm_code);
                               const isGranted = hasRolePerm || hasUserPerm;
-                              
+
                               return (
                                 <tr key={perm.perm_code} className="hover:bg-indigo-50/30 transition-colors">
                                   <td className="px-4 py-2 text-center">
-                                    <input 
-                                      type="checkbox" 
+                                    <input
+                                      type="checkbox"
                                       className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 disabled:opacity-50"
                                       checked={isGranted}
                                       disabled={hasRolePerm} // cannot uncheck role perms here
@@ -358,7 +358,7 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
                 )}
               </div>
             </div>
-            
+
           </form>
         </div>
 
@@ -367,8 +367,8 @@ export default function UserFormModal({ isOpen, onClose, userData }) {
           <button type="button" onClick={() => onClose()} className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             ยกเลิก (Cancel)
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             form="userForm"
             disabled={loading}
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70"

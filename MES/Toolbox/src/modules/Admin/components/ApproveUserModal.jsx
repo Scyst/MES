@@ -129,7 +129,7 @@ export default function ApproveUserModal({ isOpen, onClose, pendingUser, onAppro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 dark:border-slate-800 my-8">
-        
+
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex justify-between items-center">
           <div>
@@ -152,7 +152,7 @@ export default function ApproveUserModal({ isOpen, onClose, pendingUser, onAppro
 
         {/* Body */}
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          
+
           {/* User Request Summary Card */}
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-200 dark:border-slate-700 text-sm space-y-2">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">

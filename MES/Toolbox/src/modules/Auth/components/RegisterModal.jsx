@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, GraduationCap, Building2, User, Key, Phone, Shield, CheckCircle, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { X, GraduationCap, Building2, Key, CheckCircle, ArrowRight, BookOpen, Clock } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
 
@@ -26,7 +26,7 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
     fullname: '',
     phone: '',
     emp_id: '',
-    account_type: 'employee', // 'employee' | 'contractor' | 'customer' | 'executive'
+    account_type: 'employee',
     role: 'operator',
     line: 'LINE 1',
     company_name: '',
@@ -118,57 +118,56 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 dark:border-slate-800 my-8">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 my-8">
         
         {/* Modal Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-blue-700 to-indigo-800 text-white flex justify-between items-center">
+        <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Shield size={22} className="text-blue-200" />
-              ลงทะเบียนเข้าใช้งานระบบ (Register Account)
+            <h2 className="text-lg font-bold text-white">
+              ลงทะเบียนผู้ใช้งาน
             </h2>
-            <p className="text-blue-100 text-xs mt-0.5">
-              ศูนย์การลงทะเบียนผู้เข้าอบรมและบุคลากรโรงงาน SNC Former B9
+            <p className="text-slate-400 text-xs mt-0.5">
+              ระบบศูนย์เรียนรู้และแพลตฟอร์มโรงงาน SNC Former B9
             </p>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="text-blue-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Content Section */}
         {registeredResult ? (
           <div className="p-8 text-center space-y-6">
-            <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-              <CheckCircle size={36} />
+            <div className="w-14 h-14 rounded-full mx-auto flex items-center justify-center bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <CheckCircle size={32} />
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                {registeredResult.auto_approved ? 'ลงทะเบียนสำเร็จ พร้อมเข้าใช้งาน!' : 'ยื่นคำขอลงทะเบียนสำเร็จ!'}
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                {registeredResult.auto_approved ? 'ลงทะเบียนสำเร็จ' : 'ยื่นคำขอเรียบร้อย'}
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto">
+              <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
                 {registeredResult.message}
               </p>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 text-left max-w-md mx-auto space-y-2 border border-slate-200 dark:border-slate-700 text-sm">
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 text-left max-w-sm mx-auto space-y-2 border border-slate-200 dark:border-slate-700 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">ชื่อผู้ใช้งาน (Username):</span>
+                <span className="text-slate-500">ชื่อผู้ใช้:</span>
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{registeredResult.username}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">ประเภทบัญชี:</span>
+                <span className="text-slate-500">ประเภท:</span>
                 <span className="font-semibold text-blue-600 dark:text-blue-400 capitalize">{registeredResult.account_type}</span>
               </div>
               {registeredResult.expires_at && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">อายุการใช้งาน:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">30 วัน (ถึง {new Date(registeredResult.expires_at).toLocaleDateString('th-TH')})</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">ถึง {new Date(registeredResult.expires_at).toLocaleDateString('th-TH')}</span>
                 </div>
               )}
             </div>
@@ -179,66 +178,60 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                 handleClose();
                 if (onRegisterSuccess) onRegisterSuccess(registeredResult.username);
               }}
-              className="w-full max-w-md mx-auto py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              className="w-full max-w-sm mx-auto py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
             >
-              <span>กลับสู่หน้าเข้าสู่ระบบ (Sign In)</span>
-              <ArrowRight size={18} />
+              <span>เข้าสู่ระบบ</span>
+              <ArrowRight size={16} />
             </button>
           </div>
         ) : (
           <div>
             {/* Tabs Switcher */}
-            <div className="grid grid-cols-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 m-4 rounded-xl text-sm font-medium">
+            <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800 m-5 mb-3 rounded-xl text-sm font-medium">
               <button
                 type="button"
                 onClick={() => setActiveTab('trainee')}
-                className={`py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   activeTab === 'trainee'
-                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-sm font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
                 }`}
               >
-                <GraduationCap size={18} />
-                <span>ผู้เข้าอบรมคลาสเรียน (Trainee)</span>
+                <GraduationCap size={16} />
+                <span>ผู้เข้าอบรม (Trainee)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('workforce')}
-                className={`py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   activeTab === 'workforce'
-                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-sm font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
                 }`}
               >
-                <Building2 size={18} />
-                <span>บุคลากรโรงงาน / คำขอพิเศษ</span>
+                <Building2 size={16} />
+                <span>พนักงาน / ผู้รับเหมา</span>
               </button>
             </div>
 
             {/* TAB 1: TRAINEE FORM */}
             {activeTab === 'trainee' && (
-              <form onSubmit={handleTraineeSubmit} className="p-6 pt-2 space-y-4">
-                <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl p-3.5 text-xs text-blue-800 dark:text-blue-300 flex items-start gap-2.5">
-                  <Sparkles size={18} className="shrink-0 text-blue-600 mt-0.5" />
-                  <div>
-                    <span className="font-semibold">ระบบเข้าเรียนทันที (Fast-Track):</span>
-                    <p className="mt-0.5">
-                      กรอก <b>"รหัสห้องเรียน (Class Code)"</b> ที่ได้รับจากผู้สอนเพื่อรับสิทธิ์เข้าเรียนใน Learning Hub ทันทีโดยไม่ต้องรออนุมัติ
-                    </p>
-                  </div>
+              <form onSubmit={handleTraineeSubmit} autoComplete="off" className="px-6 py-3 space-y-3.5">
+                <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-950/30 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-900/40">
+                  <BookOpen size={14} className="shrink-0 text-blue-600" />
+                  <span>กรอกรหัสห้องเรียนที่ได้รับจากผู้สอนเพื่อเปิดใช้งานบัญชีทันที</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ชื่อ-นามสกุลจริง (Full Name) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      ชื่อ-นามสกุล <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="fullname"
                       required
-                      placeholder="เช่น สมชาย ใจดี"
                       value={traineeForm.fullname}
                       onChange={handleTraineeChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -246,13 +239,12 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      เบอร์โทรศัพท์ (Phone Number)
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      เบอร์โทรศัพท์
                     </label>
                     <input
                       type="tel"
                       name="phone"
-                      placeholder="08X-XXX-XXXX"
                       value={traineeForm.phone}
                       onChange={handleTraineeChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -260,14 +252,14 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ชื่อผู้ใช้งานที่ต้องการ (Username) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="username"
                       required
-                      placeholder="ใช้อักษรภาษาอังกฤษหรือเบอร์โทร"
+                      autoComplete="off"
                       value={traineeForm.username}
                       onChange={handleTraineeChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
@@ -275,30 +267,27 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      รหัสผ่าน (Password) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      รหัสผ่าน <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
                       name="password"
                       required
-                      placeholder="อย่างน้อย 6 ตัวอักษร"
+                      autoComplete="new-password"
                       value={traineeForm.password}
                       onChange={handleTraineeChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      สังกัด / สถาบัน / บริษัท (Organization)
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      สถาบัน / หน่วยงาน
                     </label>
                     <input
                       type="text"
                       name="company_name"
-                      placeholder="เช่น มหาวิทยาลัย / บริษัทภายนอก"
                       value={traineeForm.company_name}
                       onChange={handleTraineeChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -306,34 +295,34 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1 font-semibold">
+                    <label className="block text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
                       <Key size={13} />
-                      รหัสห้องเรียน (Class Code) *
+                      รหัสห้องเรียน (Class Code) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="class_code"
                       required
-                      placeholder="เช่น SNC-B9, SNC-LEARN"
+                      placeholder="ระบุรหัสที่ได้รับจากผู้สอน"
                       value={traineeForm.class_code}
                       onChange={handleTraineeChange}
-                      className="w-full px-3 py-2 rounded-lg border-2 border-blue-400 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-950/20 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase font-bold"
+                      className="w-full px-3 py-2 rounded-lg border-2 border-blue-400 dark:border-blue-600 bg-blue-50/40 dark:bg-blue-950/20 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase font-bold placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs"
                     />
                   </div>
                 </div>
 
-                <div className="pt-3">
+                <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-60"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-60"
                   >
                     {loading ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <>
-                        <GraduationCap size={18} />
-                        <span>ลงทะเบียนและเริ่มเข้าเรียนทันที</span>
+                        <GraduationCap size={17} />
+                        <span>ลงทะเบียนเข้าสู่ระบบ</span>
                       </>
                     )}
                   </button>
@@ -343,21 +332,16 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
 
             {/* TAB 2: FACTORY WORKFORCE & SPECIAL ACCESS FORM */}
             {activeTab === 'workforce' && (
-              <form onSubmit={handleWorkforceSubmit} className="p-6 pt-2 space-y-4">
-                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-                  <AlertCircle size={18} className="shrink-0 text-amber-600 mt-0.5" />
-                  <div>
-                    <span className="font-semibold">กระบวนการตรวจสอบสิทธิ์ (Approval Gate):</span>
-                    <p className="mt-0.5">
-                      คำขอสมัครสำหรับสายงานโรงงานจะถูกส่งต่อไปยังผู้ดูแลระบบ (Admin) เพื่ออนุมัติและผูกสิทธิ์ประจำไลน์ผลิต
-                    </p>
-                  </div>
+              <form onSubmit={handleWorkforceSubmit} autoComplete="off" className="px-6 py-3 space-y-3.5">
+                <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-900/40">
+                  <Clock size={14} className="shrink-0 text-amber-600" />
+                  <span>คำขอจะถูกส่งให้ผู้ดูแลระบบ (Admin) ตรวจสอบและอนุมัติสิทธิ์</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      กลุ่มผู้ใช้งาน (Account Type) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      ประเภทผู้ใช้งาน <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="account_type"
@@ -365,16 +349,16 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="employee">พนักงานโรงงาน / สัญญาจ้าง (Factory Staff)</option>
-                      <option value="contractor">ทีมงานภายนอก / ผู้รับเหมา / QC ส่งตัว (Contractor)</option>
-                      <option value="customer">ลูกค้าภายนอก / ตรวจรับสินค้า (Customer)</option>
-                      <option value="executive">ผู้บริหารส่วนกลาง (HQ Executive)</option>
+                      <option value="employee">พนักงานโรงงาน / สัญญาจ้าง</option>
+                      <option value="contractor">ผู้รับเหมา / QC ส่งตัว</option>
+                      <option value="customer">ลูกค้า / ตรวจประเมิน</option>
+                      <option value="executive">ผู้บริหารส่วนกลาง</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ตำแหน่งที่ขอ (Requested Role) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      บทบาท / หน้าที่ <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="role"
@@ -382,26 +366,25 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     >
-                      <option value="operator">พนักงานฝ่ายผลิต (Operator / Subcontract)</option>
-                      <option value="supervisor">หัวหน้าไลน์ / ซุปเปอร์ไวเซอร์ (Supervisor)</option>
-                      <option value="qc">ฝ่ายตรวจสอบคุณภาพ (Quality Control / QC)</option>
-                      <option value="maintenance">ช่างซ่อมบำรุง / วิศวกร PE (Maintenance / PE)</option>
-                      <option value="planner">เจ้าหน้าที่วางแผน (Production Planner)</option>
-                      <option value="contractor">ผู้รับเหมา / ช่างเฉพาะกิจ (Contractor)</option>
-                      <option value="customer">ลูกค้า / ผู้ตรวจประเมิน (Customer)</option>
-                      <option value="executive">ผู้บริหารส่วนกลาง (HQ Executive)</option>
+                      <option value="operator">พนักงานฝ่ายผลิต (Operator)</option>
+                      <option value="supervisor">หัวหน้าไลน์ (Supervisor)</option>
+                      <option value="qc">ฝ่ายตรวจสอบคุณภาพ (QC)</option>
+                      <option value="maintenance">ช่างซ่อมบำรุง / PE</option>
+                      <option value="planner">เจ้าหน้าที่วางแผน (Planner)</option>
+                      <option value="contractor">ผู้รับเหมา / ช่างเฉพาะกิจ</option>
+                      <option value="customer">ลูกค้า / ผู้ตรวจประเมิน</option>
+                      <option value="executive">ผู้บริหารส่วนกลาง</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ชื่อ-นามสกุลจริง *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      ชื่อ-นามสกุล <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="fullname"
                       required
-                      placeholder="เช่น นายธนากร มั่นคง"
                       value={workforceForm.fullname}
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -409,13 +392,12 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                       รหัสพนักงาน (ถ้ามี)
                     </label>
                     <input
                       type="text"
                       name="emp_id"
-                      placeholder="เช่น 109600123"
                       value={workforceForm.emp_id}
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
@@ -423,8 +405,8 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ไลน์ผลิต / พื้นที่ปฏิบัติงาน
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      ไลน์ผลิต / พื้นที่
                     </label>
                     <select
                       name="line"
@@ -445,13 +427,12 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      เบอร์โทรศัพท์ติดต่อ
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      เบอร์โทรศัพท์
                     </label>
                     <input
                       type="tel"
                       name="phone"
-                      placeholder="08X-XXX-XXXX"
                       value={workforceForm.phone}
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -459,14 +440,14 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      ชื่อผู้ใช้งาน (Username) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="username"
                       required
-                      placeholder="กรอกชื่อผู้ใช้สำหรับเข้าสู่ระบบ"
+                      autoComplete="off"
                       value={workforceForm.username}
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
@@ -474,14 +455,14 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      รหัสผ่าน (Password) *
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                      รหัสผ่าน <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
                       name="password"
                       required
-                      placeholder="อย่างน้อย 6 ตัวอักษร"
+                      autoComplete="new-password"
                       value={workforceForm.password}
                       onChange={handleWorkforceChange}
                       className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -490,32 +471,32 @@ export default function RegisterModal({ isOpen, onClose, onRegisterSuccess }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    เหตุผลและความจำเป็นในการขอเข้าใช้งาน (Purpose) *
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                    เหตุผลในการขอใช้งาน <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     name="request_reason"
                     rows={2}
                     required
-                    placeholder="เช่น เข้ามารับผิดชอบการตรวจสอบชิ้นส่วนไลน์ 3 ชั่วคราว / ขอสิทธิ์ดูรายงานตู้สินค้าสำหรับลูกค้า"
+                    placeholder="ระบุวัตถุประสงค์สั้นๆ เพื่อให้แอดมินพิจารณาอนุมัติ"
                     value={workforceForm.request_reason}
                     onChange={handleWorkforceChange}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none placeholder:text-slate-400 placeholder:text-xs"
                   ></textarea>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-1">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-60"
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-60"
                   >
                     {loading ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <>
-                        <Building2 size={18} />
-                        <span>ส่งคำขอเปิดใช้งานบัญชี (Submit Request)</span>
+                        <Building2 size={17} />
+                        <span>ส่งคำขอเปิดใช้งานบัญชี</span>
                       </>
                     )}
                   </button>
