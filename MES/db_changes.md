@@ -4,6 +4,23 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-03 — Team Planner Index Optimization (4,684 Tasks Query Bottleneck Fix)
+
+**Agent:** Antigravity  
+**Feature:** เพิ่ม Non-clustered Index บนตาราง `dbo.TeamPlanner_Tasks` เพื่อลดปัญหา Full Table Scan และ Disk Sort ในการดึงข้อมูลงานสาธารณะ (`Visibility = 'public'`) จัดเรียงตาม `CreatedAt DESC` สำหรับหน้ากระดานแผนงาน Team Planner และการ Polling พื้นหลัง
+
+### Schema Alterations
+
+#### 1. dbo.TeamPlanner_Tasks
+- สร้างดัชนี (Non-clustered Index) พร้อม Included Columns:
+```sql
+CREATE NONCLUSTERED INDEX IX_TeamPlanner_Tasks_Vis_Created 
+ON dbo.TeamPlanner_Tasks (Visibility, CreatedAt DESC) 
+INCLUDE (Id, Title, Status, Assignee, StartDate, DueDate, StartTime, EndTime, Priority, ProjectId, SpaceId, CreatedBy);
+```
+
+---
+
 ## 2026-11-02 — Self-Service Registration, Account Lifecycle & Hybrid PBAC Schema
 
 **Agent:** Antigravity  

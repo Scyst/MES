@@ -111,3 +111,46 @@ MES/Toolbox/
 - [x] **Layer 2: User Management & PBAC Permission Matrix (Parity 100%)** — Complete
 - [x] **Layer 3: System Settings & Master Data (Parity 100%)** — Complete
 - [x] **Layer 4: Full Profile & 4D Performance Evaluation (Parity 100%)** — Complete
+
+---
+
+## 🎨 4. มาตรฐานการออกแบบ UI/UX ระดับอุตสาหกรรม (Unified Industrial Design Tokens & Spacing Protocol)
+> **สำหรับ AI Agent และนักพัฒนาทุกคน:** ทุกหน้า/โมดูลที่สร้างขึ้นใหม่หรือพอร์ตเข้ามาในระบบ Toolbox **ต้องปฏิบัติตามมาตรฐานนี้อย่างเคร่งครัด 100%** เพื่อให้ผู้ใช้งานได้รับประสบการณ์ที่เนียนตา คมชัด เป็นมืออาชีพ และเป็นมาตรฐานเดียวกันทั้งโรงงาน:
+
+### 4.1 Token และคลาสส่วนกลาง (`src/index.css`)
+*   **Page Header (`.mes-page-header`):** หัวหน้ากระชับ สะอาดตา มี Breadcrumbs นำทาง ขนาดหัวข้อ `text-lg font-bold text-slate-900 dark:text-white`
+*   **Header Margin Spacing:** ระยะห่างระหว่าง Page Header กับแถบแท็บ (Tab Navigation) หรือเนื้อหาด้านล่าง **ต้องกำหนดเป็น `mb-4` (16px) เสมอ** ห้ามใส่ `mb-6` หรือ `mb-8` ที่ทำให้หน้าเวิ้งว้างเกินไป
+*   **Tab Buttons (`.mes-tab-btn`):**
+    *   เมื่อ Active: `bg-blue-600 text-white shadow-2xs font-medium`
+    *   เมื่อ Inactive: `bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 border border-slate-200 dark:border-slate-700`
+    *   ขนาดความสูง: `h-8` หรือ `py-1.5 px-3` พร้อมไอคอนขนาด `w-3.5 h-3.5`
+*   **Buttons (`.mes-btn-primary`, `.mes-btn-secondary`, `.mes-btn-danger`):**
+    *   ความสูงมาตรฐาน: `h-[34px]` หรือ `h-8` สำหรับปุ่มบน Tool bar
+    *   ขนาดตัวอักษร: `text-xs font-medium` (Industrial High-Density Standard)
+    *   รัศมีขอบ: `rounded-lg` หรือ `rounded-xl`
+*   **Form Inputs & Selects (`.mes-input`, `.mes-select`):**
+    *   พื้นหลังต้องคมชัด อ่านง่าย: ใช้ `bg-white dark:bg-slate-800` เสมอ (ห้ามใช้สีโปร่งใส `bg-slate-50/50` ที่ทำให้ช่องกรอกจมหรือกลืนกับพื้นหลัง)
+    *   ขอบและเงา: `border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500/20`
+*   **Data Table Density (`<DataTable />`):**
+    *   ส่วนหัว (Table Header): `px-3 py-2 text-xs font-semibold uppercase bg-slate-50 dark:bg-slate-800/80`
+    *   เนื้อหาแถว (Table Row): `px-3 py-2 text-xs text-slate-800 dark:text-slate-100 hover:bg-blue-50/30`
+    *   ตัวควบคุมตาราง: ช่องค้นหาและปุ่ม Action ด้านบนตารางมีความสูง `h-[34px]`
+
+---
+
+## ⚡ 5. แนวทางวิศวกรรมประสิทธิภาพ (Performance Engineering Guidelines)
+เพื่อป้องกันไม่ให้ระบบช้าลงเมื่อมีข้อมูลสะสมปริมาณมากในสายการผลิต:
+
+1.  **Decouple Heavy Calculations from Initial Page Loads:**
+    *   ห้ามใส่ฟังก์ชันคำนวณต้นทุน, ยอดสรุปกะ (Morning Brief), หรือ Cross-Module Aggregate หนักๆ ลงใน API โหลดหน้าหลัก (เช่น `get_initial_data`)
+    *   ให้แยกเป็น Endpoint ย่อย (เช่น `get_morning_brief`) และเรียกแบบ On-Demand เมื่อเปิด Modal หรือคลิกแท็บเท่านั้น
+2.  **Two-Stage CTE Pagination in SQL Server:**
+    *   เมื่อตารางมีข้อมูลมากกว่า 500 แถว และต้องทำ Correlated Subquery (เช่น `STUFF(... FOR XML PATH)` หรือ `COUNT(...)` ข้ามตาราง):
+    *   **ห้ามรัน Subquery ใน CTE แรกก่อนแบ่งหน้าเด็ดขาด** (เพราะ SQL Server จะคำนวณทุกแถวในฐานข้อมูล)
+    *   **ให้ทำ Two-Stage CTE:** คัดกรองและแบ่งหน้าเฉพาะ `item_id` (หรือ Primary Key) ให้เหลือ 25–50 แถวก่อน แล้วค่อย `JOIN` กลับมารัน Subquery บน 25–50 แถวเป้าหมาย (ลดเวลา Query จาก 6.2 วินาที เหลือต่ำกว่า 0.3 วินาที)
+3.  **Selective Background Polling:**
+    *   การ Polling อัปเดตข้อมูลอัตโนมัติในพื้นหลัง (เช่น Team Planner ทุก 30 วินาที) ต้องเรียกเฉพาะข้อมูลที่มีการเคลื่อนไหวแบบ Real-time (`tasks`, `events`, `activities`) เท่านั้น
+    *   ห้าม Polling ซ้ำข้อมูล Master/โครงสร้างที่ไม่ค่อยเปลี่ยนแปลง (`projects`, `spaces`, `users`) ในลูป 30 วินาที
+4.  **Vendor Bundle Splitting (Vite manualChunks):**
+    *   แยกไลบรารีขนาดใหญ่ที่ใช้เฉพาะทาง (`xlsx` ~424kB, `jspdf`/`html2canvas` ~660kB) ออกจาก Core Engine ผ่าน `rollupOptions.output.manualChunks`
+    *   เพื่อให้เบราว์เซอร์ดาวน์โหลดไฟล์เครื่องยนต์หลัก (`mes-engine-*.js`) ในขนาดเพียง ~110kB (Gzip ~34kB) หน้าเว็บจะเปิดติดในเสี้ยววินาทีบนทุกอุปกรณ์

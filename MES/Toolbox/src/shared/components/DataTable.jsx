@@ -196,9 +196,8 @@ export default function DataTable({
                       <button
                         type="button"
                         onClick={() => handleSort(column)}
-                        className={`flex items-center gap-1 uppercase hover:text-slate-800 dark:hover:text-slate-200 ${
-                          isCompact ? 'py-0.5' : 'min-h-[44px]'
-                        }`}
+                        className={`flex items-center gap-1 uppercase hover:text-slate-800 dark:hover:text-slate-200 ${isCompact ? 'py-0.5' : 'min-h-[44px]'
+                          }`}
                       >
                         {headerText}
                         <SortIcon className={`h-3.5 w-3.5 ${isSorted ? 'text-blue-600' : 'opacity-40'}`} />
@@ -230,9 +229,8 @@ export default function DataTable({
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className={`${isCompact ? 'px-3 py-2' : 'px-4 py-3'} text-slate-800 dark:text-slate-100 ${
-                        column.className || ''
-                      }`}
+                      className={`${isCompact ? 'px-3 py-2' : 'px-4 py-3'} text-slate-800 dark:text-slate-100 ${column.className || ''
+                        }`}
                     >
                       {column.render ? column.render(row) : readValue(column, row)}
                     </td>

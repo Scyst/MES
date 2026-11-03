@@ -70,6 +70,12 @@ try {
             }
             break;
 
+        case 'get_sub_types':
+            $stmt = $pdo->query("SELECT DISTINCT RTRIM(LTRIM(material_sub_type)) as sub_type FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE material_sub_type IS NOT NULL AND material_sub_type != '' ORDER BY sub_type ASC");
+            $subTypes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['success' => true, 'data' => $subTypes]);
+            break;
+
         case 'read':
         case 'get_items':
             $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -159,44 +165,40 @@ try {
                 , i.Cost_Total, i.StandardPrice, i.StandardGP, i.Price_USD
             ";
             
-            $costingCols_Final = "
-                , planned_output, strokes_per_part, material_type, material_sub_type, CTN, net_weight, gross_weight, cbm, invoice_product_type, invoice_description
-                , Cost_RM, Cost_PKG, Cost_SUB, Cost_DL
-                , Cost_OH_Machine, Cost_OH_Utilities, Cost_OH_Indirect, Cost_OH_Staff, Cost_OH_Accessory, Cost_OH_Others
-                , Cost_Total, StandardPrice, StandardGP, Price_USD
-            ";
-
+            // High-Performance Two-Stage CTE:
+            // Stage 1 filters and paginates only item_id, so expensive XML string aggregations run ONLY on the target page (25-50 rows) instead of all rows.
             $dataSql = "
-                WITH NumberedRows AS (
+                WITH PagedItems AS (
                     SELECT 
-                        DISTINCT i.item_id, i.sap_no, i.part_no, i.sku, i.barcode, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
-                        i.is_active, i.min_stock, i.max_stock, i.is_tracking
-                        {$costingCols_CTE} 
-                        ,
-                        STUFF((
-                            SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub WITH (NOLOCK)
-                            WHERE r_sub.item_id = i.item_id ORDER BY r_sub.model FOR XML PATH('')
-                        ), 1, 2, '') AS used_in_models,
-                        (
-                            SELECT 
-                                CASE 
-                                    WHEN COUNT(r_spd.route_id) = 0 THEN 'N/A'
-                                    WHEN MIN(r_spd.planned_output) = MAX(r_spd.planned_output) THEN CAST(MIN(r_spd.planned_output) AS VARCHAR(20))
-                                    ELSE CAST(MIN(r_spd.planned_output) AS VARCHAR(20)) + ' - ' + CAST(MAX(r_spd.planned_output) AS VARCHAR(20))
-                                END
-                            FROM " . ROUTES_TABLE . " r_spd WITH (NOLOCK)
-                            WHERE r_spd.item_id = i.item_id AND r_spd.planned_output > 0
-                        ) AS route_speed_range,
+                        i.item_id,
                         ROW_NUMBER() OVER ({$orderByClause}) AS RowNum
                     {$fromClause}
                     {$whereClause}
+                    GROUP BY i.item_id, i.sap_no, i.is_active
                 )
                 SELECT 
-                    item_id, sap_no, part_no, sku, barcode, part_description, created_at, is_active, used_in_models,
-                    route_speed_range, min_stock, max_stock, is_tracking
-                {$costingCols_Final} 
-                FROM NumberedRows
-                WHERE RowNum > ? AND RowNum <= ?
+                    i.item_id, i.sap_no, i.part_no, i.sku, i.barcode, i.part_description, FORMAT(i.created_at, 'yyyy-MM-dd HH:mm') as created_at, 
+                    i.is_active, i.min_stock, i.max_stock, i.is_tracking
+                    {$costingCols_CTE} 
+                    ,
+                    STUFF((
+                        SELECT ', ' + r_sub.model FROM " . ROUTES_TABLE . " r_sub WITH (NOLOCK)
+                        WHERE r_sub.item_id = i.item_id ORDER BY r_sub.model FOR XML PATH('')
+                    ), 1, 2, '') AS used_in_models,
+                    (
+                        SELECT 
+                            CASE 
+                                WHEN COUNT(r_spd.route_id) = 0 THEN 'N/A'
+                                WHEN MIN(r_spd.planned_output) = MAX(r_spd.planned_output) THEN CAST(MIN(r_spd.planned_output) AS VARCHAR(20))
+                                ELSE CAST(MIN(r_spd.planned_output) AS VARCHAR(20)) + ' - ' + CAST(MAX(r_spd.planned_output) AS VARCHAR(20))
+                            END
+                        FROM " . ROUTES_TABLE . " r_spd WITH (NOLOCK)
+                        WHERE r_spd.item_id = i.item_id AND r_spd.planned_output > 0
+                    ) AS route_speed_range
+                FROM PagedItems p
+                JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON p.item_id = i.item_id
+                WHERE p.RowNum > ? AND p.RowNum <= ?
+                ORDER BY p.RowNum ASC
             ";
 
             $paginationParams = array_merge($params, [$startRow, $endRow]);

@@ -48,7 +48,7 @@ export default function RolesPermissionsTab() {
       toast.warning("ไม่สามารถแก้ไขสิทธิ์ของ System Owner (creator) ได้");
       return;
     }
-    
+
     // Optimistic UI update
     const newGrantedState = !isCurrentlyGranted;
     setMatrixData(prev => {
@@ -120,7 +120,7 @@ export default function RolesPermissionsTab() {
 
   return (
     <div className="space-y-6">
-      
+
       {/* Alert Banner */}
       <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl p-3 flex gap-2.5 items-start text-xs">
         <ShieldAlert className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" size={18} />
@@ -129,9 +129,9 @@ export default function RolesPermissionsTab() {
           <p className="text-blue-800 dark:text-blue-400 text-xs mt-0.5">กำหนดสิทธิ์พื้นฐานให้กับแต่ละบทบาท (Role) การเปลี่ยนแปลงจะมีผลกับผู้ใช้งานทุกคนที่อยู่ใน Role นั้นทันที</p>
           <p className="text-blue-600 dark:text-blue-400 text-[11px] mt-0.5">* สิทธิ์ระดับ System Owner (creator) ถูกล็อกไว้ไม่สามารถแก้ไขได้</p>
         </div>
-        
+
         {user?.role === 'creator' && (
-          <button 
+          <button
             onClick={() => setIsMasterModalOpen(true)}
             className="ml-auto mes-btn-primary"
           >
@@ -169,9 +169,8 @@ export default function RolesPermissionsTab() {
                     <button
                       onClick={() => handleToggle(role, perm.perm_code, perm.role_grants[role])}
                       disabled={role === 'creator'}
-                      className={`p-1 rounded-lg transition-all ${
-                        role === 'creator' ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'
-                      }`}
+                      className={`p-1 rounded-lg transition-all ${role === 'creator' ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'
+                        }`}
                     >
                       {perm.role_grants[role] ? (
                         <CheckCircle size={18} className="text-emerald-500" />
@@ -193,24 +192,24 @@ export default function RolesPermissionsTab() {
           <div className="bg-white rounded-2xl w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h2 className="text-lg font-bold text-gray-800">จัดการข้อมูล Master Permissions</h2>
-              <button onClick={() => setIsMasterModalOpen(false)} className="text-gray-400 hover:text-red-500"><XCircle size={20}/></button>
+              <button onClick={() => setIsMasterModalOpen(false)} className="text-gray-400 hover:text-red-500"><XCircle size={20} /></button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               <form onSubmit={handleAddPerm} className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[150px]">
                   <label className="block text-xs font-medium text-blue-800 mb-1">Perm Code</label>
-                  <input required value={newPerm.code} onChange={e=>setNewPerm(p=>({...p, code:e.target.value}))}
+                  <input required value={newPerm.code} onChange={e => setNewPerm(p => ({ ...p, code: e.target.value }))}
                     className="w-full text-sm py-1.5 px-2 border rounded focus:ring-2 outline-none" placeholder="e.g. view_reports" />
                 </div>
                 <div className="flex-1 min-w-[150px]">
                   <label className="block text-xs font-medium text-blue-800 mb-1">Module Name</label>
-                  <input required value={newPerm.module} onChange={e=>setNewPerm(p=>({...p, module:e.target.value}))}
+                  <input required value={newPerm.module} onChange={e => setNewPerm(p => ({ ...p, module: e.target.value }))}
                     className="w-full text-sm py-1.5 px-2 border rounded focus:ring-2 outline-none" placeholder="e.g. REPORTS" />
                 </div>
                 <div className="flex-2 min-w-[200px]">
                   <label className="block text-xs font-medium text-blue-800 mb-1">Description</label>
-                  <input required value={newPerm.desc} onChange={e=>setNewPerm(p=>({...p, desc:e.target.value}))}
+                  <input required value={newPerm.desc} onChange={e => setNewPerm(p => ({ ...p, desc: e.target.value }))}
                     className="w-full text-sm py-1.5 px-2 border rounded focus:ring-2 outline-none" placeholder="รายละเอียด..." />
                 </div>
                 <button type="submit" disabled={adding} className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 flex items-center gap-1 h-[34px]">
@@ -234,7 +233,7 @@ export default function RolesPermissionsTab() {
                         <td className="px-4 py-2 text-gray-500 text-xs">{p.module_name}</td>
                         <td className="px-4 py-2">
                           <button onClick={() => handleDeletePerm(p.perm_code)} className="text-red-500 hover:bg-red-50 p-1 rounded">
-                            <Trash2 size={16}/>
+                            <Trash2 size={16} />
                           </button>
                         </td>
                       </tr>

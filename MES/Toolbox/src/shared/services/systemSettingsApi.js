@@ -58,6 +58,10 @@ export const systemSettingsApi = {
     return apiGet(ITEM_API, { action: 'read_models', search, _t: Date.now() });
   },
 
+  getSubTypes: async () => {
+    return apiGet(ITEM_API, { action: 'get_sub_types', _t: Date.now() });
+  },
+
   bulkImportItems: async (items) => {
     return apiPost(`${ITEM_API}?action=bulk_import`, { items });
   },

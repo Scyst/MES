@@ -156,20 +156,33 @@ function App() {
       }
 
       const timestamp = Date.now();
-      const [resTasks, resEvents, resAct, resProj, resSpaces, resUsers] = await Promise.all([
-        axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`),
-        axios.get('/api/events.php'),
-        axios.get('/api/activities.php'),
-        axios.get(`/api/projects.php?_t=${timestamp}`),
-        axios.get(`/api/spaces.php?_t=${timestamp}`),
-        axios.get('/api/users.php').catch(() => ({ data: [] }))
-      ]);
+      if (silent) {
+        // Fast background poll: only dynamic work items (tasks, events, activities)
+        const [resTasks, resEvents, resAct] = await Promise.all([
+          axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`),
+          axios.get('/api/events.php'),
+          axios.get('/api/activities.php')
+        ]);
+        setTasks(Array.isArray(resTasks.data) ? resTasks.data : []);
+        setEvents(Array.isArray(resEvents.data) ? resEvents.data : []);
+        setActivities(Array.isArray(resAct.data) ? resAct.data : []);
+      } else {
+        // Full load: load structural data (projects, spaces, users) as well
+        const [resTasks, resEvents, resAct, resProj, resSpaces, resUsers] = await Promise.all([
+          axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`),
+          axios.get('/api/events.php'),
+          axios.get('/api/activities.php'),
+          axios.get(`/api/projects.php?_t=${timestamp}`),
+          axios.get(`/api/spaces.php?_t=${timestamp}`),
+          axios.get('/api/users.php').catch(() => ({ data: [] }))
+        ]);
         setTasks(Array.isArray(resTasks.data) ? resTasks.data : []);
         setEvents(Array.isArray(resEvents.data) ? resEvents.data : []);
         setActivities(Array.isArray(resAct.data) ? resAct.data : []);
         setProjects(Array.isArray(resProj.data) ? resProj.data : []);
         setSpaces(Array.isArray(resSpaces.data) ? resSpaces.data : []);
         setUsers(Array.isArray(resUsers.data) ? resUsers.data : []);
+      }
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {

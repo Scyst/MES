@@ -56,6 +56,8 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
   const [sortDirection, setSortDirection] = useState('asc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [availableSubTypes, setAvailableSubTypes] = useState([]);
 
   // Modals state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -66,9 +68,21 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
   const [auditItem, setAuditItem] = useState(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [sapSyncModalOpen, setSapSyncModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+
+  // Load sub-types once on mount
+  useEffect(() => {
+    let mounted = true;
+    systemSettingsApi.getSubTypes().then((res) => {
+      if (mounted && res && res.success && Array.isArray(res.data)) {
+        setAvailableSubTypes(res.data);
+      }
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -76,11 +90,14 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
       const res = await systemSettingsApi.getItems({
         status: statusFilter,
         type: selectedType !== 'ALL' ? selectedType : '',
+        filter_sub_material: selectedSubType !== 'ALL' ? selectedSubType : '',
         search: searchTerm,
-        limit: 2000,
+        page: page,
+        limit: pageSize,
       });
       if (res && res.success) {
         setItems(res.data || []);
+        setTotalCount(res.total || 0);
       } else {
         showToast(res?.message || 'ไม่สามารถโหลดข้อมูล Item Master ได้', 'error');
       }
@@ -89,7 +106,7 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, selectedType, searchTerm, showToast]);
+  }, [statusFilter, selectedType, selectedSubType, searchTerm, page, pageSize, showToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -98,39 +115,8 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
     return () => clearTimeout(timer);
   }, [fetchItems]);
 
-  // Extract unique sub-types from items for dropdown filter
-  const availableSubTypes = useMemo(() => {
-    const set = new Set();
-    items.forEach((it) => {
-      if (it.material_sub_type && it.material_sub_type.trim()) {
-        set.add(it.material_sub_type.trim());
-      }
-    });
-    return Array.from(set).sort();
-  }, [items]);
-
-  // Filtered & Sorted Rows
-  const filteredItems = useMemo(() => {
-    let result = items;
-    if (selectedSubType !== 'ALL') {
-      result = result.filter((it) => it.material_sub_type === selectedSubType);
-    }
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(
-        (it) =>
-          (it.sap_no && it.sap_no.toLowerCase().includes(term)) ||
-          (it.part_no && it.part_no.toLowerCase().includes(term)) ||
-          (it.part_description && it.part_description.toLowerCase().includes(term)) ||
-          (it.barcode && it.barcode.toLowerCase().includes(term)) ||
-          (it.sku && it.sku.toLowerCase().includes(term))
-      );
-    }
-    return result;
-  }, [items, selectedSubType, searchTerm]);
-
   const sortedItems = useMemo(() => {
-    const result = [...filteredItems];
+    const result = [...items];
     if (!sortKey) return result;
 
     const dirFactor = sortDirection === 'asc' ? 1 : -1;
@@ -147,16 +133,13 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
       }
       return dirFactor * String(valA).localeCompare(String(valB), 'th', { numeric: true, sensitivity: 'base' });
     });
-  }, [filteredItems, sortKey, sortDirection]);
+  }, [items, sortKey, sortDirection]);
 
-  // Paginated Rows
-  const totalItems = sortedItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  // Paginated Rows directly from server
+  const totalItems = totalCount;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pagedItems = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return sortedItems.slice(start, start + pageSize);
-  }, [sortedItems, currentPage, pageSize]);
+  const pagedItems = sortedItems;
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -228,14 +211,27 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
     }
   };
 
-  const handleExportExcel = () => {
-    if (sortedItems.length === 0) {
-      showToast('ไม่มีข้อมูลสำหรับส่งออก', 'warning');
-      return;
-    }
+  const handleExportExcel = async () => {
+    if (exporting) return;
+    setExporting(true);
+    showToast('กำลังเตรียมข้อมูลสำหรับ Export...', 'info');
 
     try {
-      const exportData = sortedItems.map((it) => ({
+      const res = await systemSettingsApi.getItems({
+        status: statusFilter,
+        type: selectedType !== 'ALL' ? selectedType : '',
+        filter_sub_material: selectedSubType !== 'ALL' ? selectedSubType : '',
+        search: searchTerm,
+        limit: -1,
+      });
+
+      if (!res || !res.success || !res.data || res.data.length === 0) {
+        showToast('ไม่มีข้อมูลสำหรับส่งออก', 'warning');
+        return;
+      }
+
+      const exportItems = res.data;
+      const exportData = exportItems.map((it) => ({
         'SAP No.': it.sap_no,
         'Part No.': it.part_no,
         Description: it.part_description,
@@ -269,9 +265,11 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'ItemMaster');
       XLSX.writeFile(wb, `ItemMaster_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast(`ส่งออกข้อมูล ${sortedItems.length.toLocaleString()} รายการสำเร็จ`, 'success');
+      showToast(`ส่งออกข้อมูล ${exportItems.length.toLocaleString()} รายการสำเร็จ`, 'success');
     } catch (err) {
       showToast('เกิดข้อผิดพลาดในการส่งออก Excel: ' + err.message, 'error');
+    } finally {
+      setExporting(false);
     }
   };
 

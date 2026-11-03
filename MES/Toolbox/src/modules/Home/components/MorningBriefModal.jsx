@@ -31,6 +31,9 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
+      if (!data) {
+        fetchBrief(selectedTeam, selectedDate);
+      }
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setIsVisible(true);
