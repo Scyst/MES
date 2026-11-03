@@ -548,7 +548,17 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
               </tr>
             ) : (
               pagedItems.map((it) => {
-                const typeClass = TYPE_BADGE_CLASSES[it.material_type] || 'bg-slate-600 text-white';
+                // Auto-resolve prefix classification: 10xxxxxx is strictly RM (Raw Material)
+                let resolvedType = it.material_type;
+                if (!resolvedType || resolvedType === 'UNCLASSIFIED') {
+                  if (it.sap_no?.startsWith('10')) resolvedType = 'RM';
+                  else if (it.sap_no?.startsWith('20')) resolvedType = 'PKG';
+                  else if (it.sap_no?.startsWith('30')) resolvedType = 'SEMI';
+                  else if (it.sap_no?.startsWith('40')) resolvedType = 'FG';
+                  else if (it.sap_no?.startsWith('70')) resolvedType = 'CON';
+                  else resolvedType = it.material_type || 'FG';
+                }
+                const typeClass = TYPE_BADGE_CLASSES[resolvedType] || 'bg-slate-600 text-white';
                 const isActive = it.is_active == 1;
 
                 return (
@@ -567,7 +577,7 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
                           {it.sap_no}
                         </button>
                         <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${typeClass}`}>
-                          {it.material_type || 'FG'}
+                          {resolvedType}
                         </span>
                         {it.material_sub_type && (
                           <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800">

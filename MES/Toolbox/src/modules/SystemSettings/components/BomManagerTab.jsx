@@ -69,10 +69,13 @@ export default function BomManagerTab({ lines = [], models = [] }) {
     try {
       const res = await systemSettingsApi.getFgsWithBom();
       if (res && res.success) {
-        const list = (res.data || []).map(normalizeFg);
+        const list = (res.data || [])
+          .map(normalizeFg)
+          .filter((fg) => fg.material_type !== 'RM' && !fg.sap_no?.startsWith('10') && !fg.sap_no?.startsWith('20'));
         setFgsWithBom(list);
         if (list.length > 0 && !selectedFg) {
-          setSelectedFg(list[0]);
+          const defaultItem = list.find((it) => it.has_bom === 1) || list[0];
+          setSelectedFg(defaultItem);
         }
       } else {
         showToast(res?.message || 'ไม่สามารถโหลดรายชื่อ FG ได้', 'error');
@@ -133,11 +136,14 @@ export default function BomManagerTab({ lines = [], models = [] }) {
     fetchComponents();
   }, [fetchComponents]);
 
-  // Filter FGs list on the left
+  // Filter FGs list on the left (Strictly exclude RM / 10xxxxxx / 20xxxxxx from requiring BOM)
   const filteredFgs = useMemo(() => {
-    if (!fgSearch.trim()) return fgsWithBom;
+    let list = fgsWithBom.filter(
+      (fg) => fg.material_type !== 'RM' && !fg.sap_no?.startsWith('10') && !fg.sap_no?.startsWith('20')
+    );
+    if (!fgSearch.trim()) return list;
     const term = fgSearch.toLowerCase();
-    return fgsWithBom.filter(
+    return list.filter(
       (fg) =>
         fg.sap_no?.toLowerCase().includes(term) ||
         fg.part_no?.toLowerCase().includes(term) ||

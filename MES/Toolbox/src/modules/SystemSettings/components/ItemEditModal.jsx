@@ -127,6 +127,20 @@ export default function ItemEditModal({
     setRoutes(updated);
   };
 
+  const handleSapNoChange = (val) => {
+    let newType = formData.material_type;
+    const trimmed = val.trim();
+    if (trimmed.length >= 2) {
+      const prefix = trimmed.substring(0, 2);
+      if (prefix === '10') newType = 'RM';
+      else if (prefix === '20') newType = 'PKG';
+      else if (prefix === '30') newType = 'SEMI';
+      else if (prefix === '40') newType = 'FG';
+      else if (prefix === '70') newType = 'CON';
+    }
+    setFormData((prev) => ({ ...prev, sap_no: val, material_type: newType || prev.material_type }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.sap_no.trim()) return;
@@ -225,7 +239,7 @@ export default function ItemEditModal({
                     required
                     placeholder="เช่น 4001552"
                     value={formData.sap_no || ''}
-                    onChange={(e) => setFormData({ ...formData, sap_no: e.target.value })}
+                    onChange={(e) => handleSapNoChange(e.target.value)}
                     className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

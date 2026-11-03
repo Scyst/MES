@@ -102,6 +102,9 @@ try {
                 FROM " . ITEMS_TABLE . " i WITH (NOLOCK) 
                 WHERE is_active = 1 
                   AND NOT EXISTS (SELECT 1 FROM " . BOM_TABLE . " b WITH (NOLOCK) WHERE b.fg_item_id = i.item_id)
+                  AND (material_type IS NULL OR material_type != 'RM')
+                  AND sap_no NOT LIKE '10%'
+                  AND sap_no NOT LIKE '20%'
                   AND (sap_no LIKE ? OR part_no LIKE ? OR part_description LIKE ?)
                 ORDER BY sap_no ASC
             ";
@@ -659,18 +662,22 @@ try {
                 FROM " . ITEMS_TABLE . " i WITH (NOLOCK)
                 WHERE i.is_active = 1 
                   AND i.material_type != 'RM'
+                  AND i.sap_no NOT LIKE '10%'
+                  AND i.sap_no NOT LIKE '20%'
             ";
             
+            $orderClause = " ORDER BY has_bom DESC, (CASE WHEN i.material_type = 'FG' OR i.sap_no LIKE '40%' THEN 1 ELSE 2 END) ASC, i.sap_no ASC";
+
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
-                $sql .= " ORDER BY i.sap_no ASC";
+                $sql .= $orderClause;
                 $stmt = $pdo->query($sql);
             } else if ($currentUser['role'] === 'supervisor' || !empty($currentUser['line'])) {
                 $sql .= " AND i.item_id IN (SELECT item_id FROM " . ROUTES_TABLE . " WITH (NOLOCK) WHERE line = ?)";
-                $sql .= " ORDER BY i.sap_no ASC";
+                $sql .= $orderClause;
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$currentUser['line']]);
             } else {
-                $sql .= " ORDER BY i.sap_no ASC";
+                $sql .= $orderClause;
                 $stmt = $pdo->query($sql);
             }
             
