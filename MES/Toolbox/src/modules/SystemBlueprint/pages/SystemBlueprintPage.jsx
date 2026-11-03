@@ -21,11 +21,12 @@ import {
 import { BLUEPRINT_DATA } from '../data/blueprintData';
 import NodeCard from '../components/NodeCard';
 import NodeDetailDrawer from '../components/NodeDetailDrawer';
+import TopologyCanvas from '../components/TopologyCanvas';
 
 export default function SystemBlueprintPage() {
   const [selectedDomain, setSelectedDomain] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('layers'); // 'layers' | 'pipelines' | 'catalog'
+  const [activeTab, setActiveTab] = useState('topology'); // 'topology' | 'layers' | 'pipelines' | 'catalog'
   const [selectedNode, setSelectedNode] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -42,7 +43,7 @@ export default function SystemBlueprintPage() {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(n => 
+      result = result.filter(n =>
         n.title.toLowerCase().includes(q) ||
         (n.desc && n.desc.toLowerCase().includes(q)) ||
         (n.protocol && n.protocol.toLowerCase().includes(q)) ||
@@ -181,26 +182,35 @@ export default function SystemBlueprintPage() {
       </div>
 
       {/* 3. Tab Switcher (Underline style matching System Settings & User Management) */}
-      <div className="flex items-center gap-4 border-b border-slate-200 dark:border-slate-800 px-1">
+      <div className="flex items-center gap-4 border-b border-slate-200 dark:border-slate-800 px-1 overflow-x-auto scrollbar-none">
         <button
-          onClick={() => setActiveTab('layers')}
-          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${
-            activeTab === 'layers'
+          onClick={() => setActiveTab('topology')}
+          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap relative ${activeTab === 'topology'
               ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-bold'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
+        >
+          <Network className="w-4 h-4" />
+          ผังเส้นใยภาพรวม (Topology Canvas)
+        </button>
+
+        <button
+          onClick={() => setActiveTab('layers')}
+          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap relative ${activeTab === 'layers'
+              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
         >
           <Layers className="w-4 h-4" />
-          แผนผัง 5 เลเยอร์สถาปัตยกรรม
+          เมทริกซ์ 5 เลเยอร์สถาปัตยกรรม
         </button>
 
         <button
           onClick={() => setActiveTab('pipelines')}
-          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${
-            activeTab === 'pipelines'
+          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap relative ${activeTab === 'pipelines'
               ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-bold'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <Activity className="w-4 h-4" />
           เส้นทางการไหลของข้อมูล (Pipelines)
@@ -208,11 +218,10 @@ export default function SystemBlueprintPage() {
 
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors relative ${
-            activeTab === 'catalog'
+          className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap relative ${activeTab === 'catalog'
               ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-bold'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <Database className="w-4 h-4" />
           สารบัญตารางฐานข้อมูล & SP
@@ -225,11 +234,10 @@ export default function SystemBlueprintPage() {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
           <button
             onClick={() => setSelectedDomain('ALL')}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium whitespace-nowrap transition-colors ${
-              selectedDomain === 'ALL'
+            className={`px-2.5 py-1 text-xs rounded-lg font-medium whitespace-nowrap transition-colors ${selectedDomain === 'ALL'
                 ? 'bg-slate-900 text-white dark:bg-blue-600'
                 : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
+              }`}
           >
             ทั้งหมด (All)
           </button>
@@ -237,11 +245,10 @@ export default function SystemBlueprintPage() {
             <button
               key={d.id}
               onClick={() => setSelectedDomain(d.id)}
-              className={`px-2.5 py-1 text-xs rounded-lg font-medium whitespace-nowrap transition-colors ${
-                selectedDomain === d.id
+              className={`px-2.5 py-1 text-xs rounded-lg font-medium whitespace-nowrap transition-colors ${selectedDomain === d.id
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-              }`}
+                }`}
             >
               {d.name_th}
             </button>
@@ -261,7 +268,17 @@ export default function SystemBlueprintPage() {
         </div>
       </div>
 
-      {/* 5. TAB VIEW 1: Layered Architecture Matrix */}
+      {/* 5. TAB VIEW: Topology Canvas */}
+      {activeTab === 'topology' && (
+        <TopologyCanvas
+          nodes={filteredNodes}
+          edges={BLUEPRINT_DATA.edges}
+          onNodeClick={handleNodeClick}
+          selectedDomain={selectedDomain}
+        />
+      )}
+
+      {/* 6. TAB VIEW: Layered Architecture Matrix */}
       {activeTab === 'layers' && (
         <div className="space-y-6">
           {BLUEPRINT_DATA.layers.map(layer => {
@@ -269,16 +286,16 @@ export default function SystemBlueprintPage() {
             if (layerNodes.length === 0 && (selectedDomain !== 'ALL' || searchQuery)) return null;
 
             return (
-              <div 
-                key={layer.id} 
+              <div
+                key={layer.id}
                 className="bg-slate-50/50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80"
               >
                 {/* Layer Heading */}
                 <div className="flex items-center justify-between mb-3.5">
                   <div className="flex items-center gap-2">
-                    <span 
-                      className="w-2.5 h-2.5 rounded-full" 
-                      style={{ backgroundColor: layer.color }} 
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: layer.color }}
                     />
                     <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider">
                       {layer.id.replace(/^[L0-9]+_/, '')} — {layer.name_th}
@@ -331,12 +348,12 @@ export default function SystemBlueprintPage() {
               const toNode = BLUEPRINT_DATA.nodes.find(n => n.id === edge.to);
 
               return (
-                <div 
+                <div
                   key={idx}
                   className="p-3.5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
                 >
                   {/* From Node */}
-                  <div 
+                  <div
                     onClick={() => fromNode && handleNodeClick(fromNode)}
                     className="flex-1 min-w-[200px] cursor-pointer group"
                   >
@@ -356,7 +373,7 @@ export default function SystemBlueprintPage() {
                   </div>
 
                   {/* To Node */}
-                  <div 
+                  <div
                     onClick={() => toNode && handleNodeClick(toNode)}
                     className="flex-1 min-w-[200px] cursor-pointer group md:text-right"
                   >
@@ -394,7 +411,7 @@ export default function SystemBlueprintPage() {
                 const usingModules = BLUEPRINT_DATA.nodes.filter(n => n.tables && n.tables.includes(tbl));
 
                 return (
-                  <div 
+                  <div
                     key={tbl}
                     className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-emerald-300 transition-colors"
                   >
@@ -404,7 +421,7 @@ export default function SystemBlueprintPage() {
                     {usingModules.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {usingModules.map(m => (
-                          <span 
+                          <span
                             key={m.id}
                             onClick={() => handleNodeClick(m)}
                             className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer hover:text-blue-600"
@@ -434,7 +451,7 @@ export default function SystemBlueprintPage() {
 
             <div className="space-y-2">
               {dbNode.stored_procedures.map(sp => (
-                <div 
+                <div
                   key={sp}
                   className="p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/20"
                 >
@@ -462,3 +479,4 @@ export default function SystemBlueprintPage() {
     </div>
   );
 }
+

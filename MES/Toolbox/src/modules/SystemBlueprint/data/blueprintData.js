@@ -321,3 +321,4 @@ export const BLUEPRINT_DATA = {
     { from: "hw_electric_mqtt", to: "mod_legacy_utility_exec", label: "คำนวณต้นทุนค่าไฟ/ค่าแก๊สรายวันเข้า Daily P&L", type: "CALCULATION" }
   ]
 };
+

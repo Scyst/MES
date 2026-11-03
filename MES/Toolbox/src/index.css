@@ -185,3 +185,23 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
   }
 }
 
+/* ═══ Blueprint Animated Flows ═══ */
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.edge-animated {
+  stroke-dasharray: 6 6;
+  animation: dashFlow 1.2s linear infinite;
+}
+
+.blueprint-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+

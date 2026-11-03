@@ -264,3 +264,4 @@ export default function NodeDetailDrawer({ node, isOpen, onClose, allNodes = [],
     </div>
   );
 }
+

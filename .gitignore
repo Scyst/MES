@@ -7,6 +7,7 @@ MES/documents/
 # ไม่ควรเก็บไลบรารีของโปรแกรมอื่นไว้ใน Git ควรติดตั้งแยกต่างหาก
 MES/utils/libs/
 MES/utils/BOM/
+MES/tools/ai-tester/node_modules/
 raw_data_evidence/
 # --- Old Versions ---
 # ไม่ควรเก็บโค้ดเวอร์ชันเก่าที่ไม่ใช้งานแล้วไว้ใน Repository
