@@ -19,6 +19,13 @@ ON dbo.TeamPlanner_Tasks (Visibility, CreatedAt DESC)
 INCLUDE (Id, Title, Status, Assignee, StartDate, DueDate, StartTime, EndTime, Priority, ProjectId, SpaceId, CreatedBy);
 ```
 
+#### 2. dbo.TeamPlanner_Activities
+- สร้างดัชนี (Non-clustered Index) สำหรับเร่งความเร็วการดึง 50 กิจกรรมล่าสุด (`ORDER BY CreatedAt DESC`) ป้องกันการทำ TempDB Sort:
+```sql
+CREATE NONCLUSTERED INDEX IX_TeamPlanner_Activities_CreatedAt 
+ON dbo.TeamPlanner_Activities (CreatedAt DESC);
+```
+
 ---
 
 ## 2026-11-02 — Self-Service Registration, Account Lifecycle & Hybrid PBAC Schema

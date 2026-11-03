@@ -59,8 +59,6 @@ function ensureSpacesTable($pdo) {
 }
 
 try {
-    ensureSpacesTable($pdo);
-
     if ($method === 'GET') {
         $stmt = $pdo->query("SELECT * FROM TeamPlanner_Spaces ORDER BY CreatedAt ASC");
         $spaces = [];

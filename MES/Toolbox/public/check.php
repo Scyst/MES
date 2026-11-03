@@ -43,6 +43,10 @@ if (isset($_SESSION['user'])) {
         } catch (Exception $e) {}
     }
 
+    if (session_status() === PHP_SESSION_ACTIVE && !defined('KEEP_SESSION_LOCK')) {
+        session_write_close();
+    }
+
     echo json_encode([
         'success' => true,
         'authenticated' => true,
@@ -50,6 +54,9 @@ if (isset($_SESSION['user'])) {
         'csrf_token' => $_SESSION['csrf_token']
     ]);
 } else {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
     if (isset($_GET['silent'])) {
         echo json_encode([
             'success' => false,

@@ -10,8 +10,11 @@ function checkAuth() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        if (isset($_SESSION['user']) && isset($_SESSION['user']['username'])) {
-            $mesUser = $_SESSION['user'];
+        $mesUser = $_SESSION['user'] ?? null;
+        if (session_status() === PHP_SESSION_ACTIVE && !defined('KEEP_SESSION_LOCK')) {
+            session_write_close();
+        }
+        if ($mesUser && isset($mesUser['username'])) {
             return [
                 'empId' => $mesUser['emp_id'] ?? $mesUser['username'],
                 'name' => $mesUser['fullname'] ?? $mesUser['username'],

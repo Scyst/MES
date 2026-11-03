@@ -47,6 +47,11 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); 
 }
 
+// Release session lock immediately for read operations so concurrent API requests are not serialized
+if (session_status() === PHP_SESSION_ACTIVE && !defined('KEEP_SESSION_LOCK')) {
+    session_write_close();
+}
+
 function hasRole($roles): bool {
     if (empty($_SESSION['user']['role'])) return false;
     $userRole = $_SESSION['user']['role'];

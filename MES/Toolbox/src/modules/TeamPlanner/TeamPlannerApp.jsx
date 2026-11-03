@@ -118,35 +118,32 @@ function App() {
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch all data once
-  const refreshData = useCallback(async (silent = false) => {
+  const refreshData = useCallback(async (silent = false, signal = null) => {
     if (!silent) setDataLoading(true);
+    const reqConfig = signal ? { signal } : {};
     try {
       // BUG-007: Normalize AKA to comma-separated string regardless of localStorage format
       let storedAkas = '';
+      const raw = localStorage.getItem('user_akas') || '';
       try {
-        const profileRes = await axios.get('/api/profile.php');
-        if (profileRes.data && profileRes.data.aka !== undefined) {
-          storedAkas = profileRes.data.aka; // server always returns comma-separated string
-          const akasArray = storedAkas.split(',').map(a => a.trim()).filter(Boolean);
-          localStorage.setItem('user_akas', JSON.stringify(akasArray));
-        } else {
-          // Read from localStorage — handle both old JSON array and new string formats
-          const raw = localStorage.getItem('user_akas') || '';
-          try {
-            const parsed = JSON.parse(raw);
-            storedAkas = Array.isArray(parsed) ? parsed.join(',') : raw;
-          } catch {
-            storedAkas = raw;
-          }
-        }
-      } catch (e) {
-        // Ignore auth error on profile fetch if not ready
-        const raw = localStorage.getItem('user_akas') || '';
+        const parsed = JSON.parse(raw);
+        storedAkas = Array.isArray(parsed) ? parsed.join(',') : raw;
+      } catch {
+        storedAkas = raw;
+      }
+
+      // Fast check: only query profile if not silent and storedAkas is missing
+      if (!silent && !storedAkas) {
         try {
-          const parsed = JSON.parse(raw);
-          storedAkas = Array.isArray(parsed) ? parsed.join(',') : raw;
-        } catch {
-          storedAkas = raw;
+          const profileRes = await axios.get('/api/profile.php', reqConfig);
+          if (profileRes.data && profileRes.data.aka !== undefined) {
+            storedAkas = profileRes.data.aka; // server always returns comma-separated string
+            const akasArray = storedAkas.split(',').map(a => a.trim()).filter(Boolean);
+            localStorage.setItem('user_akas', JSON.stringify(akasArray));
+          }
+        } catch (e) {
+          if (axios.isCancel(e)) return;
+          // Ignore auth error on profile fetch if not ready
         }
       }
 
@@ -159,9 +156,9 @@ function App() {
       if (silent) {
         // Fast background poll: only dynamic work items (tasks, events, activities)
         const [resTasks, resEvents, resAct] = await Promise.all([
-          axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`),
-          axios.get('/api/events.php'),
-          axios.get('/api/activities.php')
+          axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`, reqConfig),
+          axios.get('/api/events.php', reqConfig),
+          axios.get('/api/activities.php', reqConfig)
         ]);
         setTasks(Array.isArray(resTasks.data) ? resTasks.data : []);
         setEvents(Array.isArray(resEvents.data) ? resEvents.data : []);
@@ -169,12 +166,15 @@ function App() {
       } else {
         // Full load: load structural data (projects, spaces, users) as well
         const [resTasks, resEvents, resAct, resProj, resSpaces, resUsers] = await Promise.all([
-          axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`),
-          axios.get('/api/events.php'),
-          axios.get('/api/activities.php'),
-          axios.get(`/api/projects.php?_t=${timestamp}`),
-          axios.get(`/api/spaces.php?_t=${timestamp}`),
-          axios.get('/api/users.php').catch(() => ({ data: [] }))
+          axios.get(`${tasksUrl}${tasksUrl.includes('?') ? '&' : '?'}_t=${timestamp}`, reqConfig),
+          axios.get('/api/events.php', reqConfig),
+          axios.get('/api/activities.php', reqConfig),
+          axios.get(`/api/projects.php?_t=${timestamp}`, reqConfig),
+          axios.get(`/api/spaces.php?_t=${timestamp}`, reqConfig),
+          axios.get('/api/users.php', reqConfig).catch((e) => {
+            if (axios.isCancel(e)) throw e;
+            return { data: [] };
+          })
         ]);
         setTasks(Array.isArray(resTasks.data) ? resTasks.data : []);
         setEvents(Array.isArray(resEvents.data) ? resEvents.data : []);
@@ -184,6 +184,9 @@ function App() {
         setUsers(Array.isArray(resUsers.data) ? resUsers.data : []);
       }
     } catch (err) {
+      if (axios.isCancel(err) || err?.name === 'CanceledError') {
+        return;
+      }
       console.error('Failed to fetch data', err);
     } finally {
       if (!silent) setDataLoading(false);
@@ -191,17 +194,24 @@ function App() {
   }, []);
 
   useEffect(() => {
-    refreshData(false);
+    let isMounted = true;
+    let abortController = new AbortController();
+
+    refreshData(false, abortController.signal);
 
     // Background polling every 30 seconds (reduced from 15s to cut server load 50%)
     const interval = setInterval(() => {
       // Only fetch if tab is active to save CPU and Server resources
-      if (!document.hidden) {
-        refreshData(true);
+      if (!document.hidden && isMounted) {
+        refreshData(true, abortController.signal);
       }
     }, 30000);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, [refreshData]);
 
   // ══════════ Shared Handlers ══════════

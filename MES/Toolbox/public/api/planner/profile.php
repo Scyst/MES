@@ -27,8 +27,6 @@ try {
         sendJson(['error' => 'Unauthorized'], 401);
     }
 
-    ensureUserSettingsTable($pdo);
-
     if ($method === 'GET') {
         // Get AKA
         $stmt = $pdo->prepare("SELECT aka FROM USERS WHERE username = ?");
