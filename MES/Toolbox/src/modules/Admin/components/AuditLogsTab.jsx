@@ -73,51 +73,51 @@ export default function AuditLogsTab() {
         <form onSubmit={handleSubmit} className="flex flex-wrap gap-4 items-end">
           
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Date Range</label>
-            <div className="flex items-center gap-2">
-              <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:ring-2 outline-none" />
-              <span className="text-gray-400">-</span>
-              <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:ring-2 outline-none" />
+            <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Date Range</label>
+            <div className="flex items-center gap-1.5">
+              <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-2 py-1 text-xs h-[34px] focus:ring-1 focus:ring-blue-500 outline-none" />
+              <span className="text-slate-400">-</span>
+              <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-2 py-1 text-xs h-[34px] focus:ring-1 focus:ring-blue-500 outline-none" />
             </div>
           </div>
 
           <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
-            <label className="text-xs font-medium text-gray-600">Action Type</label>
-            <input type="text" name="action_type" value={filters.action_type} onChange={handleFilterChange} placeholder="e.g. LOGIN, UPDATE" className="border border-gray-200 rounded px-3 py-1.5 text-sm focus:ring-2 outline-none w-full" />
+            <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Action Type</label>
+            <input type="text" name="action_type" value={filters.action_type} onChange={handleFilterChange} placeholder="e.g. LOGIN, UPDATE" className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-1 text-xs h-[34px] focus:ring-1 focus:ring-blue-500 outline-none w-full" />
           </div>
 
           <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
-            <label className="text-xs font-medium text-gray-600">Module</label>
-            <input type="text" name="module" value={filters.module} onChange={handleFilterChange} placeholder="e.g. AUTH" className="border border-gray-200 rounded px-3 py-1.5 text-sm focus:ring-2 outline-none w-full" />
+            <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Module</label>
+            <input type="text" name="module" value={filters.module} onChange={handleFilterChange} placeholder="e.g. AUTH" className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-1 text-xs h-[34px] focus:ring-1 focus:ring-blue-500 outline-none w-full" />
           </div>
 
           <div className="flex flex-col gap-1 flex-2 min-w-[200px]">
-            <label className="text-xs font-medium text-gray-600">Keyword Search</label>
-            <input type="text" name="search" value={filters.search} onChange={handleFilterChange} placeholder="Search remarks, values..." className="border border-gray-200 rounded px-3 py-1.5 text-sm focus:ring-2 outline-none w-full" />
+            <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Keyword Search</label>
+            <input type="text" name="search" value={filters.search} onChange={handleFilterChange} placeholder="Search remarks, values..." className="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-1 text-xs h-[34px] focus:ring-1 focus:ring-blue-500 outline-none w-full" />
           </div>
 
-          <button type="submit" disabled={loading} className="bg-slate-800 text-white px-5 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2 h-[34px] disabled:opacity-70">
-            {loading ? <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full"></div> : <Search size={16} />}
+          <button type="submit" disabled={loading} className="mes-btn-primary h-[34px] px-4 self-end">
+            {loading ? <div className="animate-spin h-3.5 w-3.5 border-b-2 border-white rounded-full"></div> : <Search size={14} />}
             Search
           </button>
         </form>
       </div>
 
       {/* Logs Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-          <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-            <History size={16} /> Found {total} log entries
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xs border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
+            <History size={14} /> Found {total} log entries
           </div>
           {total > filters.limit && (
-            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">Showing latest {filters.limit}</span>
+            <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-medium">Showing latest {filters.limit}</span>
           )}
         </div>
         
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
-          <table className="w-full text-left text-sm border-collapse min-w-[1000px]">
-            <thead className="bg-white sticky top-0 z-10 shadow-sm">
-              <tr className="border-b border-gray-200 text-gray-600 text-xs uppercase tracking-wider">
+          <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
+            <thead className="bg-slate-50 dark:bg-slate-850 sticky top-0 z-10 shadow-2xs">
+              <tr className="border-b border-slate-200 dark:border-slate-750 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider">
                 <th className="py-2 px-3 font-semibold w-[140px]">Timestamp</th>
                 <th className="py-2 px-3 font-semibold w-[120px]">User</th>
                 <th className="py-2 px-3 font-semibold w-[120px]">Action</th>

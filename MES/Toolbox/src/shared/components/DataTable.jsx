@@ -56,6 +56,7 @@ export default function DataTable({
   initialPageSize = DEFAULT_PAGE_SIZE,
   exportFileName,
   toolbar = null,
+  density = 'compact',
 }) {
   const toast = useToast();
   const [searchInput, setSearchInput] = useState('');
@@ -132,13 +133,15 @@ export default function DataTable({
     }
   };
 
+  const isCompact = density === 'compact';
+
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-3">
       {(searchable || toolbar || exportFileName) && (
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col gap-2.5 md:flex-row md:items-center">
           {searchable && (
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
                 value={searchInput}
@@ -147,7 +150,11 @@ export default function DataTable({
                   setPage(1);
                 }}
                 placeholder={searchPlaceholder}
-                className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                className={
+                  isCompact
+                    ? 'h-[34px] w-full rounded-lg border border-slate-300 bg-white pl-8 pr-3 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white'
+                    : 'h-11 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white'
+                }
               />
             </div>
           )}
@@ -157,17 +164,21 @@ export default function DataTable({
               type="button"
               onClick={handleExport}
               disabled={sortedRows.length === 0}
-              className="flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              className={
+                isCompact
+                  ? 'flex h-[34px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-2xs transition-colors'
+                  : 'flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
+              }
             >
-              <Download className="h-4 w-4" /> ส่งออก Excel
+              <Download className="h-3.5 w-3.5" /> ส่งออก Excel
             </button>
           )}
         </div>
       )}
 
-      <div className="w-full overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+      <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-2xs">
+        <table className="w-full min-w-[640px] text-left text-xs">
+          <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
             <tr>
               {columns.map((column) => {
                 const isSorted = sort.key === column.key;
@@ -179,10 +190,16 @@ export default function DataTable({
                     key={column.key}
                     scope="col"
                     aria-sort={isSorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    className="px-4 py-3 font-semibold"
+                    className={isCompact ? 'px-3 py-2 font-semibold' : 'px-4 py-3 font-semibold'}
                   >
                     {sortable ? (
-                      <button type="button" onClick={() => handleSort(column)} className="flex min-h-[44px] items-center gap-1 uppercase">
+                      <button
+                        type="button"
+                        onClick={() => handleSort(column)}
+                        className={`flex items-center gap-1 uppercase hover:text-slate-800 dark:hover:text-slate-200 ${
+                          isCompact ? 'py-0.5' : 'min-h-[44px]'
+                        }`}
+                      >
                         {headerText}
                         <SortIcon className={`h-3.5 w-3.5 ${isSorted ? 'text-blue-600' : 'opacity-40'}`} />
                       </button>
@@ -194,24 +211,29 @@ export default function DataTable({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-gray-500">
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-xs text-slate-500">
                   กำลังโหลดข้อมูล...
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-gray-500">
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-xs text-slate-500">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
               pageRows.map((row, index) => (
-                <tr key={getRowKey(row, index)} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                <tr key={getRowKey(row, index)} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
                   {columns.map((column) => (
-                    <td key={column.key} className={`px-4 py-3 text-gray-800 dark:text-gray-100 ${column.className || ''}`}>
+                    <td
+                      key={column.key}
+                      className={`${isCompact ? 'px-3 py-2' : 'px-4 py-3'} text-slate-800 dark:text-slate-100 ${
+                        column.className || ''
+                      }`}
+                    >
                       {column.render ? column.render(row) : readValue(column, row)}
                     </td>
                   ))}

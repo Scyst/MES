@@ -218,14 +218,14 @@ export default function LineSchedulesTab({ lines = [] }) {
               placeholder="ค้นหาชื่อกะ หรือไลน์..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input pl-9"
             />
           </div>
 
           <select
             value={selectedLine}
             onChange={(e) => setSelectedLine(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mes-select"
           >
             <option value="ALL">ทุกไลน์ผลิต (All Lines)</option>
             {lines.map((ln) => (
@@ -240,16 +240,16 @@ export default function LineSchedulesTab({ lines = [] }) {
           <button
             onClick={fetchSchedules}
             disabled={loading}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            className="mes-btn-icon"
             title="รีเฟรชข้อมูล"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors"
+            className="mes-btn-success"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             เพิ่มตารางกะผลิต
           </button>
         </div>

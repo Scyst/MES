@@ -241,7 +241,7 @@ export default function LocationsTab({ lines = [] }) {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mes-select"
           >
             <option value="ALL">ทุกหมวดหมู่ (All Types)</option>
             {Object.keys(TYPE_COLORS).map((t) => (
@@ -255,7 +255,7 @@ export default function LocationsTab({ lines = [] }) {
             <select
               value={selectedZone}
               onChange={(e) => setSelectedZone(e.target.value)}
-              className="px-3 py-1.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-select"
             >
               <option value="ALL">ทุกโซน (All Zones)</option>
               {uniqueZones.map((z) => (
@@ -271,16 +271,16 @@ export default function LocationsTab({ lines = [] }) {
           <button
             onClick={fetchLocations}
             disabled={loading}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            className="mes-btn-icon"
             title="รีเฟรชข้อมูล"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+            className="mes-btn-primary"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             เพิ่มตำแหน่งจัดเก็บ
           </button>
         </div>

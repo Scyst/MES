@@ -23,13 +23,9 @@ const TABS = [
   { id: 'valuation', label: 'SAP Valuation', icon: Coins },
 ];
 
-const TAB_BUTTON_BASE = 'pb-3 flex items-center gap-2 font-medium transition-colors min-h-[44px] text-sm whitespace-nowrap';
+const TAB_BUTTON_BASE = 'mes-tab-btn';
 const tabClasses = (isActive) =>
-  `${TAB_BUTTON_BASE} ${
-    isActive
-      ? 'border-b-2 border-blue-600 text-blue-700 dark:text-blue-400 font-semibold'
-      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-  }`;
+  `${TAB_BUTTON_BASE} ${isActive ? 'mes-tab-btn-active' : 'mes-tab-btn-inactive'}`;
 
 export default function SystemSettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,21 +49,21 @@ export default function SystemSettingsPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Header section (Matches User Management style) */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="mes-page-container">
+      {/* Header section */}
+      <div className="mes-page-header">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <Settings className="text-blue-600" /> System Settings
+          <h1 className="mes-page-title">
+            <Settings className="text-blue-600 w-6 h-6" /> System Settings
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="mes-page-subtitle">
             ตั้งค่าระบบและจัดการข้อมูลหลัก (Item Master, BOM, Locations, Schedules, SAP)
           </p>
         </div>
       </div>
 
-      {/* Tabs Navigation (Matches User Management border-b underline style) */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 gap-6 overflow-x-auto no-scrollbar">
+      {/* Tabs Navigation */}
+      <div className="mes-tab-nav">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;

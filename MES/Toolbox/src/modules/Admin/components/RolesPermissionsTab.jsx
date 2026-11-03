@@ -122,61 +122,61 @@ export default function RolesPermissionsTab() {
     <div className="space-y-6">
       
       {/* Alert Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
-        <ShieldAlert className="text-blue-600 mt-0.5" />
+      <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl p-3 flex gap-2.5 items-start text-xs">
+        <ShieldAlert className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" size={18} />
         <div>
-          <h4 className="font-semibold text-blue-900">Permission Matrix (PBAC)</h4>
-          <p className="text-blue-800 text-sm mt-1">กำหนดสิทธิ์พื้นฐานให้กับแต่ละบทบาท (Role) การเปลี่ยนแปลงจะมีผลกับผู้ใช้งานทุกคนที่อยู่ใน Role นั้นทันที</p>
-          <p className="text-blue-600 text-xs mt-1">* สิทธิ์ระดับ System Owner (creator) ถูกล็อกไว้ไม่สามารถแก้ไขได้</p>
+          <h4 className="font-semibold text-blue-900 dark:text-blue-300">Permission Matrix (PBAC)</h4>
+          <p className="text-blue-800 dark:text-blue-400 text-xs mt-0.5">กำหนดสิทธิ์พื้นฐานให้กับแต่ละบทบาท (Role) การเปลี่ยนแปลงจะมีผลกับผู้ใช้งานทุกคนที่อยู่ใน Role นั้นทันที</p>
+          <p className="text-blue-600 dark:text-blue-400 text-[11px] mt-0.5">* สิทธิ์ระดับ System Owner (creator) ถูกล็อกไว้ไม่สามารถแก้ไขได้</p>
         </div>
         
         {user?.role === 'creator' && (
           <button 
             onClick={() => setIsMasterModalOpen(true)}
-            className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="ml-auto mes-btn-primary"
           >
-            <Settings size={16} /> Manage Permissions Master
+            <Settings size={14} /> Manage Master
           </button>
         )}
       </div>
 
       {/* Matrix Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-max">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xs border border-slate-200 dark:border-slate-800 overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-max text-xs">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="py-3 px-4 font-semibold text-gray-700 bg-gray-100 sticky left-0 z-10 w-64 border-r">สิทธิ์ (Permission)</th>
-              <th className="py-3 px-4 font-semibold text-gray-700">รายละเอียด</th>
+            <tr className="bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              <th className="py-2.5 px-3 font-semibold bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 w-64 border-r border-slate-200 dark:border-slate-700">สิทธิ์ (Permission)</th>
+              <th className="py-2.5 px-3 font-semibold">รายละเอียด</th>
               {matrixData?.roles.map(role => (
-                <th key={role} className="py-3 px-4 font-semibold text-gray-700 text-center border-l">
+                <th key={role} className="py-2.5 px-3 font-semibold text-center border-l border-slate-200 dark:border-slate-700">
                   {role.toUpperCase()}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {matrixData?.permissions.map(perm => (
-              <tr key={perm.perm_code} className="hover:bg-blue-50/30 transition-colors">
-                <td className="py-3 px-4 bg-white sticky left-0 z-10 border-r font-mono text-sm text-blue-900">
+              <tr key={perm.perm_code} className="hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-colors">
+                <td className="py-2 px-3 bg-white dark:bg-slate-900 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-700 font-mono text-xs text-blue-900 dark:text-blue-300">
                   <div className="font-semibold">{perm.perm_code}</div>
-                  <div className="text-[10px] text-gray-500 uppercase mt-1">{perm.module_name}</div>
+                  <div className="text-[10px] text-slate-500 uppercase mt-0.5">{perm.module_name}</div>
                 </td>
-                <td className="py-3 px-4 text-sm text-gray-600">
+                <td className="py-2 px-3 text-xs text-slate-600 dark:text-slate-300">
                   {perm.description}
                 </td>
                 {matrixData.roles.map(role => (
-                  <td key={role} className="py-3 px-4 text-center border-l bg-gray-50/30">
+                  <td key={role} className="py-2 px-3 text-center border-l border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-850/30">
                     <button
                       onClick={() => handleToggle(role, perm.perm_code, perm.role_grants[role])}
                       disabled={role === 'creator'}
-                      className={`p-1.5 rounded-lg transition-all ${
+                      className={`p-1 rounded-lg transition-all ${
                         role === 'creator' ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'
                       }`}
                     >
                       {perm.role_grants[role] ? (
-                        <CheckCircle size={22} className="text-emerald-500" />
+                        <CheckCircle size={18} className="text-emerald-500" />
                       ) : (
-                        <XCircle size={22} className="text-gray-300" />
+                        <XCircle size={18} className="text-slate-300 dark:text-slate-600" />
                       )}
                     </button>
                   </td>

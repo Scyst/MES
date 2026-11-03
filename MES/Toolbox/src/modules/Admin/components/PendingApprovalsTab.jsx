@@ -139,13 +139,13 @@ export default function PendingApprovalsTab({ pendingUsers, loading, onRefresh, 
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {pendingUsers.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 flex items-start gap-3 text-sm text-amber-800 dark:text-amber-300">
-          <AlertCircle size={20} className="shrink-0 text-amber-600 mt-0.5" />
+        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+          <AlertCircle size={18} className="shrink-0 text-amber-600 mt-0.5" />
           <div>
             <span className="font-bold">มีคำขอสมัครสมาชิกรอการตรวจสอบจำนวน {pendingUsers.length} รายการ</span>
-            <p className="text-xs mt-0.5 text-amber-700 dark:text-amber-400">
+            <p className="text-[11px] mt-0.5 text-amber-700 dark:text-amber-400">
               กรุณากดปุ่ม <b>"พิจารณาอนุมัติ"</b> เพื่อตรวจสอบข้อมูล กำหนด Role, ไลน์ผลิต, วันหมดอายุ และเลือกสิทธิ์ PBAC ที่เหมาะสมก่อนเปิดใช้งาน
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function PendingApprovalsTab({ pendingUsers, loading, onRefresh, 
           <button
             type="button"
             onClick={onRefresh}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
+            className="mes-btn-secondary h-[34px]"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>รีเฟรชคำขอ</span>

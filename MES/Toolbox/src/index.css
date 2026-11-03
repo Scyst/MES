@@ -103,3 +103,85 @@ body {
 input[type="time"]::-webkit-datetime-edit-ampm-field {
   display: none;
 }
+
+/* ═══ MES Industrial Design System Tokens (High Density & Consistency) ═══ */
+@layer components {
+  /* Page Layout & Header */
+  .mes-page-container {
+    @apply w-full;
+  }
+  .mes-page-header {
+    @apply flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4;
+  }
+  .mes-page-title {
+    @apply text-xl md:text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2 tracking-tight;
+  }
+  .mes-page-subtitle {
+    @apply text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5;
+  }
+
+  /* Navigation Tabs (Underline Industrial Style) */
+  .mes-tab-nav {
+    @apply flex border-b border-slate-200 dark:border-slate-700 gap-6 overflow-x-auto mb-4;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .mes-tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .mes-tab-btn {
+    @apply pb-2.5 flex items-center gap-2 text-xs md:text-sm font-medium transition-colors whitespace-nowrap min-h-[38px];
+  }
+  .mes-tab-btn-active {
+    @apply border-b-2 border-blue-600 text-blue-700 dark:text-blue-400 font-semibold;
+  }
+  .mes-tab-btn-inactive {
+    @apply text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200;
+  }
+
+  /* Compact Industrial Action Buttons */
+  .mes-btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .mes-btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/10;
+  }
+  .mes-btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700;
+  }
+  .mes-btn-success {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/10;
+  }
+  .mes-btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/10;
+  }
+  .mes-btn-amber {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/10;
+  }
+  .mes-btn-icon {
+    @apply p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors inline-flex items-center justify-center;
+  }
+  .mes-btn-table-action {
+    @apply h-8 w-8 rounded-lg flex items-center justify-center transition-colors text-xs;
+  }
+
+  /* Compact Industrial Inputs & Form Controls */
+  .mes-input {
+    @apply w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors;
+  }
+  .mes-select {
+    @apply px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors;
+  }
+
+  /* Data Table & Density Tokens */
+  .mes-filter-bar {
+    @apply flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs;
+  }
+  .mes-badge {
+    @apply inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold;
+  }
+  .mes-badge-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium;
+  }
+}
+
