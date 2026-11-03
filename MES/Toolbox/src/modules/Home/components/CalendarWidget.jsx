@@ -39,7 +39,7 @@ export default function CalendarWidget({ monthlyData = {}, unreadDates = [], tod
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex-1 min-h-[380px] flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-3.5 rounded-full bg-blue-500"></span>
         <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs tracking-wider uppercase">
@@ -47,8 +47,8 @@ export default function CalendarWidget({ monthlyData = {}, unreadDates = [], tod
         </h3>
       </div>
       
-      <div className="border border-slate-200/90 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden shadow-2xs">
-        <div className="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-750 py-1.5 border-b border-slate-100 dark:border-slate-700">
+      <div className="flex-1 flex flex-col border border-slate-200/90 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden shadow-2xs">
+        <div className="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-750 py-2 border-b border-slate-100 dark:border-slate-700">
           <div className="text-rose-500 dark:text-rose-400">อา</div>
           <div>จ</div>
           <div>อ</div>
@@ -57,9 +57,9 @@ export default function CalendarWidget({ monthlyData = {}, unreadDates = [], tod
           <div>ศ</div>
           <div className="text-blue-500 dark:text-blue-400">ส</div>
         </div>
-        <div className="grid grid-cols-7 gap-0.5 p-1 bg-slate-50/30 dark:bg-slate-850/50">
+        <div className="grid grid-cols-7 gap-1 p-1.5 sm:p-2 bg-slate-50/30 dark:bg-slate-850/50 flex-1 auto-rows-fr">
           {blankDays.map((_, i) => (
-            <div key={`blank-${i}`} className="h-8 xl:h-9 border border-transparent"></div>
+            <div key={`blank-${i}`} className="min-h-[48px] sm:min-h-[52px] border border-transparent"></div>
           ))}
           {actualDays.map(({ day, dateStr }) => {
             const isToday = dateStr === todayStr;
@@ -70,20 +70,23 @@ export default function CalendarWidget({ monthlyData = {}, unreadDates = [], tod
               <div 
                 key={dateStr}
                 onClick={() => openDayManager(dateStr)}
-                className={`relative flex flex-col p-1 border rounded-lg cursor-pointer transition-all h-8 xl:h-9
-                  ${isToday ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/30 font-bold' : 'border-slate-100 dark:border-slate-700/60 bg-white dark:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
+                className={`relative flex flex-col justify-between p-1.5 sm:p-2 border rounded-xl cursor-pointer transition-all min-h-[48px] sm:min-h-[52px]
+                  ${isToday 
+                    ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-900/30 font-bold shadow-2xs ring-1 ring-blue-400/40' 
+                    : 'border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-750 hover:shadow-2xs'}
                   ${hasUnread ? 'ring-2 ring-rose-400 animate-pulse' : ''}
                 `}
               >
                 <div className="flex justify-between items-center leading-none">
-                  <span className={`text-[10px] ${isToday ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>{day}</span>
-                  {hasUnread && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
+                  <span className={`text-xs sm:text-sm ${isToday ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>{day}</span>
+                  {hasUnread && <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-800"></span>}
                 </div>
-                <div className="flex gap-0.5 mt-auto justify-center">
+                <div className="flex gap-1 mt-auto pt-1 justify-center">
                   {[1, 2, 3].map(pid => (
                     <div 
                       key={pid} 
-                      className={`w-1 h-1 rounded-full ${dayData[pid] ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-600'}`}
+                      className={`w-1.5 h-1.5 rounded-full ${dayData[pid] ? 'bg-emerald-500 shadow-2xs' : 'bg-slate-200 dark:bg-slate-600'}`}
+                      title={pid === 1 ? 'เริ่มงาน' : pid === 2 ? 'พักเบรก' : 'เลิกงาน'}
                     />
                   ))}
                 </div>

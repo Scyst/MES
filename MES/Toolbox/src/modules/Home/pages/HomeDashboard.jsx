@@ -14,7 +14,6 @@ import CalendarWidget from '../components/CalendarWidget';
 import MorningBriefModal from '../components/MorningBriefModal';
 import NotificationMenu from '../components/NotificationMenu';
 import LogModal from '../components/LogModal';
-import FactoryOperationsWidget from '../components/FactoryOperationsWidget';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
@@ -385,16 +384,13 @@ export default function HomeDashboard() {
           onLogSaved={loadInitialData}
         />
 
-        {/* Calendar Widget */}
+        {/* Calendar Widget (Dynamic Height & Touch-Friendly) */}
         <CalendarWidget
           monthlyData={data.monthlyData}
           unreadDates={data.unreadDates}
           todayDate={todayStr}
           onLogSaved={loadInitialData}
         />
-
-        {/* Dynamic Height Factory Operations & Map Status */}
-        <FactoryOperationsWidget />
       </div>
 
       {/* Right Workspace (Search Bar, Categories, Responsive Grid) */}

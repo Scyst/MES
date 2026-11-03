@@ -48,12 +48,12 @@ export default function NotificationMenu({ unreadDates = [], monthlyData = {}, o
     <div className="relative" ref={menuRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-sm transition-colors relative" 
-        title="การแจ้งเตือน"
+        className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center relative cursor-pointer" 
+        title="การแจ้งเตือน (Notifications)"
       >
-        <Bell size={24} className={count > 0 ? "text-white animate-pulse" : "text-white"} />
+        <Bell size={18} className={count > 0 ? "text-blue-600 dark:text-blue-400 animate-pulse" : "text-slate-600 dark:text-slate-300"} />
         {count > 0 && (
-          <span className="absolute top-0 right-0 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center translate-x-1/4 -translate-y-1/4 border-2 border-slate-800">
+          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-xs animate-bounce">
             {count}
           </span>
         )}
