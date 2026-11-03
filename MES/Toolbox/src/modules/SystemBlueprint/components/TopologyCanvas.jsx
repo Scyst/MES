@@ -80,12 +80,12 @@ export default function TopologyCanvas({
 }) {
   const containerRef = useRef(null);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [showAllEdges, setShowAllEdges] = useState(false);
   const [nodePositions, setNodePositions] = useState({});
 
-  // Active focused node (either hovered or locked by click)
-  const activeFocusId = hoveredNodeId || selectedNodeId;
+  // Active focused node is locked strictly to selectedNodeId (Click to Focus)
+  // This completely prevents hover layout shift flickering and path hijacking!
+  const activeFocusId = selectedNodeId;
 
   // Filter nodes by domain if not ALL
   const activeDomainNodes = useMemo(() => {
@@ -237,7 +237,7 @@ export default function TopologyCanvas({
               </span>
             </h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              คลิกหรือชี้ที่การ์ดโหนดเพื่อส่องไฟติดตามเส้นทางไหลข้อมูล (Upstream & Downstream) แบบบันไดชั้นต่อชั้น
+              คลิกที่การ์ดโหนดเพื่อส่องไฟติดตามเส้นทางไหลข้อมูล (Upstream & Downstream) แบบบันไดชั้นต่อชั้น
             </p>
           </div>
         </div>
@@ -257,12 +257,9 @@ export default function TopologyCanvas({
             <span>เส้นเชื่อมข้อมูล: {showAllEdges ? 'แสดงทั้งหมด' : 'แสดงเมื่อเลือกโหนด'}</span>
           </button>
 
-          {(selectedNodeId || hoveredNodeId) && (
+          {selectedNodeId && (
             <button
-              onClick={() => {
-                setSelectedNodeId(null);
-                setHoveredNodeId(null);
-              }}
+              onClick={() => setSelectedNodeId(null)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition-colors flex items-center gap-1"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -296,10 +293,7 @@ export default function TopologyCanvas({
               ดูรายละเอียดเชิงลึก
             </button>
             <button
-              onClick={() => {
-                setSelectedNodeId(null);
-                setHoveredNodeId(null);
-              }}
+              onClick={() => setSelectedNodeId(null)}
               className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition"
             >
               แสดงทุกโหนด (Show All)
@@ -498,7 +492,6 @@ export default function TopologyCanvas({
                     const isMatchedDomain =
                       selectedDomain === 'ALL' || node.domain === selectedDomain;
                     const isSelected = selectedNodeId === node.id;
-                    const isHovered = hoveredNodeId === node.id;
                     const isConnected =
                       connectedNodeIds.size > 0
                         ? connectedNodeIds.has(node.id)
@@ -524,14 +517,12 @@ export default function TopologyCanvas({
                             setSelectedNodeId(node.id);
                           }
                         }}
-                        onMouseEnter={() => setHoveredNodeId(node.id)}
-                        onMouseLeave={() => setHoveredNodeId(null)}
                         className={`group relative rounded-xl border p-3.5 flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer ${
                           isSelected
                             ? 'bg-sky-50/90 dark:bg-slate-900 ring-2 ring-blue-500 dark:ring-sky-400 border-transparent shadow-lg -translate-y-0.5 z-30'
-                            : isHovered
-                              ? 'bg-white dark:bg-slate-900 border-blue-400 dark:border-blue-500 shadow-md -translate-y-0.5 z-20'
-                              : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 shadow-2xs'
+                            : isConnected && selectedNodeId
+                              ? 'bg-white dark:bg-slate-900 border-blue-400 dark:border-blue-600 shadow-md ring-1 ring-blue-400/50 -translate-y-0.5 z-20'
+                              : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 shadow-2xs'
                         } ${isDimmed ? 'opacity-25 grayscale-[60%]' : 'opacity-100'}`}
                       >
                         {/* Card Top: ID & Status */}
