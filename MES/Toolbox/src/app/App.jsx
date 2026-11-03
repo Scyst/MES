@@ -10,6 +10,7 @@ import { LanguageProvider } from '../shared/contexts/LanguageContext';
 const HomeDashboard = lazy(() => import('../modules/Home/pages/HomeDashboard'));
 const UserManagement = lazy(() => import('../modules/Admin/pages/UserManagement'));
 const SystemSettingsPage = lazy(() => import('../modules/SystemSettings/pages/SystemSettingsPage'));
+const SystemBlueprintPage = lazy(() => import('../modules/SystemBlueprint/pages/SystemBlueprintPage'));
 const ProfilePage = lazy(() => import('../modules/Profile/pages/ProfilePage'));
 const Login = lazy(() => import('../modules/Auth/pages/Login'));
 const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
@@ -84,6 +85,13 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบตั้งค่าข้อมูลหลัก...</div>}>
                     <SystemSettingsPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+              <Route path="blueprint" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดพิมพ์เขียวระบบโรงงาน...</div>}>
+                    <SystemBlueprintPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

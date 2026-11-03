@@ -66,8 +66,8 @@
   2. [x] ดึงไฟล์ใน `/MES/MES/page/AccessoriesInspection/` ทั้ง 7 ไฟล์จาก FTP ลงมาเทียบกับใน Git — ยืนยันว่าไม่มีโค้ดใหม่กว่าบน FTP และคงส่วนที่เก็บรูปใน `../../uploads/accessories_inspection/` เอาไว้ครบถ้วน (เสร็จสิ้น 2026-10-30)
   3. [x] เปลี่ยนชื่อโปรเจ็ค `MES/Toolbox2` เป็น `MES/Toolbox` ให้ตรงกับพาร์ทจริงใหม่บน FTP (`/Toolbox` -> `/iot-toolbox/sandbox-b9/Toolbox/#/`) ย้ายของเก่าไปสำรองที่ `/Toolbox_legacy` และตั้ง Smart Redirect จาก `/Toolbox2`, `/Toolbox/planner`, `/Toolbox/plannerAgent`, และ `/transport-system` เข้าสู่ `/Toolbox/#/...` ครบถ้วน (เสร็จสิ้น 2026-10-30)
   4. [ ] ตรวจสอบและดำเนินการต่อตาม **"แผนตอกเสาเข็มโครงสร้างพื้นฐาน 4 ชั้น (4-Layer Core Foundation Roadmap)"** ใน `MES/Toolbox/ARCHITECTURE.md` (เริ่มจาก Layer 1: Shared UI/API Utilities -> Layer 2: User Management 100% Parity -> Layer 3: System Settings -> Layer 4: Full Profile Page)
-- [ ] **[สำหรับงานพิมพ์เขียวผู้บริหาร (Visual Blueprint Extension)]:**
-  - หากผู้บริหารต้องการหน้าจอ Interactive Visual Blueprint (คล้ายผังไฟฟ้า/เครื่องจักรที่คลิกดูสถานะสดได้) ให้ Agent อ่าน `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (หัวข้อที่ 8) และใช้ข้อมูลโหนด/เส้นเชื่อมจาก `MES/docs/blueprint/blueprint_graph.json` สร้างโมดูล `MES/Toolbox/src/modules/SystemBlueprint/` ได้ทันที
+- [x] **[สำหรับงานพิมพ์เขียวผู้บริหาร (Visual Blueprint Extension)]:**
+  - สร้างโมดูล Interactive Visual Blueprint (`MES/Toolbox/src/modules/SystemBlueprint/`) ภายใต้ Route `#/blueprint` สมบูรณ์ 100% ครอบคลุม 5 เลเยอร์สถาปัตยกรรม (ฮาร์ดแวร์/IoT, SAP ERP, SQL Server, API Gateway, แอปพลิเคชัน), 23 โหนดระบบ, 40+ ตารางฐานข้อมูล, 17 Data Pipelines พร้อมระบบตัวกรอง Domain, Search, และ Slide-over Node Inspector ละเอียดครบถ้วน (เสร็จสิ้น 2026-11-03)
 
 ## Exact Files to Modify / Reference
 - `MES/docs/blueprint/MES_SYSTEM_BLUEPRINT.md` (พิมพ์เขียวแม่บทของระบบ MES & คู่มือส่งมอบงานผู้บริหาร)

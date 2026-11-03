@@ -60,6 +60,7 @@ MES/Toolbox/
         ├── Transport/          # ระบบจองรถรับส่งพนักงาน (#/transport/*)
         ├── TeamPlanner/        # ระบบกระดานแผนงานและปฏิทินทีม (#/planner/*)
         ├── PaintChem/          # ระบบบันทึกเคมีสีและวิเคราะห์แนวโน้ม (#/paint-chem)
+        ├── SystemBlueprint/    # พิมพ์เขียวสถาปัตยกรรมดิจิทัล 5 เลเยอร์ & แผนผังระบบโรงงาน (#/blueprint)
         └── Admin/              # ระบบจัดการผู้ใช้งานและสิทธิ์ (#/admin/users)
 ```
 
@@ -111,6 +112,7 @@ MES/Toolbox/
 - [x] **Layer 2: User Management & PBAC Permission Matrix (Parity 100%)** — Complete
 - [x] **Layer 3: System Settings & Master Data (Parity 100%)** — Complete
 - [x] **Layer 4: Full Profile & 4D Performance Evaluation (Parity 100%)** — Complete
+- [x] **Layer 5: Executive Visual Architecture Blueprint (`#/blueprint`)** — Complete (ผังดิจิทัล 5 เลเยอร์, 23 โหนด, 40+ ตาราง, 17 Pipelines)
 
 ---
 

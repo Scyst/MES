@@ -10,15 +10,15 @@ ensurePlannerInterceptors();
 
 
 // ── Lazy-loaded page components (split into separate chunks) ──
-const CalendarView   = lazy(() => import('./components/CalendarView'));
-const TaskBoard      = lazy(() => import('./components/TaskBoard'));
-const Dashboard      = lazy(() => import('./components/Dashboard'));
-const GanttChart     = lazy(() => import('./components/GanttChart'));
-const LinkHub        = lazy(() => import('./components/LinkHub'));
-const ProjectsTab    = lazy(() => import('./components/ProjectsTab'));
-const MyTasks        = lazy(() => import('./components/MyTasks'));
-const Resources      = lazy(() => import('./components/Resources'));
-const SpaceView      = lazy(() => import('./components/SpaceView'));
+const CalendarView = lazy(() => import('./components/CalendarView'));
+const TaskBoard = lazy(() => import('./components/TaskBoard'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const GanttChart = lazy(() => import('./components/GanttChart'));
+const LinkHub = lazy(() => import('./components/LinkHub'));
+const ProjectsTab = lazy(() => import('./components/ProjectsTab'));
+const MyTasks = lazy(() => import('./components/MyTasks'));
+const Resources = lazy(() => import('./components/Resources'));
+const SpaceView = lazy(() => import('./components/SpaceView'));
 
 // ── Static imports: modals & always-visible components ──
 import NotificationManager from './components/NotificationManager';
@@ -192,7 +192,7 @@ function App() {
 
   useEffect(() => {
     refreshData(false);
-    
+
     // Background polling every 30 seconds (reduced from 15s to cut server load 50%)
     const interval = setInterval(() => {
       // Only fetch if tab is active to save CPU and Server resources
@@ -200,7 +200,7 @@ function App() {
         refreshData(true);
       }
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -418,15 +418,15 @@ function App() {
     };
 
     switch (activeTab) {
-      case 'dashboard': 
-        return <Dashboard 
-          tasks={tasks} 
-          events={events} 
-          activities={activities} 
-          loading={isAppLoading} 
+      case 'dashboard':
+        return <Dashboard
+          tasks={tasks}
+          events={events}
+          activities={activities}
+          loading={isAppLoading}
           users={users}
           currentUser={currentUser}
-          onNav={handleNav} 
+          onNav={handleNav}
           openTaskModal={() => { setGlobalEditingTask(null); setIsGlobalTaskModalOpen(true); }}
           openProjectModal={() => { setGlobalEditingProject(null); setIsGlobalProjectModalOpen(true); }}
           openSpaceModal={canManageSpace(currentUser) ? () => { setEditingSpace(null); setIsAddSpaceModalOpen(true); } : undefined}
@@ -434,21 +434,21 @@ function App() {
           onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
           onProjectClick={(proj) => { setGlobalEditingProject(proj); setIsGlobalProjectModalOpen(true); }}
         />;
-      case 'calendar': 
+      case 'calendar':
         return <CalendarView tasks={tasks} events={events} onSaveTask={handleSaveTask} onDeleteTask={handleDeleteTask} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} loading={isAppLoading} users={users} />;
-      case 'tasks': 
+      case 'tasks':
         return <TaskBoard {...sharedTaskProps} />;
-      case 'gantt': 
+      case 'gantt':
         return <GanttChart {...sharedTaskProps} />;
       case 'projects':
         return <ProjectsTab currentUser={currentUser} tasks={tasks} spaces={spaces} refreshData={refreshData} />;
-      case 'links': 
+      case 'links':
         return <LinkHub />;
       case 'my-tasks':
-        return <MyTasks 
-          tasks={tasks} 
-          currentUser={currentUser} 
-          refreshData={refreshData} 
+        return <MyTasks
+          tasks={tasks}
+          currentUser={currentUser}
+          refreshData={refreshData}
           onSaveTask={handleSaveTask}
           onTaskClick={(task) => { setGlobalEditingTask(task); setIsGlobalTaskModalOpen(true); }}
           onCreateTask={(init) => { setGlobalEditingTask(init || null); setIsGlobalTaskModalOpen(true); }}
@@ -498,7 +498,7 @@ function App() {
         }
         return <Dashboard tasks={tasks} events={events} activities={activities} loading={isAppLoading} users={users} currentUser={currentUser} onNav={handleNav} />;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, tasks, events, activities, projects, spaces, users, dataLoading, userLoading, currentUser]);
 
 
@@ -533,7 +533,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-[#f4f9f8] dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans overflow-hidden">
-      
+
       {/* ══════════ Desktop Top Header ══════════ */}
       <header className="hidden md:flex h-16 bg-white dark:bg-slate-900 border-b border-transparent dark:border-slate-800 shrink-0 px-5 items-center justify-between shadow-soft z-50">
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -548,24 +548,24 @@ function App() {
 
         <div className="flex items-center gap-3 md:gap-4">
           <RealTimeClock />
-          
+
           <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 hidden lg:block"></div>
-          
+
           <button className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" onClick={() => setShowNotificationModal(true)} title="Notifications">
             <FiBell className="text-[1.1rem]" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse border-2 border-white dark:border-slate-900"></span>
           </button>
-          
+
           <div className="relative">
             <div className="flex items-center gap-3 cursor-pointer p-1 pl-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-              <UserAvatar 
-                username={currentUser?.username} 
-                displayName={currentUser?.fullname || currentUser?.username} 
+              <UserAvatar
+                username={currentUser?.username}
+                displayName={currentUser?.fullname || currentUser?.username}
                 className="w-9 h-9 text-sm"
                 fallbackClass="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
               />
             </div>
-            
+
             {showProfileMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
@@ -585,7 +585,7 @@ function App() {
                     </Link>
                     <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors mb-1">
                       <div className="flex items-center gap-3">
-                        {isDarkMode ? <FiSun className="text-[1.1rem]" /> : <FiMoon className="text-[1.1rem]" />} 
+                        {isDarkMode ? <FiSun className="text-[1.1rem]" /> : <FiMoon className="text-[1.1rem]" />}
                         <span>{isDarkMode ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
                       </div>
                     </button>
@@ -603,8 +603,8 @@ function App() {
       <div className="hidden md:flex md:flex-row flex-1 overflow-hidden relative">
         <aside className="w-56 lg:w-[260px] bg-[#f4f9f8] dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10">
           <div className="px-4 py-4 pt-5 shrink-0">
-            <button 
-              onClick={() => setShowSearchModal(true)} 
+            <button
+              onClick={() => setShowSearchModal(true)}
               className="w-full flex items-center justify-between px-4 py-2 bg-slate-200/70 dark:bg-slate-800/80 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-300/70 dark:hover:bg-slate-700 transition-colors text-sm font-medium border border-transparent dark:border-slate-700"
             >
               <span>Search...</span>
@@ -615,14 +615,13 @@ function App() {
           <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4 custom-scrollbar">
             <div className="space-y-0.5 mt-2">
               {mainNav.map(item => (
-                <button 
+                <button
                   key={item.tab}
                   onClick={() => handleNav(item.tab)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium ${
-                    activeTab === item.tab 
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium ${activeTab === item.tab
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                       : 'text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <item.icon className={`text-[1.1rem] shrink-0 ${activeTab === item.tab ? 'text-indigo-600' : ''}`} />
                   <span>{item.label}</span>
@@ -639,15 +638,14 @@ function App() {
                 </div>
               </div>
               <div className="space-y-0.5">
-                  {dynamicSpacesNav.map(item => (
-                    <button 
+                {dynamicSpacesNav.map(item => (
+                  <button
                     key={item.tab}
                     onClick={() => handleNav(item.tab)}
-                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${
-                      activeTab === item.tab 
-                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
+                    className={`w-full flex items-center gap-3 py-1.5 rounded-xl transition-all text-sm font-medium ${item.subItem ? 'pl-8 pr-3 text-slate-500 text-[13px]' : 'px-3'} ${activeTab === item.tab
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                         : 'hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-200 text-slate-600'
-                    }`}
+                      }`}
                   >
                     {!item.subItem && (
                       <div className={`p-1 rounded flex items-center justify-center ${item.color || 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
@@ -655,10 +653,10 @@ function App() {
                       </div>
                     )}
                     {item.subItem && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></span>}
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </nav>
         </aside>
@@ -673,7 +671,7 @@ function App() {
 
       {/* ══════════ Mobile Layout ══════════ */}
       <div className="flex flex-col flex-1 overflow-hidden md:hidden">
-        
+
         {/* Mobile Top Bar */}
         <header className="flex items-center justify-between bg-white dark:bg-slate-900 border-b border-transparent dark:border-slate-800 px-4 py-3 shrink-0 z-30 shadow-soft">
           <div className="flex items-center gap-3">
@@ -692,12 +690,12 @@ function App() {
               <FiBell className="text-lg" />
               <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
             </button>
-            <UserAvatar 
-              username={currentUser?.username} 
-              displayName={currentUser?.fullname || currentUser?.username} 
+            <UserAvatar
+              username={currentUser?.username}
+              displayName={currentUser?.fullname || currentUser?.username}
               className="w-8 h-8 text-xs"
               fallbackClass="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
-              onClick={() => setShowProfileMenu(!showProfileMenu)} 
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
             />
           </div>
         </header>
@@ -740,11 +738,10 @@ function App() {
               <button
                 key={item.tab}
                 onClick={() => handleNav(item.tab)}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-all active:scale-90 ${
-                  activeTab === item.tab 
-                    ? 'text-indigo-600 dark:text-indigo-400' 
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-all active:scale-90 ${activeTab === item.tab
+                    ? 'text-indigo-600 dark:text-indigo-400'
                     : 'text-slate-500 dark:text-slate-500'
-                }`}
+                  }`}
               >
                 <item.icon className={`text-lg ${activeTab === item.tab ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
                 <span className="text-[10px] font-medium">{item.label}</span>
@@ -760,7 +757,7 @@ function App() {
       {/* ══════════ Mobile Slide-out Drawer ══════════ */}
       {isSidebarOpen && (
         <>
-          <div 
+          <div
             className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden backdrop-blur-sm"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
@@ -774,17 +771,16 @@ function App() {
                 <FiX className="text-xl" />
               </button>
             </div>
-            
+
             <nav className="flex-1 px-3 space-y-2 overflow-y-auto pt-4">
               {dynamicNavItems.map(item => (
-                <button 
+                <button
                   key={item.tab}
                   onClick={() => { handleNav(item.tab); setIsSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm ${
-                    activeTab === item.tab 
-                      ? 'bg-white dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shadow-soft' 
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm ${activeTab === item.tab
+                      ? 'bg-white dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shadow-soft'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <item.icon className="text-lg shrink-0" />
                   <span>{item.label}</span>
@@ -821,7 +817,7 @@ function App() {
 
       {/* Global Notifications */}
       <NotificationManager tasks={tasks} currentUser={currentUser} />
-      
+
       {/* Global Modals */}
       <AddTaskModal
         isOpen={isGlobalTaskModalOpen}
@@ -850,7 +846,7 @@ function App() {
             await axios.delete(`/api/spaces.php?id=${spaceToDelete}`);
             refreshData();
             setActiveTab('space-home');
-          } catch(e) {
+          } catch (e) {
             console.error(e);
           } finally {
             setSpaceToDelete(null);
@@ -859,9 +855,9 @@ function App() {
         onCancel={() => setSpaceToDelete(null)}
       />
 
-      <AddProjectModal 
-        isOpen={isGlobalProjectModalOpen} 
-        onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }} 
+      <AddProjectModal
+        isOpen={isGlobalProjectModalOpen}
+        onClose={() => { setIsGlobalProjectModalOpen(false); setGlobalEditingProject(null); }}
         onSave={async (data) => {
           const ok = await handleSaveProject(data);
           if (ok) {
@@ -879,7 +875,7 @@ function App() {
         onSave={handleSaveSpace}
         initialData={editingSpace}
       />
-      
+
       <InviteTeamModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
@@ -888,16 +884,16 @@ function App() {
         users={users}
         initialSpaceId={inviteModalSpaceId}
       />
-      
+
       <ProfileSettingsModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         currentUser={currentUser}
         onSaved={refreshData}
       />
-      
+
       {/* Messenger-style Chat Widget */}
-      <ChatWidget 
+      <ChatWidget
         currentUser={currentUser}
         tasks={tasks}
         projects={projects}

@@ -5,7 +5,7 @@ import {
   Store, Warehouse, Package, MapPin, ShieldCheck,
   ShieldAlert, Wrench, HeartPulse, ChevronRight,
   Settings, Users, DollarSign, FileText, Zap, Sun, Calendar, Rocket,
-  Video, Cuboid, Star, FlaskConical, GraduationCap, Search, X, Sparkles, Filter
+  Video, Cuboid, Star, FlaskConical, GraduationCap, Search, X, Sparkles, Filter, Network
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
@@ -234,6 +234,7 @@ export default function HomeDashboard() {
   const systemAdminServices = useMemo(() => [
     { title: 'System Settings', desc: 'ตั้งค่าระบบและข้อมูลหลัก (Master Data)', icon: Settings, colorClass: 'bg-slate-100 text-slate-700', to: '/system-settings', roles: ['admin', 'creator', 'supervisor'] },
     { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์ (PBAC Matrix)', icon: Users, colorClass: 'bg-slate-100 text-slate-700', to: '/admin/users', roles: ['admin', 'creator'] },
+    { title: 'System Blueprint', desc: 'พิมพ์เขียวสถาปัตยกรรมและผังระบบโรงงาน', icon: Network, colorClass: 'bg-indigo-100 text-indigo-700', to: '/blueprint', roles: ['admin', 'creator', 'manager', 'supervisor', 'executive'] },
   ], []);
 
   const sandboxServices = useMemo(() => [

@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, MonitorPlay, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -73,6 +73,7 @@ export const MENU_DATA = [
     items: [
       { name: 'System Settings', icon: Settings, to: '/system-settings' },
       { name: 'User Manager', icon: Users, to: '/admin/users' },
+      { name: 'System Blueprint (ผังระบบ)', icon: Network, to: '/blueprint' },
     ]
   }
 ];
