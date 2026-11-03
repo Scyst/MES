@@ -298,6 +298,11 @@ document.addEventListener('DOMContentLoaded', function () {
         let uploadErrors = 0;
 
         for (const file of filesToUpload) {
+            if (file.size > 50 * 1024 * 1024) {
+                showToast(`File "${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 50MB.`, 'var(--bs-danger)');
+                uploadErrors++;
+                continue;
+            }
             const formData = new FormData();
             formData.append('doc_file', file);
             formData.append('file_description', description);
@@ -469,6 +474,10 @@ document.addEventListener('DOMContentLoaded', function () {
         event.preventDefault();
         const files = reviseDocFile.files;
         if (files.length === 0) return;
+        if (files[0].size > 50 * 1024 * 1024) {
+            showToast(`File "${files[0].name}" is too large (${(files[0].size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 50MB.`, 'var(--bs-danger)');
+            return;
+        }
         
         const formData = new FormData();
         formData.append('document_id', reviseDocId.value);

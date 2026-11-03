@@ -4,7 +4,7 @@
             <div class="modal-header border-bottom-0 pt-4 px-4 pb-0">
                 <h5 class="modal-title fw-bold d-flex align-items-center" id="uploadDocModalLabel" style="color: var(--text-primary); font-size: 1.25rem;">
                     <i class="fas fa-cloud-upload-alt text-primary me-2"></i>Upload Documents
-                    <i class="fas fa-info-circle text-muted ms-2" style="font-size: 0.9rem; cursor: help;" title="Supported files: PDF, Word (doc, docx), Excel (xls, xlsx), Images (png, jpg, gif), Archives (zip, rar, 7z), Text (txt), and 3D CAD (step, stp, igs, iges, stl, obj, gltf, glb)."></i>
+                    <i class="fas fa-info-circle text-muted ms-2" style="font-size: 0.9rem; cursor: help;" title="Supported files: PDF, Word (doc, docx), Excel (xls, xlsx), Images (png, jpg, gif), Archives (zip, rar, 7z), Text (txt), and 3D CAD (step, stp, igs, iges, stl, obj, gltf, glb). Maximum size: 50MB."></i>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

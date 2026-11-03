@@ -255,18 +255,23 @@ try {
             }
             if (!isset($_FILES['doc_file']) || $_FILES['doc_file']['error'] !== UPLOAD_ERR_OK) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'No file uploaded or an upload error occurred.']);
+                $uploadErr = $_FILES['doc_file']['error'] ?? 'missing';
+                $errMsg = 'No file uploaded or an upload error occurred.';
+                if ($uploadErr === UPLOAD_ERR_INI_SIZE || $uploadErr === UPLOAD_ERR_FORM_SIZE) {
+                    $errMsg = 'File is too large and exceeds the server upload limit (php.ini upload_max_filesize).';
+                }
+                echo json_encode(['success' => false, 'error' => $errMsg]);
                 exit;
             }
             $file = $_FILES['doc_file'];
-            $maxFileSize = 20 * 1024 * 1024;
+            $maxFileSize = 50 * 1024 * 1024;
             $originalFileName = basename($file['name']);
             $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
             $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'rar', '7z', 'txt', 'step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'];
 
             if ($file['size'] > $maxFileSize) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 20MB.']);
+                echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 50MB.']);
                 exit;
             }
             if (!in_array($fileExtension, $allowedExtensions)) {
@@ -317,18 +322,23 @@ try {
             }
             if (!isset($_FILES['doc_file']) || $_FILES['doc_file']['error'] !== UPLOAD_ERR_OK) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'No file uploaded or an upload error occurred.']);
+                $uploadErr = $_FILES['doc_file']['error'] ?? 'missing';
+                $errMsg = 'No file uploaded or an upload error occurred.';
+                if ($uploadErr === UPLOAD_ERR_INI_SIZE || $uploadErr === UPLOAD_ERR_FORM_SIZE) {
+                    $errMsg = 'File is too large and exceeds the server upload limit (php.ini upload_max_filesize).';
+                }
+                echo json_encode(['success' => false, 'error' => $errMsg]);
                 exit;
             }
             $file = $_FILES['doc_file'];
-            $maxFileSize = 20 * 1024 * 1024;
+            $maxFileSize = 50 * 1024 * 1024;
             $originalFileName = basename($file['name']);
             $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
             $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'rar', '7z', 'txt', 'step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'];
 
             if ($file['size'] > $maxFileSize) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 20MB.']);
+                echo json_encode(['success' => false, 'error' => 'File is too large. Maximum size is 50MB.']);
                 exit;
             }
             if (!in_array($fileExtension, $allowedExtensions)) {

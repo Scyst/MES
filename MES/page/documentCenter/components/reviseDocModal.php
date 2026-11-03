@@ -19,7 +19,7 @@
                     <div class="mb-2">
                         <label for="reviseDocFile" class="form-label fw-semibold text-dark" style="font-size: 0.9rem;">Select New File</label>
                         <input class="form-control shadow-sm" type="file" id="reviseDocFile" name="doc_file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" style="border-radius: 8px; border-color: #CBD5E1;">
-                        <div class="form-text text-secondary mt-2"><i class="fas fa-exclamation-circle text-warning me-1"></i>This will replace the existing file. Max size 20MB.</div>
+                        <div class="form-text text-secondary mt-2"><i class="fas fa-exclamation-circle text-warning me-1"></i>This will replace the existing file. Max size 50MB.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 px-4 pb-4 pt-0 bg-white">
