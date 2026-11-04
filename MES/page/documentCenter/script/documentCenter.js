@@ -221,13 +221,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <i class="fas fa-folder-open text-warning me-2"></i> เปิดโฟลเดอร์ (Open)
                                     </button>
                                 </li>
-                                ${canManage && doc.id ? `
+                                ${canManage ? `
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <button type="button" class="dropdown-item btn-rename-item" data-doc-id="${doc.id}" data-item-type="folder" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
+                                    <button type="button" class="dropdown-item btn-rename-item" data-doc-id="${doc.id || ''}" data-item-type="folder" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
                                         <i class="fas fa-pencil-alt text-primary me-2"></i> เปลี่ยนชื่อ (Rename)
                                     </button>
                                 </li>
+                                ${doc.id ? `
                                 <li>
                                     <button type="button" class="dropdown-item btn-move-doc" data-doc-id="${doc.id}">
                                         <i class="fas fa-arrows-alt text-info me-2"></i> ย้ายตำแหน่ง (Move)
@@ -239,6 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <i class="fas fa-trash-alt me-2"></i> ลบโฟลเดอร์ (Delete)
                                     </button>
                                 </li>
+                                ` : ''}
                                 ` : ''}
                             </ul>
                         </div>
