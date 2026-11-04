@@ -95,14 +95,26 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 pb-16 sm:pb-20">
       {/* Section 1: Contact & Social */}
       <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-          <Phone className="w-4 h-4 text-blue-600" />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-            ข้อมูลการติดต่อและที่อยู่ (Contact & Address)
-          </h3>
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Phone className="w-4 h-4 text-blue-600" />
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+              ข้อมูลการติดต่อและที่อยู่ (Contact & Address)
+            </h3>
+          </div>
+          {/* Quick Save button in header */}
+          <button
+            type="submit"
+            disabled={saving}
+            className="mes-btn-primary px-3 py-1.5 text-xs sm:hidden"
+            title="บันทึกข้อมูล"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>{saving ? 'บันทึก...' : 'บันทึก'}</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -354,16 +366,21 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
         </div>
       </div>
 
-      {/* Submit Button */}
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="mes-btn-primary px-5 py-2 text-xs"
-        >
-          <Save className="w-4 h-4" />
-          <span>{saving ? 'กำลังบันทึกข้อมูล...' : 'บันทึกข้อมูลส่วนตัวและสวัสดิการ'}</span>
-        </button>
+      {/* Sticky Floating Save Bar (Floats comfortably above bottom screen edge) */}
+      <div className="sticky bottom-4 z-30 flex justify-end">
+        <div className="flex items-center gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-200/90 dark:border-slate-750 shadow-lg shadow-slate-200/50 dark:shadow-slate-950/60 transition-all">
+          <span className="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">
+            ตรวจสอบข้อมูลส่วนตัวและสวัสดิการให้เรียบร้อย
+          </span>
+          <button
+            type="submit"
+            disabled={saving}
+            className="mes-btn-primary px-5 py-2 text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? 'กำลังบันทึกข้อมูล...' : 'บันทึกข้อมูลส่วนตัวและสวัสดิการ'}</span>
+          </button>
+        </div>
       </div>
     </form>
   );
