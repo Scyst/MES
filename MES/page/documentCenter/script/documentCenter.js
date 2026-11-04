@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const API_ENDPOINT = 'api/documentCenterAPI.php';
     let currentPage = 1;
     let currentSearchTerm = '';
-    let currentFolderPath = ''; 
+    let currentFolderPath = '';
     let debounceTimer;
     let currentDocumentCache = [];
 
@@ -19,9 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedDocumentIds = new Set();
     const deleteConfirmationModalElement = document.getElementById('deleteConfirmationModal');
     const deleteConfirmationModal = deleteConfirmationModalElement ? new bootstrap.Modal(deleteConfirmationModalElement) : null;
-    let deleteType = null; 
+    let deleteType = null;
     let currentDeletingDocId = null;
-    
+
     // --- Element & Modal References ---
     const btnDeleteSelected = document.getElementById('btnDeleteSelected');
     const selectedCountSpan = document.getElementById('selectedCount');
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const uploadDocModal = uploadDocModalEl ? new bootstrap.Modal(uploadDocModalEl) : null;
     const uploadDocForm = document.getElementById('uploadDocForm');
     const viewDocModal = viewDocModalElement ? new bootstrap.Modal(viewDocModalElement) : null;
-    
+
     // --- Move & Revise Modal Elements ---
     const moveDocModalElement = document.getElementById('moveDocModal');
     const moveDocModal = moveDocModalElement ? new bootstrap.Modal(moveDocModalElement) : null;
@@ -58,14 +58,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const renameDocModalElement = document.getElementById('renameDocModal');
     const renameDocModal = renameDocModalElement ? new bootstrap.Modal(renameDocModalElement) : null;
     const renameDocForm = document.getElementById('renameDocForm');
-    
+
     // --- Folder Navigation Elements ---
     const breadcrumbContainer = document.getElementById('breadcrumbContainer');
 
-    window.navigateToFolder = function(path) {
+    window.navigateToFolder = function (path) {
         currentFolderPath = path;
         currentPage = 1;
-        if(searchInput) searchInput.value = '';
+        if (searchInput) searchInput.value = '';
         currentSearchTerm = '';
         fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
     };
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 options.headers['Content-Type'] = 'application/json';
             }
         }
-        
+
         try {
             const response = await fetch(url, options);
             const result = await response.json();
@@ -121,20 +121,20 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error(`API request failed for action "${action}":`, error);
             if (error instanceof SyntaxError) {
-                 showToast('Received an invalid response from the server. (Not JSON)', 'var(--bs-danger)');
+                showToast('Received an invalid response from the server. (Not JSON)', 'var(--bs-danger)');
             } else {
-                 showToast(error.message, 'var(--bs-danger)');
+                showToast(error.message, 'var(--bs-danger)');
             }
             throw error;
         }
     }
-    
+
     // =================================================================
     // SECTION 3: DATA FETCHING & UI RENDERING
     // =================================================================
     async function fetchDocuments(page = 1, search = '', folderPath = '') {
         documentTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>กำลังโหลดข้อมูล...</td></tr>`;
-        
+
         try {
             const result = await apiRequest('get_documents', { page, search, folderPath }, 'GET');
             currentDocumentCache = result.data || [];
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
             documentTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-5"><i class="fas fa-exclamation-triangle fa-2x mb-3 opacity-50"></i><br>Failed to load documents.</td></tr>`;
         }
     }
-    
+
     function getFileIconClass(fileName) {
         if (!fileName) return 'fa-file-alt text-secondary';
         const extension = fileName.split('.').pop().toLowerCase();
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 tr.dataset.isFolder = 'true';
                 tr.dataset.folderPath = doc.category ? doc.category + '/' + doc.file_name : doc.file_name;
             }
-            tr.style.cursor = 'pointer'; 
+            tr.style.cursor = 'pointer';
 
             if (doc.is_folder) {
                 // FOLDER ROW
@@ -210,34 +210,34 @@ document.addEventListener('DOMContentLoaded', function () {
                             <span>${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
                         </span>
                     </td>
-                    <td class="action-cell text-center" onclick="event.stopPropagation();">
+                    <td class="action-cell text-center">
                         <div class="dropdown">
                             <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false" title="ตัวเลือกเพิ่มเติม">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end action-dropdown-menu shadow border-0">
                                 <li>
-                                    <a class="dropdown-item btn-open-folder" href="javascript:void(0);" data-folder-path="${escapeHTML(folderPath)}">
+                                    <button type="button" class="dropdown-item btn-open-folder" data-folder-path="${escapeHTML(folderPath)}">
                                         <i class="fas fa-folder-open text-warning me-2"></i> เปิดโฟลเดอร์ (Open)
-                                    </a>
+                                    </button>
                                 </li>
                                 ${canManage && doc.id ? `
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <a class="dropdown-item btn-rename-item" href="javascript:void(0);" data-doc-id="${doc.id}" data-item-type="folder" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
+                                    <button type="button" class="dropdown-item btn-rename-item" data-doc-id="${doc.id}" data-item-type="folder" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
                                         <i class="fas fa-pencil-alt text-primary me-2"></i> เปลี่ยนชื่อ (Rename)
-                                    </a>
+                                    </button>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item btn-move-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                    <button type="button" class="dropdown-item btn-move-doc" data-doc-id="${doc.id}">
                                         <i class="fas fa-arrows-alt text-info me-2"></i> ย้ายตำแหน่ง (Move)
-                                    </a>
+                                    </button>
                                 </li>
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <a class="dropdown-item text-danger btn-delete-doc" href="javascript:void(0);" data-doc-id="${doc.id}" data-name="${escapeHTML(doc.file_name)}" data-item-type="folder">
+                                    <button type="button" class="dropdown-item text-danger btn-delete-doc" data-doc-id="${doc.id}" data-name="${escapeHTML(doc.file_name)}" data-item-type="folder">
                                         <i class="fas fa-trash-alt me-2"></i> ลบโฟลเดอร์ (Delete)
-                                    </a>
+                                    </button>
                                 </li>
                                 ` : ''}
                             </ul>
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // DOCUMENT ROW
                 const ext = doc.file_name.split('.').pop().toLowerCase();
                 const is3D = ['step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'].includes(ext);
-                
+
                 let linkHtml = '';
                 if (is3D) {
                     linkHtml = `<a href="javascript:void(0)" onclick="window.open3DViewer(${doc.id}, '${escapeHTML(doc.file_name)}')" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(doc.file_name)}</a>`;
@@ -281,16 +281,16 @@ document.addEventListener('DOMContentLoaded', function () {
                             <span>${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
                         </span>
                     </td>
-                    <td class="action-cell text-center" onclick="event.stopPropagation();">
+                    <td class="action-cell text-center">
                         <div class="dropdown">
                             <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false" title="ตัวเลือกเพิ่มเติม">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end action-dropdown-menu shadow border-0">
                                 <li>
-                                    <a class="dropdown-item btn-view-doc" href="javascript:void(0);" data-doc-id="${doc.id}" data-is-3d="${is3D}">
+                                    <button type="button" class="dropdown-item btn-view-doc" data-doc-id="${doc.id}" data-is-3d="${is3D}">
                                         <i class="fas fa-eye text-primary me-2"></i> ดูตัวอย่าง (Preview)
-                                    </a>
+                                    </button>
                                 </li>
                                 <li>
                                     <a class="dropdown-item btn-download-doc" href="api/view_document.php?id=${doc.id}&download=1">
@@ -298,32 +298,32 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item btn-details-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                    <button type="button" class="dropdown-item btn-details-doc" data-doc-id="${doc.id}">
                                         <i class="fas fa-info-circle text-secondary me-2"></i> รายละเอียด (Details)
-                                    </a>
+                                    </button>
                                 </li>
                                 ${canManage ? `
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <a class="dropdown-item btn-rename-item" href="javascript:void(0);" data-doc-id="${doc.id}" data-item-type="document" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
+                                    <button type="button" class="dropdown-item btn-rename-item" data-doc-id="${doc.id}" data-item-type="document" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
                                         <i class="fas fa-pencil-alt text-primary me-2"></i> เปลี่ยนชื่อ (Rename)
-                                    </a>
+                                    </button>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item btn-revise-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                    <button type="button" class="dropdown-item btn-revise-doc" data-doc-id="${doc.id}">
                                         <i class="fas fa-history text-success me-2"></i> อัปเดตเวอร์ชัน (Revise)
-                                    </a>
+                                    </button>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item btn-move-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                    <button type="button" class="dropdown-item btn-move-doc" data-doc-id="${doc.id}">
                                         <i class="fas fa-arrows-alt text-info me-2"></i> ย้ายตำแหน่ง (Move)
-                                    </a>
+                                    </button>
                                 </li>
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <a class="dropdown-item text-danger btn-delete-doc" href="javascript:void(0);" data-doc-id="${doc.id}" data-name="${escapeHTML(doc.file_name)}" data-item-type="document">
+                                    <button type="button" class="dropdown-item text-danger btn-delete-doc" data-doc-id="${doc.id}" data-name="${escapeHTML(doc.file_name)}" data-item-type="document">
                                         <i class="fas fa-trash-alt me-2"></i> ลบเอกสาร (Delete)
-                                    </a>
+                                    </button>
                                 </li>
                                 ` : ''}
                             </ul>
@@ -332,15 +332,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             documentTableBody.appendChild(tr);
         });
-        
-        updateSelectionUI(); 
+
+        updateSelectionUI();
     }
 
     function setupPagination(paginationData) {
         const paginationUl = document.getElementById('paginationControls');
         if (!paginationData || !paginationData.totalPages) {
-             if (paginationUl) paginationUl.innerHTML = '';
-             return;
+            if (paginationUl) paginationUl.innerHTML = '';
+            return;
         }
         renderPagination('paginationControls', paginationData.totalRecords, paginationData.currentPage, 30, (page) => {
             currentPage = page;
@@ -353,21 +353,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // =================================================================
     async function handleUploadSubmit(event) {
         event.preventDefault();
-        
+
         const fileInput = document.getElementById('docFile');
-        const filesToUpload = Array.from(fileInput.files); 
+        const filesToUpload = Array.from(fileInput.files);
 
         if (filesToUpload.length === 0) {
             showToast('Please select at least one file to upload.', 'var(--bs-warning)');
             return;
         }
-        
+
         uploadDocModal.hide();
-        showSpinner(); 
+        showSpinner();
 
         const description = document.getElementById('docDescription').value;
         const category = document.getElementById('docCategory').value;
-        
+
         let filesUploaded = 0;
         let uploadErrors = 0;
 
@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             showToast(`${filesToUpload.length} file(s) uploaded successfully!`, 'var(--bs-success)');
         }
-        
+
         fetchDocuments(1, '', currentFolderPath);
     }
 
@@ -413,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const editDocCategory = viewDocModalElement.querySelector('#editDocCategory');
         const viewDocUploadedBy = viewDocModalElement.querySelector('#viewDocUploadedBy');
         const viewDocUploadedAt = viewDocModalElement.querySelector('#viewDocUploadedAt');
-        
+
         const viewBtn = viewDocModalElement.querySelector('#viewDocBtn');
         const downloadBtn = viewDocModalElement.querySelector('#downloadDocBtn');
         const deleteBtn = viewDocModalElement.querySelector('#deleteDocBtn');
@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (editDocDescription) editDocDescription.readOnly = !canManage;
         if (editDocCategory) editDocCategory.readOnly = !canManage;
 
-        const newViewBtn = viewBtn.cloneNode(true); 
+        const newViewBtn = viewBtn.cloneNode(true);
         viewBtn.parentNode.replaceChild(newViewBtn, viewBtn);
         newViewBtn.addEventListener('click', () => {
             const ext = doc.file_name.split('.').pop().toLowerCase();
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 deleteConfirmationModal.show();
             });
         }
-        
+
         viewDocModal.show();
     }
 
@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function () {
             description: currentDoc ? currentDoc.file_description : ''
         };
 
-        if(moveDocModal) moveDocModal.hide();
+        if (moveDocModal) moveDocModal.hide();
         showSpinner();
         try {
             const result = await apiRequest('update', body, 'POST');
@@ -559,11 +559,11 @@ document.addEventListener('DOMContentLoaded', function () {
             showToast(`File "${files[0].name}" is too large (${(files[0].size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 50MB.`, 'var(--bs-danger)');
             return;
         }
-        
+
         const formData = new FormData();
         formData.append('document_id', reviseDocId.value);
         formData.append('doc_file', files[0]);
-        
+
         if (reviseDocModal) reviseDocModal.hide();
         showSpinner();
         try {
@@ -734,7 +734,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // SECTION 5: INITIALIZATION & EVENT LISTENERS
     // =================================================================
     function initialize() {
-        
+
         const newFolderForm = document.getElementById('newFolderForm');
         if (newFolderForm) {
             newFolderForm.addEventListener('submit', async (e) => {
@@ -747,11 +747,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     const newFolderModal = bootstrap.Modal.getInstance(document.getElementById('newFolderModal'));
                     if (newFolderModal) newFolderModal.hide();
                     fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
-                } catch(error) {
+                } catch (error) {
                 }
             });
         }
-        
+
         // 1. Search Box Event Listener
         if (searchInput) {
             searchInput.addEventListener('input', () => {
@@ -804,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 deleteConfirmationModal.show();
             });
         }
-        
+
         if (confirmDeleteBtn) {
             confirmDeleteBtn.addEventListener('click', async () => {
                 const password = deletePasswordInput.value;
@@ -813,25 +813,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 deletePasswordInput.classList.remove('is-invalid');
-            
+
                 confirmDeleteBtn.disabled = true;
                 confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
-            
+
                 const idsToDelete = deleteType === 'multiple' ? Array.from(selectedDocumentIds) : [currentDeletingDocId];
-                
+
                 try {
                     const result = await apiRequest('delete', { docIds: idsToDelete, password }, 'POST');
                     showToast(result.message, 'var(--bs-success)');
-                    
+
                     selectedDocumentIds.clear();
                     updateSelectionUI();
 
                     const docCountOnPage = Array.from(documentTableBody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('d-none')).length;
-                    if(docCountOnPage === idsToDelete.length && currentPage > 1){
+                    if (docCountOnPage === idsToDelete.length && currentPage > 1) {
                         currentPage--;
                     }
                     fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
-                } catch(error) {
+                } catch (error) {
                     // Error toast is already shown by apiRequest
                 } finally {
                     confirmDeleteBtn.disabled = false;
@@ -853,9 +853,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        documentTableBody.addEventListener('click', (event) => {
+        // Global click listener for table action dropdown items
+        document.addEventListener('click', (event) => {
             const target = event.target;
-            
+
             // 1. Delete action
             const deleteBtn = target.closest('.btn-delete-doc');
             if (deleteBtn) {
@@ -938,13 +939,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.navigateToFolder(openFolderBtn.dataset.folderPath);
                 return;
             }
+        });
 
-            // 8. If clicking any dropdown button, link, or input inside row, don't trigger row click
-            if (target.closest('.action-cell, .dropdown, a, button, input')) {
+        // Row click listener (clicking row opens file or navigates folder)
+        documentTableBody.addEventListener('click', (event) => {
+            const target = event.target;
+
+            // If clicking any action item, dropdown, button, link, or input -> Do not trigger row click
+            if (target.closest('.action-cell, .dropdown, .dropdown-menu, a, button, input')) {
                 return;
             }
 
-            // 9. Row click: Folders open folder; Documents open preview directly (no more accidental details popup!)
             const row = target.closest('tr');
             if (row) {
                 if (row.dataset.isFolder === 'true') {
@@ -975,20 +980,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (uploadDocForm) uploadDocForm.reset();
                 const previewContainer = document.getElementById('file-preview-container');
                 const previewList = document.getElementById('file-preview-list');
-                if(previewContainer) previewContainer.style.display = 'none';
-                if(previewList) previewList.innerHTML = '';
+                if (previewContainer) previewContainer.style.display = 'none';
+                if (previewList) previewList.innerHTML = '';
             });
         }
 
         if (uploadDocForm) {
             uploadDocForm.addEventListener('submit', handleUploadSubmit);
         }
-        
+
         const localEditDocForm = document.getElementById('editDocForm');
         if (localEditDocForm) {
             localEditDocForm.addEventListener('submit', handleEditSubmit);
         }
-        
+
         if (moveDocForm) {
             moveDocForm.addEventListener('submit', handleMoveSubmit);
         }
@@ -1006,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.key === 'F2') {
                 const activeModal = document.querySelector('.modal.show');
                 if (activeModal) return;
-                
+
                 const hoveredRow = document.querySelector('#documentTableBody tr:hover');
                 if (hoveredRow) {
                     const renameBtn = hoveredRow.querySelector('.btn-rename-item');
@@ -1017,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
-        
+
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('docFile');
         const folderInput = document.getElementById('docFolder');
@@ -1058,13 +1063,13 @@ document.addEventListener('DOMContentLoaded', function () {
             fileInput.files = folderInput.files;
             handleFileSelection(folderInput);
         });
-        
+
         fetchDocuments(1, '', currentFolderPath);
     }
 
     function escapeHTML(str) {
         if (str === null || str === undefined) return '';
-        return String(str).replace(/[&<>"']/g, match => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[match]);
+        return String(str).replace(/[&<>"']/g, match => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[match]);
     }
 
     initialize();
@@ -1076,13 +1081,13 @@ document.addEventListener('DOMContentLoaded', function () {
 let viewer3DInstance = null;
 let viewer3DModal = null;
 
-window.open3DViewer = function(docId, fileName) {
+window.open3DViewer = function (docId, fileName) {
     if (!viewer3DModal) {
         viewer3DModal = new bootstrap.Modal(document.getElementById('view3DModal'));
     }
-    
+
     document.getElementById('view3DModalTitle').textContent = fileName;
-    
+
     // Reset UI state
     document.getElementById('viewer3d-dimensions').classList.add('d-none');
     document.getElementById('viewer3d-size-text').textContent = 'Size: -';
@@ -1094,12 +1099,12 @@ window.open3DViewer = function(docId, fileName) {
     document.getElementById('viewer3d-body').style.background = '#f8fafc';
     window.current3DTheme = 0;
     window.is3DXRay = false;
-    
+
     viewer3DModal.show();
 
     setTimeout(() => {
         const container = document.getElementById('viewer3d-container');
-        
+
         // Fix bug where second model doesn't load by destroying old instance
         if (viewer3DInstance) {
             container.innerHTML = '';
@@ -1109,13 +1114,13 @@ window.open3DViewer = function(docId, fileName) {
         OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.14.0/libs');
         OV.Init3DViewerElements();
         viewer3DInstance = new OV.EmbeddedViewer(container, {
-            backgroundColor : new OV.RGBAColor (248, 250, 252, 255),
-            defaultColor : new OV.RGBColor (200, 200, 200),
-            edgeSettings : new OV.EdgeSettings (true, new OV.RGBColor (0, 0, 0), 1)
+            backgroundColor: new OV.RGBAColor(248, 250, 252, 255),
+            defaultColor: new OV.RGBColor(200, 200, 200),
+            edgeSettings: new OV.EdgeSettings(true, new OV.RGBColor(0, 0, 0), 1)
         });
 
-        const modelUrl = `api/view_document.php?id=${docId}&download=1`; 
-        
+        const modelUrl = `api/view_document.php?id=${docId}&download=1`;
+
         fetch(modelUrl)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
@@ -1124,7 +1129,7 @@ window.open3DViewer = function(docId, fileName) {
             .then(blob => {
                 const file = new File([blob], fileName);
                 viewer3DInstance.LoadModelFromFileList([file]);
-                
+
                 // Poll for dimensions
                 let checkDim = setInterval(() => {
                     if (!viewer3DInstance) { clearInterval(checkDim); return; }
@@ -1153,13 +1158,13 @@ window.open3DViewer = function(docId, fileName) {
 };
 
 window.current3DTheme = 0;
-window.toggle3DTheme = function() {
+window.toggle3DTheme = function () {
     if (!viewer3DInstance) return;
     window.current3DTheme = (window.current3DTheme + 1) % 3;
     let viewer = viewer3DInstance.GetViewer();
     let body = document.getElementById('viewer3d-body');
     if (!viewer) return;
-    
+
     let color;
     if (window.current3DTheme === 0) {
         color = new OV.RGBAColor(248, 250, 252, 255); // Light
@@ -1171,18 +1176,18 @@ window.toggle3DTheme = function() {
         color = new OV.RGBAColor(31, 41, 55, 255); // Dark
         body.style.background = '#1f2937';
     }
-    
+
     viewer.SetBackgroundColor(color);
     viewer.Render();
 };
 
 window.is3DXRay = false;
-window.toggle3DXRay = function() {
+window.toggle3DXRay = function () {
     if (!viewer3DInstance) return;
     window.is3DXRay = !window.is3DXRay;
     let viewer = viewer3DInstance.GetViewer();
     if (!viewer) return;
-    
+
     let iterate = (child) => {
         if ((child.isMesh || child.isLineSegments) && child.material) {
             let materials = Array.isArray(child.material) ? child.material : [child.material];
@@ -1190,7 +1195,7 @@ window.toggle3DXRay = function() {
                 if (window.is3DXRay) {
                     mat.transparent = true;
                     mat.opacity = 0.35;
-                    mat.depthWrite = false; 
+                    mat.depthWrite = false;
                 } else {
                     mat.transparent = false;
                     mat.opacity = 1.0;
@@ -1200,7 +1205,7 @@ window.toggle3DXRay = function() {
             });
         }
     };
-    
+
     if (viewer.EnumerateMeshesAndLines) {
         viewer.EnumerateMeshesAndLines(iterate);
     } else if (viewer.scene) {
@@ -1208,9 +1213,9 @@ window.toggle3DXRay = function() {
     } else if (viewer.mainModel) {
         viewer.mainModel.traverse(iterate);
     }
-    
+
     if (viewer.Render) viewer.Render();
-    
+
     let btn = document.getElementById('btn-3d-xray');
     if (window.is3DXRay) {
         btn.classList.replace('btn-outline-info', 'btn-info');
@@ -1222,7 +1227,7 @@ window.toggle3DXRay = function() {
 };
 
 window.syncAxisAnimFrame = null;
-window.startAxisSync = function() {
+window.startAxisSync = function () {
     let axisHelper = document.getElementById('viewer3d-axis-helper');
     let axisCube = document.getElementById('axis-cube');
     if (!axisHelper || !axisCube) return;
@@ -1233,7 +1238,7 @@ window.startAxisSync = function() {
             window.syncAxisAnimFrame = null;
             return;
         }
-        
+
         let viewer = viewer3DInstance.GetViewer();
         if (viewer && viewer.camera && viewer.camera.rotation) {
             let rot = viewer.camera.rotation;
@@ -1246,7 +1251,7 @@ window.startAxisSync = function() {
     window.syncAxisAnimFrame = requestAnimationFrame(syncLoop);
 };
 
-window.take3DScreenshot = function() {
+window.take3DScreenshot = function () {
     if (!viewer3DInstance) return;
     let viewer = viewer3DInstance.GetViewer();
     if (viewer && viewer.GetImageAsDataUrl) {
@@ -1254,7 +1259,7 @@ window.take3DScreenshot = function() {
         let canvas = document.getElementById('viewer');
         let w = canvas ? canvas.width : 1920;
         let h = canvas ? canvas.height : 1080;
-        
+
         let dataUrl = viewer.GetImageAsDataUrl(w, h);
         if (dataUrl) {
             let a = document.createElement('a');
@@ -1273,45 +1278,45 @@ window.take3DScreenshot = function() {
 window.is3DAutoRotate = false;
 window.autoRotateAnimFrame = null;
 
-window.toggle3DAutoRotate = function() {
+window.toggle3DAutoRotate = function () {
     if (!viewer3DInstance) return;
     window.is3DAutoRotate = !window.is3DAutoRotate;
-    
+
     let btn = document.getElementById('btn-3d-rotate');
     if (!btn) return;
-    
+
     if (window.is3DAutoRotate) {
         btn.classList.replace('btn-outline-success', 'btn-success');
         btn.classList.add('text-white');
-        
+
         let viewer = viewer3DInstance.GetViewer();
         if (!viewer || !viewer.navigation || !viewer.navigation.Orbit) {
             console.warn("Auto-rotate not supported on this viewer instance");
             return;
         }
-        
+
         let lastTime = performance.now();
         let speedDegreesPerSecond = 30; // 30 degrees per sec
-        
+
         function rotateLoop(time) {
             if (!window.is3DAutoRotate || !viewer3DInstance) {
                 window.autoRotateAnimFrame = null;
                 return;
             }
-            
+
             let dt = (time - lastTime) / 1000;
             lastTime = time;
             if (dt > 0.1) dt = 0.1;
-            
+
             let angle = speedDegreesPerSecond * dt;
             viewer.navigation.Orbit(angle, 0); // Orbit horizontally
             if (viewer.navigation.Update) viewer.navigation.Update();
             if (viewer.Render) viewer.Render();
-            
+
             window.autoRotateAnimFrame = requestAnimationFrame(rotateLoop);
         }
         window.autoRotateAnimFrame = requestAnimationFrame(rotateLoop);
-        
+
     } else {
         btn.classList.replace('btn-success', 'btn-outline-success');
         btn.classList.remove('text-white');
@@ -1322,7 +1327,7 @@ window.toggle3DAutoRotate = function() {
     }
 };
 
-window.close3DViewer = function() {
+window.close3DViewer = function () {
     if (window.is3DAutoRotate) {
         window.toggle3DAutoRotate();
     }
