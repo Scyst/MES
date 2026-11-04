@@ -1,5 +1,5 @@
-<?php
-// MES/page/paintChem/api/unlock_sheet.php
+﻿<?php
+// MES/Toolbox/public/api/paintChem/unlock_sheet.php
 // Changes sheet status SUBMITTED -> DRAFT.
 
 header('Content-Type: application/json; charset=utf-8');
@@ -15,10 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
+require_once __DIR__ . '/../../utils/logger.php';
 
 // Check Permissions
 $role = $_SESSION['user']['role'] ?? '';
-$isAllowed = hasPermission('unlock_paint_chem') || in_array(strtolower($role), ['admin', 'creator']);
+$isAllowed = hasPermission('unlock_paint_chem') || in_array(strtolower($role), ['admin', 'creator', 'superadmin']);
 
 if (!$isAllowed) {
     http_response_code(403);
@@ -47,22 +48,24 @@ if ($headerId <= 0) {
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("SELECT status FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE header_id = ?");
+    $stmt = $pdo->prepare("SELECT status, log_date, shift FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE header_id = ?");
     $stmt->execute([$headerId]);
-    $current = $stmt->fetchColumn();
+    $headerRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($current === false) {
+    if (!$headerRow) {
         $pdo->rollBack();
         http_response_code(404);
         echo json_encode(['success' => false, 'data' => null, 'message' => 'Sheet not found']);
         exit;
     }
-    if ($current === 'APPROVED') {
+    if ($headerRow['status'] === 'APPROVED') {
         $pdo->rollBack();
         http_response_code(409);
         echo json_encode(['success' => false, 'data' => null, 'message' => 'Approved sheet cannot be unlocked']);
         exit;
     }
+
+    $oldStatus = $headerRow['status'];
 
     $stmtUpd = $pdo->prepare("
         UPDATE dbo.PAINT_CHEM_SHEET_HEADER
@@ -72,11 +75,21 @@ try {
     ");
     $stmtUpd->execute([$headerId]);
 
+    writeLog(
+        $pdo,
+        'UNLOCK_PAINT_SHEET',
+        'PAINT_CHEM',
+        (string)$headerId,
+        ['status' => $oldStatus],
+        ['status' => 'DRAFT'],
+        "Supervisor unlocked paint chem sheet #{$headerId} ({$headerRow['log_date']} {$headerRow['shift']})"
+    );
+
     $pdo->commit();
     echo json_encode(['success' => true, 'data' => null, 'message' => 'Sheet unlocked']);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'Server Error']);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'Server Error: ' . $e->getMessage()]);
 }

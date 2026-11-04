@@ -1,5 +1,5 @@
 ﻿<?php
-// MES/page/paintChem/api/submit_sheet.php
+// MES/Toolbox/public/api/paintChem/submit_sheet.php
 // Changes sheet status DRAFT -> SUBMITTED and sets prepared_by.
 
 header('Content-Type: application/json; charset=utf-8');
@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
+require_once __DIR__ . '/../../utils/logger.php';
 
 // CSRF guard
 $clientToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
@@ -25,17 +26,8 @@ if (empty($clientToken) || empty($serverToken) || !hash_equals($serverToken, $cl
     exit;
 }
 
-
-$clientToken = $_POST['csrf_token'] ?? '';
-$serverToken = $_SESSION['csrf_token'] ?? '';
-if (empty($clientToken) || empty($serverToken) || !hash_equals($serverToken, $clientToken)) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'Security Error: CSRF Token ไม่ถูกต้อง']);
-    exit;
-}
-
 $headerId = intval($_POST['header_id'] ?? 0);
-$userId        = $_SESSION['user']['id'];
+$userId   = $_SESSION['user']['id'];
 
 if ($headerId <= 0) {
     http_response_code(400);
@@ -46,20 +38,20 @@ if ($headerId <= 0) {
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("SELECT status FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE header_id = ?");
+    $stmt = $pdo->prepare("SELECT status, log_date, shift FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE header_id = ?");
     $stmt->execute([$headerId]);
-    $current = $stmt->fetchColumn();
+    $headerRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($current === false) {
+    if (!$headerRow) {
         $pdo->rollBack();
         http_response_code(404);
-        echo json_encode(['success' => false, 'data' => null, 'message' => 'ไม่พบใบบันทึกนี้']);
+        echo json_encode(['success' => false, 'data' => null, 'message' => 'ไม่พบใบบันทึก']);
         exit;
     }
-    if ($current !== 'DRAFT') {
+    if ($headerRow['status'] !== 'DRAFT') {
         $pdo->rollBack();
         http_response_code(409);
-        echo json_encode(['success' => false, 'data' => null, 'message' => 'ใบนี้ถูกส่งหรืออนุมัติแล้ว']);
+        echo json_encode(['success' => false, 'data' => null, 'message' => 'ใบบันทึกนี้ถูกส่งหรืออนุมัติแล้ว']);
         exit;
     }
 
@@ -72,11 +64,21 @@ try {
     ");
     $stmtUpd->execute([$userId, $headerId]);
 
+    writeLog(
+        $pdo,
+        'SUBMIT_PAINT_SHEET',
+        'PAINT_CHEM',
+        (string)$headerId,
+        ['status' => 'DRAFT'],
+        ['status' => 'SUBMITTED', 'prepared_by' => $userId],
+        "User submitted paint chem sheet #{$headerId} ({$headerRow['log_date']} {$headerRow['shift']})"
+    );
+
     $pdo->commit();
     echo json_encode(['success' => true, 'data' => null, 'message' => 'ส่งใบบันทึกเรียบร้อย รอการตรวจสอบ']);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'เกิดข้อผิดพลาดภายในระบบ']);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'เกิดข้อผิดพลาดในระบบ']);
 }

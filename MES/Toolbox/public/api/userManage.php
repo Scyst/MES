@@ -290,17 +290,39 @@ try {
                     }
                 }
 
+                writeLog($pdo, 'CREATE_USER', 'USER_MANAGE', $username, null, [
+                    'id' => $targetId,
+                    'username' => $username,
+                    'role' => $role,
+                    'line' => $line,
+                    'emp_id' => $emp_id,
+                    'fullname' => $fullname,
+                    'team_group' => $team_group,
+                    'permissions' => $input['permissions'] ?? []
+                ], "Created new user '$username' (Role: $role) by $actionBy");
+
                 echo json_encode(['success' => true, 'message' => 'User created successfully.']);
             } else {
                 if (!$targetId) throw new Exception("Target user ID is required.");
                 
+                // Snapshot old user state before mutation
+                $oldUserStmt = $pdo->prepare("SELECT id, username, role, line, emp_id, fullname, team_group, is_active, expires_at, account_type FROM " . USERS_TABLE . " WHERE id = ?");
+                $oldUserStmt->execute([$targetId]);
+                $oldUserData = $oldUserStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+                $oldPermStmt = $pdo->prepare("SELECT perm_code FROM dbo.SYS_USER_PERMISSIONS WHERE user_id = ?");
+                $oldPermStmt->execute([$targetId]);
+                $oldUserData['permissions'] = $oldPermStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
                 $stmtUpdate = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='EDIT', @UserId=?, @Role=?, @Line=?, @EmpId=?, @Fullname=?, @TeamGroup=?, @ActionBy=?");
                 $stmtUpdate->execute([$targetId, $role, $line, $emp_id, $fullname, $team_group, $actionBy]);
 
+                $pwdChanged = false;
                 if (!empty($password)) {
                     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
                     $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
                     $stmtPwd->execute([$targetId, $hashedPassword, $actionBy]);
+                    $pwdChanged = true;
                 }
 
                 if (isset($input['permissions']) && is_array($input['permissions'])) {
@@ -327,6 +349,20 @@ try {
                     $updAcc->execute([$accType, $targetId]);
                 }
 
+                $newUserData = [
+                    'role' => $role,
+                    'line' => $line,
+                    'emp_id' => $emp_id,
+                    'fullname' => $fullname,
+                    'team_group' => $team_group,
+                    'expires_at' => array_key_exists('expires_at', $input) ? $input['expires_at'] : ($oldUserData['expires_at'] ?? null),
+                    'account_type' => !empty($input['account_type']) ? $input['account_type'] : ($oldUserData['account_type'] ?? null),
+                    'permissions' => $input['permissions'] ?? ($oldUserData['permissions'] ?? []),
+                    'password_changed' => $pwdChanged
+                ];
+
+                writeLog($pdo, 'UPDATE_USER', 'USER_MANAGE', $oldUserData['username'] ?? (string)$targetId, $oldUserData, $newUserData, "Updated user '{$oldUserData['username']}' by $actionBy");
+
                 echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
             }
             break;
@@ -336,9 +372,13 @@ try {
             if (!$targetId) throw new Exception("Missing user ID.");
             
             // Security Check
-            $stmtRoleCheck = $pdo->prepare("SELECT role FROM " . USERS_TABLE . " WHERE id = ?");
+            $stmtRoleCheck = $pdo->prepare("SELECT username, role FROM " . USERS_TABLE . " WHERE id = ?");
             $stmtRoleCheck->execute([$targetId]);
-            $targetRole = $stmtRoleCheck->fetchColumn();
+            $targetUserRow = $stmtRoleCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$targetUserRow) throw new Exception("User not found.");
+
+            $targetRole = $targetUserRow['role'] ?? '';
+            $targetUsername = $targetUserRow['username'] ?? (string)$targetId;
             
             if ($targetRole === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
             if ($targetRole === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
@@ -347,6 +387,8 @@ try {
             $hashedPassword = password_hash('123456', PASSWORD_DEFAULT);
             $stmtPwd = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='RESET_PWD', @UserId=?, @PasswordHash=?, @ActionBy=?");
             $stmtPwd->execute([$targetId, $hashedPassword, $actionBy]);
+
+            writeLog($pdo, 'RESET_PASSWORD', 'USER_MANAGE', $targetUsername, null, ['default_pwd' => '123456'], "Reset password to default (123456) for user '$targetUsername' by $actionBy");
             
             echo json_encode(['success' => true, 'message' => 'Password reset to 123456 successfully.']);
             break;
@@ -357,15 +399,32 @@ try {
             if ($targetId === (int)$currentUser['id']) throw new Exception("You cannot disable your own account.");
             
             // Security Check
-            $stmtRoleCheck = $pdo->prepare("SELECT role FROM " . USERS_TABLE . " WHERE id = ?");
+            $stmtRoleCheck = $pdo->prepare("SELECT username, role, is_active FROM " . USERS_TABLE . " WHERE id = ?");
             $stmtRoleCheck->execute([$targetId]);
-            $targetRole = $stmtRoleCheck->fetchColumn();
+            $targetUserRow = $stmtRoleCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$targetUserRow) throw new Exception("User not found.");
+
+            $targetRole = $targetUserRow['role'] ?? '';
+            $targetUsername = $targetUserRow['username'] ?? (string)$targetId;
+            $oldActive = (int)($targetUserRow['is_active'] ?? 0);
+            $newActive = $oldActive === 1 ? 0 : 1;
             
             if ($targetRole === 'creator') throw new Exception("Cannot manage 'creator' role via UI.");
             if ($targetRole === 'admin' && !hasRole('creator')) throw new Exception("Only creators can manage admin users.");
             
             $stmtToggle = $pdo->prepare("EXEC " . DB_DATABASE . ".dbo.sp_ManageUser @Action='TOGGLE_STATUS', @UserId=?, @ActionBy=?");
             $stmtToggle->execute([$targetId, $actionBy]);
+
+            writeLog(
+                $pdo,
+                'TOGGLE_STATUS',
+                'USER_MANAGE',
+                $targetUsername,
+                ['is_active' => $oldActive],
+                ['is_active' => $newActive],
+                ($newActive ? "Activated" : "Deactivated") . " user '$targetUsername' by $actionBy"
+            );
+
             echo json_encode(['success' => true, 'message' => 'User status updated.']);
             break;
             

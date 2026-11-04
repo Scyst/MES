@@ -1,5 +1,5 @@
 ﻿<?php
-// MES/page/paintChem/api/approve_sheet.php
+// MES/Toolbox/public/api/paintChem/approve_sheet.php
 // Supervisor: sets checked_by or approved_by, transitions status accordingly.
 
 header('Content-Type: application/json; charset=utf-8');
@@ -15,18 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
+require_once __DIR__ . '/../../utils/logger.php';
 
 // CSRF guard
 $clientToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
-$serverToken = $_SESSION['csrf_token'] ?? '';
-if (empty($clientToken) || empty($serverToken) || !hash_equals($serverToken, $clientToken)) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'Security Error: CSRF Token ไม่ถูกต้อง']);
-    exit;
-}
-
-
-$clientToken = $_POST['csrf_token'] ?? '';
 $serverToken = $_SESSION['csrf_token'] ?? '';
 if (empty($clientToken) || empty($serverToken) || !hash_equals($serverToken, $clientToken)) {
     http_response_code(403);
@@ -39,7 +31,7 @@ $allowedRoles = ['supervisor', 'manager', 'admin', 'superadmin'];
 $userRole = strtolower($_SESSION['user']['role'] ?? '');
 if (!in_array($userRole, $allowedRoles)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'ไม่มีสิทธิ์ดำเนินการนี้']);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'คุณไม่มีสิทธิ์ดำเนินการนี้']);
     exit;
 }
 
@@ -56,17 +48,18 @@ if ($headerId <= 0 || !in_array($action, ['check', 'approve'])) {
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("SELECT status FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE header_id = ?");
+    $stmt = $pdo->prepare("SELECT status, log_date, shift FROM dbo.PAINT_CHEM_SHEET_HEADER WHERE header_id = ?");
     $stmt->execute([$headerId]);
-    $currentStatus = $stmt->fetchColumn();
+    $headerRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($currentStatus === false) {
+    if (!$headerRow) {
         $pdo->rollBack();
         http_response_code(404);
         echo json_encode(['success' => false, 'data' => null, 'message' => 'ไม่พบใบบันทึก']);
         exit;
     }
 
+    $currentStatus = $headerRow['status'];
     $allowedTransitions = [
         'check'   => 'SUBMITTED',
         'approve' => 'SUBMITTED',
@@ -75,7 +68,7 @@ try {
     if ($currentStatus !== $allowedTransitions[$action]) {
         $pdo->rollBack();
         http_response_code(409);
-        echo json_encode(['success' => false, 'data' => null, 'message' => 'สถานะใบบันทึกไม่อนุญาตให้ดำเนินการนี้']);
+        echo json_encode(['success' => false, 'data' => null, 'message' => 'สถานะใบบันทึกไม่อนุญาตให้ดำเนินการ']);
         exit;
     }
 
@@ -86,7 +79,8 @@ try {
             WHERE header_id = ?
         ");
         $stmtUpd->execute([$userId, $headerId]);
-        $msg = 'ตรวจสอบเรียบร้อยแล้ว';
+        $newStatus = $currentStatus;
+        $msg = 'ตรวจสอบเรียบร้อย';
     } else {
         $stmtUpd = $pdo->prepare("
             UPDATE dbo.PAINT_CHEM_SHEET_HEADER
@@ -94,8 +88,20 @@ try {
             WHERE header_id = ?
         ");
         $stmtUpd->execute([$userId, $headerId]);
-        $msg = 'อนุมัติใบบันทึกเรียบร้อยแล้ว';
+        $newStatus = 'APPROVED';
+        $msg = 'อนุมัติใบบันทึกเรียบร้อย';
     }
+
+    $logAction = ($action === 'check') ? 'CHECK_PAINT_SHEET' : 'APPROVE_PAINT_SHEET';
+    writeLog(
+        $pdo,
+        $logAction,
+        'PAINT_CHEM',
+        (string)$headerId,
+        ['status' => $currentStatus, 'checked_by' => $headerRow['checked_by'] ?? null],
+        ['status' => $newStatus, 'approved_by' => $userId],
+        "Supervisor {$action}ed paint chem sheet #{$headerId} ({$headerRow['log_date']} {$headerRow['shift']})"
+    );
 
     $pdo->commit();
     echo json_encode(['success' => true, 'data' => null, 'message' => $msg]);
@@ -103,5 +109,5 @@ try {
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
-    echo json_encode(['success' => false, 'data' => null, 'message' => 'เกิดข้อผิดพลาดภายในระบบ']);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'เกิดข้อผิดพลาดในระบบ']);
 }

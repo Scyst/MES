@@ -199,10 +199,20 @@ try {
     ");
     $stmtUpdate->execute([$currentId, $pictureUrl, $username]);
 
+    $oldAvatar = $_SESSION['user']['profile_picture'] ?? null;
+
     // 11. อัปเดต session ทันที
     $_SESSION['user']['profile_picture'] = $pictureUrl;
 
-    writeLog($pdo, 'UPDATE_AVATAR', 'PROFILE', $username, $currentId, null, 'User uploaded new profile picture');
+    writeLog(
+        $pdo,
+        'UPDATE_AVATAR',
+        'PROFILE',
+        (string)$currentId,
+        ['profile_picture' => $oldAvatar],
+        ['profile_picture' => $pictureUrl],
+        "User updated profile avatar to {$pictureUrl}"
+    );
 
     echo json_encode([
         'success'     => true,

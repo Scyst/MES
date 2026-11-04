@@ -246,16 +246,36 @@ try {
             $qty = (float)($input['quantity_required'] ?? 0);
             if ($bom_id <= 0 || $qty <= 0) throw new Exception("Invalid BOM ID or quantity.");
 
-            $checkStatus = $pdo->prepare("SELECT bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE bom_id = ?");
+            $checkStatus = $pdo->prepare("
+                SELECT b.bom_id, b.fg_item_id, b.component_item_id, b.bom_version, b.quantity_required, b.bom_status,
+                       fg.sap_no AS fg_sap_no, comp.sap_no AS comp_sap_no, comp.part_description AS comp_desc
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                LEFT JOIN " . ITEMS_TABLE . " fg WITH (NOLOCK) ON b.fg_item_id = fg.item_id
+                LEFT JOIN " . ITEMS_TABLE . " comp WITH (NOLOCK) ON b.component_item_id = comp.item_id
+                WHERE b.bom_id = ?
+            ");
             $checkStatus->execute([$bom_id]);
-            $status = $checkStatus->fetchColumn();
+            $oldComp = $checkStatus->fetch(PDO::FETCH_ASSOC);
+            if (!$oldComp) throw new Exception("BOM component not found.");
 
+            $status = $oldComp['bom_status'] ?? '';
             if ($status === 'ACTIVE' || $status === 'OBSOLETE') {
                 throw new Exception("🔒 ไม่สามารถแก้ไขสูตรสถานะ [{$status}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
             }
 
             $stmt = $pdo->prepare("UPDATE " . BOM_TABLE . " SET quantity_required = ?, updated_by = ?, updated_at = GETDATE() WHERE bom_id = ?");
             $stmt->execute([$qty, $currentUser['username'], $bom_id]);
+
+            writeLog(
+                $pdo,
+                'UPDATE_BOM_COMPONENT',
+                'SYSTEM_SETTINGS',
+                (string)$oldComp['fg_item_id'],
+                ['bom_id' => $bom_id, 'comp_sap_no' => $oldComp['comp_sap_no'], 'quantity_required' => (float)$oldComp['quantity_required']],
+                ['bom_id' => $bom_id, 'comp_sap_no' => $oldComp['comp_sap_no'], 'quantity_required' => $qty],
+                "Updated quantity for {$oldComp['comp_sap_no']} in Rev v{$oldComp['bom_version']} from {$oldComp['quantity_required']} to {$qty}"
+            );
+
             echo json_encode(['success' => true, 'message' => 'อัปเดตปริมาณเรียบร้อย']);
             break;
 
@@ -264,16 +284,36 @@ try {
             $bom_id = (int)($input['bom_id'] ?? 0);
             if ($bom_id <= 0) throw new Exception("Invalid BOM ID.");
 
-            $checkStatus = $pdo->prepare("SELECT bom_status FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE bom_id = ?");
+            $checkStatus = $pdo->prepare("
+                SELECT b.bom_id, b.fg_item_id, b.component_item_id, b.bom_version, b.quantity_required, b.bom_status,
+                       fg.sap_no AS fg_sap_no, comp.sap_no AS comp_sap_no, comp.part_description AS comp_desc
+                FROM " . BOM_TABLE . " b WITH (NOLOCK)
+                LEFT JOIN " . ITEMS_TABLE . " fg WITH (NOLOCK) ON b.fg_item_id = fg.item_id
+                LEFT JOIN " . ITEMS_TABLE . " comp WITH (NOLOCK) ON b.component_item_id = comp.item_id
+                WHERE b.bom_id = ?
+            ");
             $checkStatus->execute([$bom_id]);
-            $status = $checkStatus->fetchColumn();
+            $oldComp = $checkStatus->fetch(PDO::FETCH_ASSOC);
+            if (!$oldComp) throw new Exception("BOM component not found.");
 
+            $status = $oldComp['bom_status'] ?? '';
             if ($status === 'ACTIVE' || $status === 'OBSOLETE') {
                 throw new Exception("🔒 ไม่สามารถลบวัตถุดิบออกจากสูตรสถานะ [{$status}] ได้! กรุณาสร้าง Revision (ECN) ใหม่ก่อน");
             }
 
             $stmt = $pdo->prepare("DELETE FROM " . BOM_TABLE . " WHERE bom_id = ?");
             $stmt->execute([$bom_id]);
+
+            writeLog(
+                $pdo,
+                'DELETE_BOM_COMPONENT',
+                'SYSTEM_SETTINGS',
+                (string)$oldComp['fg_item_id'],
+                $oldComp,
+                null,
+                "Deleted component {$oldComp['comp_sap_no']} ({$oldComp['comp_desc']}) from Rev v{$oldComp['bom_version']}"
+            );
+
             echo json_encode(['success' => true, 'message' => 'ลบส่วนผสมเรียบร้อย']);
             break;
 

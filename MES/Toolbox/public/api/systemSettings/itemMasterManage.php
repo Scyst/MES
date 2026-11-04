@@ -38,10 +38,15 @@ try {
             
             $sql = "
                 SELECT TOP 50 
+                    id,
                     username, 
                     action, 
                     remark AS details, 
-                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS log_time
+                    old_value,
+                    new_value,
+                    ip_address,
+                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS log_time,
+                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS created_at
                 FROM SYSTEM_LOGS WITH (NOLOCK) 
                 WHERE ref_id = ? OR ref_id = ?
                 ORDER BY created_at DESC
@@ -214,12 +219,16 @@ try {
             $id = $input['item_id'] ?? $_GET['item_id'] ?? 0;
             if (!$id) throw new Exception("Item ID is required.");
 
+            $oldStmt = $pdo->prepare("SELECT item_id, sap_no, part_no, is_active FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE item_id = ?");
+            $oldStmt->execute([$id]);
+            $oldItem = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
             $sql = "UPDATE " . ITEMS_TABLE . " SET is_active = 0 WHERE item_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$id]);
 
             if ($stmt->rowCount() > 0) {
-                writeLog($pdo, 'DEACTIVATE_ITEM', 'SYSTEM_SETTINGS', $id);
+                writeLog($pdo, 'DEACTIVATE_ITEM', 'SYSTEM_SETTINGS', (string)$id, $oldItem, ['is_active' => 0], "Item SAP: " . ($oldItem['sap_no'] ?? $id));
                 echo json_encode(['success' => true, 'message' => 'Item deactivated successfully.']);
             } else {
                 throw new Exception("Item not found or could not be deactivated.");
@@ -231,12 +240,16 @@ try {
             $id = $input['item_id'] ?? $_GET['item_id'] ?? 0;
             if (!$id) throw new Exception("Item ID is required.");
 
+            $oldStmt = $pdo->prepare("SELECT item_id, sap_no, part_no, is_active FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE item_id = ?");
+            $oldStmt->execute([$id]);
+            $oldItem = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
             $sql = "UPDATE " . ITEMS_TABLE . " SET is_active = 1 WHERE item_id = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$id]);
 
             if ($stmt->rowCount() > 0) {
-                writeLog($pdo, 'RESTORE_ITEM', 'SYSTEM_SETTINGS', $id);
+                writeLog($pdo, 'RESTORE_ITEM', 'SYSTEM_SETTINGS', (string)$id, $oldItem, ['is_active' => 1], "Item SAP: " . ($oldItem['sap_no'] ?? $id));
                 echo json_encode(['success' => true, 'message' => 'Item restored successfully.']);
             } else {
                 throw new Exception("Item not found or could not be restored.");
@@ -297,7 +310,12 @@ try {
                 $p_std = (float)($item_details['StandardPrice'] ?? 0);
                 $p_usd = (float)($item_details['Price_USD'] ?? 0);
 
+                $oldItem = null;
                 if ($item_id > 0) {
+                    $oldStmt = $pdo->prepare("SELECT * FROM " . ITEMS_TABLE . " WITH (NOLOCK) WHERE item_id = ?");
+                    $oldStmt->execute([$item_id]);
+                    $oldItem = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
                     $sql = "UPDATE " . ITEMS_TABLE . " SET 
                                 sap_no = ?, part_no = ?, sku = ?, barcode = ?, part_description = ?, material_type = ?, material_sub_type = ?,
                                 min_stock = ?, max_stock = ?, is_tracking = ?, planned_output = ?, strokes_per_part = ?, is_active = ?,
@@ -316,7 +334,7 @@ try {
                         $p_std, $p_usd,
                         $item_id
                     ]);
-                    writeLog($pdo, 'UPDATE_ITEM', 'SYSTEM_SETTINGS', $item_id, null, null, "SAP: {$sap_no}");
+                    writeLog($pdo, 'UPDATE_ITEM', 'SYSTEM_SETTINGS', (string)$item_id, $oldItem, $item_details, "Updated item SAP: {$sap_no}");
                 } else {
                     $sql = "INSERT INTO " . ITEMS_TABLE . " (
                                 sap_no, part_no, sku, barcode, part_description, material_type, material_sub_type, created_at, 
@@ -343,7 +361,7 @@ try {
                         $p_std, $p_usd
                     ]);
                     $item_id = $pdo->lastInsertId();
-                    writeLog($pdo, 'CREATE_ITEM', 'SYSTEM_SETTINGS', $item_id, null, null, "SAP: {$sap_no}");
+                    writeLog($pdo, 'CREATE_ITEM', 'SYSTEM_SETTINGS', (string)$item_id, null, $item_details, "Created new item SAP: {$sap_no}");
                 }
 
                 foreach ($routes_data as $route) {

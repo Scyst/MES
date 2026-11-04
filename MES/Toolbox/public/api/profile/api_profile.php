@@ -106,6 +106,20 @@ try {
                 throw new Exception('คำแนะนำตัวต้องไม่เกิน 500 ตัวอักษร');
             }
 
+            // Fetch old profile for audit trail
+            $oldStmt = $pdo->prepare("
+                SELECT phone, bio, preferred_lang, theme_preference,
+                       social_line_id, social_facebook,
+                       commute_method, vehicle_registration,
+                       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+                       current_address,
+                       date_of_birth, marital_status, children_count, shirt_size, shoe_size
+                FROM " . USERS_TABLE . " WITH (NOLOCK)
+                WHERE id = ?
+            ");
+            $oldStmt->execute([$currentId]);
+            $oldProfile = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
             // Execute Update via Raw SQL
             $stmt = $pdo->prepare("
                 UPDATE " . USERS_TABLE . "
@@ -130,7 +144,7 @@ try {
             if ($theme !== null) $_SESSION['user']['theme_preference'] = $theme;
             if ($lang !== null)  $_SESSION['user']['preferred_lang'] = $lang;
 
-            writeLog($pdo, 'UPDATE_PROFILE', 'PROFILE', $username, $currentId, null, 'User updated comprehensive profile info');
+            writeLog($pdo, 'UPDATE_PROFILE', 'PROFILE', (string)$currentId, $oldProfile, $input, 'User updated comprehensive profile info');
             echo json_encode(['success' => true, 'message' => 'บันทึกข้อมูลส่วนตัวสำเร็จ']);
             break;
 
@@ -179,7 +193,7 @@ try {
             $stmtPwd->execute([$currentId, $newHash, $username]);
 
             // อัปเดต session เพื่อ admin ที่ดู userManage จะเห็น status ถูกต้อง
-            writeLog($pdo, 'CHANGE_PASSWORD', 'PROFILE', $username, $currentId, null, 'User changed own password via self-service');
+            writeLog($pdo, 'CHANGE_PASSWORD', 'PROFILE', (string)$currentId, null, null, 'User changed own password via self-service');
             echo json_encode(['success' => true, 'message' => 'เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่อีกครั้ง']);
             break;
 
@@ -187,8 +201,9 @@ try {
         case 'get_activity_log':
             $stmt = $pdo->prepare("
                 SELECT TOP 20
-                    action, module, remark, ip_address, user_agent, created_at
-                FROM SYSTEM_LOGS
+                    action, module, remark, ip_address, user_agent,
+                    FORMAT(created_at, 'yyyy-MM-dd HH:mm:ss') AS created_at
+                FROM SYSTEM_LOGS WITH (NOLOCK)
                 WHERE user_id = ? OR username = ?
                 ORDER BY created_at DESC
             ");

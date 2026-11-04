@@ -171,3 +171,64 @@ MES/Toolbox/
 | **ระยะที่ 3** | **Delta Sync (Incremental Polling Engine)** | ส่งเฉพาะงานที่ถูกเพิ่ม/แก้ไข/ลบ ในรอบ 30 วินาที ผ่าน `?since=<timestamp>` เพื่อประหยัด Bandwidth ลงอีก 95% | **ต้องปรับโครงสร้างฐานข้อมูล (Schema Migration):** ตาราง `dbo.TeamPlanner_Tasks` เดิมมีเฉพาะ `CreatedAt` ยังไม่มีคอลัมน์ `UpdatedAt` และยังใช้ Hard Delete (ลบถาวร) การทำ Delta Sync อย่างถูกต้องจำเป็นต้องเพิ่ม `UpdatedAt`, ทำระบบ Soft-delete หรือ Tombstone Table และปรับ React State Reducer ซึ่งมีความเสี่ยงกระทบระบบเดิมสูงเกินความจำเป็นในเวลานี้ เพราะความเร็วปัจจุบันอยู่ที่ **136ms** อยู่แล้ว จึงควรรอทำเมื่อมีผู้ใช้ Concurrent หลักร้อยคน |
 | **ระยะที่ 4** | **DOM Virtualization (Timeline & Multi-Year Gantt)** | ใช้ `@tanstack/react-virtual` เรนเดอร์เฉพาะแถวที่อยู่ในกรอบสายตา เพื่อรองรับการดู Gantt Chart ขนาดหลายพันงานพร้อมกัน | **หน้ากระดานปัจจุบันมี Column Slice อยู่แล้ว:** ใน `TaskBoard.jsx` มีการจำกัดแถวในแต่ละคอลัมน์ไว้ที่ 20 การ์ด (`colLimits || 20`) อยู่แล้ว ทำให้ DOM Node ไม่ล้นจอ และการเลื่อนไทม์ไลน์ 1-3 เดือนยังคงทำงานได้ที่ 60 FPS อย่างลื่นไหล จึงเก็บไว้ทำเมื่อมีการขยายสเกลดูมุมมองข้ามปี |
 
+
+---
+
+## 🛡️ 7. มาตรฐานระบบประวัติการกระทำและตรวจสอบย้อนกลับระดับอุตสาหกรรม (Industrial Audit Trail Protocol & Standard Contract)
+
+เพื่อให้การพอร์ตระบบในอนาคต (และระบบเดิมที่พอร์ตเข้ามาแล้วทั้งหมด) มีมาตรฐานการตรวจสอบย้อนกลับ (Audit Traceability) และความมั่นคงปลอดภัยตามเกณฑ์ ISO/IEC 27001 และ IATF 16949 สำหรับโรงงานอุตสาหกรรม โดยไม่ต้องเขียนโค้ดซ้ำซ้อน:
+
+### 1. โครงสร้างตารางส่วนกลาง (`dbo.SYSTEM_LOGS`)
+ทุกการเปลี่ยนแปลงสถานะ (State Mutation: INSERT, UPDATE, DELETE, APPROVE, UNLOCK) จะต้องถูกบันทึกลงตารางกลาง `dbo.SYSTEM_LOGS` ในฐานข้อมูล `IIOT_TOOLBOX`:
+
+| คอลัมน์ | ชนิดข้อมูล | หน้าที่ & คำอธิบาย |
+| :--- | :--- | :--- |
+| `id` | `INT IDENTITY(1,1)` | Primary Key ของรายการประวัติ |
+| `user_id` | `INT NULL` | ID ของผู้กระทำ (ดึงจาก `$_SESSION['user']['id']` อัตโนมัติ) |
+| `username` | `NVARCHAR(100)` | Username ผู้กระทำ หรือชื่อระบบ เช่น `SYSTEM_FAST_TRACK` |
+| `role` | `NVARCHAR(50)` | Role ผู้กระทำ เช่น `admin`, `supervisor`, `operator` |
+| `action` | `NVARCHAR(100)` | กริยาการกระทำตามมาตรฐาน เช่น `CREATE_ITEM`, `UPDATE_USER`, `APPROVE_PAINT_SHEET` |
+| `module` | `NVARCHAR(50)` | รหัสโมดูล เช่น `SYSTEM_SETTINGS`, `USER_MANAGE`, `PAINT_CHEM`, `PROFILE` |
+| `ref_id` | `NVARCHAR(100)` | รหัสอ้างอิงเป้าหมาย เช่น `item_id`, `user_id`, `header_id` หรือ `sap_no` |
+| `old_value` | `NVARCHAR(MAX)` | **JSON Snapshot ข้อมูลก่อนแก้ไข** (Before state) |
+| `new_value` | `NVARCHAR(MAX)` | **JSON Snapshot ข้อมูลหลังแก้ไข** (After state) |
+| `remark` | `NVARCHAR(MAX)` | ข้อความสรุปแบบอ่านเข้าใจง่าย (Human-readable summary) |
+| `ip_address` | `NVARCHAR(50)` | หมายเลข IP จริง (รองรับ Reverse Proxy / Cloudflare ผ่าน `X-Forwarded-For`) |
+| `user_agent` | `NVARCHAR(500)` | ข้อมูลเบราว์เซอร์และอุปกรณ์ของผู้ใช้งาน |
+| `created_at` | `DATETIME` | วัน-เวลาที่เกิดการกระทำ (`GETDATE()`) |
+
+---
+
+### 2. สเปกการเรียกใช้งานฟังก์ชันมาตรฐาน (`logger.php`)
+เรียกผ่านฟังก์ชันกลาง `writeLog()` หรือ `writeAuditLog()` ใน `Toolbox/public/utils/logger.php`:
+
+```php
+require_once __DIR__ . '/../../utils/logger.php';
+
+writeLog(
+    PDO $pdo,
+    string $action,           // เช่น 'UPDATE_ITEM', 'DEACTIVATE_LOCATION'
+    string $module,           // เช่น 'SYSTEM_SETTINGS', 'USER_MANAGE'
+    string|int $refId,        // Primary Key หรือ Identifier ของข้อมูลเป้าหมาย
+    array|null $oldData,      // Array จำลองข้อมูลก่อนแก้ไข (Before Snapshot)
+    array|null $newData,      // Array จำลองข้อมูลหลังแก้ไข (After Snapshot)
+    string $remark = ''       // ข้อความสรุปที่กระชับ ชัดเจน
+);
+```
+
+#### คุณสมบัติพิเศษที่ระบบจัดการให้อัตโนมัติ:
+1. **Auto Identity Extraction:** หากไม่ส่ง `$userId` / `$username` เข้ามา ตัวฟังก์ชันจะดึงจาก `$_SESSION['user']` ให้อัตโนมัติ ป้องกันการลืมส่งข้อมูลตัวตน
+2. **Safe JSON Serialization:** รองรับทั้ง associative array, stdClass หรือ JSON string โดยจะไม่ทำการ Double-Encode (`"\"...\""`) เด็ดขาด และรองรับภาษาไทย (`JSON_UNESCAPED_UNICODE`)
+3. **True Client IP Detection:** ฟังก์ชัน `getClientIpAddress()` จะตรวจสอบ Headers เรียงลำดับ `HTTP_CF_CONNECTING_IP` -> `HTTP_X_FORWARDED_FOR` -> `HTTP_X_REAL_IP` -> `REMOTE_ADDR` และตัดเฉพาะ Valid Public/Private IP เพื่อป้องกัน IP Spoofing
+4. **Fail-Safe Operation:** หากเกิดข้อผิดพลาดในการบันทึก Log จะดักจับผ่าน try-catch และเขียนลง error log ของเครื่อง โดยไม่ทำให้ Transaction หลักของโมดูลล้มเหลว (Non-blocking audit)
+
+---
+
+### 3. กฎเหล็ก "Snapshot Pattern" สำหรับทุก Endpoint ที่พอร์ตเข้ามา
+1. **ห้ามส่ง ID เปล่าๆ เข้า `$oldData`:**
+   * ❌ *ผิด:* `writeLog($pdo, 'UPDATE_PROFILE', 'PROFILE', $username, $currentId, null, ...);` (ทำให้ `old_value` บันทึกเป็นแค่เลข ID)
+   * ✅ *ถูก:* `writeLog($pdo, 'UPDATE_PROFILE', 'PROFILE', (string)$currentId, $oldProfile, $input, ...);`
+2. **ต้อง SELECT ข้อมูลเดิมก่อน UPDATE หรือ DELETE:**
+   * ก่อนสั่งรันคำสั่ง SQL ที่เปลี่ยนแปลงข้อมูลในตารางหลัก ให้ทำการ `SELECT * FROM <TABLE> WHERE id = ?` เก็บไว้ในตัวแปร `$oldData` เสมอ
+3. **การแสดงผลความเปลี่ยนแปลงบน Frontend (Diff Viewer):**
+   * โมดูลที่มีหน้าจอ Audit Trail (เช่น `ItemAuditModal.jsx`) จะต้องเปรียบเทียบความต่างระหว่าง `$old_value` และ `$new_value` เพื่อไฮไลต์ฟิลด์ที่มีการเปลี่ยนแปลง (Before/After) ให้เห็นชัดเจน 1:1

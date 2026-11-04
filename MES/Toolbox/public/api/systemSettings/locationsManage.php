@@ -63,6 +63,10 @@ try {
             $pdo->beginTransaction();
             
             if ($id > 0) {
+                $oldStmt = $pdo->prepare("SELECT * FROM " . LOCATIONS_TABLE . " WITH (NOLOCK) WHERE location_id = ?");
+                $oldStmt->execute([$id]);
+                $oldLocation = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
                 $sql = "UPDATE " . LOCATIONS_TABLE . " 
                         SET location_name = ?, location_description = ?, production_line = ?, 
                             location_type = ?, zone_name = ?, is_active = ? 
@@ -70,7 +74,7 @@ try {
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$name, $desc, $line, $type, $zone, $is_active, $id]);
                 
-                writeLog($pdo, 'UPDATE_LOCATION', 'SYSTEM_SETTINGS', $id, null, $input, "Updated Location: $name");
+                writeLog($pdo, 'UPDATE_LOCATION', 'SYSTEM_SETTINGS', (string)$id, $oldLocation, $input, "Updated Location: $name");
                 $msg = 'Location updated successfully.';
             } else {
                 $sql = "INSERT INTO " . LOCATIONS_TABLE . " 
@@ -80,7 +84,7 @@ try {
                 $stmt->execute([$name, $desc, $line, $type, $zone, $is_active]);
                 $newId = $pdo->lastInsertId();
                 
-                writeLog($pdo, 'ADD_LOCATION', 'SYSTEM_SETTINGS', $newId, null, $input, "Created Location: $name");
+                writeLog($pdo, 'ADD_LOCATION', 'SYSTEM_SETTINGS', (string)$newId, null, $input, "Created Location: $name");
                 $msg = 'Location created successfully.';
             }
 
@@ -94,10 +98,16 @@ try {
             if ($id <= 0) {
                 throw new Exception("Location ID is required.");
             }
+
+            $oldStmt = $pdo->prepare("SELECT * FROM " . LOCATIONS_TABLE . " WITH (NOLOCK) WHERE location_id = ?");
+            $oldStmt->execute([$id]);
+            $oldLocation = $oldStmt->fetch(PDO::FETCH_ASSOC);
+
             $pdo->beginTransaction();
             $stmt = $pdo->prepare("UPDATE " . LOCATIONS_TABLE . " SET is_active = 0 WHERE location_id = ?");
             $stmt->execute([$id]);
-            writeLog($pdo, 'DELETE_LOCATION', 'SYSTEM_SETTINGS', $id, null, ['location_id' => $id], "Deactivated Location ID: $id");
+            $locName = $oldLocation['location_name'] ?? $id;
+            writeLog($pdo, 'DELETE_LOCATION', 'SYSTEM_SETTINGS', (string)$id, $oldLocation, ['is_active' => 0], "Deactivated Location: $locName");
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Location deactivated successfully.']);
             break;
