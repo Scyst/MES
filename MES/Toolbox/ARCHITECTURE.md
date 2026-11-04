@@ -156,3 +156,17 @@ MES/Toolbox/
 4.  **Vendor Bundle Splitting (Vite manualChunks):**
     *   แยกไลบรารีขนาดใหญ่ที่ใช้เฉพาะทาง (`xlsx` ~424kB, `jspdf`/`html2canvas` ~660kB) ออกจาก Core Engine ผ่าน `rollupOptions.output.manualChunks`
     *   เพื่อให้เบราว์เซอร์ดาวน์โหลดไฟล์เครื่องยนต์หลัก (`mes-engine-*.js`) ในขนาดเพียง ~110kB (Gzip ~34kB) หน้าเว็บจะเปิดติดในเสี้ยววินาทีบนทุกอุปกรณ์
+5.  **Hot/Cold Data Separation & Filtered Database Indexing:**
+    *   ตารางงานหรือธุรกรรมที่มีการบันทึกต่อเนื่องสะสมหลักพันถึงแสนรายการ (เช่น `TeamPlanner_Tasks`) ต้องแบ่งแยกข้อมูลร้อน (Active / Recent 30 Days) ออกจากข้อมูลเย็น (ประวัติงานเก่า)
+    *   ใช้ Filtered Index บน SQL Server 2016 (เช่น `IX_TeamPlanner_Tasks_Active` กรอง `WHERE Status <> 'done'`) เพื่อให้การคิวรีเข้ากระดานงานประจำวันวิ่งตรงเข้า RAM ความเร็วระดับ Microseconds
+    *   ค่าเริ่มต้นของระบบจะดึงเฉพาะงาน Active + งานที่ปิดไม่เกิน 30 วัน และจัดเตรียม On-Demand Archive Toggle (`include_archived=1`) ให้ผู้ใช้กดดูประวัติทั้งหมดได้เมื่อต้องการ
+
+---
+
+## 🚀 6. แผนแม่บทสถาปัตยกรรมในอนาคตของ Team Planner (Future Scalability Roadmap)
+
+| ระยะการพัฒนา | ฟีเจอร์ / ยุทธศาสตร์ | วัตถุประสงค์ & ประโยชน์ | สาเหตุที่ยังไม่ได้ทำในตอนนี้ (Why not now?) |
+| :--- | :--- | :--- | :--- |
+| **ระยะที่ 3** | **Delta Sync (Incremental Polling Engine)** | ส่งเฉพาะงานที่ถูกเพิ่ม/แก้ไข/ลบ ในรอบ 30 วินาที ผ่าน `?since=<timestamp>` เพื่อประหยัด Bandwidth ลงอีก 95% | **ต้องปรับโครงสร้างฐานข้อมูล (Schema Migration):** ตาราง `dbo.TeamPlanner_Tasks` เดิมมีเฉพาะ `CreatedAt` ยังไม่มีคอลัมน์ `UpdatedAt` และยังใช้ Hard Delete (ลบถาวร) การทำ Delta Sync อย่างถูกต้องจำเป็นต้องเพิ่ม `UpdatedAt`, ทำระบบ Soft-delete หรือ Tombstone Table และปรับ React State Reducer ซึ่งมีความเสี่ยงกระทบระบบเดิมสูงเกินความจำเป็นในเวลานี้ เพราะความเร็วปัจจุบันอยู่ที่ **136ms** อยู่แล้ว จึงควรรอทำเมื่อมีผู้ใช้ Concurrent หลักร้อยคน |
+| **ระยะที่ 4** | **DOM Virtualization (Timeline & Multi-Year Gantt)** | ใช้ `@tanstack/react-virtual` เรนเดอร์เฉพาะแถวที่อยู่ในกรอบสายตา เพื่อรองรับการดู Gantt Chart ขนาดหลายพันงานพร้อมกัน | **หน้ากระดานปัจจุบันมี Column Slice อยู่แล้ว:** ใน `TaskBoard.jsx` มีการจำกัดแถวในแต่ละคอลัมน์ไว้ที่ 20 การ์ด (`colLimits || 20`) อยู่แล้ว ทำให้ DOM Node ไม่ล้นจอ และการเลื่อนไทม์ไลน์ 1-3 เดือนยังคงทำงานได้ที่ 60 FPS อย่างลื่นไหล จึงเก็บไว้ทำเมื่อมีการขยายสเกลดูมุมมองข้ามปี |
+
