@@ -60,6 +60,7 @@ MES/Toolbox/
         ├── Transport/          # ระบบจองรถรับส่งพนักงาน (#/transport/*)
         ├── TeamPlanner/        # ระบบกระดานแผนงานและปฏิทินทีม (#/planner/*)
         ├── PaintChem/          # ระบบบันทึกเคมีสีและวิเคราะห์แนวโน้ม (#/paint-chem)
+        ├── InboundHub/         # ศูนย์กลางเชื่อมเอกสารและตู้สินค้า ลูกค้า–SCM–Store (#/inbound-hub, #/partner-portal)
         ├── SystemBlueprint/    # พิมพ์เขียวสถาปัตยกรรมดิจิทัล 5 เลเยอร์ & แผนผังระบบโรงงาน (#/blueprint)
         └── Admin/              # ระบบจัดการผู้ใช้งานและสิทธิ์ (#/admin/users)
 ```

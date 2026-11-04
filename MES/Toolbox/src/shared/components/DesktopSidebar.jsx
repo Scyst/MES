@@ -41,6 +41,7 @@ export const MENU_DATA = [
     title: 'WAREHOUSE & LOGISTICS',
     sectionIcon: Warehouse,
     items: [
+      { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub' },
       { name: 'Store Dashboard', icon: Store, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeDashboard.php', external: true },
       { name: 'Inventory Stock', icon: Box, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/inventoryDashboard.php', external: true },
       { name: 'Warehouse Operations', icon: Warehouse, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/warehouse_operations.php', external: true },

@@ -16,6 +16,8 @@ const Login = lazy(() => import('../modules/Auth/pages/Login'));
 const PaintChemEntryPage = lazy(() => import('../modules/PaintChem/pages/PaintChemEntryPage'));
 const TransportApp = lazy(() => import('../modules/Transport/TransportApp'));
 const TeamPlannerApp = lazy(() => import('../modules/TeamPlanner/TeamPlannerApp'));
+const InboundHubPage = lazy(() => import('../modules/InboundHub/pages/InboundHubPage'));
+const StandalonePartnerPortalPage = lazy(() => import('../modules/InboundHub/pages/StandalonePartnerPortalPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -49,6 +51,26 @@ export default function App() {
               <ErrorBoundary>
                 <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">กำลังโหลดระบบรถรับส่งพนักงาน...</div>}>
                   <TransportApp />
+                </Suspense>
+              </ErrorBoundary>
+            } />
+
+            {/* External Partner Portal (Isolated Layout without Internal Sidebar) */}
+            <Route path="/partner-portal" element={
+              <ErrorBoundary>
+                <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">กำลังโหลดพอร์ทัลคู่ค้า...</div>}>
+                  <StandalonePartnerPortalPage />
+                </Suspense>
+              </ErrorBoundary>
+            } />
+
+            {/* Standalone Executive Prototype Presentation Mode */}
+            <Route path="/inbound-demo" element={
+              <ErrorBoundary>
+                <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">กำลังโหลดหน้าสาธิตระบบ Inbound Hub...</div>}>
+                  <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-6">
+                    <InboundHubPage />
+                  </div>
                 </Suspense>
               </ErrorBoundary>
             } />
@@ -106,6 +128,14 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดโมดูลบันทึกเคมีสี...</div>}>
                     <PaintChemEntryPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="inbound-hub" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดศูนย์กลางรับสินค้าขาเข้า...</div>}>
+                    <InboundHubPage />
                   </Suspense>
                 </ErrorBoundary>
               } />
