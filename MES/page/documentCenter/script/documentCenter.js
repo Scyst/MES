@@ -53,6 +53,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const reviseDocName = document.getElementById('reviseDocName');
     const reviseDocId = document.getElementById('reviseDocId');
     const reviseDocFile = document.getElementById('reviseDocFile');
+
+    // --- Rename Modal Elements ---
+    const renameDocModalElement = document.getElementById('renameDocModal');
+    const renameDocModal = renameDocModalElement ? new bootstrap.Modal(renameDocModalElement) : null;
+    const renameDocForm = document.getElementById('renameDocForm');
     
     // --- Folder Navigation Elements ---
     const breadcrumbContainer = document.getElementById('breadcrumbContainer');
@@ -185,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (doc.is_folder) {
                 // FOLDER ROW
+                const folderPath = doc.category ? doc.category + '/' + doc.file_name : doc.file_name;
                 tr.innerHTML = `
                     <td class="fw-bold" style="padding: 12px 10px; color: var(--text-primary);">
                         <span style="color: #F59E0B; margin-right: 8px; font-size: 1.2rem;">📁</span>
@@ -204,13 +210,39 @@ document.addEventListener('DOMContentLoaded', function () {
                             <span>${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
                         </span>
                     </td>
-                    ${canManage ? `
-                    <td class="action-cell text-end">
-                        ${doc.id ? `
-                        <button class="btn btn-sm btn-move-doc" data-doc-id="${doc.id}" title="Move Folder" style="color: #3B82F6; border: none; background: transparent; padding: 4px 8px; font-size: 1.2rem;">➡️</button>
-                        <button class="btn btn-sm btn-delete-doc" data-doc-id="${doc.id}" title="Delete Folder" style="color: #ef4444; border: none; background: transparent; padding: 4px 8px; font-size: 1.2rem;">&times;</button>
-                        ` : ''}
-                    </td>` : ''}`;
+                    <td class="action-cell text-center" onclick="event.stopPropagation();">
+                        <div class="dropdown">
+                            <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false" title="ตัวเลือกเพิ่มเติม">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end action-dropdown-menu shadow border-0">
+                                <li>
+                                    <a class="dropdown-item btn-open-folder" href="javascript:void(0);" data-folder-path="${escapeHTML(folderPath)}">
+                                        <i class="fas fa-folder-open text-warning me-2"></i> เปิดโฟลเดอร์ (Open)
+                                    </a>
+                                </li>
+                                ${canManage && doc.id ? `
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item btn-rename-item" href="javascript:void(0);" data-doc-id="${doc.id}" data-item-type="folder" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
+                                        <i class="fas fa-pencil-alt text-primary me-2"></i> เปลี่ยนชื่อ (Rename)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item btn-move-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                        <i class="fas fa-arrows-alt text-info me-2"></i> ย้ายตำแหน่ง (Move)
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger btn-delete-doc" href="javascript:void(0);" data-doc-id="${doc.id}" data-name="${escapeHTML(doc.file_name)}" data-item-type="folder">
+                                        <i class="fas fa-trash-alt me-2"></i> ลบโฟลเดอร์ (Delete)
+                                    </a>
+                                </li>
+                                ` : ''}
+                            </ul>
+                        </div>
+                    </td>`;
             } else {
                 // DOCUMENT ROW
                 const ext = doc.file_name.split('.').pop().toLowerCase();
@@ -249,12 +281,54 @@ document.addEventListener('DOMContentLoaded', function () {
                             <span>${escapeHTML(doc.uploaded_by) || 'N/A'}</span>
                         </span>
                     </td>
-                    ${canManage ? `
-                    <td class="action-cell text-end">
-                        <button class="btn btn-sm btn-revise-doc" data-doc-id="${doc.id}" title="Revise Document" style="color: #10B981; border: none; background: transparent; padding: 4px 8px; font-size: 1.1rem;">🔄</button>
-                        <button class="btn btn-sm btn-move-doc" data-doc-id="${doc.id}" title="Move Document" style="color: #3B82F6; border: none; background: transparent; padding: 4px 8px; font-size: 1.1rem;">➡️</button>
-                        <button class="btn btn-sm btn-delete-doc" data-doc-id="${doc.id}" title="Delete Document" style="color: #ef4444; border: none; background: transparent; padding: 4px 8px; font-size: 1.2rem;">&times;</button>
-                    </td>` : ''}`;
+                    <td class="action-cell text-center" onclick="event.stopPropagation();">
+                        <div class="dropdown">
+                            <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false" title="ตัวเลือกเพิ่มเติม">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end action-dropdown-menu shadow border-0">
+                                <li>
+                                    <a class="dropdown-item btn-view-doc" href="javascript:void(0);" data-doc-id="${doc.id}" data-is-3d="${is3D}">
+                                        <i class="fas fa-eye text-primary me-2"></i> ดูตัวอย่าง (Preview)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item btn-download-doc" href="api/view_document.php?id=${doc.id}&download=1">
+                                        <i class="fas fa-download text-success me-2"></i> ดาวน์โหลด (Download)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item btn-details-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                        <i class="fas fa-info-circle text-secondary me-2"></i> รายละเอียด (Details)
+                                    </a>
+                                </li>
+                                ${canManage ? `
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item btn-rename-item" href="javascript:void(0);" data-doc-id="${doc.id}" data-item-type="document" data-name="${escapeHTML(doc.file_name)}" data-category="${escapeHTML(doc.category || '')}">
+                                        <i class="fas fa-pencil-alt text-primary me-2"></i> เปลี่ยนชื่อ (Rename)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item btn-revise-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                        <i class="fas fa-history text-success me-2"></i> อัปเดตเวอร์ชัน (Revise)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item btn-move-doc" href="javascript:void(0);" data-doc-id="${doc.id}">
+                                        <i class="fas fa-arrows-alt text-info me-2"></i> ย้ายตำแหน่ง (Move)
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger btn-delete-doc" href="javascript:void(0);" data-doc-id="${doc.id}" data-name="${escapeHTML(doc.file_name)}" data-item-type="document">
+                                        <i class="fas fa-trash-alt me-2"></i> ลบเอกสาร (Delete)
+                                    </a>
+                                </li>
+                                ` : ''}
+                            </ul>
+                        </div>
+                    </td>`;
             }
             documentTableBody.appendChild(tr);
         });
@@ -334,6 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const viewDocFileName = viewDocModalElement.querySelector('#viewDocFileName');
         const editDocId = viewDocModalElement.querySelector('#editDocId');
+        const editDocFileName = viewDocModalElement.querySelector('#editDocFileName');
         const editDocDescription = viewDocModalElement.querySelector('#editDocDescription');
         const editDocCategory = viewDocModalElement.querySelector('#editDocCategory');
         const viewDocUploadedBy = viewDocModalElement.querySelector('#viewDocUploadedBy');
@@ -347,6 +422,10 @@ document.addEventListener('DOMContentLoaded', function () {
             viewDocFileName.innerHTML = `<i class="fas ${getFileIconClass(doc.file_name)} me-2"></i> ${escapeHTML(doc.file_name)}`;
         }
         if (editDocId) editDocId.value = doc.id;
+        if (editDocFileName) {
+            editDocFileName.value = doc.file_name || '';
+            editDocFileName.readOnly = !canManage;
+        }
         if (editDocDescription) editDocDescription.value = doc.file_description || '';
         if (editDocCategory) editDocCategory.value = doc.category || '';
         if (viewDocUploadedBy) {
@@ -408,8 +487,10 @@ document.addEventListener('DOMContentLoaded', function () {
     async function handleEditSubmit(event) {
         event.preventDefault();
         const form = event.target;
+        const editDocFileNameInput = form.querySelector('#editDocFileName');
         const body = {
             document_id: form.querySelector('#editDocId').value,
+            file_name: editDocFileNameInput ? editDocFileNameInput.value.trim() : undefined,
             description: form.querySelector('#editDocDescription').value,
             category: form.querySelector('#editDocCategory').value
         };
@@ -493,6 +574,144 @@ document.addEventListener('DOMContentLoaded', function () {
             // Error toast handled
         } finally {
             hideSpinner();
+        }
+    }
+
+    function openRenameModal(itemData) {
+        if (!renameDocModalElement) return;
+
+        const { id, itemType, name, category } = itemData;
+
+        const renameItemId = document.getElementById('renameItemId');
+        const renameItemType = document.getElementById('renameItemType');
+        const renameOldName = document.getElementById('renameOldName');
+        const renameCategory = document.getElementById('renameCategory');
+        const renameExtension = document.getElementById('renameExtension');
+        const renameModalTitle = document.getElementById('renameModalTitle');
+        const renameCurrentLabel = document.getElementById('renameCurrentLabel');
+        const renameCurrentIcon = document.getElementById('renameCurrentIcon');
+        const renameCurrentName = document.getElementById('renameCurrentName');
+        const renameNewName = document.getElementById('renameNewName');
+        const renameExtAddon = document.getElementById('renameExtAddon');
+        const renameHelpText = document.getElementById('renameHelpText');
+
+        if (renameItemId) renameItemId.value = id || '';
+        if (renameItemType) renameItemType.value = itemType || 'document';
+        if (renameOldName) renameOldName.value = name || '';
+        if (renameCategory) renameCategory.value = category || '';
+        if (renameCurrentName) renameCurrentName.textContent = name || '';
+
+        if (itemType === 'folder') {
+            if (renameModalTitle) renameModalTitle.textContent = 'เปลี่ยนชื่อโฟลเดอร์ (Rename Folder)';
+            if (renameCurrentLabel) renameCurrentLabel.textContent = 'ชื่อโฟลเดอร์ปัจจุบัน:';
+            if (renameCurrentIcon) renameCurrentIcon.innerHTML = '📁';
+            if (renameExtension) renameExtension.value = '';
+            if (renameExtAddon) renameExtAddon.classList.add('d-none');
+            if (renameHelpText) renameHelpText.textContent = 'การเปลี่ยนชื่อโฟลเดอร์จะอัปเดตโฟลเดอร์ย่อยและเอกสารภายในทั้งหมดโดยอัตโนมัติ';
+            if (renameNewName) {
+                renameNewName.value = name || '';
+                renameNewName.style.borderRadius = '8px';
+            }
+        } else {
+            if (renameModalTitle) renameModalTitle.textContent = 'เปลี่ยนชื่อเอกสาร (Rename Document)';
+            if (renameCurrentLabel) renameCurrentLabel.textContent = 'ชื่อเอกสารปัจจุบัน:';
+            if (renameCurrentIcon) renameCurrentIcon.innerHTML = `<i class="fas ${getFileIconClass(name)}"></i>`;
+
+            // Separate base name and extension like Windows File Explorer
+            const lastDotIndex = name ? name.lastIndexOf('.') : -1;
+            let baseName = name || '';
+            let extension = '';
+            if (lastDotIndex > 0) {
+                baseName = name.substring(0, lastDotIndex);
+                extension = name.substring(lastDotIndex); // e.g., '.pdf'
+            }
+
+            if (renameExtension) renameExtension.value = extension;
+            if (extension && renameExtAddon) {
+                renameExtAddon.textContent = extension;
+                renameExtAddon.classList.remove('d-none');
+                if (renameNewName) renameNewName.style.borderRadius = '8px 0 0 8px';
+                if (renameHelpText) renameHelpText.textContent = `ระบบจะคงนามสกุลไฟล์ (${extension}) ให้อัตโนมัติเหมือนใน Windows`;
+            } else {
+                if (renameExtAddon) renameExtAddon.classList.add('d-none');
+                if (renameNewName) renameNewName.style.borderRadius = '8px';
+                if (renameHelpText) renameHelpText.textContent = 'ระบุชื่อเอกสารที่ต้องการ';
+            }
+
+            if (renameNewName) renameNewName.value = baseName;
+        }
+
+        renameDocModal.show();
+        setTimeout(() => {
+            if (renameNewName) {
+                renameNewName.focus();
+                renameNewName.select();
+            }
+        }, 300);
+    }
+
+    async function handleRenameSubmit(event) {
+        event.preventDefault();
+
+        const id = document.getElementById('renameItemId')?.value;
+        const itemType = document.getElementById('renameItemType')?.value || 'document';
+        const oldName = document.getElementById('renameOldName')?.value || '';
+        const category = document.getElementById('renameCategory')?.value || '';
+        const extension = document.getElementById('renameExtension')?.value || '';
+        const rawNewName = document.getElementById('renameNewName')?.value?.trim();
+
+        if (!rawNewName) {
+            showToast('กรุณาระบุชื่อใหม่', 'var(--bs-warning)');
+            return;
+        }
+
+        // Check for prohibited Windows characters
+        const invalidChars = /[\\/:*?"<>|]/;
+        if (invalidChars.test(rawNewName)) {
+            showToast('ชื่อไฟล์หรือโฟลเดอร์ต้องไม่มีอักขระพิเศษต่อไปนี้: \\ / : * ? " < > |', 'var(--bs-warning)');
+            return;
+        }
+
+        let finalNewName = rawNewName;
+        if (itemType === 'document' && extension) {
+            if (!finalNewName.toLowerCase().endsWith(extension.toLowerCase())) {
+                finalNewName += extension;
+            }
+        }
+
+        if (finalNewName === oldName) {
+            if (renameDocModal) renameDocModal.hide();
+            return;
+        }
+
+        const submitBtn = document.getElementById('renameDocSubmitBtn');
+        const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> กำลังบันทึก...';
+        }
+
+        try {
+            const payload = {
+                id: id,
+                item_type: itemType,
+                old_name: oldName,
+                new_name: finalNewName,
+                category: category
+            };
+
+            const result = await apiRequest('rename', payload, 'POST');
+            showToast(result.message || 'เปลี่ยนชื่อเรียบร้อยแล้ว', 'var(--bs-success)');
+            if (renameDocModal) renameDocModal.hide();
+
+            fetchDocuments(currentPage, currentSearchTerm, currentFolderPath);
+        } catch (error) {
+            // Error toast handled in apiRequest
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
         }
     }
 
@@ -637,34 +856,110 @@ document.addEventListener('DOMContentLoaded', function () {
         documentTableBody.addEventListener('click', (event) => {
             const target = event.target;
             
-            if (target.closest('.btn-delete-doc')) {
+            // 1. Delete action
+            const deleteBtn = target.closest('.btn-delete-doc');
+            if (deleteBtn) {
+                event.preventDefault();
                 event.stopPropagation();
-                const docId = target.closest('.btn-delete-doc').dataset.docId;
+                const docId = deleteBtn.dataset.docId;
+                const name = deleteBtn.dataset.name || 'รายการนี้';
+                const itemType = deleteBtn.dataset.itemType === 'folder' ? 'โฟลเดอร์' : 'เอกสาร';
                 currentDeletingDocId = docId;
-                deleteMessageParagraph.textContent = `Are you sure you want to delete this item? This action cannot be undone.`;
+                deleteMessageParagraph.textContent = `คุณแน่ใจหรือไม่ว่าต้องการลบ${itemType} (${name})? การกระทำนี้ไม่สามารถย้อนกลับได้`;
                 deleteType = 'single';
                 deleteConfirmationModal.show();
                 return;
             }
-            if (target.closest('.btn-revise-doc')) {
+
+            // 2. Rename action
+            const renameBtn = target.closest('.btn-rename-item');
+            if (renameBtn) {
+                event.preventDefault();
                 event.stopPropagation();
-                const docId = target.closest('.btn-revise-doc').dataset.docId;
+                openRenameModal({
+                    id: renameBtn.dataset.docId,
+                    itemType: renameBtn.dataset.itemType,
+                    name: renameBtn.dataset.name,
+                    category: renameBtn.dataset.category
+                });
+                return;
+            }
+
+            // 3. Revise action
+            const reviseBtn = target.closest('.btn-revise-doc');
+            if (reviseBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+                const docId = reviseBtn.dataset.docId;
                 openReviseModal(docId);
                 return;
             }
-            if (target.closest('.btn-move-doc')) {
+
+            // 4. Move action
+            const moveBtn = target.closest('.btn-move-doc');
+            if (moveBtn) {
+                event.preventDefault();
                 event.stopPropagation();
-                const docId = target.closest('.btn-move-doc').dataset.docId;
+                const docId = moveBtn.dataset.docId;
                 openMoveModal(docId);
                 return;
             }
-            
-            const row = event.target.closest('tr');
-            if (row && !target.closest('.action-cell')) {
+
+            // 5. View / Preview action in dropdown
+            const viewBtn = target.closest('.btn-view-doc');
+            if (viewBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+                const docId = viewBtn.dataset.docId;
+                const is3D = viewBtn.dataset.is3D === 'true';
+                const doc = currentDocumentCache.find(d => d.id == docId);
+                if (is3D) {
+                    window.open3DViewer(docId, doc ? doc.file_name : '3D Model');
+                } else {
+                    window.open(`api/view_document.php?id=${docId}`, '_blank');
+                }
+                return;
+            }
+
+            // 6. Details modal action in dropdown
+            const detailsBtn = target.closest('.btn-details-doc');
+            if (detailsBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+                openDetailModal(detailsBtn.dataset.docId);
+                return;
+            }
+
+            // 7. Open folder in dropdown
+            const openFolderBtn = target.closest('.btn-open-folder');
+            if (openFolderBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+                window.navigateToFolder(openFolderBtn.dataset.folderPath);
+                return;
+            }
+
+            // 8. If clicking any dropdown button, link, or input inside row, don't trigger row click
+            if (target.closest('.action-cell, .dropdown, a, button, input')) {
+                return;
+            }
+
+            // 9. Row click: Folders open folder; Documents open preview directly (no more accidental details popup!)
+            const row = target.closest('tr');
+            if (row) {
                 if (row.dataset.isFolder === 'true') {
                     window.navigateToFolder(row.dataset.folderPath);
                 } else if (row.dataset.docId) {
-                    openDetailModal(row.dataset.docId);
+                    const doc = currentDocumentCache.find(d => d.id == row.dataset.docId);
+                    if (doc) {
+                        const ext = doc.file_name.split('.').pop().toLowerCase();
+                        const is3D = ['step', 'stp', 'igs', 'iges', 'stl', 'obj', 'gltf', 'glb'].includes(ext);
+                        if (is3D) {
+                            window.open3DViewer(doc.id, doc.file_name);
+                        } else {
+                            window.open(`api/view_document.php?id=${doc.id}`, '_blank');
+                        }
+                    }
                 }
             }
         });
@@ -701,6 +996,27 @@ document.addEventListener('DOMContentLoaded', function () {
         if (reviseDocForm) {
             reviseDocForm.addEventListener('submit', handleReviseSubmit);
         }
+
+        if (renameDocForm) {
+            renameDocForm.addEventListener('submit', handleRenameSubmit);
+        }
+
+        // F2 Keyboard shortcut to rename hovered document or folder
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F2') {
+                const activeModal = document.querySelector('.modal.show');
+                if (activeModal) return;
+                
+                const hoveredRow = document.querySelector('#documentTableBody tr:hover');
+                if (hoveredRow) {
+                    const renameBtn = hoveredRow.querySelector('.btn-rename-item');
+                    if (renameBtn) {
+                        e.preventDefault();
+                        renameBtn.click();
+                    }
+                }
+            }
+        });
         
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('docFile');

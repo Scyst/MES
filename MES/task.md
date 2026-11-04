@@ -1,5 +1,20 @@
 # 📌 Active Task Tracker
 
+## ✅ [COMPLETED] Document Center (Windows-Style Rename Modal, Action Dropdown & UX Overhaul)
+- **Assignee**: Oat (ณภัทร นุ่มทอง)
+- **Timeline**: 2026-11-04 (11:35 - 12:15)
+- **Status**: COMPLETED
+
+### Checklist
+- [x] Backend API `documentCenterAPI.php`: เพิ่ม action `rename` (รองรับทั้งไฟล์และโฟลเดอร์ พร้อม Cascade subcategories ใน SQL Server และป้องกันอักขระต้องห้ามของ Windows)
+- [x] Modal Component `renameDocModal.php`: สร้าง UI เปลี่ยนชื่อแบบ Windows แยกชื่อไฟล์ออกจากนามสกุลอัตโนมัติ
+- [x] Details Modal `viewDocModal.php`: เพิ่ม input `editDocFileName` เพื่อให้สามารถแก้ชื่อไฟล์จากหน้า Details ได้
+- [x] Table & Interaction `documentCenterUI.php` & `documentCenter.js`: รวมคอลัมน์ Actions เป็นเมนูจุดไข่ปลา `⋮` และปรับ Row Click ให้เปิดดูไฟล์/โฟลเดอร์โดยตรง ไม่เผลอเปิด Details Modal
+- [x] Keyboard Shortcut: เพิ่มคีย์ลัด `F2` บนแถวที่เมาส์ชี้ เพื่อเปิดเปลี่ยนชื่อแบบ Windows
+- [x] ตรวจสอบ Syntax และ Deploy ขึ้น FTP เรียบร้อยครบทั้ง 5 ไฟล์
+
+---
+
 ## ✅ [COMPLETED] Profile Page Standardization & 4D Performance Polish (Layer 4 UI/UX Alignment)
 - **Task ID (Planner)**: 6560
 - **Assignee**: Oat (ณภัทร นุ่มทอง)

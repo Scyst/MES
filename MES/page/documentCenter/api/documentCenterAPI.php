@@ -21,7 +21,7 @@ if (empty($action)) {
 }
 
 // Centralized CSRF check for all write actions.
-$writeActions = ['upload', 'update', 'delete', 'revise', 'create_folder'];
+$writeActions = ['upload', 'update', 'delete', 'revise', 'create_folder', 'rename'];
 if (in_array($action, $writeActions)) {
     $csrfTokenHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfTokenHeader)) {
@@ -381,7 +381,117 @@ try {
             exit;
 
         //==================================
-        //  UPDATE DOCUMENT
+        //  RENAME DOCUMENT OR FOLDER
+        //==================================
+        case 'rename':
+            if (!hasRole(['admin', 'creator', 'qc'])) {
+                throw new Exception('Permission denied.', 403);
+            }
+            $inputData = json_decode(file_get_contents('php://input'), true);
+            $itemType = $inputData['item_type'] ?? 'document';
+            $docId = !empty($inputData['id']) ? (int)$inputData['id'] : null;
+            $oldName = trim($inputData['old_name'] ?? '');
+            $newName = trim($inputData['new_name'] ?? '');
+            $category = trim($inputData['category'] ?? '');
+
+            if (empty($newName)) {
+                throw new Exception('กรุณาระบุชื่อใหม่', 400);
+            }
+
+            if (preg_match('/[\\\\\\/:*?"<>|]/', $newName)) {
+                throw new Exception('ชื่อไฟล์หรือโฟลเดอร์ต้องไม่มีอักขระพิเศษ: \\ / : * ? " < > |', 400);
+            }
+
+            if ($itemType === 'folder') {
+                if (empty($oldName)) {
+                    throw new Exception('ไม่พบชื่อโฟลเดอร์เดิม', 400);
+                }
+                if ($oldName === $newName) {
+                    echo json_encode(['success' => true, 'message' => 'ชื่อโฟลเดอร์ไม่มีการเปลี่ยนแปลง']);
+                    exit;
+                }
+
+                $oldFullPath = ($category === '' ? $oldName : $category . '/' . $oldName);
+                $newFullPath = ($category === '' ? $newName : $category . '/' . $newName);
+
+                // Check conflict
+                $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM dbo.{$documentsTable} WHERE category = ? AND file_name = ? AND file_type = 'folder'");
+                $checkStmt->execute([$category, $newName]);
+                if ($checkStmt->fetchColumn() > 0) {
+                    throw new Exception('มีโฟลเดอร์ชื่อ "' . $newName . '" อยู่แล้วในตำแหน่งนี้', 400);
+                }
+
+                $pdo->beginTransaction();
+
+                // 1. Update explicit folder record if exists, or create one if it was implicit
+                if ($docId) {
+                    $stmtF = $pdo->prepare("UPDATE dbo.{$documentsTable} SET file_name = ? WHERE id = ? AND file_type = 'folder'");
+                    $stmtF->execute([$newName, $docId]);
+                } else {
+                    $stmtCheckExp = $pdo->prepare("SELECT id FROM dbo.{$documentsTable} WHERE file_type = 'folder' AND file_name = ? AND category = ?");
+                    $stmtCheckExp->execute([$oldName, $category]);
+                    $expId = $stmtCheckExp->fetchColumn();
+                    if ($expId) {
+                        $stmtF = $pdo->prepare("UPDATE dbo.{$documentsTable} SET file_name = ? WHERE id = ?");
+                        $stmtF->execute([$newName, $expId]);
+                    } else {
+                        $stmtF = $pdo->prepare("INSERT INTO dbo.{$documentsTable} (file_name, file_type, category, uploaded_by_user_id, file_path, file_size) VALUES (?, 'folder', ?, ?, '', 0)");
+                        $stmtF->execute([$newName, $category, $_SESSION['user']['id']]);
+                    }
+                }
+
+                // 2. Cascade exact category matches
+                $stmtC1 = $pdo->prepare("UPDATE dbo.{$documentsTable} SET category = ? WHERE category = ?");
+                $stmtC1->execute([$newFullPath, $oldFullPath]);
+
+                // 3. Cascade sub-category matches
+                $oldPrefix = $oldFullPath . '/';
+                $stmtC2 = $pdo->prepare("
+                    UPDATE dbo.{$documentsTable} 
+                    SET category = STUFF(category, 1, LEN(?), ?)
+                    WHERE category LIKE ? + '%'
+                ");
+                $stmtC2->execute([$oldFullPath, $newFullPath, $oldPrefix]);
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => 'เปลี่ยนชื่อโฟลเดอร์สำเร็จ', 'new_name' => $newName]);
+            } else {
+                // Document rename
+                if (!$docId) {
+                    throw new Exception('ไม่พบรหัสเอกสาร', 400);
+                }
+
+                $stmtDoc = $pdo->prepare("SELECT file_name, category FROM dbo.{$documentsTable} WHERE id = ?");
+                $stmtDoc->execute([$docId]);
+                $doc = $stmtDoc->fetch(PDO::FETCH_ASSOC);
+                if (!$doc) {
+                    throw new Exception('ไม่พบเอกสารที่ระบุ', 404);
+                }
+
+                $origExt = strtolower(pathinfo($doc['file_name'], PATHINFO_EXTENSION));
+                $newExt = strtolower(pathinfo($newName, PATHINFO_EXTENSION));
+
+                $finalName = $newName;
+                if (empty($newExt) && !empty($origExt)) {
+                    $finalName .= '.' . $origExt;
+                }
+
+                // Check conflict
+                $checkDocStmt = $pdo->prepare("SELECT COUNT(*) FROM dbo.{$documentsTable} WHERE category = ? AND file_name = ? AND id != ? AND (file_type != 'folder' OR file_type IS NULL)");
+                $checkDocStmt->execute([$doc['category'], $finalName, $docId]);
+                if ($checkDocStmt->fetchColumn() > 0) {
+                    throw new Exception('มีเอกสารชื่อ "' . $finalName . '" อยู่แล้วในโฟลเดอร์นี้', 400);
+                }
+
+                $stmtUpdateName = $pdo->prepare("UPDATE dbo.{$documentsTable} SET file_name = ? WHERE id = ?");
+                $stmtUpdateName->execute([$finalName, $docId]);
+
+                echo json_encode(['success' => true, 'message' => 'เปลี่ยนชื่อเอกสารสำเร็จ', 'new_name' => $finalName]);
+            }
+            break;
+
+        //==================================
+        //  UPDATE DOCUMENT
         //==================================
         case 'update':
             if (!hasRole(['admin', 'creator', 'qc'])) {
@@ -393,9 +503,19 @@ try {
                 throw new Exception('Document ID is required.', 400);
             }
 
-            $sql = "UPDATE dbo.{$documentsTable} SET file_description = ?, category = ? WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$inputData['description'] ?? null, $inputData['category'] ?? null, $documentId]);
+            if (isset($inputData['file_name']) && trim($inputData['file_name']) !== '') {
+                $newFileName = trim($inputData['file_name']);
+                if (preg_match('/[\\\\\\/:*?"<>|]/', $newFileName)) {
+                    throw new Exception('File name cannot contain: \\ / : * ? " < > |', 400);
+                }
+                $sql = "UPDATE dbo.{$documentsTable} SET file_name = ?, file_description = ?, category = ? WHERE id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$newFileName, $inputData['description'] ?? null, $inputData['category'] ?? null, $documentId]);
+            } else {
+                $sql = "UPDATE dbo.{$documentsTable} SET file_description = ?, category = ? WHERE id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$inputData['description'] ?? null, $inputData['category'] ?? null, $documentId]);
+            }
             echo json_encode(['success' => true, 'message' => 'Document updated successfully.']);
             break;
             

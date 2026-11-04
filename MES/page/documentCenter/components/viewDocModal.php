@@ -32,6 +32,13 @@
                     <!-- Editable Fields -->
                     <div class="row g-3">
                         <div class="col-12">
+                            <label for="editDocFileName" class="form-label fw-semibold text-dark" style="font-size: 0.9rem;">File Name</label>
+                            <div class="input-group shadow-sm" style="border-radius: 8px;">
+                                <span class="input-group-text bg-light text-secondary border-end-0" style="border-color: #CBD5E1;"><i class="fas fa-file-alt"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" id="editDocFileName" placeholder="File Name" style="border-color: #CBD5E1;">
+                            </div>
+                        </div>
+                        <div class="col-12">
                             <label for="editDocDescription" class="form-label fw-semibold text-dark" style="font-size: 0.9rem;">Description</label>
                             <textarea class="form-control bg-white" id="editDocDescription" rows="2" placeholder="Add a description for this document..." style="border-radius: 8px; border-color: #CBD5E1;"></textarea>
                         </div>

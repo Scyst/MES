@@ -93,6 +93,55 @@ $pageIcon = "fas fa-folder-open";
         .category-item:hover { background-color: #F1F5F9; }
         .category-item.active { background-color: #EEF2FF; color: var(--primary-color); font-weight: 600; }
         .folder-arrow { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* Action Dropdown Menu */
+        .action-dropdown-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: #64748b;
+            background: transparent;
+            border: 1px solid transparent;
+            transition: all 0.15s ease-in-out;
+        }
+        .action-dropdown-btn:hover, .action-dropdown-btn[aria-expanded="true"] {
+            background-color: #e2e8f0;
+            color: #0f172a;
+        }
+        .action-dropdown-menu {
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 6px;
+            min-width: 190px;
+            z-index: 1050;
+        }
+        .action-dropdown-menu .dropdown-item {
+            border-radius: 6px;
+            padding: 7px 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s ease;
+        }
+        .action-dropdown-menu .dropdown-item i {
+            width: 16px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .action-dropdown-menu .dropdown-item:hover {
+            background-color: #f1f5f9;
+        }
+        .action-dropdown-menu .dropdown-item.text-danger:hover {
+            background-color: #fef2f2;
+            color: #dc2626 !important;
+        }
     </style>
 </head>
 
@@ -147,15 +196,12 @@ $pageIcon = "fas fa-folder-open";
                         <table class="table-modern w-100 text-start align-middle mb-0">
                             <thead style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
-
-                                    <th style="width: 33%;">File Name</th>
-                                    <th style="width: 18%;">Description</th>
+                                    <th style="width: 35%;">File Name</th>
+                                    <th style="width: 20%;">Description</th>
                                     <th style="width: 14%;">Category</th>
                                     <th style="width: 9%;">Size</th>
                                     <th style="width: 14%;">Uploaded By</th>
-                                    <?php if ($canManage): ?>
-                                    <th style="width: 12%; text-align: right;">Actions</th>
-                                    <?php endif; ?>
+                                    <th style="width: 8%; text-align: center;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="documentTableBody">
@@ -180,6 +226,7 @@ $pageIcon = "fas fa-folder-open";
                     include('components/uploadDocModal.php');
                     include('components/deleteConfirmationModal.php');
                     include('components/moveDocModal.php');
+                    include('components/renameDocModal.php');
                     include('components/reviseDocModal.php');
                     include('components/newFolderModal.php');
                 }
