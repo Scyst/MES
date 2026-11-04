@@ -119,14 +119,14 @@ export default function AuditLogsTab() {
             <thead className="bg-slate-50 dark:bg-slate-850 sticky top-0 z-10 shadow-2xs">
               <tr className="border-b border-slate-200 dark:border-slate-750 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider">
                 <th className="py-2.5 px-3 font-semibold w-[140px]">วัน-เวลา</th>
-                <th className="py-2.5 px-3 font-semibold min-w-[160px]">ผู้ใช้งาน (User)</th>
+                <th className="py-2.5 px-3 font-semibold w-[170px]">ผู้ใช้งาน (User)</th>
                 <th className="py-2.5 px-3 font-semibold w-[130px]">IP Address</th>
                 <th className="py-2.5 px-3 font-semibold w-[110px]">Action</th>
-                <th className="py-2.5 px-3 font-semibold w-[100px]">Module</th>
-                <th className="py-2.5 px-3 font-semibold w-[90px]">Ref ID</th>
-                <th className="py-2.5 px-3 font-semibold">Remark / Context</th>
-                <th className="py-2.5 px-3 font-semibold w-[110px] text-center">Old Data</th>
-                <th className="py-2.5 px-3 font-semibold w-[110px] text-center">New Data</th>
+                <th className="py-2.5 px-3 font-semibold w-[110px]">Module</th>
+                <th className="py-2.5 px-3 font-semibold w-[100px]">Ref ID</th>
+                <th className="py-2.5 px-3 font-semibold min-w-[200px]">Remark / Context</th>
+                <th className="py-2.5 px-3 font-semibold w-[100px] text-center">Old Data</th>
+                <th className="py-2.5 px-3 font-semibold w-[100px] text-center">New Data</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -142,8 +142,8 @@ export default function AuditLogsTab() {
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="py-2 px-3 text-xs font-mono text-slate-500 whitespace-nowrap">{log.created_at}</td>
-                    <td className="py-2 px-3">
-                      <div className="font-semibold text-slate-800 dark:text-slate-100 text-xs">
+                    <td className="py-2 px-3 w-[170px]">
+                      <div className="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate" title={log.fullname || log.username}>
                         {log.fullname || log.username}
                       </div>
                       {log.fullname && (
@@ -152,13 +152,13 @@ export default function AuditLogsTab() {
                         </div>
                       )}
                     </td>
-                    <td className="py-2 px-3">
+                    <td className="py-2 px-3 w-[130px]">
                       <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span>{log.ip_address || '-'}</span>
                       </div>
                     </td>
-                    <td className="py-2 px-3">
+                    <td className="py-2 px-3 w-[110px]">
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                         log.action === 'API_ERROR' || log.action === 'SYSTEM_ERROR' ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300' :
                         log.action === 'LOGIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' :
@@ -169,11 +169,11 @@ export default function AuditLogsTab() {
                         {log.action}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-xs font-mono text-indigo-700 dark:text-indigo-400">{log.module}</td>
-                    <td className="py-2 px-3 text-xs text-slate-600 dark:text-slate-400">{log.ref_id}</td>
-                    <td className="py-2 px-3 text-xs text-slate-700 dark:text-slate-300 max-w-[200px] truncate" title={log.remark}>{log.remark || '-'}</td>
-                    <td className="py-2 px-3 text-center">{renderJsonText(log.old_value, 'Old Value Data')}</td>
-                    <td className="py-2 px-3 text-center">{renderJsonText(log.new_value, 'New Value Data')}</td>
+                    <td className="py-2 px-3 text-xs font-mono text-indigo-700 dark:text-indigo-400 w-[110px] whitespace-nowrap">{log.module}</td>
+                    <td className="py-2 px-3 text-xs text-slate-600 dark:text-slate-400 w-[100px] truncate">{log.ref_id}</td>
+                    <td className="py-2 px-3 text-xs text-slate-700 dark:text-slate-300 break-words" title={log.remark}>{log.remark || '-'}</td>
+                    <td className="py-2 px-3 text-center w-[100px]">{renderJsonText(log.old_value, 'Old Value Data')}</td>
+                    <td className="py-2 px-3 text-center w-[100px]">{renderJsonText(log.new_value, 'New Value Data')}</td>
                   </tr>
                 ))
               )}
