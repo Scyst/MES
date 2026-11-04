@@ -173,3 +173,30 @@ CREATE TABLE dbo.INBOUND_ALLOCATIONS (
 3. **ราคากลางอ้างอิงตลาดวัตถุดิบ (`Market Benchmark Price`):**
    - `MarketRefPrice = (net_commodity_weight_kg * MarketIndexPerKg) + fabrication_fee_per_unit`
    - `MarketVariancePct = ((doc_unit_price - MarketRefPrice) / NULLIF(MarketRefPrice, 0)) * 100`
+
+---
+
+## 5. มาตรฐานการบันทึกประวัติและตรวจสอบย้อนกลับ (Industrial Audit Trail Protocol)
+สอดคล้องกับมาตรฐานความมั่นคงปลอดภัยและตรวจสอบย้อนกลับตาม **[ARCHITECTURE.md ส่วนที่ 7](../../../Toolbox/ARCHITECTURE.md#L177-L234)** เมื่อขึ้นระบบ Backend PHP API ใน Phase 2 ทุกการเปลี่ยนแปลงสถานะข้อมูล (State Mutation) จะต้องเรียกใช้ฟังก์ชันกลาง `writeLog()` จาก `Toolbox/public/utils/logger.php` เพื่อบันทึกลงตารางกลาง `dbo.SYSTEM_LOGS`:
+
+```php
+require_once __DIR__ . '/../../utils/logger.php';
+// writeLog($pdo, $action, 'INBOUND_HUB', $refId, $oldData, $newData, $remark);
+```
+
+### 1. จุดบันทึก Audit Actions หลักและโครงสร้าง Snapshot (JSON Payload)
+
+| รหัส Action | จุดที่เกิดเหตุการณ์ (Trigger Point) | ผู้กระทำ (Actor) | รหัสอ้างอิง (`ref_id`) | รายละเอียด Snapshot (`old_value` / `new_value`) |
+| :--- | :--- | :--- | :--- | :--- |
+| `UPLOAD_INBOUND_DOCS` | ลูกค้าหรือ SCM อัปโหลดไฟล์ Invoice / Packing List สำเร็จ | Customer / SCM Proxy | `invoice_no` | `old_value = null`<br>`new_value = { partner_id, invoice_no, total_amount, currency, container_count, uploaded_source, file_names }` |
+| `STORE_RECEIVE_CONTAINER` | คลังสินค้ากดยืนยันยอดรับจริงหน้าตู้ | Store Operator | `container_no` | `old_value = { status, items: [{ sap_no, packed_qty }] }`<br>`new_value = { status: 'COMPLETED'/'DISCREPANCY', items: [{ sap_no, packed_qty, actual_received_qty, damaged_qty, discrepancy_remark, evidence_photo_path }] }` |
+| `PRINT_RM_SERIAL_TAGS` | คลังสั่งพิมพ์/สร้างป้าย RM Tag รายตู้ | Store Operator | `container_no` | `old_value = { tag_generated: 0 }`<br>`new_value = { tag_generated: 1, tag_ranges: ['TAG-001...'], generated_at }` |
+| `APPROVE_INVOICE_PRICE` | SCM อนุมัติราคาเพื่อส่งต่อเข้าระบบบัญชี/SAP | SCM Officer | `invoice_no` | `old_value = { price_check_status: 'PENDING_REVIEW' }`<br>`new_value = { price_check_status: 'APPROVED', approved_amount_usd, approved_at }` |
+| `DISPUTE_INVOICE_PRICE` | SCM ส่งทักท้วงส่วนต่างราคาเกินเกณฑ์ไปยังลูกค้า | SCM Officer | `invoice_no` | `old_value = { price_check_status: 'PENDING_REVIEW' }`<br>`new_value = { price_check_status: 'DISPUTED', dispute_reason, alert_lines: [...] }` |
+| `MATCH_ASYNC_CONTAINER` | SCM ยืนยันผูกตู้ที่รับเข้าคลังล่วงหน้าเข้ากับบิล | SCM Officer | `invoice_no` | `old_value = { linked_containers: [] }`<br>`new_value = { linked_containers: [container_no], matched_allocations: [...] }` |
+| `UPDATE_MARKET_BENCHMARK`| SCM ปรับปรุงตัวแปรดัชนีราคาตลาดโลก/อัตราแลกเปลี่ยน | SCM Officer | `index_code` | `old_value = { index_code, old_rate, effective_date }`<br>`new_value = { index_code, new_rate, effective_date, updated_at }` |
+
+### 2. ข้อกำหนด Snapshot Pattern
+1. **ห้ามบันทึกเฉพาะตัวเลขผลลัพธ์:** เมื่อ Store บันทึกรับสินค้า ต้องบันทึกทั้ง `packed_qty` (ยอดตามเอกสาร), `actual_received_qty` (ยอดรับจริง), และ `damaged_qty` (ยอดชำรุด) พร้อมเหตุผลและชื่อไฟล์รูปถ่าย เพื่อใช้เป็นหลักฐานระงับข้อพิพาท (Dispute Claim) กับคู่ค้า
+2. **UI Audit Trail Modal (Phase 2):** บนกระดานของ SCM (`ScmWorkbenchView`) และ Store (`StoreReceivingView`) จะต้องมีปุ่ม **"ประวัติการตรวจสอบ (Audit History)"** โดยนำคอมโพเนนต์ `ItemAuditModal.jsx` มาปรับใช้เป็น Diff Viewer แสดงการเปลี่ยนแปลงก่อน-หลัง เพื่อให้ตรวจสอบย้อนกลับได้แบบ Real-Time ตามมาตรฐานโรงงาน
+
