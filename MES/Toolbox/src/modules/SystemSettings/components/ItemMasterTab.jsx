@@ -287,8 +287,8 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
 
   return (
     <div className="space-y-4">
-      {/* Top Filter & Action Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+      {/* Top Filter & Action Bar (Sticky Docked at Top) */}
+      <div className="sticky top-0 z-30 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-all">
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative min-w-[240px] flex-1 sm:flex-none">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -735,8 +735,8 @@ export default function ItemMasterTab({ lines = [], models = [] }) {
         </table>
       </div>
 
-      {/* Pagination Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 px-1">
+      {/* Pagination Footer (Sticky Floating at Bottom) */}
+      <div className="sticky bottom-0 z-30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 p-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-md transition-all">
         <div className="flex items-center gap-3">
           <span>
             แสดง {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} -{' '}

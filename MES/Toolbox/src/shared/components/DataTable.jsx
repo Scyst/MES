@@ -57,6 +57,9 @@ export default function DataTable({
   exportFileName,
   toolbar = null,
   density = 'compact',
+  stickyToolbar = true,
+  stickyPagination = true,
+  tableMaxHeight = null,
 }) {
   const toast = useToast();
   const [searchInput, setSearchInput] = useState('');
@@ -138,7 +141,13 @@ export default function DataTable({
   return (
     <div className="w-full space-y-3">
       {(searchable || toolbar || exportFileName) && (
-        <div className="flex flex-col gap-2.5 md:flex-row md:items-center">
+        <div
+          className={
+            stickyToolbar
+              ? 'sticky top-0 z-20 flex flex-col gap-2.5 md:flex-row md:items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-all'
+              : 'flex flex-col gap-2.5 md:flex-row md:items-center'
+          }
+        >
           {searchable && (
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -176,9 +185,14 @@ export default function DataTable({
         </div>
       )}
 
-      <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-2xs">
+      <div
+        className={`w-full overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-2xs ${
+          tableMaxHeight ? 'overflow-y-auto' : ''
+        }`}
+        style={tableMaxHeight ? { maxHeight: tableMaxHeight } : undefined}
+      >
         <table className="w-full min-w-[640px] text-left text-xs">
-          <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+          <thead className="sticky top-0 z-10 bg-slate-50/95 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900/95 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 backdrop-blur-xs">
             <tr>
               {columns.map((column) => {
                 const isSorted = sort.key === column.key;
@@ -242,16 +256,31 @@ export default function DataTable({
         </table>
       </div>
 
-      <Pagination
-        page={currentPage}
-        pageSize={pageSize}
-        totalItems={sortedRows.length}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-      />
+      {stickyPagination ? (
+        <div className="sticky bottom-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-md transition-all">
+          <Pagination
+            page={currentPage}
+            pageSize={pageSize}
+            totalItems={sortedRows.length}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
+        </div>
+      ) : (
+        <Pagination
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={sortedRows.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      )}
     </div>
   );
 }

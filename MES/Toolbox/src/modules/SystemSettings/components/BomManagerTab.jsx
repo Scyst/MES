@@ -63,7 +63,7 @@ export default function BomManagerTab({ lines = [], models = [] }) {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
 
-  // Load all FGs
+  // Load all FGs (functional update avoids re-triggering fetchFgs when selectedFg is set)
   const fetchFgs = useCallback(async () => {
     setLoadingFgs(true);
     try {
@@ -73,10 +73,10 @@ export default function BomManagerTab({ lines = [], models = [] }) {
           .map(normalizeFg)
           .filter((fg) => fg.material_type !== 'RM' && !fg.sap_no?.startsWith('10') && !fg.sap_no?.startsWith('20'));
         setFgsWithBom(list);
-        if (list.length > 0 && !selectedFg) {
-          const defaultItem = list.find((it) => it.has_bom === 1) || list[0];
-          setSelectedFg(defaultItem);
-        }
+        setSelectedFg((prev) => {
+          if (prev) return prev;
+          return list.find((it) => it.has_bom === 1) || list[0] || null;
+        });
       } else {
         showToast(res?.message || 'ไม่สามารถโหลดรายชื่อ FG ได้', 'error');
       }
@@ -85,56 +85,97 @@ export default function BomManagerTab({ lines = [], models = [] }) {
     } finally {
       setLoadingFgs(false);
     }
-  }, [selectedFg, showToast]);
+  }, [showToast]);
 
   useEffect(() => {
     fetchFgs();
   }, [fetchFgs]);
 
-  // Load versions whenever selectedFg changes
+  // Load components for a given FG and Version
+  const fetchComponents = useCallback(
+    async (fgOverride = null, versionOverride = null) => {
+      const targetFg = fgOverride || selectedFg;
+      const fgId = targetFg?.item_id || targetFg?.fg_item_id;
+      const ver = versionOverride !== null && versionOverride !== undefined ? versionOverride : selectedVersion;
+      if (!fgId) return;
+
+      setLoadingComponents(true);
+      try {
+        const res = await systemSettingsApi.getBomComponents(fgId, ver);
+        if (res && res.success) {
+          setComponents(res.data || []);
+        } else {
+          showToast(res?.message || 'ไม่สามารถโหลดชิ้นส่วน BOM ได้', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      } finally {
+        setLoadingComponents(false);
+      }
+    },
+    [selectedFg, selectedVersion, showToast]
+  );
+
+  // Unified sequence: when selectedFg changes, fetch versions first, then fetch components ONCE for the active version.
+  // This eliminates the double fetch and blinking caused by uncoordinated effects.
   useEffect(() => {
     const fgId = selectedFg?.item_id || selectedFg?.fg_item_id;
-    if (fgId) {
-      systemSettingsApi.getBomVersions(fgId).then((res) => {
-        if (res && res.success) {
-          const vList = res.data || [];
+    if (!fgId) {
+      setVersions([]);
+      setSelectedVersion('');
+      setComponents([]);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingComponents(true);
+
+    systemSettingsApi
+      .getBomVersions(fgId)
+      .then(async (res) => {
+        if (!isMounted) return;
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const vList = res.data;
           setVersions(vList);
           const activeV = vList.find((v) => v.bom_status === 'ACTIVE') || vList[0];
-          setSelectedVersion(activeV?.bom_version != null ? String(activeV.bom_version) : '');
+          const vStr = activeV?.bom_version != null ? String(activeV.bom_version) : '';
+          setSelectedVersion(vStr);
+
+          // Fetch components directly for the active version in one atomic flow
+          try {
+            const compRes = await systemSettingsApi.getBomComponents(fgId, vStr);
+            if (isMounted) {
+              if (compRes && compRes.success) {
+                setComponents(compRes.data || []);
+              } else {
+                setComponents([]);
+              }
+            }
+          } catch (compErr) {
+            if (isMounted) {
+              showToast('เกิดข้อผิดพลาดในการโหลดชิ้นส่วน: ' + compErr.message, 'error');
+            }
+          } finally {
+            if (isMounted) setLoadingComponents(false);
+          }
         } else {
           setVersions([]);
           setSelectedVersion('');
+          setComponents([]);
+          setLoadingComponents(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          showToast('เกิดข้อผิดพลาดในการโหลดเวอร์ชัน: ' + err.message, 'error');
+          setLoadingComponents(false);
         }
       });
-    } else {
-      setVersions([]);
-      setSelectedVersion('');
-    }
-  }, [selectedFg]);
 
-  // Load components whenever selectedFg or selectedVersion changes
-  const fetchComponents = useCallback(async () => {
-    const fgId = selectedFg?.item_id || selectedFg?.fg_item_id;
-    if (!fgId) return;
-
-    setLoadingComponents(true);
-    try {
-      const res = await systemSettingsApi.getBomComponents(fgId, selectedVersion);
-      if (res && res.success) {
-        setComponents(res.data || []);
-      } else {
-        showToast(res?.message || 'ไม่สามารถโหลดชิ้นส่วน BOM ได้', 'error');
-      }
-    } catch (err) {
-      showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
-    } finally {
-      setLoadingComponents(false);
-    }
-  }, [selectedFg, selectedVersion, showToast]);
-
-  useEffect(() => {
-    fetchComponents();
-  }, [fetchComponents]);
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedFg, showToast]);
 
   // Filter FGs list on the left (Strictly exclude RM / 10xxxxxx / 20xxxxxx from requiring BOM)
   const filteredFgs = useMemo(() => {
@@ -388,7 +429,11 @@ export default function BomManagerTab({ lines = [], models = [] }) {
                   {versions.length > 0 ? (
                     <select
                       value={selectedVersion}
-                      onChange={(e) => setSelectedVersion(e.target.value)}
+                      onChange={(e) => {
+                        const newVer = e.target.value;
+                        setSelectedVersion(newVer);
+                        fetchComponents(selectedFg, newVer);
+                      }}
                       className="px-2 py-0.5 text-xs font-bold rounded border border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       {versions.map((v) => (
@@ -645,8 +690,10 @@ export default function BomManagerTab({ lines = [], models = [] }) {
             const fgId = selectedFg?.item_id || selectedFg?.fg_item_id;
             const vRes = await systemSettingsApi.getBomVersions(fgId);
             if (vRes?.success) {
+              const newVer = String(res.data?.new_version || '2');
               setVersions(vRes.data || []);
-              setSelectedVersion(String(res.data?.new_version || '2'));
+              setSelectedVersion(newVer);
+              fetchComponents(selectedFg, newVer);
             }
           } else {
             showToast(res?.message || 'สร้าง Revision ไม่สำเร็จ', 'error');

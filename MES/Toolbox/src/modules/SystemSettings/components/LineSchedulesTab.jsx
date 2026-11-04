@@ -208,8 +208,8 @@ export default function LineSchedulesTab({ lines = [] }) {
 
   return (
     <div className="space-y-4">
-      {/* Filters and Actions Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      {/* Filters and Actions Bar (Sticky Docked at Top) */}
+      <div className="sticky top-0 z-20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-all">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-[220px]">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -264,6 +264,7 @@ export default function LineSchedulesTab({ lines = [] }) {
         loading={loading}
         defaultSortKey="line"
         emptyMessage="ไม่พบข้อมูลตารางกะการผลิต"
+        searchable={false}
       />
 
       {/* Modal */}
