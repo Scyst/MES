@@ -27,10 +27,22 @@ function formatTaskOutput($row) {
 
 try {
     if ($method === 'GET') {
+        if ($id) {
+            $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Tasks WHERE Id = ?");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                http_response_code(404);
+                sendJson(['error' => 'Task not found'], 404);
+            }
+            sendJson(formatTaskOutput($row));
+        }
+
         $currentUserFullname = $_SESSION['user']['fullname'] ?? '';
         $currentUsername = $_SESSION['user']['username'] ?? '';
         $akasStr = isset($_GET['akas']) ? $_GET['akas'] : '';
         $akas = array_filter(array_map('trim', explode(',', $akasStr)));
+        $includeArchived = isset($_GET['include_archived']) && ($_GET['include_archived'] === '1' || $_GET['include_archived'] === 'true');
 
         $conditions = ["Visibility = 'public'"];
         $params = [];
@@ -53,12 +65,19 @@ try {
             }
         }
 
-        $whereClause = "";
+        $userAccessClause = "";
         if (count($conditions) > 1) {
             $visibilityCondition = array_shift($conditions);
-            $whereClause = "WHERE ($visibilityCondition OR " . implode(' OR ', $conditions) . ")";
+            $userAccessClause = "($visibilityCondition OR " . implode(' OR ', $conditions) . ")";
         } else {
-            $whereClause = "WHERE Visibility = 'public'";
+            $userAccessClause = "Visibility = 'public'";
+        }
+
+        // Hot / Cold Partitioning: By default, query active tasks + tasks closed within 30 days (utilizes Filtered Index)
+        if ($includeArchived) {
+            $whereClause = "WHERE $userAccessClause";
+        } else {
+            $whereClause = "WHERE $userAccessClause AND (Status <> 'done' OR DueDate >= DATEADD(day, -30, GETDATE()) OR CreatedAt >= DATEADD(day, -30, GETDATE()))";
         }
 
         $stmt = $pdo->prepare("SELECT * FROM TeamPlanner_Tasks $whereClause ORDER BY CreatedAt DESC");

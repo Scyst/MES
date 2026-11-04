@@ -4,6 +4,24 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-04 — Team Planner Filtered Index for Active Tasks (Industry Standard Scalability)
+
+**Agent:** Antigravity  
+**Feature:** เพิ่ม Filtered Non-clustered Index บนตาราง `dbo.TeamPlanner_Tasks` โดยคัดกรองเฉพาะงานที่ยังไม่เสร็จสิ้น (`Status <> 'done'`) ซึ่งเป็นชุดข้อมูลร้อน (Hot Data) ที่ใช้งานประจำวัน เพื่อให้การคิวรีเข้ากระดานงานเร็วระดับ Microseconds และลดขนาดดัชนีในหน่วยความจำ RAM ของ SQL Server
+
+### Schema Alterations
+
+#### 1. dbo.TeamPlanner_Tasks
+- สร้าง Filtered Index สำหรับ Active Tasks:
+```sql
+CREATE NONCLUSTERED INDEX IX_TeamPlanner_Tasks_Active
+ON dbo.TeamPlanner_Tasks (Visibility, CreatedAt DESC)
+INCLUDE (Id, Title, Status, Assignee, StartDate, DueDate, StartTime, EndTime, Priority, ProjectId, SpaceId, CreatedBy)
+WHERE Status <> 'done';
+```
+
+---
+
 ## 2026-11-03 — Team Planner Index Optimization (4,684 Tasks Query Bottleneck Fix)
 
 **Agent:** Antigravity  

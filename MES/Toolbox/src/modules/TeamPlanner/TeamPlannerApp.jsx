@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
-import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus, FiFolder } from 'react-icons/fi';
+import { FiCalendar, FiCheckSquare, FiLink, FiPieChart, FiBarChart2, FiBell, FiMenu, FiX, FiSun, FiMoon, FiLogOut, FiUser, FiBriefcase, FiSearch, FiHome, FiUsers, FiPlus, FiFolder, FiArchive } from 'react-icons/fi';
 import axios from 'axios';
 import { ensurePlannerInterceptors } from './plannerApiSetup';
 import { useAuth } from '../../shared/contexts/AuthContext';
@@ -116,9 +116,12 @@ function App() {
   const [spaces, setSpaces] = useState([]);
   const [users, setUsers] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const includeArchivedRef = React.useRef(includeArchived);
+  includeArchivedRef.current = includeArchived;
 
   // Fetch all data once
-  const refreshData = useCallback(async (silent = false, signal = null) => {
+  const refreshData = useCallback(async (silent = false, signal = null, forceArchived = null) => {
     if (!silent) setDataLoading(true);
     const reqConfig = signal ? { signal } : {};
     try {
@@ -147,9 +150,13 @@ function App() {
         }
       }
 
+      const withArchived = forceArchived !== null ? forceArchived : includeArchivedRef.current;
       let tasksUrl = '/api/tasks.php';
-      if (storedAkas) {
-        tasksUrl += `?akas=${encodeURIComponent(storedAkas)}`;
+      const qParams = [];
+      if (storedAkas) qParams.push(`akas=${encodeURIComponent(storedAkas)}`);
+      if (withArchived) qParams.push('include_archived=1');
+      if (qParams.length > 0) {
+        tasksUrl += `?${qParams.join('&')}`;
       }
 
       const timestamp = Date.now();
@@ -212,6 +219,14 @@ function App() {
       abortController.abort();
       clearInterval(interval);
     };
+  }, [refreshData]);
+
+  const toggleIncludeArchived = useCallback(() => {
+    setIncludeArchived((prev) => {
+      const nextVal = !prev;
+      refreshData(false, null, nextVal);
+      return nextVal;
+    });
   }, [refreshData]);
 
   // ══════════ Shared Handlers ══════════
@@ -622,6 +637,28 @@ function App() {
             </button>
           </div>
 
+          <div className="px-4 pb-2">
+            <button
+              onClick={toggleIncludeArchived}
+              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                includeArchived
+                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-semibold'
+                  : 'bg-slate-200/50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300/60 dark:hover:bg-slate-700 border border-transparent'
+              }`}
+              title={includeArchived ? 'กำลังแสดงงานทั้งหมดรวมประวัติเก่า' : 'ค่าเริ่มต้น: แสดงเฉพาะงานปัจจุบันและ 30 วันล่าสุด'}
+            >
+              <div className="flex items-center gap-2">
+                <FiArchive className="text-sm shrink-0" />
+                <span>{includeArchived ? 'รวมประวัติงานเก่า' : 'งานปัจจุบัน (Active)'}</span>
+              </div>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                includeArchived ? 'bg-amber-500 text-white' : 'bg-slate-300/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+              }`}>
+                {includeArchived ? 'ALL' : '30D'}
+              </span>
+            </button>
+          </div>
+
           <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto pb-4 custom-scrollbar">
             <div className="space-y-0.5 mt-2">
               {mainNav.map(item => (
@@ -693,6 +730,18 @@ function App() {
             </Link>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              className={`relative p-1.5 rounded-lg transition-all ${
+                includeArchived
+                  ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              onClick={toggleIncludeArchived}
+              title={includeArchived ? 'รวมประวัติงานเก่า' : 'งานปัจจุบัน (Active)'}
+            >
+              <FiArchive className="text-lg" />
+              {includeArchived && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full"></span>}
+            </button>
             <button className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white relative p-1.5" onClick={toggleTheme} title="Toggle Theme">
               {isDarkMode ? <FiSun className="text-lg" /> : <FiMoon className="text-lg" />}
             </button>
