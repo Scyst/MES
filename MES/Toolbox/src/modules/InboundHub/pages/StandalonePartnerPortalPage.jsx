@@ -1,5 +1,6 @@
 import React from 'react';
-import { Globe, KeyRound, Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Globe, KeyRound, Building2, ArrowLeft } from 'lucide-react';
 import { InboundHubProvider } from '../context/InboundHubContext';
 import PartnerPortalView from '../components/PartnerPortalView';
 
@@ -7,17 +8,28 @@ export default function StandalonePartnerPortalPage() {
   return (
     <InboundHubProvider>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-        {/* แถบส่วนหัวแยกขาดจากเมนูภายในโรงงาน 100% */}
+        {/* แถบส่วนหัวแยกเฉพาะลูกค้าภายนอก (Standalone Header) */}
         <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-                <Globe className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-sm font-bold tracking-tight">SNC PARTNER PORTAL</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Inbound Document & Container Pre-Advice System
+            <div className="flex items-center gap-3">
+              <Link
+                to="/inbound-hub"
+                className="mes-btn-secondary py-1 px-2.5 text-xs text-slate-600 dark:text-slate-300"
+                title="กลับไปยังหน้าหลัก MES Inbound Hub"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">กลับหน้าระบบ MES</span>
+              </Link>
+              <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <Globe className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold tracking-tight">SNC PARTNER PORTAL</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Inbound Document & Container Pre-Advice System
+                  </div>
                 </div>
               </div>
             </div>

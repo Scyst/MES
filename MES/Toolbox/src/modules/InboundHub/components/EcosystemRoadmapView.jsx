@@ -93,7 +93,10 @@ export default function EcosystemRoadmapView() {
           {ECOSYSTEM_MODULES.map((mod) => {
             const Icon = mod.icon;
             return (
-              <div key={mod.title} className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
+              <div
+                key={mod.title}
+                className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 border-l-4 border-l-blue-600"
+              >
                 <div className="flex items-center gap-2.5 mb-1.5">
                   <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
                     <Icon className="w-4 h-4" />
@@ -112,7 +115,10 @@ export default function EcosystemRoadmapView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {PHASES.map((p, idx) => (
-          <div key={p.phase} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
+          <div
+            key={p.phase}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs border-l-4 border-l-indigo-600"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="mes-badge bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
                 STEP {idx + 1}

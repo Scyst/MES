@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   UploadCloud, FileSpreadsheet, FileText, CheckCircle2,
-  Truck, PackageCheck, AlertTriangle, Clock, Sparkles, ArrowRight, ShieldCheck
+  Truck, PackageCheck, AlertTriangle, Clock, Sparkles, ArrowRight, ShieldCheck, Search, X
 } from 'lucide-react';
 import { useInboundHub } from '../context/InboundHubContext';
+import { useToast } from '../../../shared/contexts/FeedbackContext';
 import { SAMPLE_EXTRACTED_SHIPMENT } from '../data/mockInboundData';
 
 function ContainerTimelineBadge({ status }) {
@@ -38,12 +39,29 @@ function ContainerTimelineBadge({ status }) {
 // NOTE: Intentionally >50 lines — encapsulates full Partner Dropzone, Auto-Match Preview, and Live Shipment Tracker
 export default function PartnerPortalView({ isProxyMode = false }) {
   const { invoices, containers, submitExtractedShipment } = useInboundHub();
+  const toast = useToast();
+
   const [isExtracting, setIsExtracting] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [uploadedFileNames, setUploadedFileNames] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trackerSearch, setTrackerSearch] = useState('');
 
-  const partnerInvoices = invoices.filter((inv) => inv.partnerId === 'PTN-01');
+  const partnerInvoices = useMemo(() => {
+    return invoices.filter((inv) => {
+      if (inv.partnerId !== 'PTN-01') return false;
+      if (trackerSearch.trim() === '') return true;
+      const term = trackerSearch.toLowerCase();
+      return (
+        inv.invoiceNo.toLowerCase().includes(term) ||
+        inv.lines.some(
+          (l) =>
+            l.customerPartNo.toLowerCase().includes(term) ||
+            l.partDescription.toLowerCase().includes(term)
+        )
+      );
+    });
+  }, [invoices, trackerSearch]);
 
   const triggerExtraction = (filesList = ['DK_Consolidated_INV_0912.pdf', 'DK_Container_PackingList_2x40HQ.xlsx']) => {
     setIsExtracting(true);
@@ -51,7 +69,8 @@ export default function PartnerPortalView({ isProxyMode = false }) {
     setTimeout(() => {
       setIsExtracting(false);
       setPreviewData(SAMPLE_EXTRACTED_SHIPMENT);
-    }, 900);
+      toast.success('สกัดข้อมูลตารางและจับคู่รหัสสินค้ากับระบบโรงงานสำเร็จ 100%');
+    }, 800);
   };
 
   const handleFileInput = (e) => {
@@ -64,6 +83,7 @@ export default function PartnerPortalView({ isProxyMode = false }) {
     if (!previewData || isSubmitting) return;
     setIsSubmitting(true);
     submitExtractedShipment(previewData, isProxyMode ? 'SCM_PROXY' : 'PARTNER_PORTAL');
+    toast.success(`ส่งข้อมูลอินวอยซ์ ${previewData.invoiceNo} และตู้สินค้าเข้าคลัง/SCM สำเร็จ`);
     setPreviewData(null);
     setUploadedFileNames([]);
     setIsSubmitting(false);
@@ -76,7 +96,7 @@ export default function PartnerPortalView({ isProxyMode = false }) {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-100">
             <ShieldCheck className="w-4 h-4" />
-            {isProxyMode ? 'โหมดเจ้าหน้าที่ SCM อัปโหลดเอกสารแทนลูกค้า (Onboarding Proxy)' : 'SNC B2B Partner Portal — บัญชีคู่ค้า: Daikin Industries'}
+            <span>{isProxyMode ? 'โหมดเจ้าหน้าที่ SCM อัปโหลดเอกสารแทนลูกค้า (Onboarding Proxy)' : 'SNC B2B Partner Portal — บัญชีคู่ค้า: Daikin Industries'}</span>
           </div>
           <h2 className="text-base md:text-lg font-bold mt-1">
             ส่งข้อมูลล่วงหน้าด้วยไฟล์เดิมที่มีอยู่แล้ว (ไม่ต้องกรอกแบบฟอร์มทีละรายการ)
@@ -89,10 +109,10 @@ export default function PartnerPortalView({ isProxyMode = false }) {
           type="button"
           onClick={() => triggerExtraction()}
           disabled={isExtracting}
-          className="min-h-[44px] px-4 py-2 rounded-lg bg-white text-blue-700 hover:bg-blue-50 font-semibold text-xs flex items-center justify-center gap-2 shadow-xs shrink-0 cursor-pointer disabled:opacity-60"
+          className="min-h-[44px] px-4 py-2 rounded-lg bg-white text-blue-700 hover:bg-blue-50 font-semibold text-xs flex items-center justify-center gap-2 shadow-xs shrink-0 cursor-pointer disabled:opacity-60 transition-colors"
         >
           <Sparkles className="w-4 h-4 text-amber-500" />
-          {isExtracting ? 'กำลังสกัดข้อมูลจากเอกสาร...' : 'ทดลองจำลองโยนไฟล์ลูกค้า (1 Invoice + 2 ตู้)'}
+          <span>{isExtracting ? 'กำลังสกัดข้อมูลจากเอกสาร...' : 'ทดลองจำลองโยนไฟล์ลูกค้า (1 Invoice + 2 ตู้)'}</span>
         </button>
       </div>
 
@@ -125,7 +145,7 @@ export default function PartnerPortalView({ isProxyMode = false }) {
 
         {isExtracting && (
           <div className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center gap-3 text-xs text-blue-800 dark:text-blue-200">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
             <span>กำลังอ่านตารางและแปลงรหัสสินค้าจากไฟล์: <strong>{uploadedFileNames.join(', ')}</strong>...</span>
           </div>
         )}
@@ -136,8 +156,8 @@ export default function PartnerPortalView({ isProxyMode = false }) {
             <div className="p-3 bg-emerald-100/70 dark:bg-emerald-950/50 border-b border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  สกัดข้อมูลและตรวจสอบยอดรวมสำเร็จ: ยอดรวมทุกตู้ตรงกับยอดใน Invoice {previewData.invoiceNo} ครบ 100%
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>สกัดข้อมูลและตรวจสอบยอดรวมสำเร็จ: ยอดรวมทุกตู้ตรงกับยอดใน Invoice {previewData.invoiceNo} ครบ 100%</span>
                 </div>
                 <div className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">
                   ไฟล์ต้นทาง: {uploadedFileNames.join(' + ')} | วิธีประมวลผล: {previewData.extractionMethod}
@@ -147,7 +167,7 @@ export default function PartnerPortalView({ isProxyMode = false }) {
                 <button
                   type="button"
                   onClick={() => setPreviewData(null)}
-                  className="mes-btn-secondary min-h-[38px]"
+                  className="mes-btn-secondary min-h-[36px]"
                 >
                   ยกเลิก
                 </button>
@@ -155,10 +175,10 @@ export default function PartnerPortalView({ isProxyMode = false }) {
                   type="button"
                   disabled={isSubmitting}
                   onClick={handleConfirmSubmit}
-                  className="mes-btn-success min-h-[38px]"
+                  className="mes-btn-success min-h-[36px]"
                 >
                   <PackageCheck className="w-4 h-4" />
-                  ยืนยันส่งข้อมูลเข้าคลังและ SCM
+                  <span>ยืนยันส่งข้อมูลเข้าคลังและ SCM</span>
                 </button>
               </div>
             </div>
@@ -173,7 +193,7 @@ export default function PartnerPortalView({ isProxyMode = false }) {
                     <th className="px-3 py-2 text-right">ราคา/หน่วย (Doc)</th>
                     <th className="px-3 py-2 text-right">ยอดรวม Invoice</th>
                     {previewData.containers.map((c) => (
-                      <th key={c.tempId} className="px-3 py-2 text-right bg-blue-50/70 dark:bg-blue-950/30">
+                      <th key={c.tempId} className="px-3 py-2 text-right bg-blue-50/70 dark:bg-blue-950/30 font-mono">
                         ตู้ {c.containerNo}
                       </th>
                     ))}
@@ -181,8 +201,8 @@ export default function PartnerPortalView({ isProxyMode = false }) {
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-xs bg-white dark:bg-slate-900">
                   {previewData.lines.map((line) => (
-                    <tr key={line.customerPartNo}>
-                      <td className="px-3 py-2 font-semibold text-slate-800 dark:text-white">{line.customerPartNo}</td>
+                    <tr key={line.customerPartNo} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                      <td className="px-3 py-2 font-semibold text-slate-800 dark:text-white font-mono">{line.customerPartNo}</td>
                       <td className="px-3 py-2">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono text-[11px]">
                           <ArrowRight className="w-3 h-3" /> SAP {line.sapNo}
@@ -190,11 +210,11 @@ export default function PartnerPortalView({ isProxyMode = false }) {
                       </td>
                       <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{line.partDescription}</td>
                       <td className="px-3 py-2 text-right font-mono">${line.docUnitPrice.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right font-bold text-slate-900 dark:text-white">
+                      <td className="px-3 py-2 text-right font-bold font-mono text-slate-900 dark:text-white">
                         {line.invoicedQty.toLocaleString()} {line.uom}
                       </td>
                       {previewData.containers.map((c) => (
-                        <td key={c.tempId} className="px-3 py-2 text-right font-semibold text-blue-700 dark:text-blue-300 bg-blue-50/30 dark:bg-blue-950/10">
+                        <td key={c.tempId} className="px-3 py-2 text-right font-semibold font-mono text-blue-700 dark:text-blue-300 bg-blue-50/30 dark:bg-blue-950/10">
                           {(line.allocations[c.tempId] || 0).toLocaleString()} {line.uom}
                         </td>
                       ))}
@@ -207,20 +227,45 @@ export default function PartnerPortalView({ isProxyMode = false }) {
         )}
       </div>
 
-      {/* กระดานติดตามสถานะตู้สินค้าแบบเรียลไทม์ (Value Giveback ให้ลูกค้าไม่ต้องโทรตาม SCM) */}
+      {/* กระดานติดตามสถานะตู้สินค้าแบบเรียลไทม์ (Live Shipment & Container Tracking) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-white">
               สถานะเอกสารและการตรวจรับเข้าคลังแบบเรียลไทม์ (Live Shipment & Container Tracking)
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               อัปเดตทันทีเมื่อรถถึงหน้าคลังหรือคลังสินค้าตรวจรับเสร็จสิ้น ลดการส่งอีเมลสอบถามสถานะ
             </p>
           </div>
-          <span className="mes-badge bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-            ซ่อนข้อมูลต้นทุนภายในโรงงาน 100%
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="mes-badge bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              ซ่อนข้อมูลต้นทุนภายในโรงงาน 100%
+            </span>
+          </div>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="mes-filter-bar mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={trackerSearch}
+              onChange={(e) => setTrackerSearch(e.target.value)}
+              placeholder="ค้นหาเลขที่ Invoice หรือ รหัสสินค้า..."
+              className="mes-input pl-8"
+            />
+            {trackerSearch && (
+              <button
+                type="button"
+                onClick={() => setTrackerSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -230,19 +275,19 @@ export default function PartnerPortalView({ isProxyMode = false }) {
               <div key={inv.invoiceId} className="border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 bg-slate-50/50 dark:bg-slate-800/30">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-200 dark:border-slate-700">
                   <div>
-                    <span className="text-xs font-bold text-blue-700 dark:text-blue-400">{inv.invoiceNo}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">วันที่เอกสาร: {inv.invoiceDate}</span>
+                    <span className="text-xs font-bold font-mono text-blue-700 dark:text-blue-400">{inv.invoiceNo}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">วันที่เอกสาร: <span className="font-mono">{inv.invoiceDate}</span></span>
                     <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">| จำนวนรวม {linkedContainers.length} ตู้สินค้า</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {inv.priceApprovalStatus === 'DISPUTED' && (
                       <span className="mes-badge-pill bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                        <AlertTriangle className="w-3.5 h-3.5" /> ฝ่ายจัดซื้อส่งคำถามเรื่องราคาเอกสาร ({inv.scmNote || 'กรุณาตรวจสอบราคา'})
+                        <AlertTriangle className="w-3.5 h-3.5" /> ฝ่ายจัดซื้อส่งคำถามเรื่องราคา ({inv.scmNote || 'กรุณาตรวจสอบราคา'})
                       </span>
                     )}
                     {inv.priceApprovalStatus === 'APPROVED' && (
                       <span className="mes-badge-pill bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> เอกสารผ่านการตรวจสอบแล้ว
+                        <CheckCircle2 className="w-3.5 h-3.5" /> เอกสารผ่านการตรวจสอบราคาแล้ว
                       </span>
                     )}
                   </div>
@@ -250,20 +295,20 @@ export default function PartnerPortalView({ isProxyMode = false }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mt-3">
                   {linkedContainers.map((cnt) => (
-                    <div key={cnt.containerId} className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                    <div key={cnt.containerId} className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xs">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="font-mono text-xs font-bold text-slate-800 dark:text-white">{cnt.containerNo}</span>
                         <ContainerTimelineBadge status={cnt.status} />
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
-                        <div>ทะเบียนรถ: {cnt.truckLicense} | ซีล: {cnt.sealNo}</div>
-                        <div>กำหนดถึง (ETA): {cnt.etaDatetime}</div>
+                        <div>ทะเบียนรถ: <strong className="text-slate-700 dark:text-slate-200">{cnt.truckLicense}</strong> | ซีล: <span className="font-mono">{cnt.sealNo}</span></div>
+                        <div>กำหนดถึง (ETA): <span className="font-mono">{cnt.etaDatetime}</span></div>
                       </div>
                       <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
                         {cnt.items.map((item) => (
                           <div key={item.contItemId} className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2">{item.customerPartNo}</span>
-                            <span className="font-semibold text-slate-800 dark:text-white shrink-0">
+                            <span className="text-slate-600 dark:text-slate-300 truncate pr-2 font-mono">{item.customerPartNo}</span>
+                            <span className="font-semibold font-mono text-slate-800 dark:text-white shrink-0">
                               {item.actualReceivedQty !== null
                                 ? `รับแล้ว ${item.actualReceivedQty.toLocaleString()} / ${item.packedQty.toLocaleString()} ${item.uom}`
                                 : `แจ้งส่ง ${item.packedQty.toLocaleString()} ${item.uom}`}
