@@ -209,11 +209,10 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
                 <button
                   type="button"
                   onClick={() => setThemePref('light')}
-                  className={`p-2.5 rounded-lg border flex items-center justify-center gap-2 text-xs transition-colors ${
-                    themePref === 'light'
+                  className={`p-2.5 rounded-lg border flex items-center justify-center gap-2 text-xs transition-colors ${themePref === 'light'
                       ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-700 font-bold'
                       : 'border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <Sun className="w-4 h-4 text-amber-500" />
                   <span>โหมดสว่าง (Light)</span>
@@ -222,11 +221,10 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
                 <button
                   type="button"
                   onClick={() => setThemePref('dark')}
-                  className={`p-2.5 rounded-lg border flex items-center justify-center gap-2 text-xs transition-colors ${
-                    themePref === 'dark'
+                  className={`p-2.5 rounded-lg border flex items-center justify-center gap-2 text-xs transition-colors ${themePref === 'dark'
                       ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-700 font-bold'
                       : 'border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <Moon className="w-4 h-4 text-indigo-400" />
                   <span>โหมดมืด (Dark)</span>
