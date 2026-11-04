@@ -8,7 +8,6 @@ import {
   Moon,
   Globe,
   Save,
-  ShieldCheck,
   Clock,
 } from 'lucide-react';
 import { profileApi } from '../../../shared/services/profileApi';
@@ -97,17 +96,17 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
       {/* Change Password Card */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <Key className="w-5 h-5 text-amber-500" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            เปลี่ยนรหัสผ่าน (Change Password)
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <Key className="w-4 h-4 text-amber-500" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            เปลี่ยนรหัสผ่านเข้าสู่ระบบ (Change Password)
           </h3>
         </div>
 
-        <form onSubmit={handlePasswordChange} className="space-y-4">
+        <form onSubmit={handlePasswordChange} className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               รหัสผ่านปัจจุบัน (Current Password) <span className="text-rose-500">*</span>
@@ -119,12 +118,12 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
                 placeholder="ระบุรหัสผ่านเดิม"
                 value={pwdForm.old_password}
                 onChange={(e) => setPwdForm({ ...pwdForm, old_password: e.target.value })}
-                className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mes-input pr-9"
               />
               <button
                 type="button"
                 onClick={() => setShowOldPwd(!showOldPwd)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
               >
                 {showOldPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -142,12 +141,12 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
                 placeholder="ความยาวอย่างน้อย 6 ตัวอักษร"
                 value={pwdForm.new_password}
                 onChange={(e) => setPwdForm({ ...pwdForm, new_password: e.target.value })}
-                className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mes-input pr-9"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPwd(!showNewPwd)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
               >
                 {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -165,70 +164,72 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
                 placeholder="ระบุรหัสผ่านใหม่อีกครั้ง"
                 value={pwdForm.confirm_password}
                 onChange={(e) => setPwdForm({ ...pwdForm, confirm_password: e.target.value })}
-                className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mes-input pr-9"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
               >
                 {showConfirmPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={changingPwd}
-            className="flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition-colors disabled:opacity-50"
-          >
-            <Lock className="w-4 h-4" />
-            {changingPwd ? 'กำลังเปลี่ยนรหัสผ่าน...' : 'อัปเดตรหัสผ่านใหม่'}
-          </button>
+          <div className="pt-1">
+            <button
+              type="submit"
+              disabled={changingPwd}
+              className="mes-btn-amber px-4 py-2 text-xs"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>{changingPwd ? 'กำลังบันทึกรหัสผ่าน...' : 'อัปเดตรหัสผ่านใหม่'}</span>
+            </button>
+          </div>
         </form>
       </div>
 
-      {/* Preferences & Session Security Card */}
-      <div className="space-y-6">
-        {/* Appearance & Language */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Globe className="w-5 h-5 text-blue-600" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              การตั้งค่าหน้าจอและภาษา (Display & Language)
+      {/* Preferences & Inactivity Notice */}
+      <div className="space-y-4">
+        {/* Display & Language Settings */}
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+            <Globe className="w-4 h-4 text-blue-600" />
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+              การแสดงผลและภาษา (Display & Language)
             </h3>
           </div>
 
-          <form onSubmit={handleSavePreferences} className="space-y-4">
+          <form onSubmit={handleSavePreferences} className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">
-                ธีมการแสดงผล (Color Theme)
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                ธีมการแสดงผล (Theme)
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setThemePref('light')}
-                  className={`p-3 rounded-xl border flex items-center gap-3 transition-colors ${
+                  className={`p-2.5 rounded-lg border flex items-center justify-center gap-2 text-xs transition-colors ${
                     themePref === 'light'
-                      ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-600 font-bold'
+                      ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-700 font-bold'
                       : 'border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <Sun className="w-5 h-5 text-amber-500" />
-                  <span className="text-xs">โหมดสว่าง (Light)</span>
+                  <Sun className="w-4 h-4 text-amber-500" />
+                  <span>โหมดสว่าง (Light)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setThemePref('dark')}
-                  className={`p-3 rounded-xl border flex items-center gap-3 transition-colors ${
+                  className={`p-2.5 rounded-lg border flex items-center justify-center gap-2 text-xs transition-colors ${
                     themePref === 'dark'
-                      ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-600 font-bold'
+                      ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 text-blue-700 font-bold'
                       : 'border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <Moon className="w-5 h-5 text-indigo-400" />
-                  <span className="text-xs">โหมดมืด (Dark)</span>
+                  <Moon className="w-4 h-4 text-indigo-400" />
+                  <span>โหมดมืด (Dark)</span>
                 </button>
               </div>
             </div>
@@ -240,33 +241,35 @@ export default function ProfileSecurityTab({ profile, onProfileUpdated }) {
               <select
                 value={langPref}
                 onChange={(e) => setLangPref(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mes-select w-full"
               >
                 <option value="th">ภาษาไทย (Thai)</option>
                 <option value="en">English (US)</option>
               </select>
             </div>
 
-            <button
-              type="submit"
-              disabled={savingPrefs}
-              className="flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              {savingPrefs ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
-            </button>
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={savingPrefs}
+                className="mes-btn-primary px-4 py-2 text-xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{savingPrefs ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
+              </button>
+            </div>
           </form>
         </div>
 
-        {/* Security & Inactivity Notice */}
-        <div className="bg-slate-50 dark:bg-slate-850 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-          <Clock className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
-          <div className="text-xs text-slate-500 space-y-1">
+        {/* Security Notice */}
+        <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-start gap-3">
+          <Clock className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+          <div className="text-xs text-slate-500 space-y-0.5">
             <p className="font-semibold text-slate-700 dark:text-slate-300">
               ความปลอดภัยของเซสชัน (Inactivity Auto-Logout)
             </p>
-            <p>
-              ระบบมีการตัดการเชื่อมต่ออัตโนมัติหากไม่มีการใช้งานเกิน 60 นาที เพื่อความปลอดภัยของข้อมูลโรงงานและป้องกันการเข้าถึงจากอุปกรณ์ภายนอก
+            <p className="text-[11px] leading-relaxed">
+              ระบบตัดการเชื่อมต่ออัตโนมัติเมื่อไม่มีการเคลื่อนไหวเกิน 60 นาที เพื่อความปลอดภัยของข้อมูลโรงงานและป้องกันการเข้าถึงจากอุปกรณ์ภายนอก
             </p>
           </div>
         </div>

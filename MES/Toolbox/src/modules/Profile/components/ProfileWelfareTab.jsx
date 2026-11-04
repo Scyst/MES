@@ -95,17 +95,17 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Section 1: Contact & Social */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <Phone className="w-5 h-5 text-blue-600" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            ข้อมูลการติดต่อ & ที่อยู่ (Contact & Address)
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <Phone className="w-4 h-4 text-blue-600" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            ข้อมูลการติดต่อและที่อยู่ (Contact & Address)
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               เบอร์โทรศัพท์ (Phone Number)
@@ -115,7 +115,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="081-xxx-xxxx"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
@@ -128,7 +128,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="ไอดีไลน์"
               value={formData.social_line_id}
               onChange={(e) => setFormData({ ...formData, social_line_id: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
@@ -141,7 +141,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="ชื่อโปรไฟล์เฟซบุ๊ก"
               value={formData.social_facebook}
               onChange={(e) => setFormData({ ...formData, social_facebook: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
@@ -154,22 +154,22 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="ระบุที่อยู่ปัจจุบัน..."
               value={formData.current_address}
               onChange={(e) => setFormData({ ...formData, current_address: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
         </div>
       </div>
 
-      {/* Section 2: Personal Details & Welfare */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <Shirt className="w-5 h-5 text-emerald-600" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            ข้อมูลส่วนบุคคล & ไซส์เครื่องแบบสวัสดิการ (Welfare & Uniform)
+      {/* Section 2: Personal Details & Welfare Uniform */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <Shirt className="w-4 h-4 text-emerald-600" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            ข้อมูลส่วนบุคคลและขนาดเครื่องแบบสวัสดิการ (Personal & Uniform)
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               วันเกิด (Date of Birth) {calculatedAge !== null && `(อายุ ${calculatedAge} ปี)`}
@@ -178,18 +178,18 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               type="date"
               value={formData.date_of_birth}
               onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-              สถานะภาพ (Marital Status)
+              สถานภาพ (Marital Status)
             </label>
             <select
               value={formData.marital_status}
               onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-select w-full"
             >
               <option value="single">โสด (Single)</option>
               <option value="married">สมรส (Married)</option>
@@ -208,7 +208,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               max="20"
               value={formData.children_count}
               onChange={(e) => setFormData({ ...formData, children_count: Number(e.target.value) })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
@@ -219,7 +219,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
             <select
               value={formData.shirt_size}
               onChange={(e) => setFormData({ ...formData, shirt_size: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-select w-full"
             >
               {SHIRT_SIZES.map((sz) => (
                 <option key={sz} value={sz}>
@@ -236,7 +236,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
             <select
               value={formData.shoe_size}
               onChange={(e) => setFormData({ ...formData, shoe_size: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-select w-full"
             >
               {SHOE_SIZES.map((sz) => (
                 <option key={sz} value={sz}>
@@ -252,25 +252,25 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
             </label>
             <input
               type="text"
-              placeholder="คติประจำใจ หรือคำแนะนำตัว..."
+              placeholder="คติประจำใจ หรือเป้าหมายการทำงาน..."
               value={formData.bio}
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
         </div>
       </div>
 
       {/* Section 3: Commute & Transport */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <Truck className="w-5 h-5 text-purple-600" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            การเดินทาง & การโดยสาร (Commute & Transportation)
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <Truck className="w-4 h-4 text-purple-600" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            การเดินทางและการโดยสาร (Commute & Transportation)
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               วิธีเดินทางมาทำงานหลัก (Commute Method)
@@ -278,7 +278,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
             <select
               value={formData.commute_method}
               onChange={(e) => setFormData({ ...formData, commute_method: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-select w-full"
             >
               {COMMUTE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -290,29 +290,29 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-              ทะเบียนรถยนต์/จักรยานยนต์ (Vehicle Registration Plate)
+              ทะเบียนรถยนต์/จักรยานยนต์ (Vehicle Plate)
             </label>
             <input
               type="text"
               placeholder="เช่น กข 1234 ระยอง (เว้นว่างได้)"
               value={formData.vehicle_registration}
               onChange={(e) => setFormData({ ...formData, vehicle_registration: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
         </div>
       </div>
 
       {/* Section 4: Emergency Contact */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <ShieldAlert className="w-5 h-5 text-rose-600" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <ShieldAlert className="w-4 h-4 text-rose-600" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
             ผู้ติดต่อกรณีฉุกเฉิน (Emergency Contact)
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               ชื่อ-นามสกุล ผู้ติดต่อฉุกเฉิน
@@ -322,7 +322,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="ระบุชื่อผู้ติดต่อ..."
               value={formData.emergency_contact_name}
               onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
@@ -335,7 +335,7 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="08x-xxx-xxxx"
               value={formData.emergency_contact_phone}
               onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
 
@@ -348,21 +348,21 @@ export default function ProfileWelfareTab({ profile, onProfileUpdated }) {
               placeholder="เช่น บิดา, มารดา, คู่สมรส, พี่น้อง"
               value={formData.emergency_contact_relation}
               onChange={(e) => setFormData({ ...formData, emergency_contact_relation: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mes-input"
             />
           </div>
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
+      {/* Submit Button */}
+      <div className="flex justify-end pt-2">
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors disabled:opacity-50"
+          className="mes-btn-primary px-5 py-2 text-xs"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'กำลังบันทึกข้อมูล...' : 'บันทึกข้อมูลส่วนตัวและสวัสดิการ'}
+          <span>{saving ? 'กำลังบันทึกข้อมูล...' : 'บันทึกข้อมูลส่วนตัวและสวัสดิการ'}</span>
         </button>
       </div>
     </form>

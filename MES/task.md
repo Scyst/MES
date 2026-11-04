@@ -1,5 +1,20 @@
 # 📌 Active Task Tracker
 
+## ✅ [COMPLETED] Profile Page Standardization & 4D Performance Polish (Layer 4 UI/UX Alignment)
+- **Task ID (Planner)**: 6560
+- **Assignee**: Oat (ณภัทร นุ่มทอง)
+- **Space**: Developer Team (ID: 3)
+- **Timeline**: 2026-11-04 (09:00 - 10:30)
+- **Status**: COMPLETED
+
+### Checklist
+- [x] ปรับแต่ง `ProfilePage.jsx` ให้ใช้ `.mes-page-header`, `.mes-page-title` และ `.mes-tab-nav` สไตล์ Underline เดียวกับ System Settings & User Management
+- [x] ปรับฟอร์ม `ProfileWelfareTab.jsx` ให้ใช้ `.mes-input`, `.mes-select`, `.mes-btn-primary` และจัด Grid ให้กระชับ
+- [x] ปรับฟอร์ม `ProfileSecurityTab.jsx` และตาราง `ProfileActivityLogsTab.jsx` ให้เข้าคู่กับระบบ
+- [x] Build, Deploy FTP และรัน E2E Verification ตรวจสอบหน้าจอทั้ง PC และ Mobile
+
+---
+
 ## ✅ [COMPLETED] Team Planner Performance Optimization (Hot/Cold Data & Filtered Index)
 - **Task ID (Planner)**: 6559
 - **Assignee**: Oat (ณภัทร นุ่มทอง)
