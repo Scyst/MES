@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, History, Filter, Download, X, Globe } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
+import SecurityWatermark from '../../../shared/components/SecurityWatermark';
 
 export default function AuditLogsTab() {
   const [logs, setLogs] = useState([]);
@@ -115,6 +116,7 @@ export default function AuditLogsTab() {
         </div>
         
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+          <SecurityWatermark classification="SNC AUDIT LOG • RESTRICTED ACCESS" />
           <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
             <thead className="bg-slate-50 dark:bg-slate-850 sticky top-0 z-10 shadow-2xs">
               <tr className="border-b border-slate-200 dark:border-slate-750 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider">

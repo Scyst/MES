@@ -232,3 +232,42 @@ writeLog(
    * ก่อนสั่งรันคำสั่ง SQL ที่เปลี่ยนแปลงข้อมูลในตารางหลัก ให้ทำการ `SELECT * FROM <TABLE> WHERE id = ?` เก็บไว้ในตัวแปร `$oldData` เสมอ
 3. **การแสดงผลความเปลี่ยนแปลงบน Frontend (Diff Viewer):**
    * โมดูลที่มีหน้าจอ Audit Trail (เช่น `ItemAuditModal.jsx`) จะต้องเปรียบเทียบความต่างระหว่าง `$old_value` และ `$new_value` เพื่อไฮไลต์ฟิลด์ที่มีการเปลี่ยนแปลง (Before/After) ให้เห็นชัดเจน 1:1
+
+---
+
+## 👁️ 8. มาตรฐานลายน้ำป้องกันการรั่วไหลของข้อมูล (Dynamic Security Watermark & DLP Protocol)
+
+เพื่อตอบสนองมาตรฐาน **ISO/IEC 27001 Control A.8.12 (Data Leakage Prevention)** และป้องกันการลักลอบบันทึกภาพหน้าจอสูตรการผลิต (BOM), ต้นทุนทางธุรกิจ (SAP Valuation), หรือประวัติการใช้งาน (Audit Logs) ออกไปเผยแพร่ภายนอก:
+
+### 1. คอมโพเนนต์มาตรฐานกลาง (`SecurityWatermark.jsx`)
+พัฒนาเป็นคอมโพเนนต์กลางที่ `Toolbox/src/shared/components/SecurityWatermark.jsx`:
+- **Identity Binding:** ดึงข้อมูลผู้ใช้งานที่กำลัง Login สดจาก `useAuth()` (`user.fullname` และ `user.username`)
+- **Anti-Tamper Timestamp:** ผูกวันที่และชั้นความลับ (`SNC CONFIDENTIAL`, `SNC PROPRIETARY`) แบบ Real-time
+- **Zero-Friction UX:** กำหนด CSS `pointer-events: none` และ `user-select: none` ซ้อนทับที่ระดับ `z-index: 20` ผู้ใช้งานสามารถคลิก ลากเมาส์ พิมพ์ข้อมูล และเลื่อนตารางได้ตามปกติ 100%
+- **Vector Pattern:** สร้างลวดลายซ้ำแบบ SVG เวกเตอร์เอียง `-22°` ที่ความทึบแสง (Opacity) เพียง 4-4.5% สบายตาต่อการทำงานจริง แต่จะปรากฏเด่นชัดทันทีเมื่อถูกถ่ายภาพด้วยกล้องสมาร์ตโฟน
+- **Hardcopy Protection:** รองรับการพิมพ์ผ่านเบราว์เซอร์ ลายน้ำจะคงอยู่บนเอกสารหรือไฟล์ PDF ที่ส่งออก
+
+### 2. วิธีการเรียกใช้งาน
+#### แบบที่ 1: เรียกผ่าน Prop ในตารางส่วนกลาง (`DataTable.jsx`)
+```jsx
+<DataTable
+  columns={columns}
+  rows={items}
+  watermark="SNC FINANCIAL • SAP VALUATION CONFIDENTIAL"
+/>
+```
+
+#### แบบที่ 2: วางเป็น Overlay ใน Container ที่กำหนด `relative`
+```jsx
+<div className="relative overflow-auto">
+  <SecurityWatermark classification="SNC AUDIT LOG • RESTRICTED ACCESS" />
+  <table className="w-full">...</table>
+</div>
+```
+
+---
+
+## 📜 9. เอกสารอ้างอิงมาตรฐานสากลและการรับการตรวจประเมิน (International Audit Compliance)
+รายละเอียดการปฏิบัติตามมาตรฐานสากล **IATF 16949:2016**, **ISO/IEC 27001:2022**, และ **พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)** พร้อมคู่มือแนวทางการตอบข้อซักถามออดิท (Auditor Q&A Cheat Sheet) ได้รับการรวบรวมไว้ใน:
+👉 **[คู่มือมาตรฐานความมั่นคงปลอดภัยและการตรวจสอบย้อนกลับสากล](file:///E:/MES/MES/MES/Toolbox/docs/AUDIT_COMPLIANCE_HANDBOOK.md)** (`Toolbox/docs/AUDIT_COMPLIANCE_HANDBOOK.md`)
+*(สามารถสั่งพิมพ์หรือส่งต่อให้ผู้บริหารและทีมงานใช้อ้างอิงขณะรับการตรวจประเมินโรงงานได้ทันที)*

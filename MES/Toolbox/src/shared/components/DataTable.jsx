@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from 'lucide-react';
 import Pagination from './Pagination';
+import SecurityWatermark from './SecurityWatermark';
 import { useToast } from '../contexts/FeedbackContext';
 
 /**
@@ -60,6 +61,7 @@ export default function DataTable({
   stickyToolbar = true,
   stickyPagination = true,
   tableMaxHeight = null,
+  watermark = false,
 }) {
   const toast = useToast();
   const [searchInput, setSearchInput] = useState('');
@@ -186,11 +188,16 @@ export default function DataTable({
       )}
 
       <div
-        className={`w-full overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-2xs ${
+        className={`w-full overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-2xs relative ${
           tableMaxHeight ? 'overflow-y-auto' : ''
         }`}
         style={tableMaxHeight ? { maxHeight: tableMaxHeight } : undefined}
       >
+        {watermark && (
+          <SecurityWatermark
+            classification={typeof watermark === 'string' ? watermark : undefined}
+          />
+        )}
         <table className="w-full min-w-[640px] text-left text-xs">
           <thead className="sticky top-0 z-10 bg-slate-50/95 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900/95 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 backdrop-blur-xs">
             <tr>
