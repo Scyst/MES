@@ -7,8 +7,6 @@ import {
   TrendingUp,
   Award,
   ShieldAlert,
-  Target,
-  CheckCircle2,
   Info,
 } from 'lucide-react';
 import {
@@ -94,34 +92,62 @@ export default function Profile4DGradingTab({ performance, loading }) {
     {
       title: 'IPH (Productivity)',
       sub: 'มูลค่าผลผลิตเทียบต้นทุนแรงงาน',
+      weight: '35%',
       grade: performance?.grade_iph || '-',
       icon: Coins,
       metric: `${Number(performance?.income_per_head || 0).toLocaleString()} THB`,
       ratio: `Ratio: ${Number(performance?.income_ratio || 0).toFixed(2)}x`,
+      tooltip: {
+        title: 'IPH Productivity (น้ำหนัก 35%)',
+        desc: 'วัดความคุ้มค่าผลผลิตสุทธิต่อต้นทุนแรงงานจริงในสายการผลิต',
+        formula: 'มูลค่าผลผลิตสุทธิ / ต้นทุนแรงงานทางตรง (DL)',
+        benchmark: 'เกณฑ์ A: ≥ 1.50x | เกณฑ์ B: 1.20 - 1.49x | เกณฑ์ C: 1.00 - 1.19x',
+      },
     },
     {
       title: '5S (Workplace)',
       sub: 'มาตรฐาน 5ส และความสะอาดหน้างาน',
+      weight: '25%',
       grade: performance?.grade_5s || '-',
       icon: Sparkles,
       metric: 'เกณฑ์ 5 ส',
       ratio: 'ผ่านการตรวจมาตรฐาน',
+      tooltip: {
+        title: '5S Standards (น้ำหนัก 25%)',
+        desc: 'ความสะอาด ความเป็นระเบียบ และความปลอดภัยของพื้นที่ปฏิบัติงาน',
+        formula: 'ผลตรวจสุ่ม 5ส ประจำสัปดาห์โดยคณะกรรมการความปลอดภัย',
+        benchmark: 'เกณฑ์ A: ผ่านเกณฑ์ ≥ 90% | เกณฑ์ B: 80 - 89%',
+      },
     },
     {
       title: 'Attendance (เวลาทำงาน)',
       sub: 'การตรงต่อเวลาและระเบียบวินัย',
+      weight: '20%',
       grade: performance?.grade_attendance || '-',
       icon: Clock,
       metric: `สาย: ${performance?.late_days || 0} วัน`,
       ratio: `ขาด: ${performance?.absent_days || 0} วัน`,
+      tooltip: {
+        title: 'Attendance (น้ำหนัก 20%)',
+        desc: 'การตรงต่อเวลาและระเบียบวินัยการเข้าปฏิบัติงาน',
+        formula: 'ดึงข้อมูล Real-Time จากระบบสแกนใบหน้า Time Attendance',
+        benchmark: 'เกณฑ์ A: สาย 0 วัน ขาด 0 วัน | เกณฑ์ B: สาย ≤ 2 วัน',
+      },
     },
     {
       title: 'Learning Hub (ทักษะ)',
       sub: 'การพัฒนาทักษะและอบรมหลักสูตร',
+      weight: '20%',
       grade: performance?.grade_learning || '-',
       icon: GraduationCap,
       metric: `ผ่าน: ${performance?.passed_courses || 0} หลักสูตร`,
       ratio: `ทักษะ: ${performance?.skill_count || 0} ด้าน`,
+      tooltip: {
+        title: 'Learning Hub (น้ำหนัก 20%)',
+        desc: 'การพัฒนาทักษะและการเข้าเรียนในหลักสูตรมาตรฐานโรงงาน',
+        formula: 'ผลคะแนนสอบและจำนวนหลักสูตรที่ผ่านในศูนย์เรียนรู้ MES',
+        benchmark: 'เกณฑ์ A: ผ่าน ≥ 3 หลักสูตร/รอบประเมิน และมีทักษะ Level 2+',
+      },
     },
   ];
 
@@ -163,7 +189,7 @@ export default function Profile4DGradingTab({ performance, loading }) {
         </div>
       </div>
 
-      {/* 4 Dimension Grade Cards */}
+      {/* 4 Dimension Grade Cards with Hover Tooltips */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {dimensions.map((dim, idx) => {
           const Icon = dim.icon;
@@ -171,7 +197,7 @@ export default function Profile4DGradingTab({ performance, loading }) {
           return (
             <div
               key={idx}
-              className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between space-y-3"
+              className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between space-y-3 relative group"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -179,7 +205,33 @@ export default function Profile4DGradingTab({ performance, loading }) {
                     <Icon className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">{dim.title}</h4>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{dim.title}</h4>
+                      {/* Interactive Tooltip Icon */}
+                      <div className="relative group/tip inline-block">
+                        <button
+                          type="button"
+                          className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-0.5 rounded-full"
+                          aria-label={`ข้อมูลเกณฑ์ ${dim.title}`}
+                        >
+                          <Info className="w-3.5 h-3.5" />
+                        </button>
+                        {/* Tooltip Content Card */}
+                        <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 hidden group-hover/tip:block w-64 p-3 bg-slate-900 text-white rounded-xl shadow-xl text-left text-xs z-50 pointer-events-none animate-fade-in border border-slate-750">
+                          <div className="flex items-center justify-between border-b border-slate-750 pb-1.5 mb-1.5">
+                            <span className="font-bold text-blue-400 text-[11px]">{dim.tooltip.title}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">นัยสำคัญ {dim.weight}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-300 mb-2 leading-relaxed">{dim.tooltip.desc}</p>
+                          <div className="space-y-1 text-[10px] bg-slate-800/90 p-2 rounded-lg border border-slate-700/60">
+                            <p className="text-slate-300"><span className="text-slate-400 font-semibold">สูตรการคิด:</span> {dim.tooltip.formula}</p>
+                            <p className="text-slate-300"><span className="text-slate-400 font-semibold">เกณฑ์ประเมิน:</span> {dim.tooltip.benchmark}</p>
+                          </div>
+                          {/* Triangle arrow */}
+                          <div className="absolute -top-1.5 left-3 sm:left-1/2 sm:-translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45 border-t border-l border-slate-750"></div>
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-[10px] text-slate-400">{dim.sub}</p>
                   </div>
                 </div>
@@ -198,7 +250,7 @@ export default function Profile4DGradingTab({ performance, loading }) {
         })}
       </div>
 
-      {/* Historical Trend Chart & Table (Expanded dynamic height to fill fullscreen) */}
+      {/* Historical Trend Chart & Table (Expands comfortably to fill full desktop height) */}
       <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
           <div className="flex items-center gap-2">
@@ -213,7 +265,7 @@ export default function Profile4DGradingTab({ performance, loading }) {
         {trendData.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-1">
             {/* Dynamic Height Trend Chart */}
-            <div className="lg:col-span-2 h-[320px] sm:h-[360px] lg:h-[390px] border border-slate-100 dark:border-slate-800 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-850">
+            <div className="lg:col-span-2 h-[380px] sm:h-[420px] lg:h-[460px] border border-slate-100 dark:border-slate-800 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-850">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ top: 15, right: 25, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -241,8 +293,8 @@ export default function Profile4DGradingTab({ performance, loading }) {
               </ResponsiveContainer>
             </div>
 
-            {/* Matching Dynamic Height Trend Table */}
-            <div className="lg:col-span-1 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden h-[320px] sm:h-[360px] lg:h-[390px] flex flex-col">
+            {/* Matching Height Trend Table */}
+            <div className="lg:col-span-1 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden h-[380px] sm:h-[420px] lg:h-[460px] flex flex-col">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-100/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 sticky top-0 z-10">
                   <tr>
@@ -278,101 +330,10 @@ export default function Profile4DGradingTab({ performance, loading }) {
             </div>
           </div>
         ) : (
-          <div className="py-16 text-center text-xs text-slate-400">
+          <div className="py-20 text-center text-xs text-slate-400">
             ยังไม่มีบันทึกประวัติผลการประเมินย้อนหลังในระบบ
           </div>
         )}
-      </div>
-
-      {/* 4D Criteria & Benchmark Breakdown (Fills vertical screen space on large monitors) */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-              เกณฑ์การประเมินและน้ำหนักคะแนน 4 มิติ (4D Metric Benchmarks & Weights)
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-400 font-mono">Total Weight: 100%</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          {/* IPH */}
-          <div className="p-3.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                <Coins className="w-3.5 h-3.5" /> IPH Productivity
-              </span>
-              <span className="mes-badge bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
-                น้ำหนัก 35%
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              เป้าหมาย: Ratio &ge; 1.20x คำนวณจากมูลค่าผลผลิตสุทธิต่อต้นทุนแรงงานจริงในสายการผลิต
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-800 flex justify-between">
-              <span>เกณฑ์ A: &ge; 1.50x</span>
-              <span className="text-emerald-600 font-semibold">ปัจจุบัน: {Number(performance?.income_ratio || 0).toFixed(2)}x</span>
-            </div>
-          </div>
-
-          {/* 5S */}
-          <div className="p-3.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" /> 5S Standards
-              </span>
-              <span className="mes-badge bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
-                น้ำหนัก 25%
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              เป้าหมาย: ผ่านเกณฑ์ 5 ส และความปลอดภัยหน้างาน &ge; 90% จากการตรวจสุ่มรายสัปดาห์
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-800 flex justify-between">
-              <span>ตรวจประเมิน: รายสัปดาห์</span>
-              <span className="text-emerald-600 font-semibold">เกรด: {performance?.grade_5s || '-'}</span>
-            </div>
-          </div>
-
-          {/* Attendance */}
-          <div className="p-3.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Attendance
-              </span>
-              <span className="mes-badge bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">
-                น้ำหนัก 20%
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              เป้าหมาย: ตรงต่อเวลา สาย 0 วัน ขาด 0 วัน เชื่อมต่อระบบสแกนใบหน้า Real-Time
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-800 flex justify-between">
-              <span>สาย: {performance?.late_days || 0} วัน</span>
-              <span className="text-blue-600 font-semibold">ขาด: {performance?.absent_days || 0} วัน</span>
-            </div>
-          </div>
-
-          {/* Learning Hub */}
-          <div className="p-3.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
-                <GraduationCap className="w-3.5 h-3.5" /> Learning Hub
-              </span>
-              <span className="mes-badge bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300">
-                น้ำหนัก 20%
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              เป้าหมาย: อบรมและสอบผ่านบทเรียนในศูนย์การเรียนรู้อย่างน้อย 3 หลักสูตร/รอบประเมิน
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-800 flex justify-between">
-              <span>ผ่าน: {performance?.passed_courses || 0} หลักสูตร</span>
-              <span className="text-purple-600 font-semibold">ทักษะ: {performance?.skill_count || 0} ด้าน</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
