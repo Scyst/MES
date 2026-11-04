@@ -499,31 +499,43 @@ try {
             $startRow = ($page - 1) * $limit;
             
             $conditions = []; $params = [];
-            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(created_at AS DATE) >= ?"; $params[] = $_GET['startDate']; }
-            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(created_at AS DATE) <= ?"; $params[] = $_GET['endDate']; }
-            if (!empty($_GET['user'])) { $conditions[] = "username LIKE ?"; $params[] = '%' . $_GET['user'] . '%'; }
-            if (!empty($_GET['action_type'])) { $conditions[] = "action LIKE ?"; $params[] = '%' . $_GET['action_type'] . '%'; }
-            if (!empty($_GET['module'])) { $conditions[] = "module LIKE ?"; $params[] = '%' . $_GET['module'] . '%'; }
+            if (!empty($_GET['startDate'])) { $conditions[] = "CAST(s.created_at AS DATE) >= ?"; $params[] = $_GET['startDate']; }
+            if (!empty($_GET['endDate'])) { $conditions[] = "CAST(s.created_at AS DATE) <= ?"; $params[] = $_GET['endDate']; }
+            if (!empty($_GET['user'])) { 
+                $conditions[] = "(s.username LIKE ? OR u.fullname LIKE ?)"; 
+                $userKw = '%' . $_GET['user'] . '%';
+                $params[] = $userKw;
+                $params[] = $userKw;
+            }
+            if (!empty($_GET['action_type'])) { $conditions[] = "s.action LIKE ?"; $params[] = '%' . $_GET['action_type'] . '%'; }
+            if (!empty($_GET['module'])) { $conditions[] = "s.module LIKE ?"; $params[] = '%' . $_GET['module'] . '%'; }
             if (!empty($_GET['search'])) { 
-                $conditions[] = "(remark LIKE ? OR old_value LIKE ? OR new_value LIKE ? OR ref_id LIKE ?)"; 
+                $conditions[] = "(s.remark LIKE ? OR s.old_value LIKE ? OR s.new_value LIKE ? OR s.ref_id LIKE ? OR s.ip_address LIKE ?)"; 
                 $searchKw = '%' . $_GET['search'] . '%';
-                array_push($params, $searchKw, $searchKw, $searchKw, $searchKw); 
+                array_push($params, $searchKw, $searchKw, $searchKw, $searchKw, $searchKw); 
             }
             
             $whereClause = $conditions ? "WHERE " . implode(" AND ", $conditions) : "";
 
-            $totalStmt = $pdo->prepare("SELECT COUNT(*) AS total FROM dbo.SYSTEM_LOGS $whereClause");
+            $totalStmt = $pdo->prepare("
+                SELECT COUNT(*) AS total 
+                FROM dbo.SYSTEM_LOGS s WITH (NOLOCK)
+                LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON s.username = u.username
+                $whereClause
+            ");
             $totalStmt->execute($params);
             $total = (int)$totalStmt->fetch()['total'];
             
             $dataSql = "
                 SELECT * FROM ( 
                     SELECT 
-                        id, username, role, action, module, ref_id, 
-                        old_value, new_value, remark, ip_address, 
-                        created_at, 
-                        ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) AS RowNum 
-                    FROM dbo.SYSTEM_LOGS 
+                        s.id, s.user_id, s.username, s.role, s.action, s.module, s.ref_id, 
+                        s.old_value, s.new_value, s.remark, s.ip_address, 
+                        s.created_at,
+                        u.fullname,
+                        ROW_NUMBER() OVER (ORDER BY s.created_at DESC, s.id DESC) AS RowNum 
+                    FROM dbo.SYSTEM_LOGS s WITH (NOLOCK)
+                    LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON s.username = u.username
                     $whereClause 
                 ) AS NumberedRows 
                 WHERE RowNum > ? AND RowNum <= ?";

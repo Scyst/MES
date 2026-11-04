@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, History, Filter, Download, X } from 'lucide-react';
+import { Search, History, Filter, Download, X, Globe } from 'lucide-react';
 import { userManageApi } from '../../../shared/services/userManageApi';
 
 export default function AuditLogsTab() {
@@ -115,52 +115,65 @@ export default function AuditLogsTab() {
         </div>
         
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
-          <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
+          <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
             <thead className="bg-slate-50 dark:bg-slate-850 sticky top-0 z-10 shadow-2xs">
               <tr className="border-b border-slate-200 dark:border-slate-750 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider">
-                <th className="py-2 px-3 font-semibold w-[140px]">Timestamp</th>
-                <th className="py-2 px-3 font-semibold w-[120px]">User</th>
-                <th className="py-2 px-3 font-semibold w-[120px]">Action</th>
-                <th className="py-2 px-3 font-semibold w-[100px]">Module</th>
-                <th className="py-2 px-3 font-semibold w-[100px]">Ref ID</th>
-                <th className="py-2 px-3 font-semibold">Remark / Context</th>
-                <th className="py-2 px-3 font-semibold w-[200px]">Old Value</th>
-                <th className="py-2 px-3 font-semibold w-[200px]">New Value</th>
+                <th className="py-2.5 px-3 font-semibold w-[140px]">วัน-เวลา</th>
+                <th className="py-2.5 px-3 font-semibold min-w-[160px]">ผู้ใช้งาน (User)</th>
+                <th className="py-2.5 px-3 font-semibold w-[130px]">IP Address</th>
+                <th className="py-2.5 px-3 font-semibold w-[110px]">Action</th>
+                <th className="py-2.5 px-3 font-semibold w-[100px]">Module</th>
+                <th className="py-2.5 px-3 font-semibold w-[90px]">Ref ID</th>
+                <th className="py-2.5 px-3 font-semibold">Remark / Context</th>
+                <th className="py-2.5 px-3 font-semibold w-[110px] text-center">Old Data</th>
+                <th className="py-2.5 px-3 font-semibold w-[110px] text-center">New Data</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading && logs.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-gray-500">Loading...</td>
+                  <td colSpan="9" className="py-12 text-center text-slate-400">Loading...</td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-gray-500">ไม่พบประวัติ (No logs found)</td>
+                  <td colSpan="9" className="py-12 text-center text-slate-400">ไม่พบประวัติ (No logs found)</td>
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/50">
-                    <td className="py-2 px-3 text-xs text-gray-500">{log.created_at}</td>
+                  <tr key={log.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-2 px-3 text-xs font-mono text-slate-500 whitespace-nowrap">{log.created_at}</td>
                     <td className="py-2 px-3">
-                      <div className="font-medium text-gray-800">{log.username}</div>
-                      <div className="text-[10px] text-gray-400">{log.ip_address}</div>
+                      <div className="font-semibold text-slate-800 dark:text-slate-100 text-xs">
+                        {log.fullname || log.username}
+                      </div>
+                      {log.fullname && (
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          รหัส: {log.username}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-3">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{log.ip_address || '-'}</span>
+                      </div>
                     </td>
                     <td className="py-2 px-3">
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        log.action === 'API_ERROR' || log.action === 'SYSTEM_ERROR' ? 'bg-red-100 text-red-700' :
-                        log.action === 'LOGIN' ? 'bg-emerald-100 text-emerald-700' :
-                        log.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
-                        log.action === 'DELETE' ? 'bg-orange-100 text-orange-700' :
-                        'bg-gray-100 text-gray-700'
+                        log.action === 'API_ERROR' || log.action === 'SYSTEM_ERROR' ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300' :
+                        log.action === 'LOGIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' :
+                        log.action === 'UPDATE' || log.action === 'UPDATE_USER' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300' :
+                        log.action === 'DELETE' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300' :
+                        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                       }`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-xs font-mono text-indigo-700">{log.module}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{log.ref_id}</td>
-                    <td className="py-2 px-3 text-xs text-gray-700 max-w-[200px] truncate" title={log.remark}>{log.remark || '-'}</td>
-                    <td className="py-2 px-3">{renderJsonText(log.old_value, 'Old Value Data')}</td>
-                    <td className="py-2 px-3">{renderJsonText(log.new_value, 'New Value Data')}</td>
+                    <td className="py-2 px-3 text-xs font-mono text-indigo-700 dark:text-indigo-400">{log.module}</td>
+                    <td className="py-2 px-3 text-xs text-slate-600 dark:text-slate-400">{log.ref_id}</td>
+                    <td className="py-2 px-3 text-xs text-slate-700 dark:text-slate-300 max-w-[200px] truncate" title={log.remark}>{log.remark || '-'}</td>
+                    <td className="py-2 px-3 text-center">{renderJsonText(log.old_value, 'Old Value Data')}</td>
+                    <td className="py-2 px-3 text-center">{renderJsonText(log.new_value, 'New Value Data')}</td>
                   </tr>
                 ))
               )}
