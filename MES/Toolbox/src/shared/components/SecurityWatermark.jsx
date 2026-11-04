@@ -5,14 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
  * SecurityWatermark
  * Industrial Data Leakage Prevention (DLP) Component
  *
- * Renders a dynamic, low-opacity, repeating vector watermark over confidential
- * screens (e.g., BOM Formulas, SAP Pricing, System Audit Logs).
+ * Renders a dynamic, visible, non-intrusive repeating vector watermark over confidential
+ * screens (e.g., BOM Formulas, SAP Valuation, System Audit Logs).
  *
  * Features:
  * - Real-time User Identity binding (Fullname + Employee ID)
  * - Anti-tamper Date & Access Classification
+ * - Deterrence Visibility: Balanced 12% opacity (Clearly perceptible to users, zero obstruction to table data)
  * - 100% Non-intrusive UX: `pointer-events-none`, `user-select-none` (Zero click/scroll blocking)
- * - Tilted vector grid with high contrast resilience under smartphone camera capture
+ * - Robust UTF-8 Base64 SVG data URI (Cross-browser Unicode & Thai font support)
  * - Print-aware: retains watermark on physical paper/PDF export
  *
  * Usage:
@@ -29,7 +30,7 @@ import { useAuth } from '../contexts/AuthContext';
  */
 export default function SecurityWatermark({
   classification = 'SNC CONFIDENTIAL',
-  opacity = 0.042,
+  opacity = 0.12,
   children,
   className = '',
   fullscreen = false,
@@ -54,9 +55,9 @@ export default function SecurityWatermark({
     const line1 = escapeXml(`${rawName} ${rawId} • ${classification}`);
     const line2 = escapeXml(`${dateStr} • SNC RESTRICTED INDUSTRIAL ASSET • DO NOT COPY`);
 
-    // 380x210 repeating tile with -22deg tilted text
+    // 460x230 repeating tile with -22deg tilted text for optimal readability and spacing
     const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="380" height="210">
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="230">
   <style>
     text {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -65,33 +66,42 @@ export default function SecurityWatermark({
       user-select: none;
     }
     .title {
-      font-size: 11px;
-      fill: rgba(71, 85, 105, ${opacity});
+      font-size: 13px;
+      fill: rgba(51, 65, 85, ${opacity});
     }
     .sub {
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 500;
       letter-spacing: 0.8px;
-      fill: rgba(100, 116, 139, ${opacity * 0.85});
+      fill: rgba(71, 85, 105, ${opacity * 0.85});
     }
   </style>
-  <g transform="rotate(-22 190 105)">
-    <text x="20" y="70" class="title">${line1}</text>
-    <text x="40" y="92" class="sub">${line2}</text>
-    <text x="210" y="175" class="title">${line1}</text>
-    <text x="230" y="197" class="sub">${line2}</text>
+  <g transform="rotate(-22 230 115)">
+    <text x="20" y="80" class="title">${line1}</text>
+    <text x="35" y="102" class="sub">${line2}</text>
+    <text x="250" y="195" class="title">${line1}</text>
+    <text x="265" y="217" class="sub">${line2}</text>
   </g>
 </svg>
 `.trim();
 
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    try {
+      // Safe UTF-8 Base64 conversion for browser runtime
+      const base64 = typeof window !== 'undefined' && window.btoa
+        ? window.btoa(unescape(encodeURIComponent(svg)))
+        : Buffer.from(svg, 'utf-8').toString('base64');
+      return `data:image/svg+xml;base64,${base64}`;
+    } catch (e) {
+      // Fallback to URI encoding if Base64 fails
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
   }, [user?.fullname, user?.username, classification, opacity]);
 
   const overlayElement = (
     <div
       aria-hidden="true"
       className={`pointer-events-none select-none z-20 ${
-        fullscreen ? 'fixed inset-0' : 'absolute inset-0'
+        fullscreen ? 'fixed inset-0' : 'absolute inset-0 min-w-full min-h-full'
       } ${className}`}
       style={{
         backgroundImage: `url("${watermarkSvgDataUri}")`,
