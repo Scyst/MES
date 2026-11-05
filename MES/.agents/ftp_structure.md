@@ -288,6 +288,7 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/planner/uploads
 /Toolbox/api/planner/uploads/avatars
 /Toolbox/api/profile
+/Toolbox/api/store
 /Toolbox/api/transport
 /Toolbox/api/transport/auth
 /Toolbox/api/transport/master

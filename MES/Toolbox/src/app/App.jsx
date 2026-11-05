@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from '../shared/components/AppLayout';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
+import GlobalAiAssistant from '../shared/components/GlobalAiAssistant';
 import { AuthProvider, useAuth } from '../shared/contexts/AuthContext';
 import { FeedbackProvider } from '../shared/contexts/FeedbackContext';
 import { LanguageProvider } from '../shared/contexts/LanguageContext';
@@ -20,6 +21,7 @@ const InboundHubPage = lazy(() => import('../modules/InboundHub/pages/InboundHub
 const StandalonePartnerPortalPage = lazy(() => import('../modules/InboundHub/pages/StandalonePartnerPortalPage'));
 const DocumentCenterPage = lazy(() => import('../modules/DocumentCenter/pages/DocumentCenterPage'));
 const LearningHubApp = lazy(() => import('../modules/LearningHub/LearningHubApp'));
+const StoreApp = lazy(() => import('../modules/Store/StoreApp'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -155,6 +157,14 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดศูนย์รวมเอกสาร (Document Center)...</div>}>
                     <DocumentCenterPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="store/*" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบริหารคลังสินค้า (Store Management)...</div>}>
+                    <StoreApp />
                   </Suspense>
                 </ErrorBoundary>
               } />

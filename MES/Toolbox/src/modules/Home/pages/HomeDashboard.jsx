@@ -199,8 +199,8 @@ export default function HomeDashboard() {
 
   const warehouseServices = useMemo(() => [
     { title: 'Inbound Hub (SCM-Store)', desc: 'ศูนย์กลางเชื่อมเอกสาร ลูกค้า–SCM–สโตร์', icon: Package, colorClass: 'bg-orange-100 text-orange-700', to: '/inbound-hub' },
-    { title: 'Store Dashboard', desc: 'ศูนย์ควบคุมและคิวจ่ายสโตร์', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeDashboard.php', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
-    { title: 'Inventory Stock', desc: 'ตรวจสอบสต็อกและพิกัดแท็กสินค้า', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/inventoryDashboard.php' },
+    { title: 'Store & Inventory Hub', desc: 'ศูนย์กลางสต็อกคงคลังและอนุมัติตัดยอด', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/store', badge: 'SPA' },
+    { title: 'Visual Cycle Count', desc: 'ตรวจนับสินค้าคลังแบบ Visual Map & Blind Count', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=cycle-count', badge: 'SPA' },
     { title: 'Warehouse Operations', desc: 'จัดการคลังสินค้า (รับเข้า/โหลดขาย)', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/warehouse_operations.php', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
     { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลัง', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/rmReceiving.php', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
     { title: 'Scrap & Replacement', desc: 'เบิก/คืน วัตถุดิบ', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeRequest.php' },

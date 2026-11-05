@@ -7,14 +7,54 @@ import {
   Zap, FileText, RefreshCw, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare
 } from 'lucide-react';
 
-const SUGGESTED_QUICK_ACTIONS = [
-  'สรุปข้อมูลประจำวัน',
-  'สรุปข้อมูลของเมื่อวาน',
-  'สรุปข้อมูลสัปดาห์ก่อน',
-  'สรุปข้อมูลเดือนก่อน',
-  'แจกแจงกำลังพลกะเช้า-ดึกวันนี้',
-  'เปรียบเทียบสัปดาห์นี้กับสัปดาห์ที่แล้ว'
-];
+function getQuickActionsForPath(pathname) {
+  if (!pathname) pathname = '';
+  if (pathname.startsWith('/learning')) {
+    return [
+      'แนะนำหลักสูตร AI & Machine Vision',
+      'สรุปเนื้อหา PLC & Automation',
+      'แนวทางการต่อยอดสู่ Industry 4.0',
+      'สรุปข้อมูลประจำวัน',
+      'สถานะแจ้งซ่อมเครื่องจักร (PE) วันนี้'
+    ];
+  }
+  if (pathname.startsWith('/documents')) {
+    return [
+      'ค้นหา WI การประกอบ W20',
+      'ขอรายการ SOP แผนกขึ้นรูป',
+      'สรุปข้อมูลประจำวัน',
+      'สรุปข้อมูลของเมื่อวาน',
+      'สถานะแจ้งซ่อมเครื่องจักร (PE) วันนี้'
+    ];
+  }
+  if (pathname.startsWith('/planner')) {
+    return [
+      'สรุปงานที่ค้างในสปรินต์นี้',
+      'งานที่มีความเสี่ยงส่งมอบล่าช้า',
+      'สรุปข้อมูลประจำวัน',
+      'สรุปข้อมูลของเมื่อวาน',
+      'แจกแจงกำลังพลกะเช้า-ดึกวันนี้'
+    ];
+  }
+  if (pathname.startsWith('/transport')) {
+    return [
+      'สรุปรถรับส่งพนักงานสายบ้านฉาง',
+      'สรุปข้อมูลประจำวัน',
+      'สรุปข้อมูลของเมื่อวาน',
+      'แจกแจงกำลังพลกะเช้า-ดึกวันนี้'
+    ];
+  }
+  return [
+    'สรุปข้อมูลประจำวัน',
+    'สรุปข้อมูลของเมื่อวาน',
+    'ต้นทุนวัตถุดิบและค่าโสหุ้ยเดือน 10',
+    'สถานะแจ้งซ่อมเครื่องจักร (PE) วันนี้',
+    'สรุปข้อมูลสัปดาห์ก่อน',
+    'สรุปข้อมูลเดือนก่อน',
+    'แจกแจงกำลังพลกะเช้า-ดึกวันนี้',
+    'เปรียบเทียบสัปดาห์นี้กับสัปดาห์ที่แล้ว'
+  ];
+}
 
 function getModuleName(pathname) {
   if (!pathname || pathname === '/') return 'หน้าหลัก (Home Dashboard)';
@@ -22,9 +62,11 @@ function getModuleName(pathname) {
   if (pathname.startsWith('/transport')) return 'ระบบจองรถรับส่ง (Transport Hub)';
   if (pathname.startsWith('/planner')) return 'ทีมแพลนเนอร์ (Team Planner)';
   if (pathname.startsWith('/admin')) return 'การจัดการระบบและ Audit Logs';
-  if (pathname.startsWith('/settings')) return 'ตั้งค่าระบบ (System Settings)';
+  if (pathname.startsWith('/settings') || pathname.startsWith('/system-settings')) return 'ตั้งค่าระบบ (System Settings)';
   if (pathname.startsWith('/paint-chem')) return 'ห้องเคมีและสี (PaintChem)';
   if (pathname.startsWith('/profile')) return 'โปรไฟล์ผู้ใช้ (User Profile)';
+  if (pathname.startsWith('/store')) return 'คลังสินค้าและตรวจนับสต็อก (Store & Warehouse)';
+  if (pathname.startsWith('/learning')) return 'ศูนย์เรียนรู้องค์กร (MES Learning Hub)';
   return 'ระบบ MES Toolbox';
 }
 
@@ -36,12 +78,17 @@ export default function GlobalAiAssistant() {
   const userRoleLower = (user?.role || '').toLowerCase();
   const hasAccess = ['admin', 'creator'].includes(userRoleLower);
 
+  // Suppress on auth pages or external partner portal
+  if (!hasAccess || location.pathname === '/login' || location.pathname.startsWith('/partner-portal')) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
       role: 'model',
-      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time พร้อมตอบคำถามเรื่องยอดผลิต, ของเสีย (Scrap/Hold), กำลังพลกะเช้า-ดึก, ค่าแรง DLOT, OT และค่าพลังงาน สามารถพิมพ์ถามหรือเลือกหัวข้อด่วนด้านล่างได้เลยครับ',
+      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time พร้อมตอบคำถามเรื่องยอดผลิต, วัตถุดิบและค่าโสหุ้ย, สถานะแจ้งซ่อมเครื่องจักร (PE), ของเสีย, กำลังพลกะเช้า-ดึก, ค่าแรง DLOT, OT และพลังงาน สามารถพิมพ์ถามหรือเลือกหัวข้อด่วนด้านล่างได้เลยครับ',
       generated_at: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -55,6 +102,7 @@ export default function GlobalAiAssistant() {
   const inputRef = useRef(null);
   const chipsRef = useRef(null);
   const currentModuleName = getModuleName(location.pathname);
+  const quickActions = getQuickActionsForPath(location.pathname);
 
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -412,7 +460,7 @@ export default function GlobalAiAssistant() {
               onMouseMove={handleMouseMove}
               className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 text-[11px] select-none scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 cursor-grab active:cursor-grabbing scroll-smooth"
             >
-              {SUGGESTED_QUICK_ACTIONS.map((tag) => (
+              {quickActions.map((tag) => (
                 <button
                   key={tag}
                   type="button"

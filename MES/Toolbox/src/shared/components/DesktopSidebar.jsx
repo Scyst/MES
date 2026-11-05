@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, MonitorPlay, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -41,9 +41,9 @@ export const MENU_DATA = [
     title: 'WAREHOUSE & LOGISTICS',
     sectionIcon: Warehouse,
     items: [
+      { name: 'Store Management (คลังสินค้า)', icon: Store, to: '/store' },
+      { name: 'Visual Cycle Count (ตรวจนับ)', icon: MapPin, to: '/store?tab=cycle-count' },
       { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub' },
-      { name: 'Store Dashboard', icon: Store, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/storeDashboard.php', external: true },
-      { name: 'Inventory Stock', icon: Box, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/inventoryDashboard.php', external: true },
       { name: 'Warehouse Operations', icon: Warehouse, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/warehouse_operations.php', external: true },
       { name: 'RM Receiving & Tag', icon: Inbox, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/rmReceiving.php', external: true },
     ]
