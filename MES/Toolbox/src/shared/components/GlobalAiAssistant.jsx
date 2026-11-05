@@ -247,12 +247,16 @@ export default function GlobalAiAssistant() {
 
   return (
     <>
-      {/* 🌟 Floating Action Button (FAB) - Bottom Right */}
+      {/* 🌟 Floating Action Button (FAB) - Bottom Right with smart spacing for multi-widget pages */}
       {!isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-white/20"
+          className={`${
+            location.pathname.startsWith('/planner')
+              ? 'fixed bottom-22 right-4 md:bottom-22 md:right-6'
+              : 'fixed bottom-6 right-6'
+          } z-[90] group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-white/20`}
           title="เปิด MES AI Copilot (ผู้ช่วยอัจฉริยะประจำโรงงาน)"
         >
           <div className="relative">
@@ -266,17 +270,17 @@ export default function GlobalAiAssistant() {
         </button>
       )}
 
-      {/* 🌟 Backdrop */}
+      {/* 🌟 Backdrop with Supreme Z-Index */}
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
+          className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-xs transition-opacity duration-300"
         />
       )}
 
-      {/* 🌟 Slide-Over Drawer Panel */}
+      {/* 🌟 Slide-Over Drawer Panel with Supreme Z-Index above all Navbars */}
       <div
-        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-50 bg-white dark:bg-slate-900 shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-[9999] bg-white dark:bg-slate-900 shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
       >
         {/* Header */}
