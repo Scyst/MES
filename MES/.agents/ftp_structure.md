@@ -294,6 +294,7 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/transport/master
 /Toolbox/api/transport/reports
 /Toolbox/api/transport/schedules
+/Toolbox/api/utility
 /Toolbox/assets
 /Toolbox/images
 /Toolbox/images/defects

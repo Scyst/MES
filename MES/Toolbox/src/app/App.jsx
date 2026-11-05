@@ -22,6 +22,7 @@ const StandalonePartnerPortalPage = lazy(() => import('../modules/InboundHub/pag
 const DocumentCenterPage = lazy(() => import('../modules/DocumentCenter/pages/DocumentCenterPage'));
 const LearningHubApp = lazy(() => import('../modules/LearningHub/LearningHubApp'));
 const StoreApp = lazy(() => import('../modules/Store/StoreApp'));
+const UtilityDashboardPage = lazy(() => import('../modules/Utility/pages/UtilityDashboardPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -166,6 +167,14 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบริหารคลังสินค้า (Store Management)...</div>}>
                     <StoreApp />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="utility" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบติดตามการใช้พลังงาน (Utility & Energy)...</div>}>
+                    <UtilityDashboardPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

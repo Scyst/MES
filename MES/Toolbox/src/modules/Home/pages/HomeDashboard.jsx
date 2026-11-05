@@ -229,7 +229,7 @@ export default function HomeDashboard() {
     { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/autoInvoice/finance_dashboard.php', roles: ['admin', 'creator', 'manager'] },
     { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', roles: ['admin', 'creator', 'manager'] },
     { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/shipping_loading.php', roles: ['admin', 'creator', 'manager'] },
-    { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ', icon: Zap, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ TOU & LPG', icon: Zap, colorClass: 'bg-emerald-100 text-emerald-600', to: '/utility', roles: ['admin', 'creator', 'manager', 'engineer', 'supervisor'] },
   ], []);
 
   const systemAdminServices = useMemo(() => [
