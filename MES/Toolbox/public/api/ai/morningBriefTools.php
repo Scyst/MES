@@ -209,9 +209,13 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
             'total_standard_cogs_and_expenses_thb' => toMoney($matCost + $ohCost + $labor + $energy),
         ],
         'margin' => [
-            'revenue_minus_labor_and_energy_thb' => toMoney($revenue - $labor - $energy),
+            'contribution_margin_thb' => toMoney($revenue - $labor - $energy),
+            'contribution_margin_pct' => $revenue > 0 ? round(($revenue - $labor - $energy) / $revenue * 100, 2) : 0.0,
+            'operational_ebitda_proxy_thb' => toMoney($revenue - $matCost - $labor - $energy),
+            'ebitda_margin_pct' => $revenue > 0 ? round(($revenue - $matCost - $labor - $energy) / $revenue * 100, 2) : 0.0,
             'gross_profit_standard_thb' => toMoney($revenue - $matCost - $ohCost - $labor - $energy),
-            'note' => 'ต้นทุนวัตถุดิบและค่าโสหุ้ยคำนวณจาก Standard Cost Snapshot ของ BOM ที่ผูกกับยอดผลิต FG',
+            'gross_profit_margin_pct' => $revenue > 0 ? round(($revenue - $matCost - $ohCost - $labor - $energy) / $revenue * 100, 2) : 0.0,
+            'note' => 'EBITDA Proxy = รายได้ หักค่าวัตถุดิบ ค่าแรง และพลังงาน (ก่อนหักค่าเสื่อมและโสหุ้ยคงที่) | Gross Profit = รายได้ หักต้นทุนวัตถุดิบ ค่าโสหุ้ย ค่าแรง และพลังงาน',
         ],
     ];
 }
@@ -238,7 +242,9 @@ function queryModelBreakdown(string $startDate, string $endDate, ?string $teamGr
                 WHEN ISNULL(t.std_price_usd_snapshot, 0) > 0 THEN (t.std_price_usd_snapshot * ISNULL(cal.exchange_rate, 32.0))
                 ELSE ISNULL(t.std_price_snapshot, i.StandardPrice)
             END
-        ELSE 0 END) as revenue
+        ELSE 0 END) as revenue,
+        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity * ISNULL(t.std_cost_mat_snapshot, 0) ELSE 0 END) as mat_cost,
+        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity * ISNULL(t.std_cost_oh_snapshot, 0) ELSE 0 END) as oh_cost
         FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
         JOIN ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
         OUTER APPLY (SELECT TOP 1 r.model FROM MANUFACTURING_ROUTES r WITH (NOLOCK) WHERE r.item_id = i.item_id) rt
@@ -267,12 +273,20 @@ function queryModelBreakdown(string $startDate, string $endDate, ?string $teamGr
 
     $rows = [];
     foreach ($stmt->fetchAll() ?: [] as $row) {
+        $rev = (float)$row['revenue'];
+        $mat = (float)$row['mat_cost'];
+        $oh = (float)$row['oh_cost'];
+        $gp = $rev - $mat - $oh;
         $rows[] = [
             'model' => (string)$row['model_name'],
             'fg' => (int)$row['fg'],
             'hold' => (int)$row['hold'],
             'scrap' => (int)$row['scrap'],
-            'revenue' => toMoney($row['revenue']),
+            'revenue_thb' => toMoney($rev),
+            'standard_material_cost_thb' => toMoney($mat),
+            'standard_overhead_thb' => toMoney($oh),
+            'standard_gross_profit_thb' => toMoney($gp),
+            'gross_margin_pct' => $rev > 0 ? round($gp / $rev * 100, 2) : 0.0,
         ];
     }
     return $rows;
@@ -410,6 +424,37 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
     $energy = $totals['electricity'] + $totals['gas'];
     $inspected = $totals['fg'] + $totals['hold'] + $totals['scrap'];
 
+    $rev = $totals['revenue'];
+    $mat = $totals['material_cost'];
+    $oh = $totals['overhead_cost'];
+    $dlot = $totals['labor'];
+    $ebitda = $rev - $mat - $dlot - $energy;
+    $gp = $rev - $mat - $oh - $dlot - $energy;
+    $contrib = $rev - $dlot - $energy;
+
+    // Run rate projection for month-to-date queries
+    $startMonth = substr($startDate, 0, 7);
+    $endMonth = substr($endDate, 0, 7);
+    $isMtd = ($startMonth === $endMonth && $startDate === "{$startMonth}-01");
+    $runRate = null;
+    if ($isMtd && $productionDays > 0) {
+        $daysInMonth = (int)date('t', strtotime($startDate));
+        $currentDayNum = (int)date('j', strtotime($endDate));
+        $remainingDays = max(0, $daysInMonth - $currentDayNum);
+        $dailyAvgRev = $rev / $productionDays;
+        $dailyAvgEbitda = $ebitda / $productionDays;
+        $runRate = [
+            'is_month_to_date' => true,
+            'elapsed_production_days' => $productionDays,
+            'remaining_calendar_days' => $remainingDays,
+            'daily_average_revenue_thb' => toMoney($dailyAvgRev),
+            'daily_average_ebitda_thb' => toMoney($dailyAvgEbitda),
+            'projected_month_end_revenue_thb' => toMoney($rev + ($dailyAvgRev * $remainingDays)),
+            'projected_month_end_ebitda_thb' => toMoney($ebitda + ($dailyAvgEbitda * $remainingDays)),
+            'note' => 'ประมาณการยอดสิ้นเดือนจากจังหวะการผลิตเฉลี่ยต่อวัน (Run Rate) ในช่วงที่ผ่านมาของเดือน',
+        ];
+    }
+
     return [
         'start_date' => $startDate,
         'end_date' => $endDate,
@@ -421,19 +466,24 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
             'hold_pieces' => $totals['hold'],
             'scrap_pieces' => $totals['scrap'],
             'scrap_rate_pct' => $inspected > 0 ? round($totals['scrap'] / $inspected * 100, 2) : 0.0,
-            'revenue_thb' => toMoney($totals['revenue']),
-            'standard_material_cost_thb' => toMoney($totals['material_cost']),
-            'overhead_production_thb' => toMoney($totals['overhead_cost']),
-            'labor_dlot_thb' => toMoney($totals['labor']),
+            'revenue_thb' => toMoney($rev),
+            'standard_material_cost_thb' => toMoney($mat),
+            'overhead_production_thb' => toMoney($oh),
+            'labor_dlot_thb' => toMoney($dlot),
             'overtime_thb' => toMoney($totals['overtime']),
-            'overtime_pct_of_labor' => $totals['labor'] > 0 ? round($totals['overtime'] / $totals['labor'] * 100, 1) : 0.0,
+            'overtime_pct_of_labor' => $dlot > 0 ? round($totals['overtime'] / $dlot * 100, 1) : 0.0,
             'electricity_thb' => toMoney($totals['electricity']),
             'lpg_gas_thb' => toMoney($totals['gas']),
             'energy_total_thb' => toMoney($energy),
-            'revenue_minus_labor_and_energy_thb' => toMoney($totals['revenue'] - $totals['labor'] - $energy),
-            'gross_profit_standard_thb' => toMoney($totals['revenue'] - $totals['material_cost'] - $totals['overhead_cost'] - $totals['labor'] - $energy),
-            'margin_note' => 'ต้นทุนวัตถุดิบและค่าโสหุ้ยคำนวณจาก Standard Cost Snapshot ของ BOM ที่ผูกกับยอดผลิต FG',
+            'contribution_margin_thb' => toMoney($contrib),
+            'contribution_margin_pct' => $rev > 0 ? round($contrib / $rev * 100, 2) : 0.0,
+            'operational_ebitda_proxy_thb' => toMoney($ebitda),
+            'ebitda_margin_pct' => $rev > 0 ? round($ebitda / $rev * 100, 2) : 0.0,
+            'gross_profit_standard_thb' => toMoney($gp),
+            'gross_profit_margin_pct' => $rev > 0 ? round($gp / $rev * 100, 2) : 0.0,
+            'margin_note' => 'EBITDA Proxy = รายได้ หักค่าวัตถุดิบ ค่าแรง และพลังงาน | Gross Profit = รายได้ หักวัตถุดิบ ค่าแรง พลังงาน และโสหุ้ยมาตรฐาน',
         ],
+        'run_rate_projection' => $runRate,
         'daily' => $days,
     ];
 }
@@ -641,6 +691,93 @@ function querySystemAuditReport(string $targetDate, ?string $actionFilter = 'ALL
 }
 
 /**
+ * Query Inventory & Working Capital Health (เงินจมและสต็อกคงคลัง) from dbo.INVENTORY_ONHAND & dbo.ITEMS.
+ * Analyzes total valuation, category breakdown (FG, SEMI, RM, PKG), and top tied-up cash items.
+ * NOTE: Intentionally >50 lines — multi-faceted inventory valuation and category analytics.
+ */
+function queryInventoryHealthReport(?string $materialType = 'ALL', int $limitTop = 5): ?array {
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) return null;
+
+    $limitTop = max(1, min(20, $limitTop));
+
+    $summarySql = "SELECT 
+        COUNT(DISTINCT i.item_id) as total_skus,
+        ISNULL(SUM(o.quantity), 0) as total_pcs,
+        ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as total_inventory_value_thb
+        FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
+        JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
+        WHERE o.quantity > 0";
+    $stmtSummary = $pdo->query($summarySql);
+    $summary = $stmtSummary->fetch() ?: [];
+    $totalVal = (float)($summary['total_inventory_value_thb'] ?? 0);
+
+    $catSql = "SELECT 
+        ISNULL(i.material_type, 'OTHER') as mat_type,
+        COUNT(DISTINCT i.item_id) as sku_count,
+        ISNULL(SUM(o.quantity), 0) as total_qty,
+        ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as total_value_thb
+        FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
+        JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
+        WHERE o.quantity > 0
+        GROUP BY ISNULL(i.material_type, 'OTHER')
+        ORDER BY total_value_thb DESC";
+    $stmtCat = $pdo->query($catSql);
+    $categories = [];
+    foreach ($stmtCat->fetchAll() ?: [] as $row) {
+        $val = (float)$row['total_value_thb'];
+        $categories[] = [
+            'material_type' => (string)$row['mat_type'],
+            'sku_count' => (int)$row['sku_count'],
+            'total_quantity' => (float)$row['total_qty'],
+            'total_value_thb' => toMoney($val),
+            'pct_of_total_inventory' => $totalVal > 0 ? round($val / $totalVal * 100, 1) : 0.0,
+        ];
+    }
+
+    $topSql = "SELECT TOP ({$limitTop})
+        i.part_no, 
+        i.part_description, 
+        ISNULL(i.material_type, 'OTHER') as material_type, 
+        SUM(o.quantity) as onhand_qty, 
+        ISNULL(i.StandardPrice, 0) as standard_price, 
+        SUM(o.quantity * ISNULL(i.StandardPrice, 0)) as tied_up_value_thb
+        FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
+        JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
+        WHERE o.quantity > 0";
+    $topParams = [];
+    if (!empty($materialType) && $materialType !== 'ALL') {
+        $topSql .= " AND i.material_type = ?";
+        $topParams[] = $materialType;
+    }
+    $topSql .= " GROUP BY i.part_no, i.part_description, i.material_type, i.StandardPrice ORDER BY tied_up_value_thb DESC";
+    $stmtTop = $pdo->prepare($topSql);
+    $stmtTop->execute($topParams);
+    $topItems = [];
+    foreach ($stmtTop->fetchAll() ?: [] as $row) {
+        $topItems[] = [
+            'part_no' => (string)$row['part_no'],
+            'description' => (string)$row['part_description'],
+            'material_type' => (string)$row['material_type'],
+            'onhand_qty' => (float)$row['onhand_qty'],
+            'unit_standard_price_thb' => toMoney($row['standard_price']),
+            'total_tied_up_value_thb' => toMoney($row['tied_up_value_thb']),
+        ];
+    }
+
+    return [
+        'snapshot_date' => date('Y-m-d'),
+        'total_inventory_value_thb' => toMoney($totalVal),
+        'total_inventory_value_million_thb' => round($totalVal / 1000000, 2),
+        'total_skus' => (int)($summary['total_skus'] ?? 0),
+        'total_pieces' => (float)($summary['total_pcs'] ?? 0),
+        'category_breakdown' => $categories,
+        'top_tied_up_cash_items' => $topItems,
+        'note' => 'มูลค่าคำนวณจากยอด On-hand คงคลังจริงในระบบ คูณด้วยราคา Standard Price ของแต่ละ Part No.',
+    ];
+}
+
+/**
  * Gemini function declarations (schema types are upper-case per the REST API).
  *
  * @return array<int,array<string,mixed>>
@@ -652,7 +789,7 @@ function getToolDeclarations(): array {
         'functionDeclarations' => [
             [
                 'name' => 'get_daily_report',
-                'description' => 'รายงานเต็มของ 1 วัน: ยอดผลิต FG/Hold/Scrap รายโมเดล, รายได้, ต้นทุนวัตถุดิบมาตรฐาน (Standard BOM Material), ค่าโสหุ้ย (Overhead), กำลังพลแยกกะเช้า/กะดึก, ค่าแรง DLOT/OT, ค่าไฟ ค่าแก๊ส, กำไรขั้นต้นมาตรฐาน ใช้เมื่อผู้ใช้ถามเฉพาะวันใดวันหนึ่ง หรือถามกำลังพล หรือถามต้นทุนรวม',
+                'description' => 'รายงานเต็มของ 1 วัน: ยอดผลิต FG/Hold/Scrap, รายได้, ต้นทุนวัตถุดิบมาตรฐาน (Standard BOM Material), ค่าโสหุ้ย (Overhead), กำลังพลกะเช้า/กะดึก, ค่าแรง DLOT/OT, ค่าไฟ ค่าแก๊ส, กำไรขั้นต้นมาตรฐาน (Gross Profit & Margin %), และกำไรจากการดำเนินงาน EBITDA Proxy ใช้เมื่อถามยอดวันใดวันหนึ่ง หรือถามกำไร/EBITDA ประจำวัน หรือต้นทุนรวม',
                 'parameters' => [
                     'type' => 'OBJECT',
                     'properties' => ['date' => $dateProperty],
@@ -661,7 +798,7 @@ function getToolDeclarations(): array {
             ],
             [
                 'name' => 'get_range_report',
-                'description' => 'รายงานช่วงหลายวัน (สัปดาห์ เดือน สะสมเดือนนี้ หรือช่วงใดๆ ไม่เกิน 92 วัน) พร้อมยอดรวม และรายวัน ได้แก่ ผลผลิต รายได้ ต้นทุนวัตถุดิบมาตรฐาน ค่าโสหุ้ย ค่าแรง OT พลังงาน และกำไรขั้นต้น ใช้เมื่อผู้ใช้ถามเป็นช่วงเวลา หรือถามยอดเดือน หรือเทียบแนวโน้ม',
+                'description' => 'รายงานช่วงหลายวัน (สัปดาห์ เดือน สะสมเดือนนี้ หรือช่วงใดๆ ไม่เกิน 92 วัน): ยอดผลิต, รายได้, ต้นทุนวัตถุดิบมาตรฐาน, ค่าโสหุ้ย, ค่าแรง OT, พลังงาน, กำไรขั้นต้น (Gross Profit & Margin %), กำไร EBITDA Proxy (& Margin %), และประมาณการยอดสิ้นเดือน (Run Rate Forecast หากถามเดือนนี้) ใช้เมื่อผู้ใช้ถามเป็นช่วงเวลา ยอดสะสมเดือน กำไร/EBITDA หรือแนวโน้มสิ้นเดือน',
                 'parameters' => [
                     'type' => 'OBJECT',
                     'properties' => [
@@ -673,7 +810,7 @@ function getToolDeclarations(): array {
             ],
             [
                 'name' => 'get_model_breakdown',
-                'description' => 'ยอดผลิต FG, Hold, Scrap และรายได้แยกรายโมเดลในช่วงวันที่ที่ระบุ เรียงตามยอดผลิตมากไปน้อย ใช้เมื่อถามเรื่องโมเดล ของเสียรายโมเดล หรือสินค้าที่ขายดี',
+                'description' => 'ยอดผลิต FG, Hold, Scrap, รายได้, ต้นทุนวัตถุดิบ, ค่าโสหุ้ย และกำไรขั้นต้น (Standard GP & Gross Margin %) แยกรายโมเดล เรียงตามยอดผลิตมากไปน้อย ใช้เมื่อถามเรื่องโมเดล, ของเสียรายโมเดล, สินค้าที่ขายดี หรือสินค้าที่ทำกำไรสูงสุด/ต่ำสุด',
                 'parameters' => [
                     'type' => 'OBJECT',
                     'properties' => [
@@ -716,6 +853,23 @@ function getToolDeclarations(): array {
                         ],
                     ],
                     'required' => ['date'],
+                ],
+            ],
+            [
+                'name' => 'get_inventory_health_report',
+                'description' => 'รายงานสุขภาพคลังสินค้าและเงินจม (Inventory Valuation & Working Capital): ยอดมูลค่าสินค้าคงคลังรวมทั้งสิ้น (บาท), สัดส่วนเงินจมแยกตามหมวดสินค้า (FG สินค้าสำเร็จรูป, SEMI ชิ้นงานระหว่างทำ, RM วัตถุดิบ, PKG บรรจุภัณฑ์), และรายการสินค้าที่มีเงินจมสูงสุด (Top Tied-up Cash Items) ใช้เมื่อผู้บริหารหรือผู้ใช้ถามเรื่อง เงินจมในสต็อก, สินค้าคงคลัง, มูลค่าคลังสินค้า, สต็อกคงเหลือรวม หรือสินค้าตัวไหนค้างสต็อกเยอะสุด',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'material_type' => [
+                            'type' => 'STRING',
+                            'description' => 'กรองหมวดหมู่สินค้า เช่น ALL, FG, SEMI, RM, PKG หรือเว้นว่างเพื่อดูทั้งหมด',
+                        ],
+                        'limit' => [
+                            'type' => 'INTEGER',
+                            'description' => 'จำนวนสินค้าที่มีเงินจมสูงสุดที่ต้องการดึง (1-20, ค่าเริ่มต้น 5)',
+                        ],
+                    ],
                 ],
             ],
         ],
@@ -767,6 +921,13 @@ function executeTool(string $toolName, array $arguments, ?string $team, array &$
             $actionFilter = isset($arguments['action_filter']) ? (string)$arguments['action_filter'] : 'ALL';
             $limit = isset($arguments['limit']) ? (int)$arguments['limit'] : 15;
             return querySystemAuditReport($range[0], $actionFilter, $limit) ?? ['error' => 'ไม่สามารถอ่านบันทึกระบบได้'];
+        }
+
+        if ($toolName === 'get_inventory_health_report') {
+            $scopeLog[] = "มูลค่าสินค้าคงคลังและเงินจม";
+            $materialType = isset($arguments['material_type']) ? (string)$arguments['material_type'] : 'ALL';
+            $limit = isset($arguments['limit']) ? (int)$arguments['limit'] : 5;
+            return queryInventoryHealthReport($materialType, $limit) ?? ['error' => 'ไม่สามารถอ่านข้อมูลสินค้าคงคลังได้'];
         }
 
         return ['error' => "ไม่รู้จักเครื่องมือ {$toolName}"];
