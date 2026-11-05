@@ -256,12 +256,11 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                 </div>
 
                                 <div class="col-6 col-md-4 col-xl-2 financial-col">
-                                    <div class="fin-label" id="laborCardLabel">Labor (Actual DL+OT)</div>
+                                    <div class="fin-label" id="laborCardLabel">Labor (DL+OT)</div>
                                     <div class="fin-value text-main" id="prodCostDL">--</div>
                                     <div class="fin-sub-row">
                                         <span class="fin-sub-item">DL: <b id="valDL">--</b> | OT: <b id="valOT">--</b></span>
                                         <span class="fin-sub-item text-primary">Eff: <b id="valLaborEff">--</b></span>
-                                        <span class="fin-sub-item text-muted" id="valCompareLabor" style="display: none;"></span>
                                     </div>
                                 </div>
 

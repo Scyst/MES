@@ -73,7 +73,6 @@ function renderFinancialCard(data, viewMode = 'actual') {
     const btnBom = document.getElementById('btnLaborBom');
     const modeDesc = document.getElementById('laborModeDesc');
     const laborLabel = document.getElementById('laborCardLabel');
-    const otherLabor = document.getElementById('valCompareLabor');
 
     if (btnActual && btnBom) {
         if (viewMode === 'actual') {
@@ -100,17 +99,10 @@ function renderFinancialCard(data, viewMode = 'actual') {
         if (modeDesc) {
             modeDesc.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>โหมด: ค่าแรงจริง (Manpower / Morning Brief)`;
         }
-        if (laborLabel) laborLabel.textContent = "Labor (Actual DL+OT)";
+        if (laborLabel) laborLabel.textContent = "Labor (DL+OT)";
 
         safeSetText('valDL', formatNumber(data.TotalActualDL || 0, false, 2));
         safeSetText('valOT', formatNumber(data.TotalActualOT || 0, false, 2));
-
-        if (otherLabor) {
-            const stdCost = data.TotalStdDLCost ?? 0;
-            otherLabor.style.display = "";
-            otherLabor.innerHTML = `BOM Std: <b>${formatNumber(stdCost, false, 2)}</b>`;
-            otherLabor.title = "ค่าแรงมาตรฐานตามสูตรการผลิต (BOM Snapshot)";
-        }
     } else {
         const bomMetrics = dual.bom || {};
         laborCost = bomMetrics.laborCost ?? data.TotalStdDLCost ?? data.TotalDLCost ?? 0;
@@ -127,15 +119,6 @@ function renderFinancialCard(data, viewMode = 'actual') {
 
         safeSetText('valDL', formatNumber(laborCost, false, 2));
         safeSetText('valOT', "0.00");
-
-        if (otherLabor) {
-            const actualCost = data.TotalActualDLOT ?? 0;
-            const diff = laborCost - actualCost;
-            const diffSign = diff >= 0 ? `+${formatNumber(diff, false, 2)}` : formatNumber(diff, false, 2);
-            otherLabor.style.display = "";
-            otherLabor.innerHTML = `Actual: <b>${formatNumber(actualCost, false, 2)}</b> (Var: ${diffSign})`;
-            otherLabor.title = "ค่าแรงจ่ายจริงจาก Manpower และผลต่างเทียบ Standard";
-        }
     }
 
     safeSetText('prodCostDL', formatNumber(laborCost, false, 2));

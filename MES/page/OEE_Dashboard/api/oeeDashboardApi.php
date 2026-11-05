@@ -325,6 +325,8 @@ try {
                 $stdRes['TotalActualOT'] = $actualOT;
                 $stdRes['TotalActualDLOT'] = $actualDLOT;
                 $stdRes['TotalActualHeadcount'] = $actualHeadcount;
+                $stdRes['DailyActualDL'] = (float)($actRes['DailyActualDL'] ?? 0);
+                $stdRes['MonthlyActualDL'] = (float)($actRes['MonthlyActualDL'] ?? 0);
 
                 $rev = (float)($stdRes['TotalStdRevenue'] ?? 0);
                 $matCost = (float)($stdRes['TotalMatCost'] ?? 0);

@@ -43,19 +43,18 @@ BEGIN
         ISNULL(SUM(f.Normal_Cost), 0) AS TotalActualDL,
         ISNULL(SUM(f.OT_Cost), 0) AS TotalActualOT,
         ISNULL(SUM(f.Normal_Cost + f.OT_Cost), 0) AS TotalActualDLOT,
-        ISNULL(SUM(f.Count_Actual), 0) AS TotalHeadcount
+        ISNULL(SUM(f.Count_Actual), 0) AS TotalHeadcount,
+        ISNULL(SUM(CASE WHEN f.rate_type = 'DAILY' THEN f.Normal_Cost ELSE 0 END), 0) AS DailyActualDL,
+        ISNULL(SUM(CASE WHEN f.rate_type LIKE 'MONTHLY%' THEN f.Normal_Cost ELSE 0 END), 0) AS MonthlyActualDL
     FROM DateRange d
     CROSS APPLY dbo.fn_GetManpowerSummary_V2(d.SummaryDate) f
-    WHERE (@Line IS NULL OR f.display_section = @Line)
-      AND (
-          @Team IS NULL 
-          OR f.hc_group = @Team 
-          OR f.team_group = @Team
-      )
-      AND (
-          @Team IS NOT NULL 
-          OR ISNULL(f.hc_group, '') != 'EXCLUDE'
-      )
+    WHERE (
+        -- If Team is selected, match Team across all sections (matching Morning Brief & Manpower Team summary)
+        (@Team IS NOT NULL AND (f.hc_group = @Team OR f.team_group = @Team))
+        OR
+        -- If Team is not selected, filter by Line (if specified) and exclude 'EXCLUDE'
+        (@Team IS NULL AND (@Line IS NULL OR f.display_section = @Line) AND ISNULL(f.hc_group, '') != 'EXCLUDE')
+    )
     OPTION (MAXRECURSION 366);
 END
 ```
