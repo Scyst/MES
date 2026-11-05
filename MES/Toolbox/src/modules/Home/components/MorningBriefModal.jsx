@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
-import { Users, Coins, SmilePlus, Factory, Sun, Sparkles, Copy, Check, RefreshCw, AlertCircle, Bot } from 'lucide-react';
+import { Users, Coins, SmilePlus, Factory, Sun, Sparkles, Copy, Check, RefreshCw, AlertCircle, Bot, Send } from 'lucide-react';
 
 const getMoodEmoji = (score) => {
   if (score >= 4.5) return '😄';
@@ -10,6 +10,13 @@ const getMoodEmoji = (score) => {
   if (score > 0) return '😫';
   return '😐';
 };
+
+const SUGGESTED_PROMPTS = [
+  'เน้นวิเคราะห์ของเสีย (Scrap & Hold)',
+  'เจาะลึกต้นทุนค่าไฟและ OT',
+  'สรุปสั้น 3 บรรทัดสำหรับส่ง LINE',
+  'ประเมินประสิทธิภาพกำลังพลและขวัญกำลังใจ'
+];
 
 export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const [data, setData] = useState(initialData);
@@ -23,6 +30,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
 
   const [isRendered, setIsRendered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -70,12 +78,13 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
     }
   };
 
-  const handleGenerateAi = async () => {
+  const handleGenerateAi = async (promptOverride) => {
     if (!data) return;
+    const promptToSend = typeof promptOverride === 'string' ? promptOverride : customPrompt;
     setAiLoading(true);
     setAiError(null);
     try {
-      const res = await dailyLogApi.getMorningBriefAi(data, selectedTeam);
+      const res = await dailyLogApi.getMorningBriefAi(data, selectedTeam, promptToSend);
       if (res.success && res.data?.briefing) {
         setAiBriefing(res.data);
       } else {
@@ -87,6 +96,11 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleTagClick = (tag) => {
+    setCustomPrompt(tag);
+    handleGenerateAi(tag);
   };
 
   const handleCopy = () => {
@@ -152,7 +166,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                   value={selectedDate}
                   onChange={handleDateChange}
                   className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
-                  title="เลือกวันที่"
+                  title="เลือกวันที่ (ระบบจะวิเคราะห์ตามวันที่ที่เลือก)"
                 />
                 <select 
                   value={selectedTeam}
@@ -195,10 +209,10 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-800 text-sm sm:text-base">AI Executive Shift Briefing</span>
                         <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
-                          Gemini 2.0
+                          Gemini Flash
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500">สรุปภาพรวมกะการผลิตเชิงบริหารสำหรับหัวหน้างานและผู้บริหาร</p>
+                      <p className="text-xs text-slate-500">พิมพ์ระบุสิ่งที่ต้องการให้วิเคราะห์ หรือกดเลือกประเด็นด่วน</p>
                     </div>
                   </div>
 
@@ -206,7 +220,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                     {aiBriefing && (
                       <button
                         onClick={handleCopy}
-                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors"
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
                         title="คัดลอกข้อความสรุป"
                       >
                         {copied ? (
@@ -224,7 +238,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                     )}
 
                     <button
-                      onClick={handleGenerateAi}
+                      onClick={() => handleGenerateAi()}
                       disabled={aiLoading}
                       className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60 shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                     >
@@ -248,6 +262,53 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                   </div>
                 </div>
 
+                {/* Custom Instruction Box & Quick Tags */}
+                <div className="mt-3">
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAi(); }}
+                      placeholder="💡 พิมพ์บอก AI เช่น: 'เน้นวิเคราะห์ของเสีย Scrap', 'เทียบค่าไฟกับเป้าหมาย', 'สรุปสั้น 3 บรรทัด'..."
+                      className="w-full bg-white border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none shadow-2xs transition-all"
+                    />
+                    <div className="absolute right-1.5 flex items-center gap-1">
+                      {customPrompt && (
+                        <button
+                          onClick={() => setCustomPrompt('')}
+                          className="text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5 rounded cursor-pointer"
+                          title="ล้างข้อความ"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleGenerateAi()}
+                        disabled={aiLoading}
+                        className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 cursor-pointer shadow-2xs"
+                        title="สั่งวิเคราะห์ตามคำสั่งนี้"
+                      >
+                        <Send size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Suggestion Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-[11px] font-medium text-slate-500">เลือกด่วน:</span>
+                    {SUGGESTED_PROMPTS.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => handleTagClick(tag)}
+                        className="text-[11px] px-2.5 py-1 rounded-full bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs transition-all hover:scale-[1.02] cursor-pointer"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* AI Body */}
                 {aiLoading && (
                   <div className="pt-4 pb-2 text-center">
@@ -268,7 +329,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
                 {aiBriefing && !aiLoading && (
                   <div className="mt-3 pt-2">
-                    <div className="bg-white/90 border border-indigo-100 rounded-xl p-4 text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-2xs font-sans">
+                    <div className="bg-white/95 border border-indigo-100 rounded-xl p-4 text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-2xs font-sans">
                       {aiBriefing.briefing}
                     </div>
                     <div className="flex justify-between items-center mt-2 px-1 text-[11px] text-slate-400">
@@ -277,13 +338,6 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                         Model: {aiBriefing.model}
                       </span>
                     </div>
-                  </div>
-                )}
-
-                {!aiBriefing && !aiLoading && !aiError && (
-                  <div className="mt-2.5 flex items-center gap-2 text-xs text-slate-500">
-                    <Sparkles size={13} className="text-indigo-500 shrink-0" />
-                    <span>กดปุ่ม <b>"วิเคราะห์ด้วย AI"</b> เพื่อให้ Gemini วิเคราะห์ไฮไลท์การผลิต ของเสีย และคำแนะนำเชิงรุกสำหรับกะนี้</span>
                   </div>
                 )}
               </div>

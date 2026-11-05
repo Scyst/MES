@@ -51,6 +51,7 @@ if (empty($apiKey)) {
 }
 
 // Extract and sanitize brief summary
+$customPrompt = trim((string)($input['custom_prompt'] ?? ''));
 $dateText = htmlspecialchars((string)($briefData['date_text'] ?? $briefData['raw_date'] ?? date('Y-m-d')));
 $team = htmlspecialchars((string)($input['team'] ?? 'ALL'));
 
@@ -102,6 +103,11 @@ $prompt = <<<EOT
 2. **จุดเด่นและจุดเฝ้าระวัง (Key Highlights & Watchpoints):** สัดส่วนของเสีย (Scrap/Hold) หรือการใช้น้ำมัน/ไฟ/แก๊ส หรือประเด็นพนักงานขาดงานที่มีนัยสำคัญ
 3. **ข้อเสนอแนะเชิงรุกสำหรับกะวันนี้ (Actionable Recommendations):** 2-3 ข้อสั้นๆ ให้หัวหน้างานนำไปลงมือทำทันที
 EOT;
+
+if (!empty($customPrompt)) {
+    $cleanCustomPrompt = htmlspecialchars($customPrompt);
+    $prompt .= "\n\n[ประเด็นหรือคำถามเพิ่มเติมที่ผู้ใช้/ผู้บริหารต้องการเน้นเป็นพิเศษ]\n\"{$cleanCustomPrompt}\"\nโปรดวิเคราะห์และให้คำตอบเน้นย้ำประเด็นนี้อย่างชัดเจน";
+}
 
 $payload = [
     'contents' => [
@@ -182,3 +188,4 @@ echo json_encode([
     ],
     'message' => 'วิเคราะห์ข้อมูลด้วย AI สำเร็จ'
 ], JSON_UNESCAPED_UNICODE);
+

@@ -44,10 +44,11 @@ export const dailyLogApi = {
    * Generate an executive shift briefing using Gemini AI
    * @param {Object} briefData - The morning brief dataset
    * @param {string} team - Selected team ('ALL', 'TEAM 1', etc.)
+   * @param {string} customPrompt - Optional specific instructions or questions
    */
-  getMorningBriefAi: async (briefData, team = 'ALL') => {
+  getMorningBriefAi: async (briefData, team = 'ALL', customPrompt = '') => {
     const url = `${import.meta.env.BASE_URL}api/ai/morningBriefAi.php`;
-    const response = await axios.post(url, { brief_data: briefData, team }, {
+    const response = await axios.post(url, { brief_data: briefData, team, custom_prompt: customPrompt }, {
       headers: {
         'Content-Type': 'application/json'
       },
