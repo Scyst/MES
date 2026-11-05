@@ -537,6 +537,110 @@ function queryMaintenanceReport(string $startDate, string $endDate, ?string $lin
 }
 
 /**
+ * Query System & Security Audit logs from dbo.SYSTEM_LOGS.
+ * Analyzes logins, distinct active users, API errors, deletion events, and high-risk security operations.
+ * NOTE: Intentionally >50 lines — multi-faceted security and system log aggregation.
+ */
+function querySystemAuditReport(string $targetDate, ?string $actionFilter = 'ALL', int $limit = 15): ?array {
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) return null;
+
+    $limit = max(1, min(30, $limit));
+
+    $summarySql = "SELECT
+        COUNT(*) as total_events,
+        COUNT(DISTINCT username) as distinct_users,
+        SUM(CASE WHEN action = 'LOGIN' THEN 1 ELSE 0 END) as login_count,
+        SUM(CASE WHEN action = 'LOGOUT' THEN 1 ELSE 0 END) as logout_count,
+        SUM(CASE WHEN action = 'API_ERROR' THEN 1 ELSE 0 END) as api_error_count,
+        SUM(CASE WHEN action LIKE 'DELETE%' THEN 1 ELSE 0 END) as delete_count,
+        SUM(CASE WHEN action IN ('UNLOCK', 'APPROVE_USER', 'RESET_PASSWORD_DEFAULT', 'DEACTIVATE_ITEM') THEN 1 ELSE 0 END) as security_critical_count
+        FROM SYSTEM_LOGS WITH (NOLOCK)
+        WHERE CAST(created_at AS DATE) = ?";
+    $stmtSummary = $pdo->prepare($summarySql);
+    $stmtSummary->execute([$targetDate]);
+    $summary = $stmtSummary->fetch() ?: [];
+
+    $stmtErrors = $pdo->prepare("SELECT TOP 5
+        id, username, role, action, module, remark, created_at
+        FROM SYSTEM_LOGS WITH (NOLOCK)
+        WHERE CAST(created_at AS DATE) = ? AND action = 'API_ERROR'
+        ORDER BY created_at DESC");
+    $stmtErrors->execute([$targetDate]);
+    $recentErrors = [];
+    foreach ($stmtErrors->fetchAll() ?: [] as $row) {
+        $recentErrors[] = [
+            'id' => (int)$row['id'],
+            'username' => (string)$row['username'],
+            'role' => (string)($row['role'] ?? 'unknown'),
+            'module' => (string)($row['module'] ?? ''),
+            'error_detail' => (string)($row['remark'] ?? ''),
+            'time' => substr((string)$row['created_at'], 11, 8),
+        ];
+    }
+
+    $stmtRisks = $pdo->prepare("SELECT TOP 5
+        id, username, role, action, module, remark, created_at
+        FROM SYSTEM_LOGS WITH (NOLOCK)
+        WHERE CAST(created_at AS DATE) = ? AND (action LIKE 'DELETE%' OR action IN ('UNLOCK', 'DEACTIVATE_ITEM', 'RESET_PASSWORD_DEFAULT'))
+        ORDER BY created_at DESC");
+    $stmtRisks->execute([$targetDate]);
+    $recentRisks = [];
+    foreach ($stmtRisks->fetchAll() ?: [] as $row) {
+        $recentRisks[] = [
+            'id' => (int)$row['id'],
+            'username' => (string)$row['username'],
+            'role' => (string)($row['role'] ?? 'unknown'),
+            'action' => (string)$row['action'],
+            'module' => (string)($row['module'] ?? ''),
+            'remark' => (string)($row['remark'] ?? ''),
+            'time' => substr((string)$row['created_at'], 11, 8),
+        ];
+    }
+
+    $eventSql = "SELECT TOP {$limit}
+        id, username, role, action, module, remark, ip_address, created_at
+        FROM SYSTEM_LOGS WITH (NOLOCK)
+        WHERE CAST(created_at AS DATE) = ?";
+    $eventParams = [$targetDate];
+    if (!empty($actionFilter) && $actionFilter !== 'ALL') {
+        $eventSql .= " AND action = ?";
+        $eventParams[] = $actionFilter;
+    }
+    $eventSql .= " ORDER BY created_at DESC";
+    $stmtEvents = $pdo->prepare($eventSql);
+    $stmtEvents->execute($eventParams);
+    $recentEvents = [];
+    foreach ($stmtEvents->fetchAll() ?: [] as $row) {
+        $recentEvents[] = [
+            'username' => (string)$row['username'],
+            'role' => (string)($row['role'] ?? 'unknown'),
+            'action' => (string)$row['action'],
+            'module' => (string)($row['module'] ?? ''),
+            'remark' => (string)($row['remark'] ?? ''),
+            'ip' => (string)($row['ip_address'] ?? 'internal'),
+            'time' => substr((string)$row['created_at'], 11, 8),
+        ];
+    }
+
+    return [
+        'target_date' => $targetDate,
+        'metrics' => [
+            'total_events_today' => (int)($summary['total_events'] ?? 0),
+            'active_distinct_users' => (int)($summary['distinct_users'] ?? 0),
+            'login_count' => (int)($summary['login_count'] ?? 0),
+            'logout_count' => (int)($summary['logout_count'] ?? 0),
+            'api_error_count' => (int)($summary['api_error_count'] ?? 0),
+            'delete_operations_count' => (int)($summary['delete_count'] ?? 0),
+            'security_critical_count' => (int)($summary['security_critical_count'] ?? 0),
+        ],
+        'system_errors' => $recentErrors,
+        'high_risk_actions' => $recentRisks,
+        'recent_events_sample' => $recentEvents,
+    ];
+}
+
+/**
  * Gemini function declarations (schema types are upper-case per the REST API).
  *
  * @return array<int,array<string,mixed>>
@@ -595,6 +699,25 @@ function getToolDeclarations(): array {
                     'required' => ['start_date', 'end_date'],
                 ],
             ],
+            [
+                'name' => 'get_system_audit_logs',
+                'description' => 'ตรวจสอบบันทึกการใช้งานระบบ (System Audit & Security Logs) จากตาราง SYSTEM_LOGS: สรุปจำนวนการ Login, จำนวนผู้ใช้ที่เข้าใช้งาน (Active Users), ข้อผิดพลาดของระบบ (API_ERROR), การลบหรือแก้ไขข้อมูลสำคัญ (DELETE, UNLOCK, DEACTIVATE), รายการเหตุการณ์ล่าสุด ใช้เมื่อผู้ใช้ถามเรื่อง การใช้งานระบบ, มีใครใช้งานบ้าง, มีอะไรแปลกๆ ในระบบไหม, เช็คระบบ, ตรวจสอบความปลอดภัย หรือ Error ของระบบ',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'date' => $dateProperty,
+                        'action_filter' => [
+                            'type' => 'STRING',
+                            'description' => 'กรองเฉพาะประเภท action เช่น ALL, LOGIN, API_ERROR, DELETE หรือเว้นว่างเพื่อดูภาพรวมทั้งหมด',
+                        ],
+                        'limit' => [
+                            'type' => 'INTEGER',
+                            'description' => 'จำนวนเหตุการณ์ล่าสุดที่ต้องการดึง (1-30, ค่าเริ่มต้น 15)',
+                        ],
+                    ],
+                    'required' => ['date'],
+                ],
+            ],
         ],
     ]];
 }
@@ -634,6 +757,16 @@ function executeTool(string $toolName, array $arguments, ?string $team, array &$
             $scopeLog[] = "งานซ่อมบำรุง PE {$range[0]} ถึง {$range[1]}";
             $line = isset($arguments['line']) ? (string)$arguments['line'] : null;
             return queryMaintenanceReport($range[0], $range[1], $line);
+        }
+
+        if ($toolName === 'get_system_audit_logs') {
+            $date = (string)($arguments['date'] ?? '');
+            $range = normalizeDateRange($date, $date);
+            if (isset($range['error'])) return $range;
+            $scopeLog[] = "บันทึกการใช้งานระบบ {$range[0]}";
+            $actionFilter = isset($arguments['action_filter']) ? (string)$arguments['action_filter'] : 'ALL';
+            $limit = isset($arguments['limit']) ? (int)$arguments['limit'] : 15;
+            return querySystemAuditReport($range[0], $actionFilter, $limit) ?? ['error' => 'ไม่สามารถอ่านบันทึกระบบได้'];
         }
 
         return ['error' => "ไม่รู้จักเครื่องมือ {$toolName}"];
