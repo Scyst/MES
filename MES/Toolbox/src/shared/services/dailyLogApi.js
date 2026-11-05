@@ -41,6 +41,22 @@ export const dailyLogApi = {
   },
 
   /**
+   * Generate an executive shift briefing using Gemini AI
+   * @param {Object} briefData - The morning brief dataset
+   * @param {string} team - Selected team ('ALL', 'TEAM 1', etc.)
+   */
+  getMorningBriefAi: async (briefData, team = 'ALL') => {
+    const url = `${import.meta.env.BASE_URL}api/ai/morningBriefAi.php`;
+    const response = await axios.post(url, { brief_data: briefData, team }, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true
+    });
+    return response.data;
+  },
+
+  /**
    * Mark a supervisor reply as read
    * @param {string} logDate - Format YYYY-MM-DD
    * @param {number} periodId - 1 (Start), 2 (Break), 3 (End)

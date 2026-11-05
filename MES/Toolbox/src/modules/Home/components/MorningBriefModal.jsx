@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
-import { Users, Coins, SmilePlus, Factory, Sun } from 'lucide-react';
+import { Users, Coins, SmilePlus, Factory, Sun, Sparkles, Copy, Check, RefreshCw, AlertCircle, Bot } from 'lucide-react';
 
 const getMoodEmoji = (score) => {
   if (score >= 4.5) return '😄';
@@ -17,6 +17,12 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const [selectedTeam, setSelectedTeam] = useState('ALL');
   const [selectedDate, setSelectedDate] = useState(initialData?.raw_date || '');
   const [dontShowToday, setDontShowToday] = useState(false);
+
+  // AI Executive Briefing State
+  const [aiBriefing, setAiBriefing] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const [isRendered, setIsRendered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -50,6 +56,8 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
   const fetchBrief = async (team, date) => {
     setLoading(true);
+    setAiBriefing(null);
+    setAiError(null);
     try {
       const res = await dailyLogApi.getMorningBrief(team, date);
       if (res.success && res.data) {
@@ -60,6 +68,32 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerateAi = async () => {
+    if (!data) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await dailyLogApi.getMorningBriefAi(data, selectedTeam);
+      if (res.success && res.data?.briefing) {
+        setAiBriefing(res.data);
+      } else {
+        setAiError(res.message || 'ไม่สามารถวิเคราะห์ข้อมูลด้วย AI ได้');
+      }
+    } catch (err) {
+      console.error(err);
+      setAiError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อบริการ AI');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!aiBriefing?.briefing) return;
+    navigator.clipboard.writeText(aiBriefing.briefing);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleTeamChange = (e) => {
@@ -104,7 +138,12 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                 <Sun className="text-gray-900" size={24} />
               </div>
               <div className="flex-1">
-                <h4 className="text-xl font-bold mb-0">Morning Brief</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xl font-bold mb-0">Morning Brief</h4>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 shadow-xs">
+                    <Sparkles size={11} /> AI Ready
+                  </span>
+                </div>
                 <div className="text-white/70 text-sm">สรุปผลงานวันที่ {data?.date_text || selectedDate}</div>
               </div>
               <div className="flex items-center gap-3">
@@ -124,7 +163,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                   <option value="TEAM 1" className="text-gray-900">TEAM 1</option>
                   <option value="TEAM 2" className="text-gray-900">TEAM 2</option>
                 </select>
-                <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors p-1 text-2xl leading-none">
+                <button onClick={handleClose} className="text-white/70 hover:text-white transition-colors p-1 text-2xl leading-none" title="ปิด">
                   &times;
                 </button>
               </div>
@@ -143,111 +182,220 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
               <p className="mt-4 font-semibold">ไม่มีข้อมูลสำหรับวันนี้</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              
-              {/* Manpower */}
-              <div className="col-span-1 md:col-span-12">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-l-blue-600">
-                  <div className="text-gray-500 text-xs font-bold uppercase mb-3 flex items-center gap-2">
-                    <Users size={16} /> Manpower Statistics
-                  </div>
-                  <div className="flex justify-around text-center mt-2">
+            <div className="space-y-4">
+
+              {/* 🌟 AI Executive Shift Briefing Card */}
+              <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/70 to-blue-50/80 border border-indigo-200/90 rounded-2xl p-4 sm:p-5 shadow-xs transition-all">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-indigo-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-xs">
+                      <Bot size={20} />
+                    </div>
                     <div>
-                      <h4 className="text-2xl font-bold mb-0 text-gray-900">{data.mp_total}</h4>
-                      <small className="text-gray-500 font-medium">ทั้งหมด</small>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800 text-sm sm:text-base">AI Executive Shift Briefing</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
+                          Gemini 2.0
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">สรุปภาพรวมกะการผลิตเชิงบริหารสำหรับหัวหน้างานและผู้บริหาร</p>
                     </div>
-                    <div className="text-green-600">
-                      <h4 className="text-2xl font-bold mb-0">{data.mp_present}</h4>
-                      <small className="font-medium">เข้างาน</small>
-                    </div>
-                    <div className="text-red-500">
-                      <h4 className="text-2xl font-bold mb-0">{data.mp_leave}</h4>
-                      <small className="font-medium">ขาด/ลา</small>
-                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {aiBriefing && (
+                      <button
+                        onClick={handleCopy}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors"
+                        title="คัดลอกข้อความสรุป"
+                      >
+                        {copied ? (
+                          <>
+                            <Check size={14} className="text-green-600" />
+                            <span className="text-green-600">คัดลอกแล้ว</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} className="text-slate-500" />
+                            <span>คัดลอกสรุป</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleGenerateAi}
+                      disabled={aiLoading}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60 shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    >
+                      {aiLoading ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span>กำลังประมวลผล...</span>
+                        </>
+                      ) : aiBriefing ? (
+                        <>
+                          <RefreshCw size={14} />
+                          <span>วิเคราะห์ใหม่</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={14} className="text-amber-300" />
+                          <span>วิเคราะห์ด้วย AI</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Labor & Utility */}
-              <div className="col-span-1 md:col-span-7">
-                <div className="bg-white p-4 rounded-2xl shadow-sm h-full flex flex-col">
-                  <div className="text-gray-500 text-xs font-bold uppercase mb-3 flex items-center gap-2">
-                    <Coins size={16} /> Labor & Utility Costs (THB)
+                {/* AI Body */}
+                {aiLoading && (
+                  <div className="pt-4 pb-2 text-center">
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 animate-pulse">
+                      <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
+                      กำลังดึงข้อมูลกำลังพล ต้นทุนพลังงาน และยอดของเสียเพื่อจัดทำบทสรุป...
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">ใช้เวลาประมวลผลประมาณ 2-3 วินาที</p>
                   </div>
-                  <div className="flex-1 flex flex-col justify-center">
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-gray-500 text-sm font-medium">DLOT (รวมทั้งหมด)</span>
-                      <span className="font-bold text-gray-900">{data.dlot_total}</span>
+                )}
+
+                {aiError && (
+                  <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{aiError}</span>
+                  </div>
+                )}
+
+                {aiBriefing && !aiLoading && (
+                  <div className="mt-3 pt-2">
+                    <div className="bg-white/90 border border-indigo-100 rounded-xl p-4 text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-2xs font-sans">
+                      {aiBriefing.briefing}
                     </div>
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-gray-500 text-sm font-medium">DL (เฉพาะรายวัน)</span>
-                      <span className="font-bold text-gray-900">{data.dl_daily}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-gray-500 text-sm font-medium">OT (รวมทั้งหมด)</span>
-                      <span className="font-bold text-blue-600">{data.ot_total}</span>
-                    </div>
-                    <div className="flex justify-between py-2 mt-2">
-                      <span className="text-gray-500 text-sm font-medium">ค่าไฟ / ค่าแก๊ส</span>
-                      <span className="font-bold text-red-500">
-                        {data.elec_cost} / {data.gas_cost}
+                    <div className="flex justify-between items-center mt-2 px-1 text-[11px] text-slate-400">
+                      <span>ประมวลผลเมื่อ: {aiBriefing.generated_at}</span>
+                      <span className="font-mono text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">
+                        Model: {aiBriefing.model}
                       </span>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {!aiBriefing && !aiLoading && !aiError && (
+                  <div className="mt-2.5 flex items-center gap-2 text-xs text-slate-500">
+                    <Sparkles size={13} className="text-indigo-500 shrink-0" />
+                    <span>กดปุ่ม <b>"วิเคราะห์ด้วย AI"</b> เพื่อให้ Gemini วิเคราะห์ไฮไลท์การผลิต ของเสีย และคำแนะนำเชิงรุกสำหรับกะนี้</span>
+                  </div>
+                )}
               </div>
 
-              {/* Team Mood */}
-              <div className="col-span-1 md:col-span-5">
-                <div className="bg-white p-4 rounded-2xl shadow-sm h-full flex flex-col text-center">
-                  <div className="text-gray-500 text-xs font-bold uppercase mb-3 w-full text-left flex items-center gap-2">
-                    <SmilePlus size={16} /> Team Mood
-                  </div>
-                  <div className="flex-1 flex flex-col items-center justify-center">
-                    <div className="text-6xl mb-2 select-none">
-                      {getMoodEmoji(parseFloat(data.mood_avg))}
+              {/* Grid 12 columns for statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                
+                {/* Manpower */}
+                <div className="col-span-1 md:col-span-12">
+                  <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-l-blue-600">
+                    <div className="text-gray-500 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                      <Users size={16} /> Manpower Statistics
                     </div>
-                    <div className="font-bold text-xl text-gray-900">
-                      {parseFloat(data.mood_avg).toFixed(1)} <span className="text-sm text-gray-400 font-normal">/ 5.0</span>
+                    <div className="flex justify-around text-center mt-2">
+                      <div>
+                        <h4 className="text-2xl font-bold mb-0 text-gray-900">{data.mp_total}</h4>
+                        <small className="text-gray-500 font-medium">ทั้งหมด</small>
+                      </div>
+                      <div className="text-green-600">
+                        <h4 className="text-2xl font-bold mb-0">{data.mp_present}</h4>
+                        <small className="font-medium">เข้างาน</small>
+                      </div>
+                      <div className="text-red-500">
+                        <h4 className="text-2xl font-bold mb-0">{data.mp_leave}</h4>
+                        <small className="font-medium">ขาด/ลา</small>
+                      </div>
                     </div>
-                    <small className="text-gray-500 mt-1 font-medium">ความสุขเฉลี่ยพนักงาน</small>
                   </div>
                 </div>
-              </div>
 
-              {/* Production */}
-              <div className="col-span-1 md:col-span-12">
-                <div className="bg-slate-800 text-white p-4 sm:p-5 rounded-2xl shadow-sm">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b border-slate-600/50 gap-3">
-                    <span className="text-xs font-bold uppercase text-white/75 flex items-center gap-2">
-                      <Factory size={16} /> Production & Revenue
-                    </span>
-                    <span className="bg-green-500 text-white py-1.5 px-4 rounded-lg font-bold text-lg shadow-sm">
-                      ฿ {data.revenue}
-                    </span>
+                {/* Labor & Utility */}
+                <div className="col-span-1 md:col-span-7">
+                  <div className="bg-white p-4 rounded-2xl shadow-sm h-full flex flex-col">
+                    <div className="text-gray-500 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                      <Coins size={16} /> Labor & Utility Costs (THB)
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm font-medium">DLOT (รวมทั้งหมด)</span>
+                        <span className="font-bold text-gray-900">{data.dlot_total}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm font-medium">DL (เฉพาะรายวัน)</span>
+                        <span className="font-bold text-gray-900">{data.dl_daily}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm font-medium">OT (รวมทั้งหมด)</span>
+                        <span className="font-bold text-blue-600">{data.ot_total}</span>
+                      </div>
+                      <div className="flex justify-between py-2 mt-2">
+                        <span className="text-gray-500 text-sm font-medium">ค่าไฟ / ค่าแก๊ส</span>
+                        <span className="font-bold text-red-500">
+                          {data.elec_cost} / {data.gas_cost}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    {data.models && data.models.length > 0 ? data.models.map((m, idx) => {
-                      const fg = parseInt(m.fg) || 0;
-                      const hold = parseInt(m.hold) || 0;
-                      const scrap = parseInt(m.scrap) || 0;
-                      const total = fg + hold + scrap;
+                </div>
 
-                      return (
-                        <div key={idx} className="flex flex-col sm:flex-row justify-between sm:items-center py-2 border-b border-slate-700/50 last:border-0 gap-1 text-sm">
-                          <span className="font-semibold text-white">{m.model_name}</span>
-                          <div className="flex items-center gap-2">
-                            <b className="text-green-400 text-base">{fg.toLocaleString()}</b> <span className="text-slate-400">ตัว</span>
-                            <span className="text-slate-500 text-xs ml-2 hidden sm:inline">(Hold {hold}, Scrap {scrap}, Total {total.toLocaleString()})</span>
+                {/* Team Mood */}
+                <div className="col-span-1 md:col-span-5">
+                  <div className="bg-white p-4 rounded-2xl shadow-sm h-full flex flex-col text-center">
+                    <div className="text-gray-500 text-xs font-bold uppercase mb-3 w-full text-left flex items-center gap-2">
+                      <SmilePlus size={16} /> Team Mood
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                      <div className="text-6xl mb-2 select-none">
+                        {getMoodEmoji(parseFloat(data.mood_avg))}
+                      </div>
+                      <div className="font-bold text-xl text-gray-900">
+                        {parseFloat(data.mood_avg).toFixed(1)} <span className="text-sm text-gray-400 font-normal">/ 5.0</span>
+                      </div>
+                      <small className="text-gray-500 mt-1 font-medium">ความสุขเฉลี่ยพนักงาน</small>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Production */}
+                <div className="col-span-1 md:col-span-12">
+                  <div className="bg-slate-800 text-white p-4 sm:p-5 rounded-2xl shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b border-slate-600/50 gap-3">
+                      <span className="text-xs font-bold uppercase text-white/75 flex items-center gap-2">
+                        <Factory size={16} /> Production & Revenue
+                      </span>
+                      <span className="bg-green-500 text-white py-1.5 px-4 rounded-lg font-bold text-lg shadow-sm">
+                        ฿ {data.revenue}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {data.models && data.models.length > 0 ? data.models.map((m, idx) => {
+                        const fg = parseInt(m.fg) || 0;
+                        const hold = parseInt(m.hold) || 0;
+                        const scrap = parseInt(m.scrap) || 0;
+                        const total = fg + hold + scrap;
+
+                        return (
+                          <div key={idx} className="flex flex-col sm:flex-row justify-between sm:items-center py-2 border-b border-slate-700/50 last:border-0 gap-1 text-sm">
+                            <span className="font-semibold text-white">{m.model_name}</span>
+                            <div className="flex items-center gap-2">
+                              <b className="text-green-400 text-base">{fg.toLocaleString()}</b> <span className="text-slate-400">ตัว</span>
+                              <span className="text-slate-500 text-xs ml-2 hidden sm:inline">(Hold {hold}, Scrap {scrap}, Total {total.toLocaleString()})</span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }) : (
-                      <div className="text-slate-400 text-sm text-center py-4">ไม่มีข้อมูลการผลิต</div>
-                    )}
+                        );
+                      }) : (
+                        <div className="text-slate-400 text-sm text-center py-4">ไม่มีข้อมูลการผลิต</div>
+                      )}
+                    </div>
                   </div>
                 </div>
+
               </div>
 
             </div>
@@ -269,7 +417,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
         {/* Footer */}
         <div className="bg-gray-50 p-4 pt-0 flex justify-center pb-6">
-          <button onClick={handleClose} className="px-10 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-full transition-colors shadow-md">
+          <button onClick={handleClose} className="px-10 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-full transition-colors shadow-md cursor-pointer">
             ปิดหน้าต่างสรุป
           </button>
         </div>
