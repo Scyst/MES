@@ -78,79 +78,95 @@ export default function InventoryDashboardTab() {
     <div className="flex flex-col h-full space-y-3 animate-fadeIn relative">
       <SecurityWatermark classification="WAREHOUSE INVENTORY • CONFIDENTIAL" />
 
-      {/* Summary Metrics Cards - High Density & Mobile Responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 flex-shrink-0">
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2.5 sm:gap-3">
-          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+      {/* Summary Metrics Cards - Horizontal Swipeable on Mobile, Grid on Desktop */}
+      <div className="flex md:grid md:grid-cols-4 gap-2 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap snap-x snap-mandatory pb-0.5 flex-nowrap flex-shrink-0 touch-pan-x">
+        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
             <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
               SKUs ทั้งหมด
             </span>
-            <div className="text-base sm:text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight truncate">
               {Number(totalSkus).toLocaleString()}
             </div>
           </div>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2.5 sm:gap-3">
-          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+        <div className="min-w-[155px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
               มูลค่าคงคลัง
             </span>
-            <div className="text-base sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight truncate">
               ฿{Number(totalVal).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
           </div>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2.5 sm:gap-3">
-          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
             <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
               สินค้าใกล้หมด
             </span>
-            <div className="text-base sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight truncate">
               {Number(lowStock).toLocaleString()}
             </div>
           </div>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2.5 sm:gap-3">
-          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
+        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
             <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
               ยอดรวมคงคลัง
             </span>
-            <div className="text-base sm:text-2xl font-black text-purple-600 dark:text-purple-400 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-2xl font-black text-purple-600 dark:text-purple-400 font-mono tracking-tight truncate">
               {Number(totalQty).toLocaleString()}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar - Responsive */}
-      <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 flex-shrink-0">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหา Part No, SAP No, รายละเอียดชิ้นงาน..."
-            className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-          />
-        </form>
+      {/* Filter and Search Bar - Mobile Ultra-Compact & Horizontal Scrollable Controls */}
+      <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-1.5 sm:gap-2.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="ค้นหา Part No, SAP No, รายละเอียดชิ้นงาน..."
+              className="w-full text-xs pl-8 pr-2.5 py-1.5 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+            />
+          </form>
 
-        <div className="flex items-center gap-2 flex-wrap">
+          {/* Refresh Button on mobile next to search bar */}
+          <button
+            type="button"
+            onClick={() => {
+              setPage(1);
+              fetchData();
+            }}
+            title="รีเฟรชข้อมูล"
+            className="h-8 w-8 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0 md:hidden"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* Action Controls - Horizontal Scrollable on Mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap flex-nowrap py-0.5 md:py-0 flex-shrink-0">
           {/* Material Category Selector */}
           <select
             value={materialType}
@@ -158,7 +174,7 @@ export default function InventoryDashboardTab() {
               setMaterialType(e.target.value);
               setPage(1);
             }}
-            className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 flex-1 sm:flex-initial"
+            className="text-xs h-8 px-2.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 flex-shrink-0"
           >
             <option value="ALL">ทุกหมวดวัตถุดิบ (ALL)</option>
             {categories.map((c, idx) => {
@@ -173,7 +189,7 @@ export default function InventoryDashboardTab() {
           </select>
 
           {/* Hide Zero Qty Toggle */}
-          <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap">
+          <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer px-2.5 py-1 h-8 rounded-lg bg-slate-50/70 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 whitespace-nowrap flex-shrink-0">
             <input
               type="checkbox"
               checked={hideZero}
@@ -181,11 +197,12 @@ export default function InventoryDashboardTab() {
                 setHideZero(e.target.checked);
                 setPage(1);
               }}
-              className="rounded text-blue-600 focus:ring-0"
+              className="rounded text-blue-600 focus:ring-0 w-3.5 h-3.5"
             />
             <span>ซ่อนยอดศูนย์</span>
           </label>
 
+          {/* Refresh Button on desktop */}
           <button
             type="button"
             onClick={() => {
@@ -193,7 +210,7 @@ export default function InventoryDashboardTab() {
               fetchData();
             }}
             title="รีเฟรชข้อมูล"
-            className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="hidden md:flex p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
