@@ -140,6 +140,29 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
     $stmtMood->execute([$targetDate]);
     $moodAverage = (float)(($stmtMood->fetch() ?: [])['mood_avg'] ?? 0);
 
+    $matOhQuery = "SELECT
+        ISNULL(SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity * ISNULL(t.std_cost_mat_snapshot, 0) ELSE 0 END), 0) as mat_cost,
+        ISNULL(SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity * ISNULL(t.std_cost_oh_snapshot, 0) ELSE 0 END), 0) as oh_cost
+        FROM STOCK_TRANSACTIONS t WITH (NOLOCK)
+        JOIN ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
+        LEFT JOIN USERS u WITH (NOLOCK) ON t.created_by_user_id = u.id
+        WHERE CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) = ?
+          AND t.transaction_type = 'PRODUCTION_FG'
+          AND i.material_type = 'FG'";
+    $matOhParams = [$targetDate];
+    if ($teamParam !== null) {
+        $matOhQuery .= " AND (u.team_group = ? OR t.notes LIKE ?)";
+        $matOhParams[] = $teamParam;
+        $matOhParams[] = '%[[]TEAM_OVERRIDE: ' . $teamParam . ']%';
+    } else {
+        $matOhQuery .= " AND ISNULL(u.team_group, '') != 'EXCLUDE'";
+    }
+    $stmtMatOh = $pdo->prepare($matOhQuery);
+    $stmtMatOh->execute($matOhParams);
+    $matOh = $stmtMatOh->fetch() ?: ['mat_cost' => 0, 'oh_cost' => 0];
+    $matCost = (float)$matOh['mat_cost'];
+    $ohCost = (float)$matOh['oh_cost'];
+
     $revenue = 0.0;
     $totalFg = 0;
     $totalHold = 0;
@@ -155,6 +178,7 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
     $overtime = (float)$cost['total_ot'];
     $electricity = (float)$util['elec_cost'];
     $gas = (float)$util['gas_cost'];
+    $energy = $electricity + $gas;
 
     return [
         'date' => $targetDate,
@@ -174,16 +198,20 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
             'mood_average_of_5' => round($moodAverage, 2),
         ],
         'cost' => [
+            'standard_material_cost_thb' => toMoney($matCost),
+            'overhead_production_thb' => toMoney($ohCost),
             'labor_dlot_thb' => toMoney($labor),
             'overtime_thb' => toMoney($overtime),
             'overtime_pct_of_labor' => $labor > 0 ? round($overtime / $labor * 100, 1) : 0.0,
             'electricity_thb' => toMoney($electricity),
             'lpg_gas_thb' => toMoney($gas),
-            'energy_total_thb' => toMoney($electricity + $gas),
+            'energy_total_thb' => toMoney($energy),
+            'total_standard_cogs_and_expenses_thb' => toMoney($matCost + $ohCost + $labor + $energy),
         ],
         'margin' => [
-            'revenue_minus_labor_and_energy_thb' => toMoney($revenue - $labor - $electricity - $gas),
-            'note' => 'ยังไม่หักต้นทุนวัตถุดิบและค่าโสหุ้ยอื่น ไม่ใช่กำไรสุทธิ',
+            'revenue_minus_labor_and_energy_thb' => toMoney($revenue - $labor - $energy),
+            'gross_profit_standard_thb' => toMoney($revenue - $matCost - $ohCost - $labor - $energy),
+            'note' => 'ต้นทุนวัตถุดิบและค่าโสหุ้ยคำนวณจาก Standard Cost Snapshot ของ BOM ที่ผูกกับยอดผลิต FG',
         ],
     ];
 }
@@ -284,6 +312,8 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
         SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity ELSE 0 END) as fg,
         SUM(CASE WHEN t.transaction_type = 'PRODUCTION_HOLD' THEN t.quantity ELSE 0 END) as hold,
         SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END) as scrap,
+        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity * ISNULL(t.std_cost_mat_snapshot, 0) ELSE 0 END) as mat_cost,
+        SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN t.quantity * ISNULL(t.std_cost_oh_snapshot, 0) ELSE 0 END) as oh_cost,
         SUM(CASE WHEN t.transaction_type = 'PRODUCTION_FG' THEN
             t.quantity * CASE
                 WHEN ISNULL(t.std_price_usd_snapshot, 0) > 0 THEN (t.std_price_usd_snapshot * ISNULL(cal.exchange_rate, 32.0))
@@ -333,7 +363,11 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
         GROUP BY s.log_date";
     $utilByDate = fetchRowsIndexedByDate($utilSql, [$startDate, $endDate], 'util_date');
 
-    $totals = ['fg' => 0, 'hold' => 0, 'scrap' => 0, 'revenue' => 0.0, 'labor' => 0.0, 'overtime' => 0.0, 'electricity' => 0.0, 'gas' => 0.0];
+    $totals = [
+        'fg' => 0, 'hold' => 0, 'scrap' => 0,
+        'revenue' => 0.0, 'material_cost' => 0.0, 'overhead_cost' => 0.0,
+        'labor' => 0.0, 'overtime' => 0.0, 'electricity' => 0.0, 'gas' => 0.0
+    ];
     $days = [];
     $productionDays = 0;
     for ($cursor = strtotime($startDate); $cursor <= strtotime($endDate); $cursor += 86400) {
@@ -342,6 +376,9 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
         $labor = $laborByDate[$dateKey] ?? null;
         $util = $utilByDate[$dateKey] ?? null;
 
+        $matCostDay = (float)($prod['mat_cost'] ?? 0);
+        $ohCostDay = (float)($prod['oh_cost'] ?? 0);
+
         $day = [
             'date' => $dateKey,
             'weekday' => date('D', $cursor),
@@ -349,6 +386,8 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
             'hold' => (int)($prod['hold'] ?? 0),
             'scrap' => (int)($prod['scrap'] ?? 0),
             'revenue_thb' => toMoney($prod['revenue'] ?? 0),
+            'material_cost_thb' => toMoney($matCostDay),
+            'overhead_cost_thb' => toMoney($ohCostDay),
             'labor_dlot_thb' => toMoney($labor['dlot'] ?? 0),
             'overtime_thb' => toMoney($labor['ot'] ?? 0),
             'energy_thb' => toMoney((float)($util['elec'] ?? 0) + (float)($util['gas'] ?? 0)),
@@ -360,6 +399,8 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
         $totals['hold'] += $day['hold'];
         $totals['scrap'] += $day['scrap'];
         $totals['revenue'] += $day['revenue_thb'];
+        $totals['material_cost'] += $matCostDay;
+        $totals['overhead_cost'] += $ohCostDay;
         $totals['labor'] += $day['labor_dlot_thb'];
         $totals['overtime'] += $day['overtime_thb'];
         $totals['electricity'] += (float)($util['elec'] ?? 0);
@@ -381,6 +422,8 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
             'scrap_pieces' => $totals['scrap'],
             'scrap_rate_pct' => $inspected > 0 ? round($totals['scrap'] / $inspected * 100, 2) : 0.0,
             'revenue_thb' => toMoney($totals['revenue']),
+            'standard_material_cost_thb' => toMoney($totals['material_cost']),
+            'overhead_production_thb' => toMoney($totals['overhead_cost']),
             'labor_dlot_thb' => toMoney($totals['labor']),
             'overtime_thb' => toMoney($totals['overtime']),
             'overtime_pct_of_labor' => $totals['labor'] > 0 ? round($totals['overtime'] / $totals['labor'] * 100, 1) : 0.0,
@@ -388,9 +431,108 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
             'lpg_gas_thb' => toMoney($totals['gas']),
             'energy_total_thb' => toMoney($energy),
             'revenue_minus_labor_and_energy_thb' => toMoney($totals['revenue'] - $totals['labor'] - $energy),
-            'margin_note' => 'ยังไม่หักต้นทุนวัตถุดิบและค่าโสหุ้ยอื่น ไม่ใช่กำไรสุทธิ',
+            'gross_profit_standard_thb' => toMoney($totals['revenue'] - $totals['material_cost'] - $totals['overhead_cost'] - $totals['labor'] - $energy),
+            'margin_note' => 'ต้นทุนวัตถุดิบและค่าโสหุ้ยคำนวณจาก Standard Cost Snapshot ของ BOM ที่ผูกกับยอดผลิต FG',
         ],
         'daily' => $days,
+    ];
+}
+
+/**
+ * PE Maintenance & Machine downtime report for a date range.
+ * NOTE: Intentionally >50 lines — three maintenance queries merged into one operational report.
+ *
+ * @return array<string,mixed>
+ */
+function queryMaintenanceReport(string $startDate, string $endDate, ?string $line = null, ?string $status = null): array {
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) return ['error' => 'Database connection unavailable'];
+
+    $summarySql = "SELECT
+        COUNT(*) as total_wo,
+        SUM(CASE WHEN status IN ('Open', 'Pending', 'In Progress') THEN 1 ELSE 0 END) as pending_wo,
+        SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_wo,
+        SUM(CASE WHEN priority = 'Critical' THEN 1 ELSE 0 END) as critical_count,
+        SUM(CASE WHEN priority = 'High' THEN 1 ELSE 0 END) as high_count,
+        ISNULL(SUM(repair_minutes), 0) as total_repair_minutes
+        FROM PE_WORK_ORDERS WITH (NOLOCK)
+        WHERE CAST(requested_at AS DATE) >= ? AND CAST(requested_at AS DATE) <= ?";
+    $summaryParams = [$startDate, $endDate];
+    if (!empty($line) && $line !== 'ALL') {
+        $summarySql .= " AND line = ?";
+        $summaryParams[] = $line;
+    }
+    if (!empty($status) && $status !== 'ALL') {
+        $summarySql .= " AND status = ?";
+        $summaryParams[] = $status;
+    }
+    $stmtSummary = $pdo->prepare($summarySql);
+    $stmtSummary->execute($summaryParams);
+    $summary = $stmtSummary->fetch() ?: [];
+
+    $topMachSql = "SELECT TOP 5
+        machine_name, line, COUNT(*) as issue_count, ISNULL(SUM(repair_minutes), 0) as total_repair_min
+        FROM PE_WORK_ORDERS WITH (NOLOCK)
+        WHERE CAST(requested_at AS DATE) >= ? AND CAST(requested_at AS DATE) <= ?";
+    $topMachParams = [$startDate, $endDate];
+    if (!empty($line) && $line !== 'ALL') {
+        $topMachSql .= " AND line = ?";
+        $topMachParams[] = $line;
+    }
+    $topMachSql .= " GROUP BY machine_name, line ORDER BY COUNT(*) DESC, total_repair_min DESC";
+    $stmtTop = $pdo->prepare($topMachSql);
+    $stmtTop->execute($topMachParams);
+    $topMachines = [];
+    foreach ($stmtTop->fetchAll() ?: [] as $row) {
+        $topMachines[] = [
+            'machine_name' => (string)$row['machine_name'],
+            'line' => (string)$row['line'],
+            'issue_count' => (int)$row['issue_count'],
+            'total_repair_minutes' => (int)$row['total_repair_min'],
+        ];
+    }
+
+    $urgentSql = "SELECT TOP 5
+        wo_number, machine_name, line, priority, status, issue_title, requested_at, repair_minutes
+        FROM PE_WORK_ORDERS WITH (NOLOCK)
+        WHERE CAST(requested_at AS DATE) >= ? AND CAST(requested_at AS DATE) <= ?";
+    $urgentParams = [$startDate, $endDate];
+    if (!empty($line) && $line !== 'ALL') {
+        $urgentSql .= " AND line = ?";
+        $urgentParams[] = $line;
+    }
+    $urgentSql .= " ORDER BY CASE WHEN priority = 'Critical' THEN 1 WHEN priority = 'High' THEN 2 ELSE 3 END, requested_at DESC";
+    $stmtUrgent = $pdo->prepare($urgentSql);
+    $stmtUrgent->execute($urgentParams);
+    $recentIssues = [];
+    foreach ($stmtUrgent->fetchAll() ?: [] as $row) {
+        $recentIssues[] = [
+            'wo_number' => (string)$row['wo_number'],
+            'machine_name' => (string)$row['machine_name'],
+            'line' => (string)$row['line'],
+            'priority' => (string)$row['priority'],
+            'status' => (string)$row['status'],
+            'issue_title' => (string)$row['issue_title'],
+            'requested_at' => substr((string)$row['requested_at'], 0, 16),
+            'repair_minutes' => $row['repair_minutes'] !== null ? (int)$row['repair_minutes'] : null,
+        ];
+    }
+
+    return [
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+        'line_filter' => $line ?? 'ALL',
+        'metrics' => [
+            'total_work_orders' => (int)($summary['total_wo'] ?? 0),
+            'pending_work_orders' => (int)($summary['pending_wo'] ?? 0),
+            'completed_work_orders' => (int)($summary['completed_wo'] ?? 0),
+            'critical_issues_count' => (int)($summary['critical_count'] ?? 0),
+            'high_issues_count' => (int)($summary['high_count'] ?? 0),
+            'total_repair_downtime_minutes' => (int)($summary['total_repair_minutes'] ?? 0),
+            'total_repair_downtime_hours' => round(((int)($summary['total_repair_minutes'] ?? 0)) / 60, 1),
+        ],
+        'top_problem_machines' => $topMachines,
+        'recent_urgent_work_orders' => $recentIssues,
     ];
 }
 
@@ -406,7 +548,7 @@ function getToolDeclarations(): array {
         'functionDeclarations' => [
             [
                 'name' => 'get_daily_report',
-                'description' => 'รายงานเต็มของ 1 วัน: ยอดผลิต FG/Hold/Scrap รายโมเดล, รายได้, กำลังพลแยกกะเช้า/กะดึก, ค่าแรง DLOT/OT, ค่าไฟ ค่าแก๊ส, ความสุขพนักงาน ใช้เมื่อผู้ใช้ถามเฉพาะวันใดวันหนึ่ง หรือถามกำลังพล',
+                'description' => 'รายงานเต็มของ 1 วัน: ยอดผลิต FG/Hold/Scrap รายโมเดล, รายได้, ต้นทุนวัตถุดิบมาตรฐาน (Standard BOM Material), ค่าโสหุ้ย (Overhead), กำลังพลแยกกะเช้า/กะดึก, ค่าแรง DLOT/OT, ค่าไฟ ค่าแก๊ส, กำไรขั้นต้นมาตรฐาน ใช้เมื่อผู้ใช้ถามเฉพาะวันใดวันหนึ่ง หรือถามกำลังพล หรือถามต้นทุนรวม',
                 'parameters' => [
                     'type' => 'OBJECT',
                     'properties' => ['date' => $dateProperty],
@@ -415,7 +557,7 @@ function getToolDeclarations(): array {
             ],
             [
                 'name' => 'get_range_report',
-                'description' => 'รายงานช่วงหลายวัน (สัปดาห์ เดือน สะสมเดือนนี้ หรือช่วงใดๆ ไม่เกิน 92 วัน) พร้อมยอดรวม และรายวัน ได้แก่ ผลผลิต รายได้ ค่าแรง OT พลังงาน ใช้เมื่อผู้ใช้ถามเป็นช่วงเวลา หรือเทียบแนวโน้ม',
+                'description' => 'รายงานช่วงหลายวัน (สัปดาห์ เดือน สะสมเดือนนี้ หรือช่วงใดๆ ไม่เกิน 92 วัน) พร้อมยอดรวม และรายวัน ได้แก่ ผลผลิต รายได้ ต้นทุนวัตถุดิบมาตรฐาน ค่าโสหุ้ย ค่าแรง OT พลังงาน และกำไรขั้นต้น ใช้เมื่อผู้ใช้ถามเป็นช่วงเวลา หรือถามยอดเดือน หรือเทียบแนวโน้ม',
                 'parameters' => [
                     'type' => 'OBJECT',
                     'properties' => [
@@ -433,6 +575,22 @@ function getToolDeclarations(): array {
                     'properties' => [
                         'start_date' => $dateProperty,
                         'end_date' => $dateProperty,
+                    ],
+                    'required' => ['start_date', 'end_date'],
+                ],
+            ],
+            [
+                'name' => 'get_maintenance_report',
+                'description' => 'รายงานแจ้งซ่อมและสถานะเครื่องจักร (PE Maintenance / Work Orders): ยอดใบงานทั้งหมด, รอดำเนินการ, ซ่อมเสร็จ, ใบงานวิกฤต (Critical/High), เครื่องจักรที่เสียบ่อยที่สุด, เวลา Downtime/เวลาซ่อมรวม และรายการแจ้งซ่อมเร่งด่วนล่าสุด ใช้เมื่อถามเรื่องเครื่องจักรเสีย, แจ้งซ่อม, ซ่อมบำรุง, PE, เครื่องจักรไหนมีปัญหา',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'start_date' => $dateProperty,
+                        'end_date' => $dateProperty,
+                        'line' => [
+                            'type' => 'STRING',
+                            'description' => 'สายการผลิตที่ต้องการกรอง เช่น PRESS, SPOT, PAINT, ASSEMBLY หรือ ALL หากไม่ระบุ',
+                        ],
                     ],
                     'required' => ['start_date', 'end_date'],
                 ],
@@ -468,6 +626,14 @@ function executeTool(string $toolName, array $arguments, ?string $team, array &$
                 return ['start_date' => $range[0], 'end_date' => $range[1], 'models' => queryModelBreakdown($range[0], $range[1], $team)];
             }
             return queryRangeReport($range[0], $range[1], $team) ?? ['error' => 'ไม่สามารถอ่านข้อมูลช่วงดังกล่าวได้'];
+        }
+
+        if ($toolName === 'get_maintenance_report') {
+            $range = normalizeDateRange((string)($arguments['start_date'] ?? ''), (string)($arguments['end_date'] ?? ''));
+            if (isset($range['error'])) return $range;
+            $scopeLog[] = "งานซ่อมบำรุง PE {$range[0]} ถึง {$range[1]}";
+            $line = isset($arguments['line']) ? (string)$arguments['line'] : null;
+            return queryMaintenanceReport($range[0], $range[1], $line);
         }
 
         return ['error' => "ไม่รู้จักเครื่องมือ {$toolName}"];

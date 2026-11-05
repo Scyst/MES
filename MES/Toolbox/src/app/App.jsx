@@ -41,7 +41,8 @@ export default function App() {
         <FeedbackProvider>
           <HashRouter>
             <AuthProvider>
-          <Routes>
+              <GlobalAiAssistant />
+              <Routes>
             <Route path="/login" element={
               <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">กำลังโหลด...</div>}>
                 <Login />
