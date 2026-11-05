@@ -383,14 +383,16 @@ $payload = [
 ];
 
 $candidateModels = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
     'gemini-flash-lite-latest',
-    'gemini-2.5-flash-lite',
-    'gemini-flash-latest'
+    'gemini-3.5-flash'
 ];
 
 $replyText = null;
 $usedModel = null;
 $lastError = null;
+$hitRateLimit = false;
 
 foreach ($candidateModels as $model) {
     $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
@@ -422,16 +424,23 @@ foreach ($candidateModels as $model) {
             break;
         }
     } else {
+        if ($httpCode === 429) {
+            $hitRateLimit = true;
+        }
         $lastError = "Model {$model} returned HTTP {$httpCode}: " . ($curlError ?: $response);
     }
 }
 
 if ($replyText === null) {
-    http_response_code(502);
+    http_response_code($hitRateLimit ? 429 : 502);
+    $userMsg = $hitRateLimit 
+        ? 'ขณะนี้มีการเรียกใช้งาน AI ถี่เกินโควตาทดลองใช้ฟรี (จำกัด 15 ครั้ง/นาที) กรุณารอประมาณ 15-20 วินาทีแล้วลองกดใหม่อีกครั้งครับ'
+        : 'ไม่สามารถเชื่อมต่อบริการ AI ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง';
+
     echo json_encode([
         'success' => false,
         'data' => null,
-        'message' => 'ไม่สามารถเชื่อมต่อบริการ AI ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง',
+        'message' => $userMsg,
         'debug' => $lastError
     ], JSON_UNESCAPED_UNICODE);
     exit;
