@@ -58,11 +58,12 @@ export default function SecurityWatermark({
 
     // 560x260 spacious repeating tile with -20deg tilted single clean line
     // High-legibility large bold font (15.5px, weight 700) with wide spacing to eliminate visual clutter
+    // Explicit Tahoma and Leelawadee UI for reliable cross-browser Thai font rendering in SVG
     const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="260">
   <style>
     text {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: Tahoma, "Leelawadee UI", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-size: 15.5px;
       font-weight: 700;
       letter-spacing: 0.8px;
