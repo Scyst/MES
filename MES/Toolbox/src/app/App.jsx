@@ -18,6 +18,7 @@ const TransportApp = lazy(() => import('../modules/Transport/TransportApp'));
 const TeamPlannerApp = lazy(() => import('../modules/TeamPlanner/TeamPlannerApp'));
 const InboundHubPage = lazy(() => import('../modules/InboundHub/pages/InboundHubPage'));
 const StandalonePartnerPortalPage = lazy(() => import('../modules/InboundHub/pages/StandalonePartnerPortalPage'));
+const DocumentCenterPage = lazy(() => import('../modules/DocumentCenter/pages/DocumentCenterPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -136,6 +137,14 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดศูนย์กลางรับสินค้าขาเข้า...</div>}>
                     <InboundHubPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="documents" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดศูนย์รวมเอกสาร (Document Center)...</div>}>
+                    <DocumentCenterPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

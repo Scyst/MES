@@ -184,7 +184,7 @@ export default function HomeDashboard() {
     { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php' },
     { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟร์คลิฟต์', icon: Truck, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php' },
-    { title: 'Document Center', desc: 'คู่มือและเอกสารการทำงาน', icon: FolderOpen, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/documentCenter/documentCenterUI.php' },
+    { title: 'Document Center', desc: 'คู่มือและเอกสารการทำงาน (WI/SOP/CAD)', icon: FolderOpen, colorClass: 'bg-indigo-100 text-indigo-700', to: '/documents' },
   ], []);
 
   const productionServices = useMemo(() => [

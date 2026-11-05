@@ -23,7 +23,7 @@ export const MENU_DATA = [
       { name: 'Forklift Booking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php', external: true },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
       { name: 'Team Planner (แผนงานทีม)', icon: Calendar, to: '/planner' },
-      { name: 'Document Center', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/documentCenter/documentCenterUI.php', external: true },
+      { name: 'Document Center (ศูนย์เอกสาร)', icon: FolderOpen, to: '/documents' },
     ]
   },
   {
