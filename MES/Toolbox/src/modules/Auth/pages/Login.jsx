@@ -16,19 +16,44 @@ export default function Login() {
   const { user, login, checkAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Read target path from router search (?redirect=...), window.location.search, or router state
+  const searchParams = new URLSearchParams(location.search || window.location.search);
+  const redirectParam = searchParams.get('redirect');
+
   const from =
+    redirectParam ||
     (location.state?.from?.pathname
       ? location.state.from.pathname +
       (location.state.from.search || '') +
       (location.state.from.hash || '')
       : null) || '/';
 
+  const handlePostLoginRedirect = (target) => {
+    if (!target || target === '/login') {
+      navigate('/', { replace: true });
+      return;
+    }
+    // If target is an external URL (e.g. Learning Hub, full absolute path, or relative ../)
+    if (
+      target.startsWith('http://') ||
+      target.startsWith('https://') ||
+      target.startsWith('/iot-toolbox') ||
+      target.includes('LearningHub') ||
+      target.startsWith('../')
+    ) {
+      window.location.href = target;
+      return;
+    }
+    navigate(target, { replace: true });
+  };
+
   // Redirect automatically when `user` becomes authenticated (including via Cross-Tab Login Sync)
   useEffect(() => {
     if (user) {
-      navigate(from === '/login' ? '/' : from, { replace: true });
+      handlePostLoginRedirect(from);
     }
-  }, [user, navigate, from]);
+  }, [user, from]);
 
   // Also re-verify session if user switches back to this login tab after logging in elsewhere
   useEffect(() => {
@@ -52,7 +77,7 @@ export default function Login() {
 
     const result = await login(username, password);
     if (result.success) {
-      navigate(from === '/login' ? '/' : from, { replace: true });
+      handlePostLoginRedirect(from);
     } else {
       setError(result.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
       setIsLoading(false);

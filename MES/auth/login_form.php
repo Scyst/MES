@@ -90,6 +90,12 @@ function getFriendlyPageName($url) {
                             Sign In <i class="fas fa-arrow-right ms-2"></i>
                         </button>
                     </div>
+                    <div class="mt-3 pt-3 border-top text-center">
+                        <p class="text-muted small mb-2">สำหรับนักเรียน / นักศึกษาฝึกงาน / สมาชิกเข้าอบรม:</p>
+                        <a href="../../Toolbox/#/login<?php echo !empty($redirectTarget) ? '?redirect=' . urlencode($redirectTarget) : ''; ?>" class="btn btn-outline-success btn-sm w-100 fw-bold">
+                            <i class="fas fa-user-graduate me-1"></i> สมัครสมาชิก / เข้าสู่ระบบใหม่ (TOOLBOX OS)
+                        </a>
+                    </div>
                 </form>
             </div>
             

@@ -13,7 +13,7 @@ import PostDetail from './pages/PostDetail';
 import Leaderboard from './pages/Leaderboard';
 import AuditDashboard from './pages/AuditDashboard';
 import UserProfile from './pages/UserProfile';
-import { getCurrentUser, getMesLoginUrl } from './data/communityStore';
+import { getCurrentUser, getMesLoginUrl, fetchRealUserSession, clearLocalUserSession } from './data/communityStore';
 import './index.css';
 
 function ScrollToTop() {
@@ -30,13 +30,61 @@ function AppLayout() {
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
 
   useEffect(() => {
+    // 1. Initial live session verification from server
+    fetchRealUserSession().then((u) => {
+      if (u) setCurrentUser(u);
+    });
+
+    // 2. Custom Event listener
     const handleUserUpdated = (e) => {
       if (e.detail) {
         setCurrentUser(e.detail);
       }
     };
     window.addEventListener('mes-user-updated', handleUserUpdated);
-    return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
+
+    // 3. Cross-Tab Auth Synchronization via BroadcastChannel ('mes_auth_channel')
+    let channel = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('mes_auth_channel');
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'LOGIN') {
+            fetchRealUserSession().then((u) => {
+              if (u) setCurrentUser(u);
+            });
+          } else if (event.data?.type === 'LOGOUT') {
+            const guest = clearLocalUserSession();
+            setCurrentUser(guest);
+          }
+        };
+      }
+    } catch {
+      // Ignore BroadcastChannel errors in unsupported envs
+    }
+
+    // 4. Fallback localStorage event listener for Cross-Tab Sync
+    const handleStorageChange = (e) => {
+      if (e.key === 'mes_auth_login_ts') {
+        fetchRealUserSession().then((u) => {
+          if (u) setCurrentUser(u);
+        });
+      } else if (e.key === 'mes_auth_logout_ts') {
+        const guest = clearLocalUserSession();
+        setCurrentUser(guest);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('mes-user-updated', handleUserUpdated);
+      window.removeEventListener('storage', handleStorageChange);
+      if (channel) {
+        try {
+          channel.close();
+        } catch {}
+      }
+    };
   }, []);
 
   const isGuest = !currentUser || !currentUser.isLoggedInReal;

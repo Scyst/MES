@@ -266,13 +266,13 @@ export function saveUserGrading(grading) {
 
 export const API_LEARNING_URL = '../MES/MES/page/manpower/api/api_learning.php';
 export const API_VERIFY_URL = '../MES/MES/auth/api_verify.php?silent=1';
-export const MES_LOGOUT_URL = '../MES/MES/auth/logout.php';
+export const MES_LOGOUT_URL = '../Toolbox/logout.php';
 
 export function getMesLoginUrl() {
   if (typeof window === 'undefined') {
-    return '../MES/MES/auth/login_form.php';
+    return '../Toolbox/#/login';
   }
-  return `../MES/MES/auth/login_form.php?redirect=${encodeURIComponent(window.location.href)}`;
+  return `../Toolbox/#/login?redirect=${encodeURIComponent(window.location.href)}`;
 }
 
 export function clearLocalUserSession() {
@@ -288,12 +288,22 @@ export function clearLocalUserSession() {
 export async function logoutFromMes() {
   clearLocalUserSession();
   try {
+    // 1. Broadcast LOGOUT to all other open tabs (Toolbox, Learning Hub, etc.)
+    if (typeof BroadcastChannel !== 'undefined') {
+      const ch = new BroadcastChannel('mes_auth_channel');
+      ch.postMessage({ type: 'LOGOUT', ts: Date.now() });
+      ch.close();
+    }
+    localStorage.setItem('mes_auth_logout_ts', String(Date.now()));
+
+    // 2. Clear backend PHP session via Toolbox logout endpoint
     await fetch(MES_LOGOUT_URL, { method: 'GET', credentials: 'include' });
-  } catch {
-    // Ignore network error during logout redirect
+  } catch (err) {
+    console.warn('Logout request error:', err);
   }
+  // 3. Immediately redirect to modern Toolbox Login (with student registration button)
   if (typeof window !== 'undefined') {
-    window.location.reload();
+    window.location.href = getMesLoginUrl();
   }
 }
 

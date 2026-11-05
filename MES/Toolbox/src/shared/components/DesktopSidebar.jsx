@@ -90,7 +90,7 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
   };
 
   const renderMenuSections = (isMobileDrawer = false) => {
-    const isTrainee = user?.role === 'trainee';
+    const isTrainee = user?.role === 'trainee' || user?.account_type === 'trainee';
     const isSystemAdmin = user?.role === 'admin' || user?.role === 'creator' || user?.permissions?.includes('manage_users') || user?.permissions?.includes('manage_settings');
 
     return MENU_DATA.map((section, sIdx) => {

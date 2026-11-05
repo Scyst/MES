@@ -42,6 +42,10 @@ if (!defined('BASE_URL')) {
     }
 }
 $targetLogin = "login_form.php";
+if ((isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'LearningHub') !== false) || (isset($_GET['redirect']) && strpos($_GET['redirect'], 'LearningHub') !== false)) {
+    header("Location: ../../Toolbox/#/login" . $redirectParam);
+    exit;
+}
 if (defined('BASE_URL') && !empty(BASE_URL)) {
     $targetLogin = rtrim(BASE_URL, '/') . '/auth/login_form.php';
 } elseif (isset($_SERVER['SCRIPT_NAME']) && strpos($_SERVER['SCRIPT_NAME'], '/auth/') !== false) {
