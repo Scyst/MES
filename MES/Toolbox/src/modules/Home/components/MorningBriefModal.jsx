@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
-import { Users, Coins, SmilePlus, Factory, Sun, Sparkles, Copy, Check, RefreshCw, AlertCircle, Bot, Send } from 'lucide-react';
+import { Users, Coins, SmilePlus, Factory, Sun, Sparkles, Copy, Check, RefreshCw, AlertCircle, Bot, Send, Calendar, FileText, Zap } from 'lucide-react';
 
 const getMoodEmoji = (score) => {
   if (score >= 4.5) return '😄';
@@ -12,10 +12,10 @@ const getMoodEmoji = (score) => {
 };
 
 const SUGGESTED_PROMPTS = [
+  'ยอดผลิต ต้นทุน และกำไรวันที่ 8 สิงหาคม',
   'เน้นวิเคราะห์ของเสีย (Scrap & Hold)',
   'เจาะลึกต้นทุนค่าไฟและ OT',
-  'สรุปสั้น 3 บรรทัดสำหรับส่ง LINE',
-  'ประเมินประสิทธิภาพกำลังพลและขวัญกำลังใจ'
+  'สรุปสั้น 3 บรรทัดส่ง LINE'
 ];
 
 export default function MorningBriefModal({ isOpen, onClose, initialData }) {
@@ -31,6 +31,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   const [aiError, setAiError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+  const [summaryStyle, setSummaryStyle] = useState('concise'); // 'concise' | 'formal'
 
   const [isRendered, setIsRendered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -78,15 +79,21 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
     }
   };
 
-  const handleGenerateAi = async (promptOverride) => {
+  const handleGenerateAi = async (promptOverride, styleOverride) => {
     if (!data) return;
     const promptToSend = typeof promptOverride === 'string' ? promptOverride : customPrompt;
+    const styleToSend = styleOverride || summaryStyle;
     setAiLoading(true);
     setAiError(null);
     try {
-      const res = await dailyLogApi.getMorningBriefAi(data, selectedTeam, promptToSend);
+      const res = await dailyLogApi.getMorningBriefAi(data, selectedTeam, promptToSend, styleToSend);
       if (res.success && res.data?.briefing) {
         setAiBriefing(res.data);
+        // Automatically sync modal date & numbers if AI auto-queried a different target date
+        if (res.data.auto_switched_date && res.data.updated_brief_data) {
+          setSelectedDate(res.data.auto_switched_date);
+          setData(res.data.updated_brief_data);
+        }
       } else {
         setAiError(res.message || 'ไม่สามารถวิเคราะห์ข้อมูลด้วย AI ได้');
       }
@@ -100,7 +107,14 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
   const handleTagClick = (tag) => {
     setCustomPrompt(tag);
-    handleGenerateAi(tag);
+    handleGenerateAi(tag, summaryStyle);
+  };
+
+  const handleStyleToggle = (newStyle) => {
+    setSummaryStyle(newStyle);
+    if (aiBriefing || customPrompt) {
+      handleGenerateAi(customPrompt, newStyle);
+    }
   };
 
   const handleCopy = () => {
@@ -166,7 +180,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                   value={selectedDate}
                   onChange={handleDateChange}
                   className="bg-white/20 border-0 rounded px-3 py-1.5 text-sm font-bold text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer"
-                  title="เลือกวันที่ (ระบบจะวิเคราะห์ตามวันที่ที่เลือก)"
+                  title="เลือกวันที่ (หรือพิมพ์วันที่ในช่อง AI ด้านล่างได้โดยตรง)"
                 />
                 <select 
                   value={selectedTeam}
@@ -206,21 +220,51 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                       <Bot size={20} />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-slate-800 text-sm sm:text-base">AI Executive Shift Briefing</span>
                         <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
-                          Gemini Flash
+                          Auto-Query Active
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500">พิมพ์ระบุสิ่งที่ต้องการให้วิเคราะห์ หรือกดเลือกประเด็นด่วน</p>
+                      <p className="text-xs text-slate-500">พิมพ์ถามอะไรก็ได้ในระบบ หรือระบุวันที่ที่ต้องการดูข้อมูลได้โดยตรง</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Style Selector Toggle */}
+                    <div className="flex items-center bg-white/90 p-0.5 rounded-lg border border-indigo-200/90 text-xs shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => handleStyleToggle('concise')}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                          summaryStyle === 'concise' 
+                            ? 'bg-indigo-600 text-white shadow-2xs' 
+                            : 'text-slate-600 hover:text-indigo-600'
+                        }`}
+                        title="สรุปสั้น 4-6 บรรทัด ตัวเลขเน้นๆ สำหรับผู้บริหาร"
+                      >
+                        <Zap size={12} />
+                        <span>สรุปสั้น</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStyleToggle('formal')}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                          summaryStyle === 'formal' 
+                            ? 'bg-indigo-600 text-white shadow-2xs' 
+                            : 'text-slate-600 hover:text-indigo-600'
+                        }`}
+                        title="รายงานทางการ วิเคราะห์ครบ 3 มิติเชิงวิศวกรรม"
+                      >
+                        <FileText size={12} />
+                        <span>ทางการ</span>
+                      </button>
+                    </div>
+
                     {aiBriefing && (
                       <button
                         onClick={handleCopy}
-                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition-colors cursor-pointer"
                         title="คัดลอกข้อความสรุป"
                       >
                         {copied ? (
@@ -231,7 +275,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                         ) : (
                           <>
                             <Copy size={14} className="text-slate-500" />
-                            <span>คัดลอกสรุป</span>
+                            <span>คัดลอก</span>
                           </>
                         )}
                       </button>
@@ -240,22 +284,22 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                     <button
                       onClick={() => handleGenerateAi()}
                       disabled={aiLoading}
-                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60 shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60 shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                     >
                       {aiLoading ? (
                         <>
                           <RefreshCw size={14} className="animate-spin" />
-                          <span>กำลังประมวลผล...</span>
+                          <span>กำลังดึงข้อมูล...</span>
                         </>
                       ) : aiBriefing ? (
                         <>
                           <RefreshCw size={14} />
-                          <span>วิเคราะห์ใหม่</span>
+                          <span>ถามใหม่</span>
                         </>
                       ) : (
                         <>
                           <Sparkles size={14} className="text-amber-300" />
-                          <span>วิเคราะห์ด้วย AI</span>
+                          <span>วิเคราะห์</span>
                         </>
                       )}
                     </button>
@@ -270,7 +314,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAi(); }}
-                      placeholder="💡 พิมพ์บอก AI เช่น: 'เน้นวิเคราะห์ของเสีย Scrap', 'เทียบค่าไฟกับเป้าหมาย', 'สรุปสั้น 3 บรรทัด'..."
+                      placeholder="💡 พิมพ์ถาม เช่น 'อยากรู้ยอดผลิต ต้นทุนและกำไรของวันที่แปดสิงหาคม', 'สรุปสั้น 3 บรรทัด'..."
                       className="w-full bg-white border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none shadow-2xs transition-all"
                     />
                     <div className="absolute right-1.5 flex items-center gap-1">
@@ -287,7 +331,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                         onClick={() => handleGenerateAi()}
                         disabled={aiLoading}
                         className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 cursor-pointer shadow-2xs"
-                        title="สั่งวิเคราะห์ตามคำสั่งนี้"
+                        title="ส่งคำถาม"
                       >
                         <Send size={13} />
                       </button>
@@ -296,7 +340,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
                   {/* Suggestion Chips */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    <span className="text-[11px] font-medium text-slate-500">เลือกด่วน:</span>
+                    <span className="text-[11px] font-medium text-slate-500">คำถามยอดนิยม:</span>
                     {SUGGESTED_PROMPTS.map((tag) => (
                       <button
                         key={tag}
@@ -314,9 +358,9 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                   <div className="pt-4 pb-2 text-center">
                     <div className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 animate-pulse">
                       <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
-                      กำลังดึงข้อมูลกำลังพล ต้นทุนพลังงาน และยอดของเสียเพื่อจัดทำบทสรุป...
+                      กำลังเชื่อมต่อ SQL Server และประมวลผลข้อมูลกะตามคำสั่ง...
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">ใช้เวลาประมวลผลประมาณ 2-3 วินาที</p>
+                    <p className="text-xs text-slate-400 mt-1">กำลังคำนวณยอดผลิต ต้นทุน DLOT และค่าพลังงาน</p>
                   </div>
                 )}
 
@@ -329,13 +373,21 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
                 {aiBriefing && !aiLoading && (
                   <div className="mt-3 pt-2">
+                    {/* Auto-Switched Date Indicator */}
+                    {aiBriefing.auto_switched_date && (
+                      <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs">
+                        <Calendar size={13} className="text-emerald-600" />
+                        <span>ดึงข้อมูลวันที่ {aiBriefing.auto_switched_date} จาก SQL Server ให้อัตโนมัติเรียบร้อย</span>
+                      </div>
+                    )}
+
                     <div className="bg-white/95 border border-indigo-100 rounded-xl p-4 text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-2xs font-sans">
                       {aiBriefing.briefing}
                     </div>
                     <div className="flex justify-between items-center mt-2 px-1 text-[11px] text-slate-400">
                       <span>ประมวลผลเมื่อ: {aiBriefing.generated_at}</span>
                       <span className="font-mono text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">
-                        Model: {aiBriefing.model}
+                        Style: {summaryStyle} | Model: {aiBriefing.model}
                       </span>
                     </div>
                   </div>

@@ -20,7 +20,7 @@ export const dailyLogApi = {
   getInitialData: async () => {
     const params = new URLSearchParams();
     params.append('action', 'get_initial_data');
-    
+
     const response = await postApi(API_URL, params);
     return response.data;
   },
@@ -35,7 +35,7 @@ export const dailyLogApi = {
     params.append('action', 'get_morning_brief');
     params.append('team', team);
     if (date) params.append('brief_date', date);
-    
+
     const response = await postApi(API_URL, params);
     return response.data;
   },
@@ -45,10 +45,16 @@ export const dailyLogApi = {
    * @param {Object} briefData - The morning brief dataset
    * @param {string} team - Selected team ('ALL', 'TEAM 1', etc.)
    * @param {string} customPrompt - Optional specific instructions or questions
+   * @param {string} summaryStyle - 'concise' (short summary) or 'formal' (detailed report)
    */
-  getMorningBriefAi: async (briefData, team = 'ALL', customPrompt = '') => {
+  getMorningBriefAi: async (briefData, team = 'ALL', customPrompt = '', summaryStyle = 'concise') => {
     const url = `${import.meta.env.BASE_URL}api/ai/morningBriefAi.php`;
-    const response = await axios.post(url, { brief_data: briefData, team, custom_prompt: customPrompt }, {
+    const response = await axios.post(url, {
+      brief_data: briefData,
+      team,
+      custom_prompt: customPrompt,
+      summary_style: summaryStyle
+    }, {
       headers: {
         'Content-Type': 'application/json'
       },
@@ -67,7 +73,7 @@ export const dailyLogApi = {
     params.append('action', 'mark_as_read');
     params.append('log_date', logDate);
     params.append('period_id', periodId);
-    
+
     const response = await postApi(API_URL, params);
     return response.data;
   },
@@ -87,7 +93,7 @@ export const dailyLogApi = {
     Object.keys(data).forEach(key => {
       params.append(key, data[key]);
     });
-    
+
     const response = await postApi(API_URL, params);
     return response.data;
   }
