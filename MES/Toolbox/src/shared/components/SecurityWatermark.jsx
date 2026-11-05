@@ -30,7 +30,7 @@ import { useAuth } from '../contexts/AuthContext';
  */
 export default function SecurityWatermark({
   classification = 'SNC CONFIDENTIAL',
-  opacity = 0.12,
+  opacity = 0.08,
   children,
   className = '',
   fullscreen = false,
@@ -55,25 +55,25 @@ export default function SecurityWatermark({
     const line1 = escapeXml(`${rawName} ${rawId} • ${classification}`);
     const line2 = escapeXml(`${dateStr} • SNC RESTRICTED INDUSTRIAL ASSET • DO NOT COPY`);
 
-    // 460x230 repeating tile with -22deg tilted text for optimal readability and spacing
+    // 460x230 repeating tile with -22deg tilted text for optimal readability, spacing and anti-moiré stroke resilience
     const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="460" height="230">
   <style>
     text {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
       user-select: none;
     }
     .title {
-      font-size: 13px;
-      fill: rgba(51, 65, 85, ${opacity});
+      font-size: 13.5px;
+      font-weight: 700;
+      fill: rgba(30, 41, 59, ${opacity});
     }
     .sub {
-      font-size: 10px;
-      font-weight: 500;
+      font-size: 10.5px;
+      font-weight: 600;
       letter-spacing: 0.8px;
-      fill: rgba(71, 85, 105, ${opacity * 0.85});
+      fill: rgba(51, 65, 85, ${opacity * 0.85});
     }
   </style>
   <g transform="rotate(-22 230 115)">
