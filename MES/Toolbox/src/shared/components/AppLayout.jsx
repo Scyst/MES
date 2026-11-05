@@ -16,6 +16,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import DesktopSidebar from './DesktopSidebar';
 import AccountSettingsModal from './AccountSettingsModal';
+import GlobalAiAssistant from './GlobalAiAssistant';
 
 function resolveProfilePictureUrl(profilePicture) {
   if (!profilePicture) return null;
@@ -427,6 +428,9 @@ export default function AppLayout() {
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
       />
+
+      {/* Global MES AI Copilot (Ubiquitous Floating Assistant) */}
+      <GlobalAiAssistant />
     </div>
   );
 }

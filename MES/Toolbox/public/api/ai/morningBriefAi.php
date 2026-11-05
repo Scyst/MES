@@ -73,9 +73,10 @@ function callGeminiWithFallback(array $payload, string $apiKey): array {
     return ['response' => null, 'model' => null, 'rateLimited' => $rateLimited, 'lastError' => $lastError];
 }
 
-function buildSystemInstruction(string $summaryStyle, bool $isLineMode, string $productionToday, string $selectedDate, string $team): string {
+function buildSystemInstruction(string $summaryStyle, bool $isLineMode, string $productionToday, string $selectedDate, string $team, string $pageContext = ''): string {
     $weekdayThai = ['Sun' => 'อาทิตย์', 'Mon' => 'จันทร์', 'Tue' => 'อังคาร', 'Wed' => 'พุธ', 'Thu' => 'พฤหัสบดี', 'Fri' => 'ศุกร์', 'Sat' => 'เสาร์'];
     $todayWeekday = $weekdayThai[date('D', strtotime($productionToday))] ?? '';
+    $pageContextText = !empty($pageContext) ? "\n- หน้าจอที่ผู้ใช้กำลังเปิดอยู่ขณะนี้: {$pageContext} (ให้คำนึงถึงบริบทของหน้านี้เป็นพิเศษ)" : '';
 
     if ($isLineMode) {
         $styleRule = "รูปแบบ: ข้อความสำหรับส่ง LINE ผู้บริหาร ตอบเพียง 3-4 บรรทัด ไม่มีคำเกริ่นนำหรือคำลงท้าย ขึ้นต้นด้วย 📌 ตามด้วยช่วงเวลาที่สรุป จากนั้น 1️⃣ ผลผลิตและรายได้ 2️⃣ กำลังพลกะเช้า/กะดึก (ถ้าเป็นข้อมูลรายวัน) หรือต้นทุนค่าแรง/OT (ถ้าเป็นช่วงหลายวัน) 3️⃣ ต้นทุนพลังงานและส่วนต่างรายได้หลังหักค่าแรงและพลังงาน ทุกบรรทัดต้องมีตัวเลขจริง";
@@ -86,12 +87,12 @@ function buildSystemInstruction(string $summaryStyle, bool $isLineMode, string $
     }
 
     return <<<SYS
-คุณคือ "AI ผู้ช่วยฝ่ายบริหารและปฏิบัติการ" ของโรงงาน B9 บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน) ใช้ระบบ MES เป็นแหล่งข้อมูลเดียว
+คุณคือ "AI ผู้ช่วยฝ่ายบริหารและปฏิบัติการ (MES AI Copilot)" ของโรงงาน B9 บริษัท เอส เอ็น ซี ฟอร์เมอร์ จำกัด (มหาชน) ใช้ระบบ MES เป็นแหล่งข้อมูลเดียว
 
-[บริบทเวลา]
+[บริบทเวลาและระบบ]
 - วันผลิตปัจจุบัน: {$productionToday} (วัน{$todayWeekday}) วันผลิตเปลี่ยนวันเวลา 08:00 น.
 - วันที่ที่ผู้ใช้เลือกบนหน้าจอ: {$selectedDate}
-- ทีมที่กรอง: {$team}
+- ทีมที่กรอง: {$team}{$pageContextText}
 - ผู้ใช้พิมพ์ปี พ.ศ. ให้แปลงเป็น ค.ศ. (ลบ 543) หากไม่ระบุปีให้ใช้ปี ค.ศ. ของวันผลิตปัจจุบัน
 - ผู้ใช้พิมพ์ "วันนี้" = วันผลิตปัจจุบัน, "เมื่อวาน" = วันก่อนหน้า, "เดือนนี้" = วันที่ 1 ถึงวันผลิตปัจจุบัน, "เดือนที่แล้ว" = ทั้งเดือนก่อนหน้า, "สัปดาห์นี้/สัปดาห์ที่แล้ว" = จันทร์ถึงอาทิตย์
 - หากผู้ใช้ไม่ระบุวันที่ ให้ใช้วันที่ที่ผู้ใช้เลือกบนหน้าจอ
@@ -99,6 +100,7 @@ function buildSystemInstruction(string $summaryStyle, bool $isLineMode, string $
 [วิธีทำงาน]
 - ต้องเรียกเครื่องมือดึงข้อมูลจริงก่อนตอบทุกครั้งที่คำถามเกี่ยวกับตัวเลข ห้ามตอบจากความจำหรือการคาดเดา
 - ถามวันเดียว/กำลังพล ใช้ get_daily_report ถามเป็นช่วงหรือเดือน ใช้ get_range_report ถามรายโมเดลหรือของเสียรายโมเดล ใช้ get_model_breakdown สามารถเรียกหลายเครื่องมือเพื่อเปรียบเทียบได้
+- หากคำถามเป็นการถามต่อเนื่อง (Follow-up question) เช่น "แล้ววันที่ 3 ล่ะ?" ให้ดูบริบทจากข้อความก่อนหน้าเพื่อดึงข้อมูลอย่างถูกต้อง
 - หากคำถามอยู่นอกขอบเขตข้อมูลที่เครื่องมือให้ได้ (เช่น ประวัติซ่อม สูตรสี สต็อกวัตถุดิบ คุณภาพรายใบงาน) ห้ามแต่งตัวเลข ให้บอกตรงๆ ว่าตอนนี้ AI ยังเข้าถึงข้อมูลนั้นไม่ได้ และแนะนำโมดูลที่ควรเปิดดู (PE Maintenance, PaintChem, Store Inventory, Quality) หรือบอกว่าต้องพัฒนาเครื่องมือดึงข้อมูลเพิ่ม
 - หากเครื่องมือส่ง error กลับมา ให้อธิบายสาเหตุให้ผู้ใช้เข้าใจและแนะนำวิธีถามใหม่
 
@@ -148,10 +150,28 @@ try {
     $briefDate = (string)($input['brief_data']['raw_date'] ?? '');
     $selectedDate = isValidIsoDate($briefDate) ? $briefDate : $productionToday;
 
+    $pageContext = mb_substr(trim((string)($input['page_context'] ?? '')), 0, 100);
+    $rawHistory = is_array($input['history'] ?? null) ? $input['history'] : [];
+
+    // Sanitize multi-turn history (keep up to 6 messages = 3 turns max for token efficiency)
+    $historyContents = [];
+    if (!empty($rawHistory)) {
+        $recent = array_slice($rawHistory, -6);
+        foreach ($recent as $msg) {
+            if (!is_array($msg)) continue;
+            $r = (($msg['role'] ?? '') === 'model' || ($msg['role'] ?? '') === 'assistant') ? 'model' : 'user';
+            $t = mb_substr(trim((string)($msg['content'] ?? $msg['text'] ?? '')), 0, 1500);
+            if ($t !== '') {
+                $historyContents[] = ['role' => $r, 'parts' => [['text' => $t]]];
+            }
+        }
+    }
+
     $isLineMode = (bool)preg_match('/line|ไลน์|3\s*บรรทัด/iu', $customPrompt);
     $userQuestion = $customPrompt !== '' ? $customPrompt : "สรุปผลการดำเนินงานของวันที่ {$selectedDate}";
 
-    $cacheKey = md5(implode('|', [$_SESSION['user']['id'] ?? 'anon', $team, $summaryStyle, $userQuestion, $selectedDate, $productionToday, (string)intdiv(time(), AI_CACHE_TTL_SECONDS)]));
+    $historyHash = !empty($historyContents) ? md5(json_encode($historyContents)) : '';
+    $cacheKey = md5(implode('|', [$_SESSION['user']['id'] ?? 'anon', $team, $summaryStyle, $userQuestion, $selectedDate, $productionToday, $pageContext, $historyHash, (string)intdiv(time(), AI_CACHE_TTL_SECONDS)]));
     $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mes_ai_brief_' . $cacheKey . '.json';
     if (is_file($cacheFile)) {
         $cached = json_decode((string)@file_get_contents($cacheFile), true);
@@ -161,8 +181,8 @@ try {
         }
     }
 
-    $systemInstruction = buildSystemInstruction($summaryStyle, $isLineMode, $productionToday, $selectedDate, $team);
-    $contents = [['role' => 'user', 'parts' => [['text' => $userQuestion]]]];
+    $systemInstruction = buildSystemInstruction($summaryStyle, $isLineMode, $productionToday, $selectedDate, $team, $pageContext);
+    $contents = array_merge($historyContents, [['role' => 'user', 'parts' => [['text' => $userQuestion]]]]);
     $scopeLog = [];
     $toolsUsed = [];
     $replyText = null;
