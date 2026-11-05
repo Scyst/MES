@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Boxes, MapPin, ShieldAlert, FileText, Sparkles, CheckCircle2
+  Boxes, MapPin, ShieldAlert, FileText
 } from 'lucide-react';
 import InventoryDashboardTab from './components/InventoryDashboardTab';
 import CycleCountTab from './components/CycleCountTab';
@@ -22,71 +22,75 @@ export default function StoreApp() {
     // Check pending count for badge indicator
     storeApi.getPendingCounts()
       .then((res) => {
-        if (res.success && res.pending_counts) {
-          setPendingApprovalCount(res.pending_counts.length);
+        if (res.success) {
+          const records = res.pending_counts || res.data || [];
+          setPendingApprovalCount(records.length);
         }
       })
       .catch(() => {});
   }, [currentTab]);
 
   return (
-    <div className="w-full flex flex-col h-full gap-3 p-4 md:p-6 bg-slate-50/50 dark:bg-slate-950/50">
-      {/* Page Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+    <div className="mes-page-container flex flex-col h-full gap-3 overflow-hidden">
+      {/* Header section (Uses standard .mes-page-header tokens) */}
+      <div className="mes-page-header mb-0 flex-col md:flex-row gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Boxes className="w-6 h-6" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+            <Boxes className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight truncate">
                 Store & Warehouse Management
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              <span className="mes-badge bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 ⚡ SPA Ported
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              ศูนย์กลางคลังสินค้า: ตรวจนับสต็อกแบบ Visual Map (Blind Count), รายงานสต็อกคงเหลือ, และระบบอนุมัติการปรับยอด
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+              ศูนย์กลางคลังสินค้า: ตรวจนับสต็อกแบบ Visual Map (Blind Count), รายงานสต็อกคงเหลือ, และระบบอนุมัติตัดยอด
             </p>
           </div>
         </div>
 
-        {/* Tab Switcher Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+        {/* Tab Switcher Pills - Horizontal scrolling on mobile without wrap */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap w-full md:w-auto flex-nowrap">
           <button
+            type="button"
             onClick={() => setTab('onhand')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[34px] ${
               currentTab === 'onhand'
                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <Boxes className="w-3.5 h-3.5" />
-            <span>สต็อกคงเหลือ (Onhand)</span>
+            <Boxes className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+            <span>สต็อกคงเหลือ <span className="hidden sm:inline">(Onhand)</span></span>
           </button>
 
           <button
+            type="button"
             onClick={() => setTab('cycle-count')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[34px] ${
               currentTab === 'cycle-count'
                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>แผนผังตรวจนับ (Visual Map)</span>
+            <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+            <span>แผนผังตรวจนับ <span className="hidden sm:inline">(Map)</span></span>
           </button>
 
           <button
+            type="button"
             onClick={() => setTab('approvals')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 relative ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[34px] relative ${
               currentTab === 'approvals'
                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
             <span>รออนุมัติตัดยอด</span>
             {pendingApprovalCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-amber-500 text-white ml-0.5">
@@ -96,21 +100,22 @@ export default function StoreApp() {
           </button>
 
           <button
+            type="button"
             onClick={() => setTab('ledger')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[34px] ${
               currentTab === 'ledger'
                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>ประวัติบัญชีสต็อก (Ledger)</span>
+            <FileText className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+            <span>ประวัติบัญชีสต็อก <span className="hidden sm:inline">(Ledger)</span></span>
           </button>
         </div>
       </div>
 
       {/* Main Tab Content */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {currentTab === 'onhand' && <InventoryDashboardTab />}
         {currentTab === 'cycle-count' && <CycleCountTab />}
         {currentTab === 'approvals' && <PendingApprovalsTab />}

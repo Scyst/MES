@@ -273,38 +273,40 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
           </span>
         </label>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             ref={inputRef}
             type="text"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             placeholder="สแกนแท็กพาเลท หรือพิมพ์รหัสแท็ก..."
-            className="flex-1 text-sm font-mono font-bold px-4 py-3 rounded-xl border-2 border-blue-500/30 focus:border-blue-600 focus:outline-none bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100"
+            className="flex-1 text-base sm:text-sm font-mono font-bold px-4 py-3 rounded-xl border-2 border-blue-500/30 focus:border-blue-600 focus:outline-none bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 min-h-[44px]"
           />
 
-          <input
-            type="number"
-            step="any"
-            value={qtyInput}
-            onChange={(e) => setQtyInput(e.target.value)}
-            placeholder="จำนวน (ค่าเริ่มต้น 1)"
-            className="w-32 text-sm font-mono px-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              step="any"
+              value={qtyInput}
+              onChange={(e) => setQtyInput(e.target.value)}
+              placeholder="จำนวน (1)"
+              className="w-28 sm:w-32 text-base sm:text-sm font-mono px-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 min-h-[44px]"
+            />
 
-          <button
-            type="submit"
-            disabled={loading || !tagInput.trim()}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 transition-colors flex items-center gap-1.5"
-          >
-            {loading ? 'กำลังนับ...' : 'บันทึก'}
-          </button>
+            <button
+              type="submit"
+              disabled={loading || !tagInput.trim()}
+              className="flex-1 sm:flex-initial px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px]"
+            >
+              {loading ? 'กำลังนับ...' : 'บันทึก'}
+            </button>
+          </div>
         </div>
       </form>
 
-      {/* Counted Items Table */}
-      <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+      {/* Counted Items Display - Dual Mode */}
+      <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-0">
+        <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 flex-shrink-0">
           <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
             <span>รายการที่นับแล้วในเซสชั่นนี้</span>
             <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-[11px] font-mono">
@@ -313,9 +315,10 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
           </h3>
 
           <button
+            type="button"
             onClick={handleFinish}
             disabled={isSubmittingFinish}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 sm:gap-2 transition-colors disabled:opacity-50 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{isSubmittingFinish ? 'กำลังส่งข้อมูล...' : 'สรุปผลและส่งตรวจนับ'}</span>
@@ -332,27 +335,90 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
               </p>
             </div>
           ) : (
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100/70 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 font-semibold sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
-                <tr>
-                  <th className="py-2.5 px-4">#</th>
-                  <th className="py-2.5 px-3">หมายเลขแท็ก (Tag Serial)</th>
-                  <th className="py-2.5 px-3">รหัสและรายละเอียดชิ้นงาน</th>
-                  <th className="py-2.5 px-3 text-right">จำนวนที่นับได้</th>
-                  {!blindCountMask && <th className="py-2.5 px-3 text-right">ยอดในระบบ</th>}
-                  <th className="py-2.5 px-3 text-center">สถานะ</th>
-                  <th className="py-2.5 px-4 text-right">เวลาที่นับ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <>
+              {/* DESKTOP TABLE VIEW */}
+              <div className="hidden md:block">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100/70 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 font-semibold sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="py-2.5 px-4">#</th>
+                      <th className="py-2.5 px-3">หมายเลขแท็ก (Tag Serial)</th>
+                      <th className="py-2.5 px-3">รหัสและรายละเอียดชิ้นงาน</th>
+                      <th className="py-2.5 px-3 text-right">จำนวนที่นับได้</th>
+                      {!blindCountMask && <th className="py-2.5 px-3 text-right">ยอดในระบบ</th>}
+                      <th className="py-2.5 px-3 text-center">สถานะ</th>
+                      <th className="py-2.5 px-4 text-right">เวลาที่นับ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {countedItems.map((item, idx) => {
+                      const isWrong = item.is_wrong_location;
+                      const hasDiff = item.system_qty !== undefined && item.actual_qty !== item.system_qty;
+
+                      return (
+                        <tr
+                          key={idx}
+                          className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${
+                            isWrong
+                              ? 'bg-amber-50/40 dark:bg-amber-950/20'
+                              : hasDiff
+                              ? 'bg-red-50/30 dark:bg-red-950/10'
+                              : ''
+                          }`}
+                        >
+                          <td className="py-2.5 px-4 text-slate-400 font-mono">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
+                            {item.tag_serial_no}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                            <div className="font-semibold">{item.part_no}</div>
+                            <div className="text-[11px] text-slate-400 truncate max-w-xs">
+                              {item.part_description}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                            {Number(item.actual_qty).toLocaleString()}
+                          </td>
+                          {!blindCountMask && (
+                            <td className="py-2.5 px-3 text-right font-mono text-slate-500">
+                              {item.system_qty !== undefined ? Number(item.system_qty).toLocaleString() : '-'}
+                            </td>
+                          )}
+                          <td className="py-2.5 px-3 text-center">
+                            {isWrong ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                                หลงคลัง
+                              </span>
+                            ) : hasDiff ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400">
+                                ยอดไม่ตรง
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                                ตรง
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-mono text-slate-400 text-[11px]">
+                            {item.counted_at}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE CARDS VIEW */}
+              <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
                 {countedItems.map((item, idx) => {
                   const isWrong = item.is_wrong_location;
                   const hasDiff = item.system_qty !== undefined && item.actual_qty !== item.system_qty;
 
                   return (
-                    <tr
+                    <div
                       key={idx}
-                      className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${
+                      className={`p-3 transition-colors flex flex-col gap-1.5 ${
                         isWrong
                           ? 'bg-amber-50/40 dark:bg-amber-950/20'
                           : hasDiff
@@ -360,25 +426,13 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
                           : ''
                       }`}
                     >
-                      <td className="py-2.5 px-4 text-slate-400 font-mono">{idx + 1}</td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
-                        {item.tag_serial_no}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
-                        <div className="font-semibold">{item.part_no}</div>
-                        <div className="text-[11px] text-slate-400 truncate max-w-xs">
-                          {item.part_description}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-slate-400">#{idx + 1}</span>
+                          <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                            {item.tag_serial_no}
+                          </span>
                         </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                        {Number(item.actual_qty).toLocaleString()}
-                      </td>
-                      {!blindCountMask && (
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-500">
-                          {item.system_qty !== undefined ? Number(item.system_qty).toLocaleString() : '-'}
-                        </td>
-                      )}
-                      <td className="py-2.5 px-3 text-center">
                         {isWrong ? (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
                             หลงคลัง
@@ -392,15 +446,38 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
                             ตรง
                           </span>
                         )}
-                      </td>
-                      <td className="py-2.5 px-4 text-right font-mono text-slate-400 text-[11px]">
-                        {item.counted_at}
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div className="text-xs text-slate-700 dark:text-slate-300">
+                        <span className="font-semibold">{item.part_no}</span>
+                        {item.part_description && (
+                          <span className="text-slate-400 ml-1.5 truncate text-[11px]">
+                            {item.part_description}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[11px] text-slate-400">นับได้:</span>
+                          <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                            {Number(item.actual_qty).toLocaleString()}
+                          </span>
+                        </div>
+                        {!blindCountMask && (
+                          <div className="text-[11px] font-mono text-slate-400">
+                            ในระบบ: {item.system_qty !== undefined ? Number(item.system_qty).toLocaleString() : '-'}
+                          </div>
+                        )}
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {item.counted_at}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </div>

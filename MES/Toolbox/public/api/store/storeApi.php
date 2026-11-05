@@ -969,13 +969,20 @@ try {
                     i.item_id,
                     i.sap_no,
                     ISNULL(i.part_no, i.sap_no) AS item_no,
+                    ISNULL(i.part_no, i.sap_no) AS part_no,
                     i.part_description,
                     ISNULL(i.material_type, 'UNKNOWN') AS material_type,
+                    i.material_sub_type,
+                    ISNULL(i.min_stock, 0) AS safety_stock,
+                    ISNULL(i.sku, 'PCS') AS unit,
                     ISNULL(Onhand.available_qty, 0) AS available_qty,
+                    ISNULL(Onhand.available_qty, 0) AS onhand_qty,
                     ISNULL(Pending.pending_qty, 0) AS pending_qty,
                     (ISNULL(Onhand.available_qty, 0) + ISNULL(Pending.pending_qty, 0)) AS total_qty,
                     ISNULL(i.StandardPrice, 0) AS unit_price,
-                    (ISNULL(Onhand.available_qty, 0) * ISNULL(i.StandardPrice, 0)) AS total_value
+                    (ISNULL(Onhand.available_qty, 0) * ISNULL(i.StandardPrice, 0)) AS total_value,
+                    TopLoc.location_name,
+                    TopLoc.zone_name
                 FROM dbo.ITEMS i WITH (NOLOCK)
                 OUTER APPLY (
                     SELECT SUM(o.quantity) AS available_qty 
@@ -987,6 +994,13 @@ try {
                     FROM dbo.RM_SERIAL_TAGS p WITH (NOLOCK) 
                     WHERE p.item_id = i.item_id AND p.status = 'PENDING'
                 ) Pending
+                OUTER APPLY (
+                    SELECT TOP 1 loc.location_name, loc.zone_name 
+                    FROM dbo.INVENTORY_ONHAND o2 WITH (NOLOCK) 
+                    JOIN dbo.LOCATIONS loc WITH (NOLOCK) ON o2.location_id = loc.location_id 
+                    WHERE o2.parameter_id = i.item_id AND o2.quantity > 0 
+                    ORDER BY o2.quantity DESC
+                ) TopLoc
                 $whereSQL
                 $orderBySQL
                 OFFSET $offsetInt ROWS FETCH NEXT $limitInt ROWS ONLY
@@ -999,7 +1013,20 @@ try {
             $response = [
                 'success' => true, 
                 'data' => $data, 
+                'onhand' => $data,
+                'items' => $data,
                 'kpi' => $kpi,
+                'summary' => [
+                    'total_items' => (int)$kpi['total_skus'],
+                    'total_skus' => (int)$kpi['total_skus'],
+                    'total_val' => (float)$kpi['total_value'],
+                    'total_value' => (float)$kpi['total_value'],
+                    'low_stock' => (int)$kpi['out_of_stock'],
+                    'out_of_stock' => (int)$kpi['out_of_stock'],
+                    'total_qty' => (float)$kpi['toolbar_total_pcs'],
+                    'toolbar_total_pcs' => (float)$kpi['toolbar_total_pcs'],
+                    'total_pending_qty' => (float)$kpi['total_pending_qty']
+                ],
                 'pagination' => [
                     'total_records' => $kpi['total_skus'],
                     'current_page' => $page,
@@ -2239,7 +2266,9 @@ try {
                     'categories' => $categories,
                     'sub_types' => $groupedSubTypes,
                     'all_sub_types' => array_values($allSubTypesSet)
-                ]
+                ],
+                'categories' => $categories,
+                'sub_types' => $groupedSubTypes
             ];
             break;
 
@@ -2507,7 +2536,7 @@ try {
             $stmt = $pdo->query($sql);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $response = ['success' => true, 'data' => $data, 'count' => count($data)];
+            $response = ['success' => true, 'data' => $data, 'pending_counts' => $data, 'count' => count($data)];
             break;
 
         case 'get_cycle_count_history':
