@@ -20,7 +20,7 @@ export const MENU_DATA = [
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
       { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
-      { name: 'Forklift Booking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php', external: true },
+      { name: 'Forklift Booking (จองโฟล์คลิฟท์)', icon: Truck, to: '/forklift' },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
       { name: 'Team Planner (แผนงานทีม)', icon: Calendar, to: '/planner' },
       { name: 'Document Center (ศูนย์เอกสาร)', icon: FolderOpen, to: '/documents' },
