@@ -548,7 +548,7 @@ export default function BomManagerTab({ lines = [], models = [] }) {
 
             {/* Components Table (Matches Legacy Image 8 Schema) */}
             <div className="flex-1 overflow-auto relative">
-              <SecurityWatermark classification="SNC PROPRIETARY • BOM SPECIFICATION" />
+              <SecurityWatermark classification="BOM SPECIFICATION" />
               <table className="w-full border-collapse text-xs text-left">
                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-850 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 uppercase font-semibold text-[11px]">
                   <tr>

@@ -52,35 +52,26 @@ export default function SecurityWatermark({
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
-    const line1 = escapeXml(`${rawName} ${rawId} • ${classification}`);
-    const line2 = escapeXml(`${dateStr} • SNC RESTRICTED INDUSTRIAL ASSET • DO NOT COPY`);
+    const cleanTag = escapeXml(
+      `${rawId ? rawId + ' ' : ''}${rawName} • ${dateStr} • ${classification}`
+    );
 
-    // 460x230 repeating tile with -22deg tilted text for optimal readability, spacing and anti-moiré stroke resilience
+    // 560x260 spacious repeating tile with -20deg tilted single clean line
+    // High-legibility large bold font (15.5px, weight 700) with wide spacing to eliminate visual clutter
     const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="230">
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="260">
   <style>
     text {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      letter-spacing: 0.6px;
-      user-select: none;
-    }
-    .title {
-      font-size: 13.5px;
+      font-size: 15.5px;
       font-weight: 700;
+      letter-spacing: 0.8px;
+      user-select: none;
       fill: rgba(30, 41, 59, ${opacity});
     }
-    .sub {
-      font-size: 10.5px;
-      font-weight: 600;
-      letter-spacing: 0.8px;
-      fill: rgba(51, 65, 85, ${opacity * 0.85});
-    }
   </style>
-  <g transform="rotate(-22 230 115)">
-    <text x="20" y="80" class="title">${line1}</text>
-    <text x="35" y="102" class="sub">${line2}</text>
-    <text x="250" y="195" class="title">${line1}</text>
-    <text x="265" y="217" class="sub">${line2}</text>
+  <g transform="rotate(-20 280 130)">
+    <text x="30" y="130">${cleanTag}</text>
   </g>
 </svg>
 `.trim();

@@ -594,7 +594,7 @@ export default function SapValuationTab() {
         defaultSortDirection="desc"
         emptyMessage="ไม่พบข้อมูลสินค้าตรงตามเงื่อนไขที่เลือก"
         searchable={false}
-        watermark="SNC FINANCIAL • SAP VALUATION CONFIDENTIAL"
+        watermark="SAP VALUATION"
       />
     </div>
   );
