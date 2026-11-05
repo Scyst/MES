@@ -9,6 +9,15 @@ import SecurityWatermark from '../../../shared/components/SecurityWatermark';
 import ItemDetailsModal from './ItemDetailsModal';
 import QuickScannerModal from './QuickScannerModal';
 
+const getQtyFontSize = (val) => {
+  const str = typeof val === 'number' ? val.toLocaleString() : String(val ?? '');
+  const len = str.length;
+  if (len >= 14) return 'text-[10px] sm:text-[11px] tracking-tighter';
+  if (len >= 11) return 'text-[11px] sm:text-xs tracking-tighter';
+  if (len >= 8) return 'text-xs sm:text-sm tracking-tight';
+  return 'text-sm';
+};
+
 export default function InventoryDashboardTab({ onNavigateTab }) {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState({});
@@ -86,9 +95,9 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
       <SecurityWatermark classification="WAREHOUSE INVENTORY • CONFIDENTIAL" />
 
       {/* Summary Metrics Cards - Horizontal Swipeable on Mobile, Grid on Desktop */}
-      <div className="flex md:grid md:grid-cols-4 gap-2 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap snap-x snap-mandatory pb-0.5 flex-nowrap flex-shrink-0 touch-pan-x">
+      <div className="flex md:grid md:grid-cols-4 gap-2 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap snap-x snap-mandatory pb-1 flex-nowrap flex-shrink-0 touch-pan-x">
         {/* Card 1: SKUs */}
-        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-blue-600">
+        <div className="w-[145px] shrink-0 md:w-auto md:shrink md:flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start border-l-4 border-l-blue-600">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
             <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -103,7 +112,7 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
         </div>
 
         {/* Card 2: Valuation */}
-        <div className="min-w-[155px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-emerald-500">
+        <div className="w-[170px] shrink-0 md:w-auto md:shrink md:flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start border-l-4 border-l-emerald-500">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -118,7 +127,7 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
         </div>
 
         {/* Card 3: Low/Out of Stock */}
-        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-rose-500">
+        <div className="w-[150px] shrink-0 md:w-auto md:shrink md:flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start border-l-4 border-l-rose-500">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
             <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -133,7 +142,7 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
         </div>
 
         {/* Card 4: Total Qty */}
-        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-purple-500">
+        <div className="w-[160px] shrink-0 md:w-auto md:shrink md:flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start border-l-4 border-l-purple-500">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
             <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -401,36 +410,52 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
                       </p>
 
                       {/* Structured 3-Column Split (Pending | Available | Total) */}
-                      <div className="grid grid-cols-3 text-center border-t border-slate-100 dark:border-slate-800 pt-2 bg-slate-50/50 dark:bg-slate-800/30 rounded-lg py-1.5 mt-1">
-                        <div className="border-r border-slate-200 dark:border-slate-700">
-                          <div className="text-[10px] text-slate-400 font-sans">Pending</div>
-                          <div className="font-mono font-bold text-xs text-amber-500">
+                      <div className="grid grid-cols-[0.8fr_1.1fr_1.1fr] text-center border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 rounded-xl py-2 px-1 mt-1.5 divide-x divide-slate-200/80 dark:divide-slate-700/80">
+                        {/* Pending */}
+                        <div className="min-w-0 px-1 flex flex-col justify-center">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                            Pending
+                          </span>
+                          <span
+                            className={`font-mono font-bold text-amber-500 block truncate ${getQtyFontSize(pendingQty)}`}
+                            title={`รอรับเข้า (Pending): ${pendingQty.toLocaleString()}`}
+                          >
                             {pendingQty.toLocaleString()}
-                          </div>
+                          </span>
                         </div>
 
+                        {/* Available */}
                         <div
-                          className="border-r border-slate-200 dark:border-slate-700 cursor-pointer"
+                          className="min-w-0 px-1 cursor-pointer flex flex-col justify-center group"
                           onClick={() => setSelectedModalItem(item)}
-                          title="คลิกเพื่อดูพิกัด"
+                          title={`คลิกเพื่อดูพิกัดคลัง: ${onhand.toLocaleString()}`}
                         >
-                          <div className="text-[10px] text-slate-400 font-sans">Available</div>
-                          <div
-                            className={`font-mono font-black text-sm underline ${
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                            Available
+                          </span>
+                          <span
+                            className={`font-mono font-black underline decoration-dotted underline-offset-2 block truncate ${
                               isOutOfStock
-                                ? 'text-rose-500'
+                                ? 'text-rose-500 dark:text-rose-400'
                                 : 'text-emerald-600 dark:text-emerald-400'
-                            }`}
+                            } ${getQtyFontSize(onhand)}`}
+                            title={`พร้อมจ่าย (Available): ${onhand.toLocaleString()}`}
                           >
                             {onhand.toLocaleString()}
-                          </div>
+                          </span>
                         </div>
 
-                        <div>
-                          <div className="text-[10px] text-slate-400 font-sans">Total</div>
-                          <div className="font-mono font-black text-xs text-slate-800 dark:text-slate-100">
+                        {/* Total */}
+                        <div className="min-w-0 px-1 flex flex-col justify-center">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                            Total
+                          </span>
+                          <span
+                            className={`font-mono font-black text-slate-800 dark:text-slate-100 block truncate ${getQtyFontSize(totalItemQty)}`}
+                            title={`รวมทั้งหมด (Total): ${totalItemQty.toLocaleString()}`}
+                          >
                             {totalItemQty.toLocaleString()}
-                          </div>
+                          </span>
                         </div>
                       </div>
 

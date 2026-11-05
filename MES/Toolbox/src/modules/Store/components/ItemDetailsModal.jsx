@@ -67,22 +67,22 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
         {/* Content */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           {/* Quick Metrics */}
-          <div className="grid grid-cols-3 gap-2 text-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-            <div>
-              <div className="text-[10px] text-slate-400 font-sans">ยอดคงเหลือ</div>
-              <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
+          <div className="grid grid-cols-3 gap-1 text-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 divide-x divide-slate-200/80 dark:divide-slate-700/80">
+            <div className="min-w-0 px-1">
+              <div className="text-[10px] text-slate-400 font-sans truncate">ยอดคงเหลือ</div>
+              <div className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 truncate" title={Number(item.available_qty ?? item.onhand_qty ?? item.quantity ?? 0).toLocaleString()}>
                 {Number(item.available_qty ?? item.onhand_qty ?? item.quantity ?? 0).toLocaleString()}
               </div>
             </div>
-            <div>
-              <div className="text-[10px] text-slate-400 font-sans">ราคา/หน่วย</div>
-              <div className="text-sm font-bold font-mono text-slate-700 dark:text-slate-300">
+            <div className="min-w-0 px-1">
+              <div className="text-[10px] text-slate-400 font-sans truncate">ราคา/หน่วย</div>
+              <div className="text-xs sm:text-sm font-bold font-mono text-slate-700 dark:text-slate-300 truncate">
                 ฿{Number(item.unit_price ?? item.StandardPrice ?? 0).toFixed(2)}
               </div>
             </div>
-            <div>
-              <div className="text-[10px] text-slate-400 font-sans">มูลค่ารวม</div>
-              <div className="text-sm font-bold font-mono text-slate-700 dark:text-slate-300">
+            <div className="min-w-0 px-1">
+              <div className="text-[10px] text-slate-400 font-sans truncate">มูลค่ารวม</div>
+              <div className="text-xs sm:text-sm font-bold font-mono text-slate-700 dark:text-slate-300 truncate" title={`฿${Number(item.total_value ?? 0).toLocaleString()}`}>
                 ฿{Number(item.total_value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
             </div>
