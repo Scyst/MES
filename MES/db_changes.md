@@ -4,6 +4,67 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-05 — OEE Dashboard Labor Cost Parity & Dual View Enhancement
+
+**Agent:** Antigravity  
+**Feature:** ปรับปรุง Stored Procedures สำหรับคำนวณค่าแรงใน OEE Dashboard ให้สอดคล้องกับระบบ Manpower และ Morning Brief (รองรับ 2 มุมมอง: Actual DL vs BOM Std DL) พร้อมแก้ปัญหา Parameter Whitespace / Trim
+
+### Schema / Stored Procedure Alterations
+
+#### 1. dbo.sp_CalculateActualCostSummary
+- ปรับปรุงให้ดึงค่าแรงจริง (Actual DL + OT) จากฟังก์ชันหลัก `dbo.fn_GetManpowerSummary_V2` โดยตรงแบบ Dynamic Date Range
+- รองรับการกรองตาม Line (แผนก) และ Team อย่างแม่นยำ พร้อมจัดการ Trim whitespace และแปลงค่า 'All' เป็น NULL
+
+```sql
+CREATE OR ALTER PROCEDURE [dbo].[sp_CalculateActualCostSummary]
+    @StartDate DATE,
+    @EndDate DATE,
+    @Line NVARCHAR(50) = NULL,
+    @Team NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Clean and normalize inputs
+    SET @Line = NULLIF(LTRIM(RTRIM(@Line)), '');
+    IF @Line = 'All' SET @Line = NULL;
+
+    SET @Team = NULLIF(LTRIM(RTRIM(@Team)), '');
+    IF @Team = 'All' SET @Team = NULL;
+
+    WITH DateRange AS (
+        SELECT CAST(@StartDate AS DATE) AS SummaryDate
+        UNION ALL
+        SELECT DATEADD(DAY, 1, SummaryDate)
+        FROM DateRange
+        WHERE SummaryDate < CAST(@EndDate AS DATE)
+    )
+    SELECT 
+        ISNULL(SUM(f.Normal_Cost), 0) AS TotalActualDL,
+        ISNULL(SUM(f.OT_Cost), 0) AS TotalActualOT,
+        ISNULL(SUM(f.Normal_Cost + f.OT_Cost), 0) AS TotalActualDLOT,
+        ISNULL(SUM(f.Count_Actual), 0) AS TotalHeadcount
+    FROM DateRange d
+    CROSS APPLY dbo.fn_GetManpowerSummary_V2(d.SummaryDate) f
+    WHERE (@Line IS NULL OR f.display_section = @Line)
+      AND (
+          @Team IS NULL 
+          OR f.hc_group = @Team 
+          OR f.team_group = @Team
+      )
+      AND (
+          @Team IS NOT NULL 
+          OR ISNULL(f.hc_group, '') != 'EXCLUDE'
+      )
+    OPTION (MAXRECURSION 366);
+END
+```
+
+#### 2. dbo.sp_CalculateProductionCostSummary
+- เพิ่มการ Sanitization / Trim ค่าพารามิเตอร์ `@Line`, `@Model`, `@Team` เพื่อป้องกันปัญหายอดผลิตและค่าแรงกลายเป็น 0 เมื่อ URL หรือ Client ส่งพารามิเตอร์ที่มีช่องว่างนำหน้า เช่น `' ASSEMBLY'`
+
+---
+
 ## 2026-11-04 — Team Planner Filtered Index for Active Tasks (Industry Standard Scalability)
 
 **Agent:** Antigravity  

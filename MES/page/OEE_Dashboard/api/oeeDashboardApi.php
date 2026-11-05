@@ -5,12 +5,13 @@ header('Content-Type: application/json; charset=utf-8');
 
 $response = ['success' => false, 'data' => null, 'message' => ''];
 $action = $_GET['action'] ?? '';
-$startDate = $_GET['startDate'] ?? date('Y-m-d');
-$endDate = $_GET['endDate'] ?? date('Y-m-d');
-$line = (!empty($_GET['line']) && $_GET['line'] !== 'All') ? $_GET['line'] : null;
-$model = (!empty($_GET['model']) && $_GET['model'] !== 'All') ? $_GET['model'] : null;
-$machine = (!empty($_GET['machine']) && $_GET['machine'] !== 'All') ? $_GET['machine'] : null;
-$team = (!empty($_GET['team']) && $_GET['team'] !== 'All') ? $_GET['team'] : null;
+$startDate = isset($_GET['startDate']) ? trim($_GET['startDate']) : date('Y-m-d');
+$endDate = isset($_GET['endDate']) ? trim($_GET['endDate']) : date('Y-m-d');
+$line = (!empty($_GET['line']) && trim($_GET['line']) !== 'All') ? trim($_GET['line']) : null;
+$model = (!empty($_GET['model']) && trim($_GET['model']) !== 'All') ? trim($_GET['model']) : null;
+$machine = (!empty($_GET['machine']) && trim($_GET['machine']) !== 'All') ? trim($_GET['machine']) : null;
+$team = (!empty($_GET['team']) && trim($_GET['team']) !== 'All') ? trim($_GET['team']) : null;
+$laborView = isset($_GET['laborView']) ? trim(strtolower($_GET['laborView'])) : 'actual';
 
 try {
     switch ($action) {
@@ -302,46 +303,98 @@ try {
                     if (is_numeric($v)) $stdRes[$k] = (float)$v;
                 }
                 
-                $stdRes['isActualDLCost'] = false;
-                
-                // Fetch actual cost ONLY if looking at aggregate level (no specific model, machine, or team)
-                if ((empty($model) || $model === 'All') && (empty($machine) || $machine === 'All') && (empty($team) || $team === 'All')) {
-                    $stmtAct = $pdo->prepare("EXEC dbo." . SP_CALC_ACTUAL_COST . " @StartDate=:sd, @EndDate=:ed, @Line=:ln, @Team=:tm");
-                    $stmtAct->bindValue(':sd', $startDate);
-                    $stmtAct->bindValue(':ed', $endDate);
-                    
-                    if (empty($line) || $line === 'All' || strtoupper($line) === 'ASSEMBLY') {
-                        $stmtAct->bindValue(':ln', null, PDO::PARAM_NULL);
-                    } else {
-                        $stmtAct->bindValue(':ln', $line, PDO::PARAM_STR);
-                    }
-                    
-                    $stmtAct->bindValue(':tm', null, PDO::PARAM_NULL);
-                    $stmtAct->execute();
-                    $actRes = $stmtAct->fetch(PDO::FETCH_ASSOC);
+                // Preserve Standard Direct Labor Cost from BOM Snapshot
+                $stdDLCost = (float)($stdRes['TotalDLCost'] ?? 0);
+                $stdRes['TotalStdDLCost'] = $stdDLCost;
 
-                    if ($actRes && isset($actRes['TotalActualDLOT'])) {
-                        $stdRes['TotalDLCost'] = (float)$actRes['TotalActualDLOT'];
-                        $stdRes['TotalActualDL'] = (float)($actRes['TotalActualDL'] ?? 0);
-                        $stdRes['TotalActualOT'] = (float)($actRes['TotalActualOT'] ?? 0);
-                        $stdRes['isActualDLCost'] = true;
-                    }
+                // Fetch actual labor cost from fn_GetManpowerSummary_V2 via SP_CALC_ACTUAL_COST
+                $stmtAct = $pdo->prepare("EXEC dbo." . SP_CALC_ACTUAL_COST . " @StartDate=:sd, @EndDate=:ed, @Line=:ln, @Team=:tm");
+                $stmtAct->bindValue(':sd', $startDate);
+                $stmtAct->bindValue(':ed', $endDate);
+                $stmtAct->bindValue(':ln', empty($line) ? null : $line, PDO::PARAM_STR);
+                $stmtAct->bindValue(':tm', empty($team) ? null : $team, PDO::PARAM_STR);
+                $stmtAct->execute();
+                $actRes = $stmtAct->fetch(PDO::FETCH_ASSOC);
+
+                $actualDL = (float)($actRes['TotalActualDL'] ?? 0);
+                $actualOT = (float)($actRes['TotalActualOT'] ?? 0);
+                $actualDLOT = (float)($actRes['TotalActualDLOT'] ?? 0);
+                $actualHeadcount = (int)($actRes['TotalHeadcount'] ?? 0);
+
+                $stdRes['TotalActualDL'] = $actualDL;
+                $stdRes['TotalActualOT'] = $actualOT;
+                $stdRes['TotalActualDLOT'] = $actualDLOT;
+                $stdRes['TotalActualHeadcount'] = $actualHeadcount;
+
+                $rev = (float)($stdRes['TotalStdRevenue'] ?? 0);
+                $matCost = (float)($stdRes['TotalMatCost'] ?? 0);
+                $ohCost = (float)($stdRes['TotalOHCost'] ?? 0);
+
+                // Scenario 1: Standard BOM View
+                $stdTotalCost = $matCost + $stdDLCost + $ohCost;
+                $stdGP = $rev - $stdTotalCost;
+                $stdPercentGP = ($rev > 0) ? ($stdGP / $rev) * 100 : 0;
+                $stdLaborEfficiency = ($stdDLCost > 0) ? ($rev / $stdDLCost) : 0;
+                $stdCostPerUnit = ($totalFG > 0) ? ($stdTotalCost / $totalFG) : 0;
+
+                // Scenario 2: Actual Cost View (Default, matches Manpower & Morning Brief)
+                $actualTotalCost = $matCost + $actualDLOT + $ohCost;
+                $actualGP = $rev - $actualTotalCost;
+                $actualPercentGP = ($rev > 0) ? ($actualGP / $rev) * 100 : 0;
+                $actualLaborEfficiency = ($actualDLOT > 0) ? ($rev / $actualDLOT) : 0;
+                $actualCostPerUnit = ($totalFG > 0) ? ($actualTotalCost / $totalFG) : 0;
+
+                // Dual view metrics dictionary for instantaneous client-side toggling
+                $stdRes['dualViews'] = [
+                    'actual' => [
+                        'laborCost' => $actualDLOT,
+                        'totalDL' => $actualDL,
+                        'totalOT' => $actualOT,
+                        'headcount' => $actualHeadcount,
+                        'totalCost' => $actualTotalCost,
+                        'grossProfit' => $actualGP,
+                        'percentGP' => $actualPercentGP,
+                        'laborEfficiency' => $actualLaborEfficiency,
+                        'costPerUnit' => $actualCostPerUnit,
+                        'percentDL' => ($rev > 0) ? ($actualDLOT / $rev) * 100 : 0
+                    ],
+                    'bom' => [
+                        'laborCost' => $stdDLCost,
+                        'totalDL' => $stdDLCost,
+                        'totalOT' => 0,
+                        'headcount' => 0,
+                        'totalCost' => $stdTotalCost,
+                        'grossProfit' => $stdGP,
+                        'percentGP' => $stdPercentGP,
+                        'laborEfficiency' => $stdLaborEfficiency,
+                        'costPerUnit' => $stdCostPerUnit,
+                        'percentDL' => ($rev > 0) ? ($stdDLCost / $rev) * 100 : 0
+                    ]
+                ];
+
+                $stdRes['laborView'] = $laborView;
+                $isActual = ($laborView !== 'bom' && $laborView !== 'std');
+                $stdRes['isActualDLCost'] = $isActual;
+
+                if ($isActual) {
+                    $stdRes['TotalDLCost'] = $actualDLOT;
+                    $stdRes['TotalStdCost'] = $actualTotalCost;
+                    $stdRes['PercentGPStd'] = $actualPercentGP;
+                    $stdRes['LaborEfficiency'] = $actualLaborEfficiency;
+                    $stdRes['CostPerUnit'] = $actualCostPerUnit;
+                    $stdRes['PercentDL'] = ($rev > 0) ? ($actualDLOT / $rev) * 100 : 0;
+                } else {
+                    $stdRes['TotalDLCost'] = $stdDLCost;
+                    $stdRes['TotalStdCost'] = $stdTotalCost;
+                    $stdRes['PercentGPStd'] = $stdPercentGP;
+                    $stdRes['LaborEfficiency'] = $stdLaborEfficiency;
+                    $stdRes['CostPerUnit'] = $stdCostPerUnit;
+                    $stdRes['PercentDL'] = ($rev > 0) ? ($stdDLCost / $rev) * 100 : 0;
                 }
-                
-                $rev = $stdRes['TotalStdRevenue'] ?? 0;
-                $stdRes['PercentDL'] = ($rev > 0) ? ($stdRes['TotalDLCost'] / $rev) * 100 : 0;
-                $stdRes['PercentOH'] = ($rev > 0) ? (($stdRes['TotalOHCost'] ?? 0) / $rev) * 100 : 0;
-                
-                $stdRes['TotalStdCost'] = ($stdRes['TotalMatCost'] ?? 0) + $stdRes['TotalDLCost'] + ($stdRes['TotalOHCost'] ?? 0);
-                $stdRes['PercentGPStd'] = ($rev > 0) ? (($rev - $stdRes['TotalStdCost']) / $rev) * 100 : 0;
-                
-                $totalCost = $stdRes['TotalStdCost'];
-                $revenue = $stdRes['TotalStdRevenue'];
-                $laborCost = $stdRes['TotalDLCost'];
-                $stdRes['CostPerUnit'] = ($totalFG > 0) ? ($totalCost / $totalFG) : 0;
-                $matCostPerUnit = ($totalFG > 0) ? ($stdRes['TotalMatCost'] / $totalFG) : 0;
+
+                $stdRes['PercentOH'] = ($rev > 0) ? ($ohCost / $rev) * 100 : 0;
+                $matCostPerUnit = ($totalFG > 0) ? ($matCost / $totalFG) : 0;
                 $stdRes['ScrapCostValue'] = $scrapQty * $matCostPerUnit;
-                $stdRes['LaborEfficiency'] = ($laborCost > 0) ? ($revenue / $laborCost) : 0;
                 
                 $response['data'] = $stdRes;
                 $response['success'] = true;
@@ -351,7 +404,8 @@ try {
                 $response['data'] = [
                     "TotalMatCost"=>0, "TotalDLCost"=>0, "TotalOHCost"=>0, "TotalStdCost"=>0, 
                     "TotalStdRevenue"=>0, "PercentRM"=>0, "PercentDL"=>0, "PercentOH"=>0, "PercentGPStd"=>0, 
-                    "isActualDLCost"=>false, "CostPerUnit"=>0, "ScrapCostValue"=>0, "LaborEfficiency"=>0
+                    "isActualDLCost"=>false, "CostPerUnit"=>0, "ScrapCostValue"=>0, "LaborEfficiency"=>0,
+                    "TotalStdDLCost"=>0, "TotalActualDL"=>0, "TotalActualOT"=>0, "TotalActualDLOT"=>0
                 ];
             }
             break;

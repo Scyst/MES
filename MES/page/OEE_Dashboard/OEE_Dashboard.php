@@ -207,11 +207,26 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                 <div class="row g-3 mb-3" id="financialSummaryCard">
                     <div class="col-12">
                         <div class="chart-card p-0 border-0 shadow-sm" style="background: #ffffff; border-radius: 12px; overflow: hidden;">
-                            <div class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom bg-light bg-opacity-50">
-                                <span class="fw-bold text-dark" style="font-size: 0.85rem;">
-                                    <i class="fas fa-file-invoice-dollar me-2 text-primary"></i>Executive Financial Summary
-                                </span>
-                                <small class="text-muted" style="font-size: 0.65rem;">Updated: <span id="lastUpdate">--:--</span></small>
+                            <div class="px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom bg-light bg-opacity-50">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="fw-bold text-dark" style="font-size: 0.85rem;">
+                                        <i class="fas fa-file-invoice-dollar me-2 text-primary"></i>Executive Financial Summary
+                                    </span>
+                                    <div class="btn-group btn-group-sm ms-md-2" role="group" aria-label="Labor Cost Mode">
+                                        <button type="button" class="btn btn-sm btn-primary fw-bold px-2 py-0" id="btnLaborActual" style="font-size: 0.72rem;" title="ค่าแรงจ่ายจริงตามเวลาบันทึกเข้างาน (ตรงกับ Morning Brief และ Manpower)">
+                                            <i class="fas fa-user-check me-1"></i>ค่าแรงจริง (Actual DL)
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-2 py-0" id="btnLaborBom" style="font-size: 0.72rem;" title="ค่าแรงมาตรฐานตามสูตรการผลิต (BOM Snapshot x ยอดผลิต FG)">
+                                            <i class="fas fa-layer-group me-1"></i>ค่าแรงมาตรฐาน (BOM Std)
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-white text-secondary border px-2 py-1" id="laborModeDesc" style="font-size: 0.68rem; font-weight: 500;">
+                                        <i class="fas fa-check-circle text-success me-1"></i>โหมด: ค่าแรงจริง (Manpower)
+                                    </span>
+                                    <small class="text-muted" style="font-size: 0.65rem;">Updated: <span id="lastUpdate">--:--</span></small>
+                                </div>
                             </div>
 
                             <div class="row g-0">
@@ -241,11 +256,12 @@ $isLoggedIn = (isset($_SESSION['user']) && !empty($_SESSION['user'])) || (isset(
                                 </div>
 
                                 <div class="col-6 col-md-4 col-xl-2 financial-col">
-                                    <div class="fin-label">Labor (DL+OT)</div>
+                                    <div class="fin-label" id="laborCardLabel">Labor (Actual DL+OT)</div>
                                     <div class="fin-value text-main" id="prodCostDL">--</div>
                                     <div class="fin-sub-row">
                                         <span class="fin-sub-item">DL: <b id="valDL">--</b> | OT: <b id="valOT">--</b></span>
                                         <span class="fin-sub-item text-primary">Eff: <b id="valLaborEff">--</b></span>
+                                        <span class="fin-sub-item text-muted" id="valCompareLabor" style="display: none;"></span>
                                     </div>
                                 </div>
 
