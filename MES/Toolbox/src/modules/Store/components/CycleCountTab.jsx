@@ -115,45 +115,7 @@ export default function CycleCountTab({ onNavigateTab }) {
   const overall = healthData?.overall || {};
 
   return (
-    <div className="flex flex-col h-full space-y-2.5 animate-fadeIn relative">
-      {/* Action Header Bar (Old System Operational UX) */}
-      <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between gap-2 flex-shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-            <MapPin className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100 truncate">
-              แผนผังคลังสินค้า (Visual Map)
-            </h2>
-            <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-              เลือกตำแหน่งคลังเพื่อเริ่มตรวจนับสต็อก (Blind Count)
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {onNavigateTab && (
-            <button
-              type="button"
-              onClick={() => onNavigateTab('approvals')}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-colors flex items-center gap-1 cursor-pointer touch-manipulation"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>อนุมัติผลนับ</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsZoneSettingsOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition-colors flex items-center gap-1 cursor-pointer touch-manipulation"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">ตั้งค่าโซน</span>
-          </button>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-full space-y-2 animate-fadeIn relative">
       {/* IRA Health & Metrics Box */}
       <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
@@ -166,16 +128,28 @@ export default function CycleCountTab({ onNavigateTab }) {
               พฤศจิกายน 2569
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setIsHealthModalOpen(true);
-              fetchHealthMetrics();
-            }}
-            className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-0.5"
-          >
-            ดูรายงาน IRA →
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsHealthModalOpen(true);
+                fetchHealthMetrics();
+              }}
+              className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+            >
+              ดูรายงาน IRA
+            </button>
+            <span className="text-slate-300 dark:text-slate-600">|</span>
+            <button
+              type="button"
+              onClick={() => setIsZoneSettingsOpen(true)}
+              className="text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer flex items-center gap-1"
+            >
+              <Layers className="w-3 h-3" />
+              <span>ตั้งค่าโซน</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 text-center border-t border-slate-100 dark:border-slate-800 pt-2 text-xs">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Layers, CheckSquare, Square, Save, Search, Check } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
 
@@ -68,9 +69,9 @@ export default function ZoneSettingsModal({ isOpen, onClose, locations, zones, o
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-3xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
           <div className="flex items-center gap-3">
@@ -256,12 +257,13 @@ export default function ZoneSettingsModal({ isOpen, onClose, locations, zones, o
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            className="px-4 py-2 font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
           >
             ปิด
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

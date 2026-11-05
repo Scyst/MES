@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Award, ShieldCheck, AlertTriangle, TrendingUp, BarChart3, CheckCircle2 } from 'lucide-react';
 
 export default function ZoneHealthModal({ isOpen, onClose, healthData, loading }) {
@@ -8,9 +9,9 @@ export default function ZoneHealthModal({ isOpen, onClose, healthData, loading }
   const zones = healthData?.zones || [];
   const cycleLabel = healthData?.cycle_label || 'รอบการตรวจนับปัจจุบัน';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
           <div className="flex items-center gap-3">
@@ -178,6 +179,7 @@ export default function ZoneHealthModal({ isOpen, onClose, healthData, loading }
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

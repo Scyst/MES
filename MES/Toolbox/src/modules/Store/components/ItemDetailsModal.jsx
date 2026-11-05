@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, MapPin, Boxes, DollarSign, Layers } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
 
@@ -31,9 +32,9 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
   const availableLocs = details?.available_details || details?.data?.available_details || [];
   const pendingLocs = details?.pending_details || details?.data?.pending_details || [];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] my-auto">
         {/* Header */}
         <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -151,6 +152,7 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

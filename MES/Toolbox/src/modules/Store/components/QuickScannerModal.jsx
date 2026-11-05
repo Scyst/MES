@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, QrCode, Search, Barcode, ArrowRight } from 'lucide-react';
 
 export default function QuickScannerModal({ isOpen, onClose, onSearch }) {
@@ -14,9 +15,9 @@ export default function QuickScannerModal({ isOpen, onClose, onSearch }) {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto">
         {/* Header */}
         <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-blue-600 text-white">
           <div className="flex items-center gap-2">
@@ -68,6 +69,7 @@ export default function QuickScannerModal({ isOpen, onClose, onSearch }) {
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
