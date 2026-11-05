@@ -116,8 +116,8 @@ export default function StoreApp() {
 
       {/* Main Tab Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {currentTab === 'onhand' && <InventoryDashboardTab />}
-        {currentTab === 'cycle-count' && <CycleCountTab />}
+        {currentTab === 'onhand' && <InventoryDashboardTab onNavigateTab={setTab} />}
+        {currentTab === 'cycle-count' && <CycleCountTab onNavigateTab={setTab} />}
         {currentTab === 'approvals' && <PendingApprovalsTab />}
         {currentTab === 'ledger' && <StockLedgerTab />}
       </div>

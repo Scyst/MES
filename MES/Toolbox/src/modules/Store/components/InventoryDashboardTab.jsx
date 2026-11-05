@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Boxes, DollarSign, AlertCircle, RefreshCw, Search, Filter,
-  TrendingDown, ShieldCheck, ChevronLeft, ChevronRight, Eye, EyeOff
+  TrendingDown, ShieldCheck, ChevronLeft, ChevronRight, Eye,
+  QrCode, FileText, ArrowLeftRight
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
 import SecurityWatermark from '../../../shared/components/SecurityWatermark';
+import ItemDetailsModal from './ItemDetailsModal';
+import QuickScannerModal from './QuickScannerModal';
 
-export default function InventoryDashboardTab() {
+export default function InventoryDashboardTab({ onNavigateTab }) {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState({});
   const [categories, setCategories] = useState([]);
@@ -18,6 +21,10 @@ export default function InventoryDashboardTab() {
   const [hideZero, setHideZero] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
+
+  // Modals
+  const [selectedModalItem, setSelectedModalItem] = useState(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -75,70 +82,74 @@ export default function InventoryDashboardTab() {
   const totalQty = summary.toolbar_total_pcs ?? summary.total_qty ?? 0;
 
   return (
-    <div className="flex flex-col h-full space-y-3 animate-fadeIn relative">
+    <div className="flex flex-col h-full space-y-2.5 animate-fadeIn relative">
       <SecurityWatermark classification="WAREHOUSE INVENTORY • CONFIDENTIAL" />
 
       {/* Summary Metrics Cards - Horizontal Swipeable on Mobile, Grid on Desktop */}
       <div className="flex md:grid md:grid-cols-4 gap-2 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap snap-x snap-mandatory pb-0.5 flex-nowrap flex-shrink-0 touch-pan-x">
-        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
-          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+        {/* Card 1: SKUs */}
+        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-blue-600">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
             <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
             <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
-              SKUs ทั้งหมด
+              รายการ (TOTAL SKUS)
             </span>
-            <div className="text-sm sm:text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight truncate">
               {Number(totalSkus).toLocaleString()}
             </div>
           </div>
         </div>
 
-        <div className="min-w-[155px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
-          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+        {/* Card 2: Valuation */}
+        <div className="min-w-[155px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-emerald-500">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
             <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
               มูลค่าคงคลัง
             </span>
-            <div className="text-sm sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight truncate">
               ฿{Number(totalVal).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
           </div>
         </div>
 
-        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
-          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+        {/* Card 3: Low/Out of Stock */}
+        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-rose-500">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
             <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
             <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
-              สินค้าใกล้หมด
+              สินค้าหมด (OUT/LOW)
             </span>
-            <div className="text-sm sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-xl font-black text-rose-600 dark:text-rose-400 font-mono tracking-tight truncate">
               {Number(lowStock).toLocaleString()}
             </div>
           </div>
         </div>
 
-        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink">
-          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
+        {/* Card 4: Total Qty */}
+        <div className="min-w-[145px] sm:min-w-0 flex-1 p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2 sm:gap-3 snap-start flex-shrink-0 sm:flex-shrink border-l-4 border-l-purple-500">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
             <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1">
             <span className="text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate block">
               ยอดรวมคงคลัง
             </span>
-            <div className="text-sm sm:text-2xl font-black text-purple-600 dark:text-purple-400 font-mono tracking-tight truncate">
+            <div className="text-sm sm:text-xl font-black text-purple-600 dark:text-purple-400 font-mono tracking-tight truncate">
               {Number(totalQty).toLocaleString()}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar - Mobile Ultra-Compact & Horizontal Scrollable Controls */}
-      <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-1.5 sm:gap-2.5 flex-shrink-0">
+      {/* Filter and Search Bar - Mobile Ultra-Compact */}
+      <div className="p-2 sm:p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-1.5 sm:gap-2 flex-shrink-0">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
@@ -165,7 +176,7 @@ export default function InventoryDashboardTab() {
           </button>
         </div>
 
-        {/* Action Controls - Horizontal Scrollable on Mobile */}
+        {/* Action Controls */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap flex-nowrap py-0.5 md:py-0 flex-shrink-0">
           {/* Material Category Selector */}
           <select
@@ -245,6 +256,7 @@ export default function InventoryDashboardTab() {
                       <th className="py-2.5 px-3 text-right">Safety Stock</th>
                       <th className="py-2.5 px-3 text-right">ราคา/หน่วย</th>
                       <th className="py-2.5 px-4 text-right">มูลค่ารวม (฿)</th>
+                      <th className="py-2.5 px-3 text-center">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -304,6 +316,16 @@ export default function InventoryDashboardTab() {
                           <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                             {totalItemVal > 0 ? `฿${totalItemVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                           </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedModalItem(item)}
+                              title="ดูพิกัดคลังสินค้า"
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                              <Search className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -311,64 +333,113 @@ export default function InventoryDashboardTab() {
                 </table>
               </div>
 
-              {/* MOBILE CARD VIEW (visible on mobile < md:, hidden on md:) */}
-              <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {/* MOBILE CARD VIEW (Adopted 1:1 from Old System Winning UX!) */}
+              <div className="block md:hidden p-2 space-y-2.5">
                 {items.map((item, idx) => {
                   const onhand = parseFloat(item.available_qty ?? item.onhand_qty ?? item.quantity ?? 0);
+                  const pendingQty = parseFloat(item.pending_qty ?? 0);
+                  const totalItemQty = onhand + pendingQty;
                   const safety = parseFloat(item.safety_stock ?? item.min_stock ?? 0);
-                  const isLow = safety > 0 && onhand <= safety;
-                  const price = parseFloat(item.unit_price ?? item.StandardPrice ?? 0);
-                  const totalItemVal = parseFloat(item.total_value ?? (onhand * price));
+                  const isOutOfStock = onhand <= 0;
+                  const isLow = !isOutOfStock && safety > 0 && onhand <= safety;
                   const partCode = item.part_no || item.item_no || item.sap_no;
 
+                  // Left border color accent
+                  let borderLeft = 'border-l-4 border-l-emerald-500';
+                  if (isOutOfStock) borderLeft = 'border-l-4 border-l-rose-500';
+                  else if (isLow) borderLeft = 'border-l-4 border-l-amber-500';
+
                   return (
-                    <div key={idx} className="p-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex flex-col gap-1.5">
-                      {/* Top: Part No & Material Type */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-mono font-black text-sm text-slate-900 dark:text-slate-100 truncate">
-                          {partCode}
+                    <div
+                      key={idx}
+                      className={`rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-3 transition-all ${borderLeft}`}
+                    >
+                      {/* Top Row: Type Badge + Out of Stock + Action Buttons */}
+                      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-600 text-white uppercase shadow-xs">
+                            {item.material_type || 'RM'}
+                          </span>
+                          {isOutOfStock && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500 text-white uppercase">
+                              OUT OF STOCK
+                            </span>
+                          )}
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase flex-shrink-0">
-                          {item.material_type || 'RM'}
-                        </span>
+
+                        {/* Action Buttons Group */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedModalItem(item)}
+                            title="ดูพิกัดคลังสินค้า"
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            <Search className="w-3.5 h-3.5" />
+                          </button>
+                          {onNavigateTab && (
+                            <button
+                              type="button"
+                              onClick={() => onNavigateTab('ledger')}
+                              title="ดูประวัติการเคลื่อนไหว (Ledger)"
+                              className="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center cursor-pointer transition-colors"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
+                      {/* Part No / Item Code (Prominent Blue Font) */}
+                      <h4 className="font-mono font-black text-base text-blue-600 dark:text-blue-400 tracking-tight leading-snug">
+                        {partCode}
+                      </h4>
+
                       {/* Description */}
-                      <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5 mb-2">
                         {item.part_description || item.description || '-'}
+                      </p>
+
+                      {/* Structured 3-Column Split (Pending | Available | Total) */}
+                      <div className="grid grid-cols-3 text-center border-t border-slate-100 dark:border-slate-800 pt-2 bg-slate-50/50 dark:bg-slate-800/30 rounded-lg py-1.5 mt-1">
+                        <div className="border-r border-slate-200 dark:border-slate-700">
+                          <div className="text-[10px] text-slate-400 font-sans">Pending</div>
+                          <div className="font-mono font-bold text-xs text-amber-500">
+                            {pendingQty.toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div
+                          className="border-r border-slate-200 dark:border-slate-700 cursor-pointer"
+                          onClick={() => setSelectedModalItem(item)}
+                          title="คลิกเพื่อดูพิกัด"
+                        >
+                          <div className="text-[10px] text-slate-400 font-sans">Available</div>
+                          <div
+                            className={`font-mono font-black text-sm underline ${
+                              isOutOfStock
+                                ? 'text-rose-500'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {onhand.toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] text-slate-400 font-sans">Total</div>
+                          <div className="font-mono font-black text-xs text-slate-800 dark:text-slate-100">
+                            {totalItemQty.toLocaleString()}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Location & SAP No */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-1.5 pt-1">
                         <span>
-                          {item.location_name ? `${item.location_name} ${item.zone_name ? `(${item.zone_name})` : ''}` : 'STORE'}
+                          📍 {item.location_name || 'STORE'} {item.zone_name ? `(${item.zone_name})` : ''}
                         </span>
-                        {item.sap_no && item.sap_no !== partCode && (
-                          <span>SAP: {item.sap_no}</span>
-                        )}
-                      </div>
-
-                      {/* Bottom: Onhand Qty & Total Valuation */}
-                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800 mt-0.5">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-[11px] text-slate-500 font-sans">คงเหลือ:</span>
-                          <span className={`font-mono font-black text-base ${isLow ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>
-                            {onhand.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-sans ml-0.5">
-                            {item.unit || 'PCS'}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
-                            ฿{totalItemVal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </div>
-                          {price > 0 && (
-                            <div className="text-[10px] text-slate-400 font-mono">
-                              @฿{price.toFixed(2)}
-                            </div>
-                          )}
-                        </div>
+                        {item.sap_no && <span>SAP: {item.sap_no}</span>}
                       </div>
                     </div>
                   );
@@ -378,9 +449,9 @@ export default function InventoryDashboardTab() {
           )}
         </div>
 
-        {/* Pagination Footer - Responsive */}
-        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 bg-slate-50/40 dark:bg-slate-800/20 flex-shrink-0">
-          <span className="truncate">
+        {/* Pagination Footer */}
+        <div className="px-3 sm:px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 bg-slate-50/40 dark:bg-slate-800/20 flex-shrink-0">
+          <span className="truncate text-[11px] sm:text-xs">
             หน้า {page} • แสดง {items.length} รายการ
           </span>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -388,24 +459,51 @@ export default function InventoryDashboardTab() {
               type="button"
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page <= 1}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
+              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer text-xs"
             >
-              <ChevronLeft className="w-4 h-4" />
+              ก่อนหน้า
             </button>
-            <span className="px-2.5 font-mono font-bold text-slate-700 dark:text-slate-300">
+            <span className="px-2 font-mono font-bold text-slate-700 dark:text-slate-300">
               {page}
             </span>
             <button
               type="button"
               onClick={() => setPage(page + 1)}
               disabled={items.length < limit}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
+              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer text-xs"
             >
-              <ChevronRight className="w-4 h-4" />
+              ถัดไป
             </button>
           </div>
         </div>
       </div>
+
+      {/* Floating Action Button (FAB) - Barcode Scanner (Old System Winning UX) */}
+      <button
+        type="button"
+        onClick={() => setIsScannerOpen(true)}
+        className="fixed bottom-20 sm:bottom-6 right-5 z-40 w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 touch-manipulation border-2 border-white/30"
+        title="สแกนเนอร์บาร์โค้ด (Barcode Scanner)"
+      >
+        <QrCode className="w-5 h-5 sm:w-6 sm:h-6" />
+      </button>
+
+      {/* Item Details Modal */}
+      <ItemDetailsModal
+        isOpen={!!selectedModalItem}
+        onClose={() => setSelectedModalItem(null)}
+        item={selectedModalItem}
+      />
+
+      {/* Quick Scanner Modal */}
+      <QuickScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onSearch={(code) => {
+          setSearch(code);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

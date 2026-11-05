@@ -28,6 +28,18 @@ export const storeApi = {
   },
 
   /**
+   * Fetch item location breakdown and details
+   */
+  getItemDetails: async (itemId, locationId = 'ALL', locationType = 'ALL') => {
+    return await apiGet(BASE_URL, {
+      action: 'get_item_details',
+      item_id: itemId,
+      location_id: locationId,
+      location_type: locationType
+    });
+  },
+
+  /**
    * Fetch pending cycle count records requiring Manager manual approval
    */
   getPendingCounts: async () => {
