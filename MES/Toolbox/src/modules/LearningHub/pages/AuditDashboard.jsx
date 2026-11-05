@@ -1,0 +1,1391 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
+import { 
+  getAllEmployees, 
+  getCourseAuditSummary, 
+  getEmployeeCompetencyPassport, 
+  getOverallAuditAnalytics,
+  DEPARTMENTS
+} from '../data/trainingAuditStore';
+import { getAllMergedCourses } from '../data/communityStore';
+import { DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
+import {
+  FiCheckCircle,
+  FiXCircle,
+  FiClock,
+  FiUser,
+  FiSearch,
+  FiFilter,
+  FiPrinter,
+  FiShield,
+  FiAward,
+  FiAlertTriangle,
+  FiBookOpen,
+  FiBarChart2,
+  FiFileText,
+  FiCalendar,
+  FiLayers,
+  FiTrendingUp,
+  FiAlertCircle,
+  FiChevronRight,
+  FiX,
+  FiCheck,
+  FiExternalLink,
+  FiDatabase,
+  FiDownload
+} from 'react-icons/fi';
+import CertificateModal from '../components/CertificateModal';
+
+export default function AuditDashboard() {
+  const { isDark } = useTheme();
+  const navigate = useNavigate();
+  const allCourses = useMemo(() => getAllMergedCourses(), []);
+  const allEmployees = useMemo(() => getAllEmployees(), []);
+
+  // Live SQL Server Audit Data State
+  const [liveAuditData, setLiveAuditData] = useState(null);
+
+  useEffect(() => {
+    fetch('../MES/MES/page/manpower/api/api_learning.php?action=get_audit_matrix', { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(json => {
+        if (json && json.success && json.data) {
+          setLiveAuditData(json.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Perspective state: 'course' | 'employee' | 'overview'
+  const [activeTab, setActiveTab] = useState('course');
+
+  // Course-Centric View state
+  const [selectedCourseId, setSelectedCourseId] = useState(() => allCourses[0]?.id || 'c-ppap');
+  const [courseDeptFilter, setCourseDeptFilter] = useState('ทั้งหมด');
+  const [courseStatusFilter, setCourseStatusFilter] = useState('ทั้งหมด');
+  const [courseSearchQuery, setCourseSearchQuery] = useState('');
+
+  // Employee-Centric View state
+  const [selectedEmpId, setSelectedEmpId] = useState(() => allEmployees[0]?.empId || 'EMP-3810');
+  const [empSearchQuery, setEmpSearchQuery] = useState('');
+
+  // Print Modal State & Standard Mode ('boi' | 'iso')
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [reportStandard, setReportStandard] = useState('boi');
+  const [selectedCertData, setSelectedCertData] = useState(null);
+
+  // Computed Course Summary
+  const courseSummary = useMemo(() => {
+    return getCourseAuditSummary(selectedCourseId);
+  }, [selectedCourseId]);
+
+  // Filtered Course Roster
+  const filteredRoster = useMemo(() => {
+    return courseSummary.participantRoster.filter(p => {
+      const matchDept = courseDeptFilter === 'ทั้งหมด' || p.department === courseDeptFilter;
+      const matchStatus = courseStatusFilter === 'ทั้งหมด' || 
+        (courseStatusFilter === 'passed' && p.passed) ||
+        (courseStatusFilter === 'in_progress' && p.status === 'in_progress') ||
+        (courseStatusFilter === 'failed' && p.status === 'failed') ||
+        (courseStatusFilter === 'not_started' && p.status === 'not_started');
+      const q = courseSearchQuery.toLowerCase().trim();
+      const matchSearch = !q || 
+        p.name.toLowerCase().includes(q) ||
+        p.empId.toLowerCase().includes(q) ||
+        p.role.toLowerCase().includes(q);
+
+      return matchDept && matchStatus && matchSearch;
+    });
+  }, [courseSummary, courseDeptFilter, courseStatusFilter, courseSearchQuery]);
+
+  // Computed Employee Passport
+  const employeePassport = useMemo(() => {
+    return getEmployeeCompetencyPassport(selectedEmpId);
+  }, [selectedEmpId]);
+
+  // Computed Factory Overview Analytics
+  const overallAnalytics = useMemo(() => {
+    return getOverallAuditAnalytics();
+  }, []);
+
+  // Filtered Employee List for Selector Dropdown
+  const filteredEmployeeList = useMemo(() => {
+    const q = empSearchQuery.toLowerCase().trim();
+    if (!q) return allEmployees;
+    return allEmployees.filter(e => 
+      e.name.toLowerCase().includes(q) || 
+      e.empId.toLowerCase().includes(q) ||
+      e.department.toLowerCase().includes(q)
+    );
+  }, [allEmployees, empSearchQuery]);
+
+  const handleTriggerPrint = () => {
+    window.print();
+  };
+
+  const handleExportCsv = () => {
+    const BOM = '\uFEFF';
+    const isBoi = reportStandard === 'boi';
+    const title = isBoi
+      ? 'แบบฟอร์มรายงานผลการฝึกอบรมบุคลากรโครงการ BOI STEMPlus (สอวช.)'
+      : 'แบบบันทึกประวัติการฝึกอบรมและประเมินผลสมรรถนะบุคลากร (ISO 9001:2015 Clause 7.2)';
+
+    const headers = [
+      'ลำดับ',
+      'รหัสพนักงาน',
+      'ชื่อ-นามสกุล',
+      'แผนก',
+      'ตำแหน่ง',
+      'สถานะการอบรม',
+      'คะแนนทดสอบ (%)',
+      'ผลการประเมิน',
+      'วันที่ผ่านการอบรม',
+      'เลขที่ใบรับรอง (Cert ID)',
+      isBoi ? 'สิทธิประโยชน์ภาษี BOI' : 'ข้อกำหนดอ้างอิง'
+    ];
+
+    const rows = courseSummary.participantRoster.map((t, idx) => [
+      idx + 1,
+      `"${t.empId}"`,
+      `"${t.name}"`,
+      `"${t.department}"`,
+      `"${t.role}"`,
+      `"${t.status}"`,
+      t.quizPercentage !== null ? t.quizPercentage : '-',
+      t.passed ? 'ผ่านเกณฑ์ (Pass)' : 'ไม่ผ่าน (Fail)',
+      `"${t.completedDate || '-'}"`,
+      `"${t.certificateId || '-'}"`,
+      isBoi ? 'ลดหย่อนภาษี 250% (STEMPlus)' : 'ISO 9001:2015 Clause 7.2'
+    ]);
+
+    const csvContent = BOM + [
+      `"${title}"`,
+      `"บริษัท เอสเอ็นซี ฟอร์เมอร์ จำกัด (มหาชน) — SNC Former Public Co., Ltd."`,
+      `"หลักสูตร: ${courseSummary.course?.title || selectedCourseId}"`,
+      `"วิทยากร: ${courseSummary.course?.instructor || 'ณภัทร นุ่มทอง'}"`,
+      `"วันที่ออกรายงาน: ${new Date().toLocaleDateString('th-TH')}"`,
+      '',
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Audit_Report_${selectedCourseId}_${reportStandard}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="learning-container py-6 space-y-6">
+      {/* Unified Page Header */}
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
+        isDark ? 'border-slate-800' : 'border-slate-200'
+      }`}>
+        <div className="min-w-0">
+          <h1 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight ${
+            isDark ? 'text-white' : 'text-slate-900'
+          }`}>
+            <span>ติดตามผลการฝึกอบรมและตรวจรับรอง</span>
+            <span className="text-sm sm:text-base lg:text-lg font-bold opacity-75 whitespace-nowrap ml-2">
+              (Training Audit Matrix)
+            </span>
+          </h1>
+          <p className={`text-xs sm:text-sm mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            ศูนย์รวมประวัติการอบรม ผลการทดสอบ และอัตราความสอดคล้องตามข้อกำหนด ISO 9001 Clause 7.2 &amp; IATF 16949
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          {liveAuditData && (
+            <div className={`h-10 px-4 rounded-xl border text-xs font-semibold flex items-center gap-2.5 select-none ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
+            }`}>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="เชื่อมต่อข้อมูลจริงแล้ว"></span>
+              <span>บุคลากร <strong className="text-cyan-400 font-black">{liveAuditData.total_employees}</strong> คน</span>
+              <span className={isDark ? 'text-slate-600' : 'text-slate-300'}>|</span>
+              <span>รับรองแล้ว <strong className="text-emerald-400 font-black">{liveAuditData.total_certifications}</strong> ใบ</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsPrintModalOpen(true)}
+            className={`h-10 px-4 rounded-xl text-xs font-bold transition-all border shadow-sm flex items-center gap-2 hover:-translate-y-0.5 whitespace-nowrap ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-700' 
+                : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300'
+            }`}
+            title="พิมพ์รายงานรับรองการฝึกอบรมสำหรับ Auditor"
+          >
+            <FiPrinter className="w-4 h-4 text-cyan-500" />
+            <span>พิมพ์รายงานออดิท</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Perspective Tabs Switcher */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          onClick={() => setActiveTab('course')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'course'
+              ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-600/20'
+              : (isDark ? 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60' : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 shadow-sm')
+          }`}
+        >
+          <FiLayers className="w-4 h-4" />
+          <span>มุมมองตามหลักสูตร (Course View)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('employee')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'employee'
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20'
+              : (isDark ? 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60' : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 shadow-sm')
+          }`}
+        >
+          <FiUser className="w-4 h-4" />
+          <span>มุมมองตามพนักงาน (Employee View)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'overview'
+              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-600/20'
+              : (isDark ? 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60' : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 shadow-sm')
+          }`}
+        >
+          <FiBarChart2 className="w-4 h-4" />
+          <span>ภาพรวมโรงงาน &amp; แจ้งเตือนต่ออายุ</span>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: COURSE-CENTRIC AUDIT VIEW */}
+      {/* ========================================================================= */}
+      {activeTab === 'course' && (
+        <div className="space-y-6">
+          {/* Course Selector Bar */}
+          <div className={`border rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm ${
+            isDark ? 'bg-slate-800/80 border-slate-700/80 shadow-md' : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className={`w-12 h-12 rounded-xl overflow-hidden border flex-shrink-0 ${
+                isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'
+              }`}>
+                <img 
+                  src={courseSummary.course?.image || DEFAULT_COURSE_IMAGE} 
+                  alt="Course" 
+                  className="w-full h-full object-cover" 
+                  onError={(e) => { e.currentTarget.src = DEFAULT_COURSE_IMAGE; }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={`text-[11px] font-bold uppercase tracking-wider ${
+                  isDark ? 'text-fuchsia-400' : 'text-fuchsia-700'
+                }`}>
+                  {courseSummary.course?.category}
+                </div>
+                <h2 className={`text-base sm:text-lg font-bold truncate ${
+                  isDark ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {courseSummary.course?.title}
+                </h2>
+              </div>
+            </div>
+
+            <div className="w-full md:w-80 flex-shrink-0">
+              <label className={`text-[11px] font-bold mb-1 block ${
+                isDark ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                เลือกหลักสูตรที่ต้องการตรวจสอบ:
+              </label>
+              <select
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
+                className={`w-full border text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-fuchsia-500 font-medium ${
+                  isDark ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-900 shadow-sm'
+                }`}
+              >
+                {allCourses.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.title} ({c.category})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* 4 Core KPI Stat Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`border rounded-2xl p-4 shadow-sm ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${
+                isDark ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                <span>ผู้เข้าเรียนทั้งหมด</span>
+                <FiUser className={isDark ? 'text-slate-400' : 'text-slate-500'} />
+              </div>
+              <div className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {courseSummary.enrolledCount} <span className={`text-xs font-normal ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>/ {courseSummary.totalEmployees} คน</span>
+              </div>
+              <div className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                คิดเป็น {Math.round((courseSummary.enrolledCount / Math.max(1, courseSummary.totalEmployees)) * 100)}% ของพนักงานทั้งโรงงาน
+              </div>
+            </div>
+
+            <div className={`border rounded-2xl p-4 shadow-sm ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${
+                isDark ? 'text-emerald-400' : 'text-emerald-700 font-bold'
+              }`}>
+                <span>ผ่านเกณฑ์ (≥80%)</span>
+                <FiCheckCircle className={isDark ? 'text-emerald-400' : 'text-emerald-600'} />
+              </div>
+              <div className={`text-2xl font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                {courseSummary.passedCount} <span className={`text-xs font-normal ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>คน</span>
+              </div>
+              <div className={`text-[11px] mt-1 ${isDark ? 'text-emerald-400/80' : 'text-emerald-700 font-medium'}`}>
+                ได้รับใบรับรองสมรรถนะอย่างเป็นทางการ
+              </div>
+            </div>
+
+            <div className={`border rounded-2xl p-4 shadow-sm ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${
+                isDark ? 'text-cyan-400' : 'text-cyan-700 font-bold'
+              }`}>
+                <span>อัตราการสอบผ่าน</span>
+                <FiTrendingUp className={isDark ? 'text-cyan-400' : 'text-cyan-600'} />
+              </div>
+              <div className={`text-2xl font-black ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                {courseSummary.passRatePercent}%
+              </div>
+              <div className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                เกณฑ์เป้าหมายมาตรฐานออดิท: ≥ 85%
+              </div>
+            </div>
+
+            <div className={`border rounded-2xl p-4 shadow-sm ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${
+                isDark ? 'text-amber-400' : 'text-amber-700 font-bold'
+              }`}>
+                <span>คะแนนสอบเฉลี่ย</span>
+                <FiAward className={isDark ? 'text-amber-400' : 'text-amber-600'} />
+              </div>
+              <div className={`text-2xl font-black ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                {courseSummary.avgScorePercent}%
+              </div>
+              <div className={`text-[11px] mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                คะแนนเฉลี่ยจากการทำแบบทดสอบ
+              </div>
+            </div>
+          </div>
+
+          {/* Department Breakdown Mini-Bar */}
+          <div className={`border rounded-2xl p-5 shadow-sm space-y-3 ${
+            isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+          }`}>
+            <h3 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${
+              isDark ? 'text-slate-300' : 'text-slate-700'
+            }`}>
+              <FiBarChart2 className="text-fuchsia-500" /> อัตราการผ่านเกณฑ์แยกตามแผนก (Department Compliance Rate)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {Object.entries(courseSummary.deptBreakdown).map(([dept, data]) => {
+                const shortDept = dept.replace('แผนก', '');
+                return (
+                  <div key={dept} className={`rounded-xl p-3 border ${
+                    isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-xs'
+                  }`}>
+                    <div className={`text-xs font-medium truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`} title={dept}>
+                      {shortDept}
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1 mb-1.5">
+                      <span className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{data.complianceRate}%</span>
+                      <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{data.passed}/{data.total} คน</span>
+                    </div>
+                    <div className={`w-full h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+                      <div 
+                        className={`h-full rounded-full transition-all ${
+                          data.complianceRate >= 80 ? 'bg-emerald-500' : data.complianceRate > 0 ? 'bg-amber-500' : 'bg-slate-400'
+                        }`}
+                        style={{ width: `${data.complianceRate}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Filter & Search Bar for Table */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1 max-w-md">
+              <div className="relative w-full">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                <input
+                  type="text"
+                  value={courseSearchQuery}
+                  onChange={(e) => setCourseSearchQuery(e.target.value)}
+                  placeholder="ค้นหาชื่อพนักงาน หรือ รหัสพนักงาน..."
+                  className={`w-full border text-xs rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:border-fuchsia-500 shadow-sm ${
+                    isDark ? 'bg-slate-800/90 border-slate-700 text-slate-200 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+              {/* Dept filter */}
+              <select
+                value={courseDeptFilter}
+                onChange={(e) => setCourseDeptFilter(e.target.value)}
+                className={`border text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-fuchsia-500 font-medium shadow-sm ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              >
+                <option value="ทั้งหมด">ทุกแผนก</option>
+                {DEPARTMENTS.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+
+              {/* Status filter */}
+              <select
+                value={courseStatusFilter}
+                onChange={(e) => setCourseStatusFilter(e.target.value)}
+                className={`border text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-fuchsia-500 font-medium shadow-sm ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              >
+                <option value="ทั้งหมด">สถานะทั้งหมด</option>
+                <option value="passed">ผ่านเกณฑ์ (Passed)</option>
+                <option value="in_progress">กำลังเรียน (In Progress)</option>
+                <option value="failed">ไม่ผ่านเกณฑ์ (Failed)</option>
+                <option value="not_started">ยังไม่เข้าเรียน (Not Started)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Participant Roster Table */}
+          <div className={`border rounded-2xl overflow-hidden shadow-sm ${
+            isDark ? 'bg-slate-800/90 border-slate-700/80 shadow-xl' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className={`w-full text-left text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <thead className={`font-semibold uppercase tracking-wider text-[11px] border-b ${
+                  isDark ? 'bg-slate-900/90 text-slate-400 border-slate-700/80' : 'bg-slate-50 text-slate-600 border-slate-200'
+                }`}>
+                  <tr>
+                    <th className="py-3 px-4">พนักงาน (Trainee)</th>
+                    <th className="py-3 px-4">แผนก / ตำแหน่ง</th>
+                    <th className="py-3 px-4">กะงาน</th>
+                    <th className="py-3 px-4 text-center">ผลการทดสอบ</th>
+                    <th className="py-3 px-4">วันที่ทำแบบทดสอบ</th>
+                    <th className="py-3 px-4">เลขที่ใบรับรอง (Cert ID)</th>
+                    <th className="py-3 px-4 text-center">สถานะรับรอง</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y font-medium ${isDark ? 'divide-slate-700/60' : 'divide-slate-100'}`}>
+                  {filteredRoster.length > 0 ? (
+                    filteredRoster.map(trainee => {
+                      return (
+                        <tr 
+                          key={trainee.empId} 
+                          onClick={() => navigate(`/learning/profile/${trainee.empId}`)}
+                          className={`transition-colors cursor-pointer group ${
+                            isDark ? 'hover:bg-slate-750/70' : 'hover:bg-slate-50'
+                          }`}
+                          title={`คลิกเพื่อดูหน้าประวัติและสมรรถนะ: ${trainee.name} (${trainee.empId})`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={trainee.avatar} 
+                                alt={trainee.name} 
+                                className={`w-8 h-8 rounded-full object-cover border flex-shrink-0 group-hover:scale-105 transition-transform ${
+                                  isDark ? 'border-slate-700' : 'border-slate-300'
+                                }`}
+                              />
+                              <div>
+                                <div className={`font-bold text-xs transition-colors flex items-center gap-1.5 ${
+                                  isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-900 group-hover:text-cyan-700'
+                                }`}>
+                                  <span>{trainee.name}</span>
+                                  <FiExternalLink className={`w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity ${
+                                    isDark ? 'text-cyan-400' : 'text-cyan-600'
+                                  }`} />
+                                </div>
+                                <div className={`text-[10px] font-mono ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-700 font-bold'}`}>{trainee.empId}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className={isDark ? 'text-slate-200' : 'text-slate-900'}>{trainee.department.replace('แผนก', '')}</div>
+                            <div className={`text-[10px] truncate max-w-[200px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{trainee.role}</div>
+                          </td>
+                          <td className={`py-3 px-4 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {trainee.shift.split(' ')[0]}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {trainee.quizPercentage !== null ? (
+                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
+                                trainee.passed 
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              }`}>
+                                {trainee.scoreDisplay}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 text-[11px]">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-300 text-[11px]">
+                            {trainee.completedDate}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
+                            {trainee.certificateId !== '-' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCertData({
+                                    recipientName: trainee.name,
+                                    empId: trainee.empId,
+                                    department: trainee.department,
+                                    courseTitle: courseSummary.course?.title || 'MES Digital Manufacturing',
+                                    courseId: selectedCourseId,
+                                    certificateId: trainee.certificateId,
+                                    completedDate: trainee.completedDate && trainee.completedDate !== '-' ? trainee.completedDate : new Date().toLocaleDateString('th-TH'),
+                                    scorePercentage: trainee.quizPercentage || 100,
+                                    hours: courseSummary.course?.duration || '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
+                                    instructorName: courseSummary.course?.instructor || 'ณภัทร นุ่มทอง',
+                                    instructorTitle: 'วิทยากรผู้เชี่ยวชาญและหัวหน้าฝ่ายวิศวกรรม (Lead Enterprise Architect)'
+                                  });
+                                }}
+                                className="text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-all flex items-center gap-1.5 font-bold group/btn shadow-xs"
+                                title="คลิกเพื่อดูและพิมพ์ใบประกาศนียบัตรทางการ (Official Certificate)"
+                              >
+                                <span>{trainee.certificateId}</span>
+                                <FiAward className="w-3.5 h-3.5 text-amber-400 group-hover/btn:scale-125 transition-transform" />
+                              </button>
+                            ) : '-'}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {trainee.passed ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
+                                <FiCheck className="w-3 h-3" /> ผ่านเกณฑ์
+                              </span>
+                            ) : trainee.status === 'in_progress' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[11px] font-bold">
+                                <FiClock className="w-3 h-3" /> กำลังเรียน
+                              </span>
+                            ) : trainee.status === 'failed' || (trainee.quizPercentage !== null && !trainee.passed) ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
+                                <FiX className="w-3 h-3" /> ต้องสอบใหม่
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[11px]">
+                                ยังไม่เข้าเรียน
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="py-8 text-center text-slate-400">
+                        ไม่พบข้อมูลพนักงานที่ตรงกับเงื่อนไขการค้นหา
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Question Difficulty & Mistake Analysis Box */}
+          {courseSummary.quizAnalytics && courseSummary.quizAnalytics.length > 0 && (
+            <div className={`border rounded-2xl p-6 shadow-sm space-y-4 ${
+              isDark ? 'bg-slate-800/80 border-slate-700/80 shadow-md' : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`text-base font-bold flex items-center gap-2 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <FiAlertCircle className="text-amber-500" />
+                    <span>การวิเคราะห์ข้อสอบและจุดที่พนักงานตอบผิดบ่อย (Quiz Difficulty Analysis)</span>
+                  </h3>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    ข้อมูลเชิงลึกสำหรับหัวหน้างานและวิศวกร เพื่อนำไปปรับปรุงเนื้อหาคู่มือและเน้นย้ำในการบรรยายหน้างานจริง
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                {courseSummary.quizAnalytics.map((q, idx) => (
+                  <div 
+                    key={q.id || idx} 
+                    className={`rounded-xl p-4 border flex flex-col justify-between ${
+                      isDark ? 'bg-slate-900/90 border-slate-700/80' : 'bg-slate-50 border-slate-200 shadow-sm'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          isDark ? 'text-slate-400 bg-slate-800 border-slate-700' : 'text-slate-700 bg-white border-slate-200 shadow-xs'
+                        }`}>
+                          ข้อที่ {idx + 1}
+                        </span>
+                        <span className={`text-xs font-black px-2 py-0.5 rounded-full border ${
+                          q.passRatePercent >= 85 
+                            ? (isDark ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300') 
+                            : (isDark ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-800 border-rose-300')
+                        }`}>
+                          ตอบถูก {q.passRatePercent}%
+                        </span>
+                      </div>
+                      <h4 className={`text-xs font-bold leading-relaxed mb-2 ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        {q.question}
+                      </h4>
+                      <div className={`text-[11px] p-2.5 rounded-lg border mb-2 leading-relaxed ${
+                        isDark 
+                          ? 'text-slate-300 bg-slate-800/60 border-slate-700/40' 
+                          : 'text-slate-800 bg-emerald-50/70 border-emerald-200 shadow-xs'
+                      }`}>
+                        <strong className={isDark ? 'text-emerald-400' : 'text-emerald-800'}>คำตอบที่ถูกต้อง:</strong> {q.correctOption}
+                      </div>
+                    </div>
+                    <div className={`text-[10px] p-2.5 rounded-lg border mt-2 leading-relaxed ${
+                      isDark 
+                        ? 'text-amber-300/90 bg-amber-500/10 border-amber-500/20' 
+                        : 'text-amber-900 bg-amber-50 border-amber-200'
+                    }`}>
+                      💡 {q.insight}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: EMPLOYEE-CENTRIC VIEW (COMPETENCY PASSPORT) */}
+      {/* ========================================================================= */}
+      {activeTab === 'employee' && (
+        <div className="space-y-6">
+          {/* Employee Selector Bar */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <img 
+                src={employeePassport.employee.avatar} 
+                alt={employeePassport.employee.name} 
+                className="w-14 h-14 rounded-2xl object-cover border-2 border-cyan-500/60 shadow-md flex-shrink-0" 
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-white truncate">
+                    {employeePassport.employee.name}
+                  </h2>
+                  <span className="font-mono text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                    {employeePassport.employee.empId}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-300 mt-0.5">
+                  {employeePassport.employee.role}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  {employeePassport.employee.department} · {employeePassport.employee.shift}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/learning/profile/${employeePassport.employee.empId}`)}
+                  className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-colors"
+                >
+                  <FiExternalLink className="w-3.5 h-3.5" />
+                  <span>เปิดดูหน้าประวัติเต็มและพิมพ์ Passport</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full md:w-80 flex-shrink-0">
+              <label className="text-[11px] font-bold text-slate-400 mb-1 block">
+                เลือกพนักงานเพื่อดูสมรรถนะ:
+              </label>
+              <select
+                value={selectedEmpId}
+                onChange={(e) => setSelectedEmpId(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-cyan-500 font-medium"
+              >
+                {allEmployees.map(emp => (
+                  <option key={emp.empId} value={emp.empId}>
+                    {emp.name} ({emp.empId} - {emp.department.replace('แผนก', '')})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Competency Overview Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+                <span>ความสอดคล้องตามเกณฑ์ตำแหน่ง</span>
+                <FiShield className="text-cyan-400" />
+              </div>
+              <div className="text-2xl font-black text-cyan-400">
+                {employeePassport.complianceRate}%
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                ผ่าน {employeePassport.mandatoryPassedCount} จาก {employeePassport.mandatoryCoursesCount} หลักสูตรบังคับ
+              </div>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between text-emerald-400 text-xs font-semibold mb-2">
+                <span>หลักสูตรที่ผ่านการอบรม</span>
+                <FiAward className="text-emerald-400" />
+              </div>
+              <div className="text-2xl font-black text-emerald-400">
+                {employeePassport.totalPassedCount} <span className="text-xs text-slate-400 font-normal">/ {employeePassport.totalCoursesCount} หลักสูตร</span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                รวมหลักสูตรบังคับและเลือกเสรี
+              </div>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between text-amber-400 text-xs font-semibold mb-2">
+                <span>คะแนนสอบเฉลี่ยสะสม</span>
+                <FiAward className="text-amber-400" />
+              </div>
+              <div className="text-2xl font-black text-amber-400">
+                {employeePassport.avgScorePercent}%
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                เกณฑ์ผ่านแต่ละวิชา: ≥ 80%
+              </div>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-semibold mb-2">
+                <span className="text-slate-400">สถานะการตรวจรับรอง</span>
+                <FiCheckCircle className="text-emerald-400" />
+              </div>
+              <div>
+                {employeePassport.isAuditReady ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black">
+                    <FiCheck className="w-3.5 h-3.5" /> พร้อมรับออดิท 100%
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black">
+                    <FiAlertTriangle className="w-3.5 h-3.5" /> ต้องอบรมเพิ่ม ({employeePassport.skillGaps.length} วิชา)
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1.5">
+                ISO 9001 / IATF 16949 Clause 7.2
+              </div>
+            </div>
+          </div>
+
+          {/* Skill Gap Alert Box (if missing mandatory courses) */}
+          {employeePassport.skillGaps.length > 0 && (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
+                <FiAlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+                <span>ตรวจพบช่องว่างสมรรถนะ (Competency Gap Detected): หลักสูตรบังคับที่ยังไม่ผ่านเกณฑ์</span>
+              </div>
+              <p className="text-xs text-rose-200/80 leading-relaxed">
+                ตามข้อกำหนดมาตรฐานคุณภาพ แผนก {employeePassport.employee.department} จำเป็นต้องผ่านหลักสูตรเหล่านี้ก่อนปฏิบัติงาน:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {employeePassport.skillGaps.map(gap => (
+                  <div key={gap.courseId} className="bg-slate-900/90 border border-rose-500/20 rounded-xl p-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-bold text-white text-xs">{gap.title}</div>
+                      <div className="text-[10px] text-slate-400">{gap.category} · {gap.duration}</div>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/learning/course/${gap.courseId}`)}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 shadow-sm"
+                    >
+                      เริ่มเรียนทันที
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Retraining Expiration Alert (if expiring within 60 days) */}
+          {employeePassport.expiringAlerts.length > 0 && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+                <FiClock className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                <span>แจ้งเตือนหลักสูตรใกล้หมดอายุรอบปี (Annual Retraining Due)</span>
+              </div>
+              <p className="text-xs text-amber-200/80">
+                ใบรับรองต่อไปนี้มีอายุเหลือไม่ถึง 60 วัน กรุณาทำการสอบทบทวน (Refresher Exam) เพื่อรักษาสมรรถนะ:
+              </p>
+              <div className="space-y-2">
+                {employeePassport.expiringAlerts.map(alert => (
+                  <div key={alert.courseId} className="bg-slate-900/90 border border-amber-500/20 rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-white">{alert.title}</span>
+                      <span className="text-[10px] text-slate-400 ml-2">ใบรับรอง: {alert.certificateId}</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
+                      เหลืออีก {alert.daysRemaining} วัน
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Employee Course Record Table */}
+          <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl overflow-hidden shadow-xl">
+            <div className="px-5 py-4 border-b border-slate-700/80 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <FiFileText className="text-cyan-400" />
+                <span>ประวัติการฝึกอบรมและสถานะสมรรถนะรายวิชา (Full Training Transcript)</span>
+              </h3>
+              <span className="text-xs text-slate-400">
+                ทั้งหมด {employeePassport.courseStatusList.length} รายการ
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-900/90 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700/80">
+                  <tr>
+                    <th className="py-3 px-4">ชื่อหลักสูตร (Course Title)</th>
+                    <th className="py-3 px-4">หมวดหมู่</th>
+                    <th className="py-3 px-4 text-center">ประเภท</th>
+                    <th className="py-3 px-4 text-center">คะแนนสอบ</th>
+                    <th className="py-3 px-4">วันที่อบรมเสร็จ</th>
+                    <th className="py-3 px-4">อายุใบรับรอง (Valid Until)</th>
+                    <th className="py-3 px-4 text-center">สถานะ</th>
+                    <th className="py-3 px-4 text-center">การปฏิบัติ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/60 font-medium">
+                  {employeePassport.courseStatusList.map(item => (
+                    <tr key={item.courseId} className="hover:bg-slate-750/50 transition-colors">
+                      <td className="py-3 px-4 font-bold text-white">
+                        {item.title}
+                      </td>
+                      <td className="py-3 px-4 text-slate-400 text-[11px]">
+                        {item.category}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {item.isMandatory ? (
+                          <span className="px-2 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 text-[10px] font-bold">
+                            บังคับ (Mandatory)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]">
+                            ทั่วไป
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {item.quizPercentage !== null ? (
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            item.passed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                          }`}>
+                            {item.quizPercentage}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-300 text-[11px]">
+                        {item.completedDate}
+                      </td>
+                      <td className="py-3 px-4 text-[11px]">
+                        {item.expiresAt ? (
+                          <span className={`${item.daysRemaining !== null && item.daysRemaining <= 60 ? 'text-amber-400 font-bold' : 'text-slate-400'}`}>
+                            {new Date(item.expiresAt).toLocaleDateString('th-TH')}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {item.passed ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
+                            <FiCheck className="w-3 h-3" /> ผ่านเกณฑ์
+                          </span>
+                        ) : item.status === 'in_progress' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[11px] font-bold">
+                            <FiClock className="w-3 h-3" /> กำลังเรียน
+                          </span>
+                        ) : item.status === 'failed' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
+                            <FiX className="w-3 h-3" /> ต้องสอบใหม่
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[11px]">
+                            ยังไม่เข้าเรียน
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => navigate(`/learning/course/${item.courseId}`)}
+                          className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
+                        >
+                          <span>ดูเนื้อหา</span>
+                          <FiChevronRight className="w-3 h-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: EXECUTIVE FACTORY OVERVIEW & RETRAINING ALERTS */}
+      {/* ========================================================================= */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Top High-level Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+                <span>บุคลากรในระบบทั้งหมด</span>
+                <FiUser className="text-fuchsia-400" />
+              </div>
+              <div className="text-3xl font-black text-white">
+                {overallAnalytics.totalEmployees} <span className="text-sm font-normal text-slate-400">คน</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">ครอบคลุม 5 แผนกหลักในสายการผลิต</div>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between text-cyan-400 text-xs font-semibold mb-2">
+                <span>ใบรับรองสมรรถนะที่ออกแล้ว</span>
+                <FiAward className="text-cyan-400" />
+              </div>
+              <div className="text-3xl font-black text-cyan-400">
+                {overallAnalytics.totalCertificatesIssued} <span className="text-sm font-normal text-slate-400">ฉบับ</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">มีผลรับรองตามข้อกำหนดระบบคุณภาพ</div>
+            </div>
+
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between text-amber-400 text-xs font-semibold mb-2">
+                <span>แจ้งเตือนต้องอบรมทบทวน</span>
+                <FiClock className="text-amber-400" />
+              </div>
+              <div className="text-3xl font-black text-amber-400">
+                {overallAnalytics.expiringList.length} <span className="text-sm font-normal text-slate-400">รายการ</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">ใบรับรองหมดอายุหรือเหลือ &lt; 60 วัน</div>
+            </div>
+          </div>
+
+          {/* Department Compliance Rates */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-md space-y-4">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <FiBarChart2 className="text-fuchsia-400" />
+              <span>อัตราความพร้อมรับการตรวจประเมินแยกตามฝ่าย (Department Compliance Matrix)</span>
+            </h3>
+            <p className="text-xs text-slate-400">
+              คำนวณจากสัดส่วนพนักงานที่ผ่านหลักสูตรบังคับประจำตำแหน่งครบถ้วนตามเกณฑ์ ISO 9001 Clause 7.2
+            </p>
+
+            <div className="space-y-4 pt-2">
+              {overallAnalytics.deptSummaries.map(dept => (
+                <div key={dept.department} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div>
+                      <span className="font-bold text-white text-sm">{dept.department}</span>
+                      <span className="text-xs text-slate-400 ml-2">({dept.totalEmployees} คน)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-black text-white">{dept.complianceRate}%</span>
+                      {dept.isTargetAchieved ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          ผ่านเป้าหมาย (≥85%)
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          กำลังเร่งรัด
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        dept.complianceRate >= 85 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-amber-500 to-yellow-400'
+                      }`}
+                      style={{ width: `${dept.complianceRate}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Retraining Expiration Alert Master List */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl overflow-hidden shadow-xl">
+            <div className="px-5 py-4 border-b border-slate-700/80 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <FiAlertTriangle className="text-amber-400" />
+                <span>ตารางติดตามการอบรมทบทวนประจำปี (Annual Retraining & Recertification Schedule)</span>
+              </h3>
+              <span className="text-xs text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                เตือนล่วงหน้า 60 วัน
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-900/90 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700/80">
+                  <tr>
+                    <th className="py-3 px-4">รหัสพนักงาน</th>
+                    <th className="py-3 px-4">ชื่อ-สกุล</th>
+                    <th className="py-3 px-4">แผนก</th>
+                    <th className="py-3 px-4">หลักสูตรที่ต้องทบทวน</th>
+                    <th className="py-3 px-4">หมายเลขใบรับรองเดิม</th>
+                    <th className="py-3 px-4 text-center">ระยะเวลาคงเหลือ</th>
+                    <th className="py-3 px-4 text-center">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/60 font-medium">
+                  {overallAnalytics.expiringList.length > 0 ? (
+                    overallAnalytics.expiringList.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-750/50">
+                        <td className="py-3 px-4 font-mono text-fuchsia-400 font-bold">
+                          {item.empId}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-white">
+                          {item.empName}
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">
+                          {item.department.replace('แผนก', '')}
+                        </td>
+                        <td className="py-3 px-4 text-slate-200">
+                          {item.courseTitle}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-cyan-400">
+                          {item.certificateId}
+                        </td>
+                        <td className="py-3 px-4 text-center font-bold text-amber-300">
+                          {item.daysRemaining > 0 ? `เหลือ ${item.daysRemaining} วัน` : 'หมดอายุแล้ว'}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {item.isExpired ? (
+                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold border border-rose-500/30">
+                              เกินกำหนด (Overdue)
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                              ต้องจัดอบรมซ้ำ
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="py-8 text-center text-slate-400">
+                        ไม่มีหลักสูตรที่หมดอายุหรือใกล้หมดอายุในระยะ 60 วันนี้
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PRINT AUDIT REPORT MODAL (BOI STEMPlus 250% & ISO 9001:2015 CLAUSE 7.2) */}
+      {/* ========================================================================= */}
+      {isPrintModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <FiPrinter className="text-cyan-400" />
+                <span>ตัวอย่างเอกสารรายงานการฝึกอบรม (Official Training Audit Evidence)</span>
+              </div>
+              <button 
+                onClick={() => setIsPrintModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Standard Mode Selector & CSV Export */}
+            <div className="bg-slate-850 px-4 py-2.5 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-semibold">รูปแบบเอกสาร:</span>
+                <button
+                  type="button"
+                  onClick={() => setReportStandard('boi')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    reportStandard === 'boi'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                      : 'bg-slate-750 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <FiAward className="w-3.5 h-3.5" />
+                  <span>BOI STEMPlus (สอวช. / ลดหย่อนภาษี 250%)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportStandard('iso')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    reportStandard === 'iso'
+                      ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                      : 'bg-slate-750 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <FiShield className="w-3.5 h-3.5" />
+                  <span>ISO 9001:2015 Clause 7.2 (IATF 16949)</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all ml-auto"
+                title="ดาวน์โหลดไฟล์ CSV พร้อม UTF-8 BOM สำหรับเปิดใน Excel ไม่เป็นภาษาต่างดาว"
+              >
+                <FiDownload className="w-3.5 h-3.5" />
+                <span>ส่งออก CSV (Excel BOM)</span>
+              </button>
+            </div>
+
+            {/* Printable Content Area */}
+            <div className="p-6 overflow-y-auto space-y-6 bg-white text-slate-900 font-sans text-xs">
+              {/* Document Header */}
+              <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
+                <div>
+                  <div className="text-base font-black text-slate-900 tracking-tight">
+                    บริษัท เอสเอ็นซี ฟอร์เมอร์ จำกัด (มหาชน) — SNC Former Public Co., Ltd.
+                  </div>
+                  {reportStandard === 'boi' ? (
+                    <>
+                      <div className="text-xs font-black text-amber-800 mt-0.5">
+                        แบบรายงานผลการฝึกอบรมบุคลากรด้านวิทยาศาสตร์ เทคโนโลยี และวิศวกรรมขั้นสูง (BOI STEMPlus Platform)
+                      </div>
+                      <div className="text-[10px] text-slate-600 mt-0.5">
+                        อ้างอิงมาตรการ: สิทธิประโยชน์ยกเว้นภาษีเงินได้นิติบุคคล 250% สำหรับการพัฒนาบุคลากรทักษะสูง (สอวช. / กกท.)
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs font-bold text-slate-700 mt-0.5">
+                        แบบบันทึกประวัติการฝึกอบรมและประเมินผลสมรรถนะบุคลากร (Training Record & Competence Evaluation)
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        อ้างอิงข้อกำหนด: ISO 9001:2015 Clause 7.2 (Competence) / IATF 16949 / ลูกค้า Lowes, Walmart, Daikin
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="text-right text-[10px] text-slate-600 font-mono">
+                  {reportStandard === 'boi' ? (
+                    <>
+                      <div className="font-bold text-amber-900">รหัสรับรอง สอวช.: BOI-STEM-2026-SNC</div>
+                      <div>สถานะหลักสูตร: ได้รับการรับรองตามเกณฑ์ STEM</div>
+                      <div>วันที่ออกเอกสาร: {new Date().toLocaleDateString('th-TH')}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div>รหัสเอกสาร: FM-HR-072-01</div>
+                      <div>แก้ไขครั้งที่: 04</div>
+                      <div>วันที่พิมพ์: {new Date().toLocaleDateString('th-TH')}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Course Info Summary in Print Sheet */}
+              <div className="grid grid-cols-2 gap-4 bg-slate-100 p-3 rounded-lg border border-slate-300">
+                <div>
+                  <div><strong>ชื่อหลักสูตร:</strong> {courseSummary.course?.title}</div>
+                  <div><strong>หมวดหมู่:</strong> {courseSummary.course?.category}</div>
+                  <div><strong>ระยะเวลาการอบรม:</strong> {reportStandard === 'boi' ? '3 วัน (24 ชั่วโมงบรรยายและฝึกปฏิบัติการ)' : courseSummary.course?.duration}</div>
+                </div>
+                <div>
+                  <div><strong>วิทยากรผู้ฝึกสอน:</strong> {courseSummary.course?.instructor || 'ณภัทร นุ่มทอง'}</div>
+                  <div><strong>จำนวนผู้เข้ารับการอบรม:</strong> {courseSummary.enrolledCount} คน (ผ่านเกณฑ์ {courseSummary.passedCount} คน)</div>
+                  <div><strong>อัตราการสอบผ่านเฉลี่ย:</strong> {courseSummary.passRatePercent}% (คะแนนเฉลี่ย {courseSummary.avgScorePercent}%)</div>
+                </div>
+              </div>
+
+              {/* Trainee Table */}
+              <div>
+                <div className="font-bold text-slate-800 mb-2 flex items-center justify-between">
+                  <span>รายชื่อพนักงานและผลการประเมินสมรรถนะ:</span>
+                  {reportStandard === 'boi' && (
+                    <span className="text-[10px] text-amber-700 font-semibold">* เข้าเกณฑ์ลดหย่อนภาษี 250% ตามพระราชกฤษฎีกา (ฉบับที่ 700)</span>
+                  )}
+                </div>
+                <table className="w-full border-collapse border border-slate-400 text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-200 text-slate-800 text-center font-bold">
+                      <th className="border border-slate-400 p-1.5 w-10">ลำดับ</th>
+                      <th className="border border-slate-400 p-1.5 w-24">รหัสพนักงาน</th>
+                      <th className="border border-slate-400 p-1.5 text-left">ชื่อ-นามสกุล</th>
+                      <th className="border border-slate-400 p-1.5 text-left">แผนก / ตำแหน่ง</th>
+                      <th className="border border-slate-400 p-1.5 w-20">คะแนน</th>
+                      <th className="border border-slate-400 p-1.5 w-24">ผลการประเมิน</th>
+                      <th className="border border-slate-400 p-1.5 w-32">เลขที่ใบรับรอง</th>
+                      {reportStandard === 'boi' && (
+                        <th className="border border-slate-400 p-1.5 w-24">สิทธิ BOI</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseSummary.participantRoster.slice(0, 15).map((t, idx) => (
+                      <tr key={t.empId} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                        <td className="border border-slate-400 p-1.5 text-center">{idx + 1}</td>
+                        <td className="border border-slate-400 p-1.5 text-center font-mono">{t.empId}</td>
+                        <td className="border border-slate-400 p-1.5 font-semibold">{t.name}</td>
+                        <td className="border border-slate-400 p-1.5">{t.department.replace('แผนก', '')}</td>
+                        <td className="border border-slate-400 p-1.5 text-center">{t.scoreDisplay}</td>
+                        <td className="border border-slate-400 p-1.5 text-center font-bold">
+                          {t.passed ? 'ผ่านเกณฑ์ (Pass)' : t.status === 'in_progress' ? 'กำลังเรียน' : 'ไม่ผ่าน (Fail)'}
+                        </td>
+                        <td className="border border-slate-400 p-1.5 text-center font-mono text-[10px]">
+                          {t.certificateId}
+                        </td>
+                        {reportStandard === 'boi' && (
+                          <td className="border border-slate-400 p-1.5 text-center font-bold text-emerald-700 text-[10px]">
+                            {t.passed ? 'สิทธิ 250%' : '-'}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Formal Sign-off Section */}
+              {reportStandard === 'boi' ? (
+                <div className="pt-6 grid grid-cols-2 gap-8 text-center border-t border-slate-300">
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อวิทยากรผู้ฝึกสอน (Lead Instructor)</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (นายณภัทร นุ่มทอง)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">วิทยากรผู้เชี่ยวชาญ / Lead Enterprise Architect</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อผู้ประสานงาน BOI / ฝ่ายพัฒนาทรัพยากรบุคคล</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (นางสาวอุไรวรรณ์)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">HRD &amp; BOI STEMPlus Coordinator</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-6 grid grid-cols-3 gap-6 text-center border-t border-slate-300">
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อผู้ฝึกสอน / วิทยากร</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (นายณภัทร นุ่มทอง)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">วิทยากรประจำหลักสูตร</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ลงชื่อหัวหน้างานต้นสังกัด</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (......................................................)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">Supervisor / Line Leader</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="text-[10px] text-slate-500">ผู้จัดการฝ่ายควบคุมคุณภาพ / ตัวแทนออดิท</div>
+                    <div className="border-b border-dotted border-slate-400 w-3/4 mx-auto"></div>
+                    <div className="text-[11px] font-bold text-slate-800">
+                      (......................................................)
+                      <div className="text-[10px] text-slate-500 font-normal mt-0.5">QA Manager / ISO Lead Auditor</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 bg-slate-800 border-t border-slate-700 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20"
+              >
+                <FiDownload className="w-4 h-4" />
+                <span>ดาวน์โหลด CSV (Excel)</span>
+              </button>
+              
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  ปิดหน้าต่าง
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTriggerPrint}
+                  className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-600/30"
+                >
+                  <FiPrinter className="w-4 h-4" />
+                  <span>สั่งพิมพ์เอกสาร (Print Window)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Certificate of Competency Modal */}
+      <CertificateModal 
+        isOpen={!!selectedCertData} 
+        onClose={() => setSelectedCertData(null)} 
+        data={selectedCertData} 
+      />
+    </div>
+  );
+}

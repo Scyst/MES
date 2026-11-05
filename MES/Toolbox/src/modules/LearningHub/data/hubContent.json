@@ -1,0 +1,76 @@
+{
+  "tabs": [
+    {
+      "id": "architecture",
+      "title": "React + Vite Architecture",
+      "badge": "Guide",
+      "icon": "⚡",
+      "sections": [
+        {
+          "id": "sec-1",
+          "number": "1",
+          "title": "ปัญหาของระบบเก่า vs ระบบใหม่",
+          "subtitle": "ก่อนจะเข้าใจว่า Vite คืออะไร มาดูก่อนว่าทำไมเราถึงต้องเปลี่ยน",
+          "content": "..."
+        },
+        {
+          "id": "sec-2",
+          "number": "2",
+          "title": "แล้ว Vite ทำหน้าที่อะไรในระบบใหม่?",
+          "subtitle": "Vite (อ่านว่า \"วีต\") คือ \"เครื่องแปลภาษา\" ที่แปลงโค้ดที่เราเขียนให้เบราว์เซอร์เข้าใจ",
+          "content": "..."
+        }
+      ]
+    },
+    {
+      "id": "knowledge-hub",
+      "title": "Knowledge Hub",
+      "badge": "4 หมวด + Quiz",
+      "icon": "📚",
+      "modules": [
+        {
+          "id": "hoverview",
+          "title": "หมวด 0: System Map",
+          "icon": "🖥️",
+          "color": "blue"
+        },
+        {
+          "id": "harch",
+          "title": "หมวด 1: Architecture",
+          "icon": "🏗️",
+          "color": "blue"
+        },
+        {
+          "id": "hsec",
+          "title": "หมวด 2: Security",
+          "icon": "🔒",
+          "color": "red"
+        },
+        {
+          "id": "herp",
+          "title": "หมวด 3: Modules",
+          "icon": "📦",
+          "color": "amber"
+        },
+        {
+          "id": "hint",
+          "title": "หมวด 4: Integration",
+          "icon": "🔄",
+          "color": "green"
+        },
+        {
+          "id": "hauth",
+          "title": "หมวด 5: Auth & Session",
+          "icon": "🔑",
+          "color": "slate"
+        },
+        {
+          "id": "hquiz",
+          "title": "Final Quiz",
+          "icon": "🎯",
+          "color": "cyan"
+        }
+      ]
+    }
+  ]
+}

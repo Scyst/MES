@@ -1,0 +1,1987 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getCourseById, addExp, getUserGrading, getCurrentUser, isUserInstructorOrAdmin } from '../data/communityStore';
+import { 
+  getUserModuleProgress, 
+  markModuleCompleted, 
+  recordCourseCompletion, 
+  recordFailedAssessment,
+  getUserCourseStatus 
+} from '../data/trainingAuditStore';
+import { getCourseAssessment, getCourseAssessmentModes, getModuleCheckpoint } from '../data/assessmentBank';
+import { 
+  FiArrowLeft, 
+  FiCheckCircle, 
+  FiCircle, 
+  FiEdit2, 
+  FiAward, 
+  FiShield, 
+  FiCheck, 
+  FiX, 
+  FiUser,
+  FiHelpCircle,
+  FiAlertTriangle,
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiList,
+  FiRefreshCw,
+  FiLock,
+  FiBookOpen,
+  FiSearch,
+  FiZap
+} from 'react-icons/fi';
+import CourseContent from '../components/CourseContent';
+import DynamicCourseRenderer from '../components/DynamicCourseRenderer';
+import ErrorBoundary from '../components/ErrorBoundary';
+import { useTheme } from '../context/ThemeContext';
+import CertificateModal from '../components/CertificateModal';
+import TrainerGuideModal from '../components/TrainerGuideModal';
+import IndustrialGlossaryModal from '../components/IndustrialGlossaryModal';
+
+function getExamModeDetails(courseId, mode) {
+  if (courseId === 'c-enterprise-app') {
+    if (mode === 'expert') {
+      return {
+        badge: '🔥 โหมดสายเทพ (Expert)',
+        count: '40 ข้อ',
+        title: 'ระดับสถาปนิกและผู้นำเทคโนโลยี (Level 4 Architect)',
+        desc: 'ข้อสอบขั้นสูง 40 ข้อ ครอบคลุม High Availability, Distributed Microservices, OPC-UA/MQTT Edge Streaming, Zero-Trust Defense และ Fault-Tolerant Architectures'
+      };
+    }
+    return {
+      badge: '⚡ โหมดปกติ (Standard)',
+      count: '20 ข้อ',
+      title: 'ระดับวิศวกรซอฟต์แวร์โรงงาน (Level 3 Specialist)',
+      desc: 'เน้นสถาปัตยกรรม Web App, RESTful API, State Management, JWT/CSRF Security และ SQL Transactions (เกณฑ์ผ่าน 80% = ถูกต้อง ≥ 16 ข้อ)'
+    };
+  }
+
+  if (courseId === 'c-machine-vision' || courseId === 'c-machine-vision-v2') {
+    if (mode === 'expert') {
+      return {
+        badge: '🔥 โหมดสายเทพ (Expert)',
+        count: '40 ข้อ',
+        title: 'ระดับผู้เชี่ยวชาญ AI & Edge Computing (Level 4)',
+        desc: 'ข้อสอบขั้นสูง 40 ข้อ ครอบคลุม Edge NPU, Deep Learning (PatchCore), Photometric Stereo, Coaxial Illumination และ High-Speed Inspection'
+      };
+    }
+    return {
+      badge: '⚡ โหมดปกติ (Standard)',
+      count: '20 ข้อ',
+      title: 'ระดับช่างตรวจวัดและวิศวกรวิชั่น (Level 3)',
+      desc: 'เน้นพื้นฐานกล้องอุตสาหกรรม, เลนส์, แสงสว่าง, การตั้งค่า Exposure/Gain และการตรวจจับข้อบกพร่องพื้นฐาน (เกณฑ์ผ่าน 80% = ถูกต้อง ≥ 16 ข้อ)'
+    };
+  }
+
+  // Default / Robot Automation
+  if (mode === 'expert') {
+    return {
+      badge: '🔥 โหมดสายเทพ (Expert)',
+      count: '40 ข้อ',
+      title: 'ระดับวิศวกรระบบอัตโนมัติ (Level 4)',
+      desc: 'ข้อสอบขั้นสูง 40 ข้อ ครอบคลุมคณิตศาสตร์ Kinematics, Offset, Matrix Palletizing และการเขียนโปรแกรมเชิงลึก'
+    };
+  }
+  return {
+    badge: '⚡ โหมดปกติ (Standard)',
+    count: '20 ข้อ',
+    title: 'ระดับมาตรฐานช่างโรงงาน (Level 3)',
+    desc: 'เน้นพื้นฐานความปลอดภัย โครงสร้าง I/O และคำสั่งเคลื่อนที่หลักที่พบบ่อย (เกณฑ์ผ่าน 80% = ถูกต้อง ≥ 16 ข้อ)'
+  };
+}
+
+export default function CourseViewer() {
+  const { courseId } = useParams();
+  const navigate = useNavigate();
+  const { isDark } = useTheme();
+
+  const course = useMemo(() => getCourseById(courseId), [courseId]);
+  
+  const [activeModuleId, setActiveModuleId] = useState(() => course?.modules?.[0]?.id || '');
+  
+  // Progress and Completion States
+  const [completedModuleIds, setCompletedModuleIds] = useState(() => {
+    return course ? getUserModuleProgress(course.id) : [];
+  });
+  
+  const [courseStatus, setCourseStatus] = useState(() => {
+    return course ? getUserCourseStatus(course.id) : null;
+  });
+
+  const [isCompleted, setIsCompleted] = useState(() => {
+    return courseStatus?.passed || courseStatus?.status === 'completed';
+  });
+
+  const [earnedCertId, setEarnedCertId] = useState(() => courseStatus?.certificateId || '');
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  const [isCertificateModalOpen, setIsCertificateModalOpen] = useState(false);
+  const [isTrainerGuideOpen, setIsTrainerGuideOpen] = useState(false);
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [latestExamScore, setLatestExamScore] = useState(null);
+  const [userGrading, setUserGrading] = useState(() => getUserGrading());
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const isTrainerOrAdmin = isUserInstructorOrAdmin(currentUser);
+  const [isMobileSyllabusOpen, setIsMobileSyllabusOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const contentTopRef = useRef(null);
+  const isInitialMount = useRef(true);
+
+  // Scroll to top on course change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [courseId]);
+
+  // Scroll smoothly to lesson content header when active module changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (contentTopRef.current) {
+      const yOffset = -115;
+      const y = contentTopRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+  }, [activeModuleId]);
+
+  useEffect(() => {
+    const handleUserUpdated = (e) => {
+      if (e?.detail?.grading) {
+        setUserGrading(e.detail.grading);
+      } else {
+        setUserGrading(getUserGrading());
+      }
+      const u = e?.detail?.user || e?.detail || getCurrentUser();
+      setCurrentUser(u);
+    };
+    window.addEventListener('mes-user-updated', handleUserUpdated);
+    return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
+  }, []);
+
+  // Assessment Modal States
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [assessmentMode, setAssessmentMode] = useState('standard'); // 'standard' (20Q) | 'expert' (40Q)
+  const [userAnswers, setUserAnswers] = useState({});
+  const [assessmentResult, setAssessmentResult] = useState(null); // { score, total, percentage, passed, mode, answers, questions }
+  const [showReviewAnswers, setShowReviewAnswers] = useState(false);
+  const [assessmentError, setAssessmentError] = useState('');
+  const [lockWarning, setLockWarning] = useState('');
+
+  // Assessment modes available for this course (e.g. ['standard', 'expert'] for Robot & Vision)
+  const availableAssessmentModes = useMemo(() => {
+    return course ? getCourseAssessmentModes(course) : ['standard'];
+  }, [course]);
+
+  // Assessment questions for this course based on mode
+  const assessmentQuestions = useMemo(() => {
+    return course ? getCourseAssessment(course, assessmentMode) : [];
+  }, [course, assessmentMode]);
+
+  // Free exploration mode: unlocked across all lessons for review and previewing
+  const isModuleUnlocked = (_index) => {
+    return true;
+  };
+
+  const handleSelectModule = (module, _index) => {
+    setActiveModuleId(module.id);
+    setIsMobileSyllabusOpen(false);
+  };
+
+  // Synchronize all course states when courseId / course changes OR when user session updates
+  useEffect(() => {
+    if (!course) return;
+    const status = getUserCourseStatus(course.id);
+    const modProgress = getUserModuleProgress(course.id);
+    const passed = status?.passed || status?.status === 'completed';
+
+    setCourseStatus(status);
+    setCompletedModuleIds(prev => {
+      if (prev.length === modProgress.length && prev.every((id, idx) => id === modProgress[idx])) {
+        return prev;
+      }
+      return modProgress;
+    });
+    setIsCompleted(passed);
+    setEarnedCertId(status?.certificateId || '');
+
+    if (course.modules?.length > 0) {
+      const exists = course.modules.some(m => m.id === activeModuleId);
+      if (!exists) {
+        setActiveModuleId(course.modules[0].id);
+      }
+    }
+  }, [courseId, course, currentUser]);
+
+  // Resolve active module safely, fallback to first module if not found
+  const activeModule = course?.modules?.find(m => m.id === activeModuleId) || course?.modules?.[0];
+  const currentIndex = course?.modules?.findIndex(m => m.id === activeModule?.id) ?? 0;
+  const totalModules = course?.modules?.length || 1;
+  const progressPercent = isCompleted ? 100 : Math.round((completedModuleIds.length / totalModules) * 100);
+
+  // Active Recall Checkpoints for current active module (supports single object or array of questions)
+  const checkpointList = useMemo(() => {
+    if (!course || !activeModule) return [];
+    const raw = getModuleCheckpoint(course, activeModule, currentIndex);
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [raw];
+  }, [course, activeModule, currentIndex]);
+
+  const [activeCheckpointIdx, setActiveCheckpointIdx] = useState(0);
+  const [passedCheckpointMap, setPassedCheckpointMap] = useState({});
+  const [checkpointSelected, setCheckpointSelected] = useState(null);
+  const [checkpointStatus, setCheckpointStatus] = useState(null); // 'correct' | 'incorrect' | null
+  const [checkpointShowHint, setCheckpointShowHint] = useState(false);
+
+  const currentCheckpoint = checkpointList[activeCheckpointIdx] || checkpointList[0] || null;
+  const totalCheckpointsInModule = checkpointList.length;
+  const passedCountInModule = checkpointList.filter((_, idx) => Boolean(passedCheckpointMap[idx])).length;
+  const allCheckpointsPassed = totalCheckpointsInModule > 0 && passedCountInModule >= totalCheckpointsInModule;
+
+  // Helper to persist per-question checkpoint state within the session so background syncs never wipe progress
+  const getSavedCheckpointMap = (cId, mId) => {
+    if (!cId || !mId) return {};
+    try {
+      const raw = sessionStorage.getItem(`mes_learning_cp_${cId}_${mId}`);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const saveCheckpointMap = (cId, mId, mapObj) => {
+    if (!cId || !mId) return;
+    try {
+      sessionStorage.setItem(`mes_learning_cp_${cId}_${mId}`, JSON.stringify(mapObj));
+    } catch {
+      // Ignore storage quota errors
+    }
+  };
+
+  // Initialize Checkpoint state ONLY when switching course or lesson (activeModuleId)
+  useEffect(() => {
+    if (!course || !activeModuleId) return;
+
+    const modProgress = getUserModuleProgress(course.id);
+    const status = getUserCourseStatus(course.id);
+    const alreadyDone = modProgress.includes(activeModuleId) || isCompleted || status?.passed || status?.status === 'completed';
+
+    if (alreadyDone) {
+      const allPassed = {};
+      checkpointList.forEach((_, idx) => {
+        allPassed[idx] = true;
+      });
+      setPassedCheckpointMap(allPassed);
+      saveCheckpointMap(course.id, activeModuleId, allPassed);
+      setActiveCheckpointIdx(0);
+      setCheckpointSelected(checkpointList[0]?.correctAnswer ?? 0);
+      setCheckpointStatus('correct');
+      setCheckpointShowHint(false);
+    } else {
+      const savedMap = getSavedCheckpointMap(course.id, activeModuleId);
+      setPassedCheckpointMap(savedMap);
+      // Start at the first unanswered question (or 0 if none answered yet)
+      const firstUnansweredIdx = checkpointList.findIndex((_, idx) => !savedMap[idx]);
+      const startIdx = firstUnansweredIdx !== -1 ? firstUnansweredIdx : 0;
+      setActiveCheckpointIdx(startIdx);
+      if (savedMap[startIdx]) {
+        setCheckpointSelected(checkpointList[startIdx]?.correctAnswer ?? 0);
+        setCheckpointStatus('correct');
+      } else {
+        setCheckpointSelected(null);
+        setCheckpointStatus(null);
+      }
+      setCheckpointShowHint(false);
+    }
+  }, [courseId, activeModuleId, checkpointList]);
+
+  // If the entire course becomes completed (e.g. after passing final assessment), mark all checkpoints passed without resetting active question index
+  useEffect(() => {
+    if (!course || !activeModuleId || !isCompleted) return;
+    const allPassed = {};
+    checkpointList.forEach((_, idx) => {
+      allPassed[idx] = true;
+    });
+    setPassedCheckpointMap(allPassed);
+    saveCheckpointMap(course.id, activeModuleId, allPassed);
+    setCheckpointSelected(checkpointList[activeCheckpointIdx]?.correctAnswer ?? 0);
+    setCheckpointStatus('correct');
+    setCheckpointShowHint(false);
+  }, [isCompleted]);
+
+  // Switch between checkpoint questions within the same module
+  const handleSwitchCheckpointQuestion = (nextIdx) => {
+    if (nextIdx < 0 || nextIdx >= checkpointList.length) return;
+    setActiveCheckpointIdx(nextIdx);
+    if (passedCheckpointMap[nextIdx] || completedModuleIds.includes(activeModuleId) || isCompleted) {
+      setCheckpointSelected(checkpointList[nextIdx]?.correctAnswer ?? 0);
+      setCheckpointStatus('correct');
+      setCheckpointShowHint(false);
+    } else {
+      setCheckpointSelected(null);
+      setCheckpointStatus(null);
+      setCheckpointShowHint(false);
+    }
+  };
+
+  // Select Checkpoint option and evaluate immediately (Active Recall)
+  const handleSelectCheckpointOption = (optIdx) => {
+    if (!currentCheckpoint) return;
+    setCheckpointSelected(optIdx);
+
+    const isCorrect = optIdx === currentCheckpoint.correctAnswer;
+    if (isCorrect) {
+      setCheckpointStatus('correct');
+      setCheckpointShowHint(false);
+
+      const updatedMap = { ...passedCheckpointMap, [activeCheckpointIdx]: true };
+      setPassedCheckpointMap(updatedMap);
+      saveCheckpointMap(course.id, activeModuleId, updatedMap);
+
+      const allPassedNow = checkpointList.every((_, idx) => Boolean(updatedMap[idx]));
+
+      // Officially mark module completed in training audit store once all questions in the lesson are passed
+      if (allPassedNow && !completedModuleIds.includes(activeModuleId) && !isCompleted) {
+        const res = markModuleCompleted({
+          courseId: course.id,
+          moduleId: activeModuleId,
+          totalModules: totalModules
+        });
+        setCompletedModuleIds(res.completedModules);
+        setCourseStatus(getUserCourseStatus(course.id));
+      }
+    } else {
+      setCheckpointStatus('incorrect');
+      setCheckpointShowHint(true);
+    }
+  };
+
+  const isCurrentModuleUnlocked = completedModuleIds.includes(activeModuleId) || isCompleted || allCheckpointsPassed;
+
+  if (!course) {
+    return (
+      <div className="viewer-not-found p-12 text-center bg-slate-900 min-h-[50vh] flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold text-white mb-4">ไม่พบหลักสูตรที่ระบุ (Course not found)</h2>
+        <button 
+          onClick={() => navigate('/learning')}
+          className="px-6 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-fuchsia-600/20"
+        >
+          กลับสู่หน้าแคตตาล็อก
+        </button>
+      </div>
+    );
+  }
+
+  // Switch to next lesson smoothly
+  const handleNextLesson = () => {
+    if (currentIndex < totalModules - 1) {
+      const nextModuleId = course.modules[currentIndex + 1].id;
+      setActiveModuleId(nextModuleId);
+    }
+  };
+
+  // Switch to previous lesson smoothly
+  const handlePrevLesson = () => {
+    if (currentIndex > 0) {
+      const prevModuleId = course.modules[currentIndex - 1].id;
+      setActiveModuleId(prevModuleId);
+    }
+  };
+
+  // Assessment Selection Handler
+  const handleSelectOption = (qIdx, optIdx) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [qIdx]: optIdx
+    }));
+    setAssessmentError('');
+  };
+
+  // Submit Assessment & Evaluation
+  const handleSubmitAssessment = () => {
+    const questions = assessmentQuestions;
+    if (questions.length === 0) return;
+
+    // Check that all questions have been answered
+    const unanswered = questions.some((_, idx) => userAnswers[idx] === undefined);
+    if (unanswered) {
+      const answeredCount = Object.keys(userAnswers).length;
+      setAssessmentError(`กรุณาตอบคำถามให้ครบทุกข้อก่อนส่งแบบประเมิน (ตอบแล้ว ${answeredCount} จาก ${questions.length} ข้อ)`);
+      return;
+    }
+
+    // Grade assessment
+    let correctCount = 0;
+    questions.forEach((q, idx) => {
+      if (userAnswers[idx] === q.correctAnswer) {
+        correctCount++;
+      }
+    });
+
+    const percentage = Math.round((correctCount / questions.length) * 100);
+    const passed = percentage >= 80;
+
+    setLatestExamScore({
+      score: correctCount,
+      total: questions.length,
+      percentage: percentage,
+      mode: assessmentMode
+    });
+
+    const resultObj = {
+      score: correctCount,
+      total: questions.length,
+      percentage: percentage,
+      passed: passed,
+      mode: assessmentMode,
+      answers: { ...userAnswers },
+      questions: [ ...questions ]
+    };
+    setAssessmentResult(resultObj);
+    setShowReviewAnswers(false);
+
+    if (passed) {
+      // Record course completion & certification
+      const allModuleIds = course.modules?.map(m => m.id) || [];
+      const rec = recordCourseCompletion({
+        courseId: course.id,
+        totalModules: totalModules,
+        moduleIds: allModuleIds,
+        score: correctCount,
+        totalQuestions: questions.length,
+        examMode: assessmentMode
+      });
+
+      setCompletedModuleIds(allModuleIds);
+      setIsCompleted(true);
+      setEarnedCertId(rec.certificateId);
+      setCourseStatus(getUserCourseStatus(course.id));
+      setUserGrading(getUserGrading());
+      setCurrentUser(getCurrentUser());
+    } else {
+      // Record failed attempt for audit matrix tracking
+      recordFailedAssessment({
+        courseId: course.id,
+        score: correctCount,
+        totalQuestions: questions.length,
+        examMode: assessmentMode
+      });
+      setCourseStatus(getUserCourseStatus(course.id));
+    }
+  };
+
+  // Reset exam to try again
+  const handleRetakeExam = () => {
+    setUserAnswers({});
+    setAssessmentResult(null);
+    setShowReviewAnswers(false);
+    setAssessmentError('');
+  };
+
+  return (
+    <div className="course-viewer">
+      {/* Floating Progressive Mastery Lock Warning */}
+      {lockWarning && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[92%] sm:w-auto px-4 py-2.5 rounded-xl shadow-2xl border flex items-center gap-2.5 text-xs font-bold animate-bounce backdrop-blur-md bg-amber-500/95 text-slate-950 border-amber-400 shadow-amber-500/30">
+          <FiLock className="w-4 h-4 flex-shrink-0 text-slate-950" />
+          <span className="flex-1 leading-snug">{lockWarning}</span>
+          <button onClick={() => setLockWarning('')} className="p-1 hover:bg-black/10 rounded transition-colors flex-shrink-0">
+            <FiX className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* 1. Celebratory Modal when course completed successfully */}
+      {showCelebrationModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-6 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200 border ${
+            isDark ? 'bg-slate-900 border-emerald-500/50' : 'bg-white border-emerald-300 shadow-xl'
+          }`}>
+            {/* Ambient Glow */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <button
+              onClick={() => setShowCelebrationModal(false)}
+              className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${
+                isDark ? 'text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200'
+              }`}
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center mx-auto text-4xl shadow-lg ${
+              isDark ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-emerald-500/20' : 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-emerald-500/10'
+            }`}>
+              <FiAward />
+            </div>
+
+            <div>
+              <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${
+                isDark ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-emerald-800 bg-emerald-50 border-emerald-300'
+              }`}>
+                ยินดีด้วย! ผ่านการประเมิน 100%
+              </span>
+              <h2 className={`text-xl sm:text-2xl font-black mt-3 leading-snug ${
+                isDark ? 'text-white' : 'text-slate-900'
+              }`}>
+                {course.title}
+              </h2>
+              <p className={`text-xs mt-2 leading-relaxed ${
+                isDark ? 'text-slate-300' : 'text-slate-600'
+              }`}>
+                สมรรถนะได้รับการประเมินและบันทึกลงในระบบรับรอง (ISO 9001:2015 Clause 7.2) เรียบร้อยแล้ว
+              </p>
+            </div>
+
+            {/* Score & Certificate ID Card */}
+            <div className={`p-4 rounded-2xl border space-y-2 ${
+              isDark ? 'bg-slate-850 border-slate-750' : 'bg-slate-50 border-slate-200'
+            }`}>
+              {latestExamScore && (
+                <div className={`flex items-center justify-between pb-2 border-b text-xs font-bold ${
+                  isDark ? 'border-slate-750' : 'border-slate-200'
+                }`}>
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>ผลการทดสอบวัดผล:</span>
+                  <span className={`font-mono font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                    {latestExamScore.score}/{latestExamScore.total} ข้อ ({latestExamScore.percentage}%) ✓ ผ่านเกณฑ์
+                  </span>
+                </div>
+              )}
+              <div className={`text-[11px] font-semibold uppercase tracking-wider ${
+                isDark ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                เลขที่ใบรับรองสมรรถนะ (Certificate ID)
+              </div>
+              <div className={`text-base font-mono font-black ${
+                isDark ? 'text-cyan-300' : 'text-cyan-800'
+              }`}>
+                {earnedCertId || 'SNC-CERT-2026-LIVE'}
+              </div>
+              <div className={`text-[10px] font-bold pt-1 ${
+                isDark ? 'text-amber-300' : 'text-amber-700'
+              }`}>
+                🎉 ได้รับโบนัสเกียรติยศ +50 EXP
+              </div>
+              {currentUser?.can_view_grading && userGrading && userGrading.grade_learning && (
+                <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[11px] font-bold ${
+                  isDark ? 'border-slate-750 text-slate-300' : 'border-slate-200 text-slate-700'
+                }`}>
+                  <span>เกรดการเรียนรู้ (MES 4D Grading):</span>
+                  <span className={`px-2 py-0.5 rounded-md font-black ${
+                    isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}>
+                    Learning {userGrading.grade_learning || 'C'} · Overall {userGrading.grade_overall || 'B'} ({userGrading.skill_count || 1}/{userGrading.learning_target_a || 3} ทักษะ)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                onClick={() => {
+                  setShowCelebrationModal(false);
+                  setIsCertificateModalOpen(true);
+                }}
+                className="py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
+              >
+                <FiAward className="w-4 h-4" />
+                <span>พิมพ์ใบประกาศนียบัตร</span>
+              </button>
+              <button
+                onClick={() => navigate('/learning/profile')}
+                className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 border border-slate-700"
+              >
+                <FiUser className="w-4 h-4 text-emerald-400" />
+                <span>พาสปอร์ต</span>
+              </button>
+              <button
+                onClick={() => setShowCelebrationModal(false)}
+                className="py-3 px-3 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Mandatory Post-Test Assessment Modal */}
+      {showAssessmentModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className={`border rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200 ${
+            isDark ? 'bg-slate-900 border-purple-500/40' : 'bg-white border-purple-200'
+          }`}>
+            {/* Header */}
+            <div className={`flex items-start justify-between pb-5 border-b ${
+              isDark ? 'border-slate-800' : 'border-slate-200'
+            }`}>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded border ${
+                    isDark ? 'text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/30' : 'text-fuchsia-800 bg-fuchsia-50 border-fuchsia-200 font-bold'
+                  }`}>
+                    ISO 9001:2015 Clause 7.2 Evaluation
+                  </span>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded border ${
+                    isDark ? 'text-amber-300 bg-amber-500/10 border-amber-500/30' : 'text-amber-800 bg-amber-50 border-amber-300 font-bold'
+                  }`}>
+                    เกณฑ์ผ่าน ≥ 80%
+                  </span>
+                </div>
+                <h2 className={`text-lg sm:text-xl font-black ${
+                  isDark ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {assessmentResult && !showReviewAnswers 
+                    ? 'ผลการประเมินวัดผลสัมฤทธิ์ (Post-Test Results)' 
+                    : showReviewAnswers 
+                    ? 'ตรวจคำตอบและคำอธิบายเฉลย (Answer Explanations)' 
+                    : 'แบบทดสอบวัดผลประสิทธิผลการฝึกอบรม (Post-Test Assessment)'}
+                </h2>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  หลักสูตร: <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{course.title}</span>
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowAssessmentModal(false);
+                  setShowReviewAnswers(false);
+                }}
+                className={`p-2 rounded-full transition-colors flex-shrink-0 ${
+                  isDark ? 'text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700' : 'text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200'
+                }`}
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Assessment Content Body */}
+            <div className="py-6 space-y-6 max-h-[60vh] overflow-y-auto pr-1">
+              {/* VIEW 1: Official Score Result Screen (Tells score prominently!) */}
+              {assessmentResult && !showReviewAnswers ? (
+                <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+                  <div className={`p-6 rounded-3xl border-2 max-w-lg mx-auto ${
+                    assessmentResult.passed
+                      ? isDark ? 'bg-emerald-950/40 border-emerald-500/60 shadow-xl shadow-emerald-500/10' : 'bg-emerald-50 border-emerald-400 shadow-lg'
+                      : isDark ? 'bg-rose-950/40 border-rose-500/60 shadow-xl shadow-rose-500/10' : 'bg-rose-50 border-rose-400 shadow-lg'
+                  }`}>
+                    <div className={`w-24 h-24 rounded-full border-4 flex flex-col items-center justify-center mx-auto mb-4 ${
+                      assessmentResult.passed
+                        ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                        : 'border-rose-500 bg-rose-500/20 text-rose-400'
+                    }`}>
+                      <span className="text-3xl font-black font-mono leading-none">{assessmentResult.percentage}%</span>
+                      <span className="text-[10px] font-bold uppercase mt-1">
+                        {assessmentResult.passed ? 'ผ่านเกณฑ์' : 'ไม่ผ่าน'}
+                      </span>
+                    </div>
+
+                    <span className={`inline-block text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full border mb-2 ${
+                      assessmentResult.passed
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                    }`}>
+                      {assessmentResult.passed ? '🎉 ยินดีด้วย! สอบผ่านเกณฑ์มาตรฐาน' : '⚠️ ยังไม่ผ่านเกณฑ์การประเมิน'}
+                    </span>
+
+                    <h3 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      คะแนนที่ทำได้: {assessmentResult.score} / {assessmentResult.total} ข้อ
+                    </h3>
+
+                    <p className={`text-xs mt-2 max-w-md mx-auto leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {assessmentResult.passed
+                        ? `ยอดเยี่ยมมาก! คุณทำคะแนนได้ ${assessmentResult.percentage}% (เกณฑ์ผ่าน ≥ 80%) ผ่านการประเมินประสิทธิผลการฝึกอบรม ISO 9001:2015 Clause 7.2 พร้อมรับใบประกาศนียบัตร`
+                        : `คุณทำคะแนนได้ ${assessmentResult.percentage}% (เกณฑ์ผ่าน 80% ต้องตอบถูกอย่างน้อย ${Math.ceil(assessmentResult.total * 0.8)} ข้อ) ยังขาดอีก ${Math.max(1, Math.ceil(assessmentResult.total * 0.8) - assessmentResult.score)} ข้อ กรุณาตรวจเฉลยและทำแบบทดสอบใหม่อีกครั้ง`}
+                    </p>
+
+                    {/* Metrics Breakdown Grid */}
+                    <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-slate-700/60 font-mono text-center">
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">โหมดข้อสอบ</span>
+                        <span className="text-xs font-bold text-amber-400">
+                          {assessmentResult.mode === 'expert' ? 'โหมดสายเทพ (40 ข้อ)' : 'โหมดปกติ (20 ข้อ)'}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">ตอบถูกต้อง</span>
+                        <span className="text-xs font-black text-emerald-400">{assessmentResult.score} ข้อ</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block">ตอบผิด</span>
+                        <span className="text-xs font-black text-rose-400">{assessmentResult.total - assessmentResult.score} ข้อ</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : showReviewAnswers ? (
+                /* VIEW 2: Review of Questions with Detailed Explanations */
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400">
+                      เฉลยคำตอบ ({assessmentResult.score}/{assessmentResult.total} ข้อ - {assessmentResult.percentage}%)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewAnswers(false)}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition"
+                    >
+                      ← กลับสู่หน้าสรุปคะแนน
+                    </button>
+                  </div>
+
+                  <div className="space-y-5">
+                    {assessmentResult.questions.map((q, idx) => {
+                      const userChoice = assessmentResult.answers[idx];
+                      const isCorrect = userChoice === q.correctAnswer;
+
+                      return (
+                        <div 
+                          key={q.id || idx}
+                          className={`p-5 rounded-2xl border space-y-3 ${
+                            isDark
+                              ? isCorrect 
+                                ? 'bg-emerald-950/20 border-emerald-500/30' 
+                                : 'bg-rose-950/20 border-rose-500/40'
+                              : isCorrect
+                                ? 'bg-emerald-50/50 border-emerald-300'
+                                : 'bg-rose-50/50 border-rose-300'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className={`text-sm font-bold leading-snug ${
+                              isDark ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {idx + 1}. {q.question}
+                            </h3>
+                            <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold flex-shrink-0 flex items-center gap-1 ${
+                              isCorrect 
+                                ? isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+                                : isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-800 border border-rose-300 font-bold'
+                            }`}>
+                              {isCorrect ? <><FiCheck /> ถูกต้อง</> : <><FiX /> ตอบผิด</>}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2 pt-1">
+                            {q.options.map((opt, optIdx) => {
+                              const isUserChoice = userChoice === optIdx;
+                              const isRealCorrect = q.correctAnswer === optIdx;
+
+                              let optClass = isDark ? 'bg-slate-800/50 border-slate-700/60 text-slate-400' : 'bg-white border-slate-200 text-slate-700 shadow-sm';
+                              if (isRealCorrect) {
+                                optClass = isDark 
+                                  ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-200 font-semibold' 
+                                  : 'bg-emerald-100 border-emerald-400 text-emerald-900 font-bold';
+                              } else if (isUserChoice && !isCorrect) {
+                                optClass = isDark 
+                                  ? 'bg-rose-500/15 border-rose-500/50 text-rose-300 line-through' 
+                                  : 'bg-rose-100 border-rose-400 text-rose-900 line-through';
+                              }
+
+                              return (
+                                <div key={optIdx} className={`p-3 rounded-xl border text-xs flex items-center justify-between ${optClass}`}>
+                                  <span>{String.fromCharCode(65 + optIdx)}. {opt}</span>
+                                  {isRealCorrect && (
+                                    <span className={`text-[10px] font-bold ml-2 flex-shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-800'}`}>
+                                      ✓ คำตอบที่ถูกต้อง
+                                    </span>
+                                  )}
+                                  {isUserChoice && !isCorrect && (
+                                    <span className={`text-[10px] font-bold ml-2 flex-shrink-0 ${isDark ? 'text-rose-400' : 'text-rose-800'}`}>
+                                      ✗ คำตอบที่คุณเลือก
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {q.explanation && (
+                            <div className={`p-3 rounded-xl text-xs leading-relaxed ${
+                              isDark ? 'bg-slate-900/80 text-slate-300 border border-slate-800' : 'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}>
+                              <strong className="text-amber-400">คำอธิบายเชิงวิศวกรรม:</strong> {q.explanation}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* VIEW 3: Standard Exam Question Form (with Duolingo Mode Switcher) */
+                <div className="space-y-6">
+                  {/* Duolingo-Style Mode Switcher (if course has standard & expert banks) */}
+                  {availableAssessmentModes.length > 1 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+                        <span>เลือกระดับความยากของแบบทดสอบ (Exam Mode):</span>
+                        <span className="text-[11px] text-amber-400 font-mono">DUOLINGO STYLE</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Normal / Standard Mode */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (assessmentMode !== 'standard') {
+                              setAssessmentMode('standard');
+                              setUserAnswers({});
+                              setAssessmentError('');
+                            }
+                          }}
+                          className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                            assessmentMode === 'standard'
+                              ? 'bg-emerald-500/15 border-emerald-500 shadow-md shadow-emerald-500/20'
+                              : 'bg-slate-800/40 border-slate-700/60 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {getExamModeDetails(course?.id, 'standard').badge}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-emerald-400">
+                              {getExamModeDetails(course?.id, 'standard').count}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white mt-1">
+                            {getExamModeDetails(course?.id, 'standard').title}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                            {getExamModeDetails(course?.id, 'standard').desc}
+                          </p>
+                        </button>
+
+                        {/* Expert Mode */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (assessmentMode !== 'expert') {
+                              setAssessmentMode('expert');
+                              setUserAnswers({});
+                              setAssessmentError('');
+                            }
+                          }}
+                          className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                            assessmentMode === 'expert'
+                              ? 'bg-amber-500/15 border-amber-500 shadow-md shadow-amber-500/20'
+                              : 'bg-slate-800/40 border-slate-700/60 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              {getExamModeDetails(course?.id, 'expert').badge}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-amber-400">
+                              {getExamModeDetails(course?.id, 'expert').count}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white mt-1">
+                            {getExamModeDetails(course?.id, 'expert').title}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                            {getExamModeDetails(course?.id, 'expert').desc}
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Progress & Info Bar */}
+                  <div className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
+                    isDark ? 'bg-slate-800/80 border-slate-750 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }`}>
+                    <span>กรุณาอ่านคำถามและเลือกคำตอบที่ถูกต้องที่สุดในแต่ละข้อ</span>
+                    <span className={`font-bold ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-700'}`}>
+                      ตอบแล้ว {Object.keys(userAnswers).length} / {assessmentQuestions.length} ข้อ
+                    </span>
+                  </div>
+
+                  {/* Questions List */}
+                  {assessmentQuestions.map((q, qIdx) => {
+                    const selectedOpt = userAnswers[qIdx];
+
+                    return (
+                      <div key={q.id || qIdx} className={`border rounded-2xl p-5 space-y-3.5 ${
+                        isDark ? 'bg-slate-850 border-slate-750' : 'bg-slate-50/80 border-slate-200 shadow-sm'
+                      }`}>
+                        <h3 className={`text-sm font-bold leading-snug ${
+                          isDark ? 'text-white' : 'text-slate-900'
+                        }`}>
+                          {qIdx + 1}. {q.question}
+                        </h3>
+
+                        <div className="space-y-2">
+                          {q.options.map((opt, optIdx) => {
+                            const isSelected = selectedOpt === optIdx;
+
+                            return (
+                              <button
+                                key={optIdx}
+                                type="button"
+                                onClick={() => handleSelectOption(qIdx, optIdx)}
+                                className={`w-full text-left p-3.5 rounded-xl border text-xs transition-all flex items-start gap-3 cursor-pointer ${
+                                  isSelected
+                                    ? isDark
+                                      ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white font-medium shadow-sm ring-1 ring-fuchsia-500/40'
+                                      : 'bg-fuchsia-50 border-fuchsia-500 text-fuchsia-950 font-bold shadow-sm ring-1 ring-fuchsia-500/40'
+                                    : isDark
+                                      ? 'bg-slate-800/60 hover:bg-slate-800 border-slate-700/70 text-slate-300 hover:text-white'
+                                      : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 hover:text-slate-950 shadow-sm font-medium'
+                                }`}
+                              >
+                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 border ${
+                                  isSelected 
+                                    ? 'bg-fuchsia-500 border-fuchsia-400 text-white' 
+                                    : isDark
+                                      ? 'border-slate-600 text-slate-400'
+                                      : 'border-slate-300 text-slate-700 bg-slate-100'
+                                }`}>
+                                  {String.fromCharCode(65 + optIdx)}
+                                </span>
+                                <span className="flex-1 leading-relaxed">
+                                  {opt}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Error Message if not all answered */}
+            {assessmentError && (
+              <div className={`p-3 mt-2 rounded-xl border text-xs flex items-center gap-2 ${
+                isDark ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-rose-50 border-rose-300 text-rose-900 font-bold'
+              }`}>
+                <FiAlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                <span>{assessmentError}</span>
+              </div>
+            )}
+
+            {/* Modal Footer Controls */}
+            <div className={`pt-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 ${
+              isDark ? 'border-slate-800' : 'border-slate-200'
+            }`}>
+              {assessmentResult && !showReviewAnswers ? (
+                <>
+                  <button
+                    onClick={() => setShowReviewAnswers(true)}
+                    className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-semibold border transition-colors flex items-center justify-center gap-2 ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    <FiSearch className="w-4 h-4" />
+                    <span>ตรวจคำตอบและดูเฉลยละเอียด</span>
+                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      onClick={handleRetakeExam}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 transition flex items-center justify-center gap-1.5"
+                    >
+                      <FiRefreshCw className="w-4 h-4" />
+                      <span>สอบใหม่ (Retake)</span>
+                    </button>
+                    {assessmentResult.passed && (
+                      <button
+                        onClick={() => {
+                          setShowAssessmentModal(false);
+                          setIsCertificateModalOpen(true);
+                        }}
+                        className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl text-xs font-black transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                      >
+                        <FiAward className="w-4 h-4" />
+                        <span>รับใบประกาศฯ</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : showReviewAnswers ? (
+                <div className="w-full flex justify-between items-center">
+                  <button
+                    onClick={() => setShowReviewAnswers(false)}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    ← กลับสู่หน้าสรุปคะแนน
+                  </button>
+                  <button
+                    onClick={handleRetakeExam}
+                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <FiRefreshCw className="w-4 h-4" />
+                    <span>สอบใหม่อีกครั้ง</span>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowAssessmentModal(false)}
+                    className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-medium border transition-colors ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    ยกเลิกและกลับสู่บทเรียน
+                  </button>
+                  <button
+                    onClick={handleSubmitAssessment}
+                    className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    <FiCheckCircle className="w-4 h-4" />
+                    <span>ส่งคำตอบและประเมินผล (Submit Assessment)</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Floating Button to Re-open Sidebar when Collapsed */}
+      {!isDesktopSidebarOpen && (
+        <button
+          onClick={() => setIsDesktopSidebarOpen(true)}
+          className={`hidden md:flex fixed left-4 top-28 z-40 items-center gap-2 px-3.5 py-2 rounded-xl border shadow-lg transition-all hover:scale-[1.02] ${
+            isDark
+              ? 'bg-slate-900/95 hover:bg-slate-800 text-slate-200 border-slate-700 shadow-black/40'
+              : 'bg-white/95 hover:bg-slate-50 text-slate-800 border-slate-300 shadow-slate-300/60'
+          }`}
+          title="เปิดแถบสารบัญบทเรียน (Show Syllabus Sidebar)"
+        >
+          <FiList className="w-4 h-4 text-fuchsia-500" />
+          <span className="text-xs font-bold">
+            สารบัญ ({currentIndex + 1}/{totalModules})
+          </span>
+          <FiChevronRight className="w-3.5 h-3.5 opacity-70" />
+        </button>
+      )}
+
+      {/* Desktop Sidebar / Syllabus */}
+      <div className={`viewer-sidebar ${isDesktopSidebarOpen ? '' : 'sidebar-collapsed'} shrink-0 md:w-80`}>
+        <div className="sidebar-header shrink-0 w-full">
+          <div className="flex items-center justify-between mb-3">
+            <button 
+              onClick={() => navigate('/learning')}
+              className={`h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm ${
+                isDark 
+                  ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700/80 hover:text-white' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 hover:text-slate-900'
+              }`}
+              title="ย้อนกลับสู่หน้ารวมหลักสูตร"
+            >
+              <FiArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsGlossaryOpen(true)}
+                className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
+                  isDark
+                    ? 'bg-cyan-950/70 hover:bg-cyan-900/90 text-cyan-200 border-cyan-500/40 hover:border-cyan-400'
+                    : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border-cyan-300'
+                }`}
+                title="คลังคำย่อ สูตรคำนวณ และที่มาของตัวเลขทางวิศวกรรม (Engineering Glossary & Formulas)"
+              >
+                <FiZap className="w-4 h-4 text-cyan-400 dark:text-cyan-300" />
+              </button>
+              {isTrainerOrAdmin && (
+                <button
+                  onClick={() => setIsTrainerGuideOpen(true)}
+                  className={`w-8 h-8 rounded-lg border transition-all flex items-center justify-center shadow-sm ${
+                    isDark
+                      ? 'bg-purple-950/70 hover:bg-purple-900/90 text-purple-200 border-purple-500/40 hover:border-purple-400'
+                      : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300'
+                  }`}
+                  title="คู่มือวิทยากรและแผนการสอน 4 วัน (Teaching Kit)"
+                >
+                  <FiBookOpen className="w-4 h-4 text-purple-400 dark:text-purple-300" />
+                </button>
+              )}
+              {isTrainerOrAdmin && (
+                <button
+                  onClick={() => navigate(`/learning/admin/course-builder?courseId=${course.id}`)}
+                  className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border-slate-700/80'
+                      : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
+                  }`}
+                  title="แก้ไขหลักสูตรนี้ (Course Studio)"
+                >
+                  <FiEdit2 className="w-3.5 h-3.5 text-amber-500" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsDesktopSidebarOpen(false)}
+                className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center shadow-sm ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700/80'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                }`}
+                title="ซ่อนแถบสารบัญ (Collapse Sidebar)"
+              >
+                <FiChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <h3 className="text-base sm:text-lg font-bold leading-snug tracking-tight break-words">
+            {course.title}
+          </h3>
+          <div className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            {totalModules} บทเรียน · {course.duration}
+          </div>
+
+          {/* Real-time Progress Bar */}
+          <div className={`mt-4 p-3 rounded-xl border ${
+            isDark ? 'bg-slate-900/90 border-slate-700/60' : 'bg-slate-50 border-slate-200 shadow-sm'
+          }`}>
+            <div className="flex items-center justify-between text-xs mb-1.5 font-bold">
+              <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ความคืบหน้า</span>
+              <span className={
+                isCompleted 
+                  ? isDark ? 'text-emerald-400 font-mono font-bold' : 'text-emerald-700 font-mono font-bold'
+                  : isDark ? 'text-fuchsia-400 font-mono' : 'text-fuchsia-700 font-mono font-bold'
+              }>
+                {isCompleted ? '✓ ผ่านแล้ว 100%' : `${progressPercent}%`}
+              </span>
+            </div>
+            <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+              <div 
+                className={`h-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-fuchsia-500 to-violet-500'}`}
+                style={{ width: `${progressPercent}%` }}
+              ></div>
+            </div>
+            <div className={`text-[10px] mt-1.5 flex items-center justify-between ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <span>ผ่านแล้ว {completedModuleIds.length}/{totalModules} บท</span>
+              {isCompleted && (
+                <span className={`font-bold flex items-center gap-1 ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                  <FiCheck className="w-3 h-3" /> ออกใบรับรองแล้ว
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="module-list">
+          {course.modules?.map((module, index) => {
+            const isSelected = activeModule?.id === module.id;
+            const isDone = completedModuleIds.includes(module.id) || isCompleted;
+            const unlocked = isModuleUnlocked(index);
+
+            return (
+              <div 
+                key={module.id} 
+                className={`module-item ${isSelected ? 'active' : ''} ${!unlocked ? 'opacity-50 cursor-not-allowed select-none' : 'cursor-pointer'}`}
+                onClick={() => handleSelectModule(module, index)}
+                title={!unlocked ? `ล็อก: ต้องผ่าน Checkpoint ในบทเรียนก่อนหน้าก่อน` : undefined}
+              >
+                <div className="module-icon">
+                  {isDone ? (
+                    <FiCheckCircle className="text-emerald-500 w-4 h-4" />
+                  ) : !unlocked ? (
+                    <FiLock className={isDark ? 'text-slate-500 w-4 h-4' : 'text-slate-400 w-4 h-4'} />
+                  ) : isSelected ? (
+                    <FiCircle className={isDark ? 'text-fuchsia-400 w-4 h-4' : 'text-fuchsia-600 w-4 h-4'} />
+                  ) : (
+                    <FiCircle className={isDark ? 'text-slate-600 w-4 h-4' : 'text-slate-400 w-4 h-4'} />
+                  )}
+                </div>
+                <div className="module-info">
+                  <span className="module-number flex items-center justify-between">
+                    <span>Lesson {index + 1}</span>
+                    {isDone ? (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                        isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-800 bg-emerald-50 border border-emerald-200'
+                      }`}>
+                        ผ่าน
+                      </span>
+                    ) : !unlocked ? (
+                      <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
+                        isDark ? 'text-slate-500' : 'text-slate-400'
+                      }`}>
+                        <FiLock className="w-2.5 h-2.5" /> ล็อก
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={`module-title ${isDone ? (isDark ? 'text-slate-200' : 'text-slate-900 font-semibold') : !unlocked ? (isDark ? 'text-slate-500' : 'text-slate-400') : ''}`}>
+                    {module.title}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile Sticky Lesson Bar (Visible only on screens < md) */}
+      <div className={`md:hidden sticky top-16 z-30 px-3 py-2 border-b flex items-center justify-between gap-2 shadow-md transition-colors ${
+        isDark ? 'bg-slate-900/95 backdrop-blur-md border-slate-800' : 'bg-white/95 backdrop-blur-md border-slate-200'
+      }`}>
+        <button
+          onClick={() => navigate('/learning')}
+          className={`p-2 rounded-xl border flex-shrink-0 transition-colors ${
+            isDark ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+          }`}
+          title="กลับหน้าหลัก (Back to Catalog)"
+        >
+          <FiArrowLeft className="w-4 h-4" />
+        </button>
+
+        {/* Interactive Dropdown Button that reveals Syllabus Bottom Sheet */}
+        <button
+          onClick={() => setIsMobileSyllabusOpen(prev => !prev)}
+          className={`flex-1 min-w-0 border rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2 transition-all active:scale-[0.99] ${
+            isDark ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0 text-left">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+              completedModuleIds.includes(activeModuleId) || isCompleted
+                ? 'bg-emerald-500 text-white'
+                : 'bg-fuchsia-600 text-white'
+            }`}>
+              {currentIndex + 1}
+            </div>
+            <div className="min-w-0">
+              <div className={`text-[10px] font-bold leading-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                บทที่ {currentIndex + 1}/{totalModules}
+              </div>
+              <div className={`text-xs font-bold truncate leading-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {activeModule?.title || 'เลือกบทเรียน'}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+              isCompleted 
+                ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800'
+                : isDark ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-fuchsia-100 text-fuchsia-800'
+            }`}>
+              {progressPercent}%
+            </span>
+            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isMobileSyllabusOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
+
+        {/* Quick Nav Prev / Next Arrow Buttons */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={handlePrevLesson}
+            disabled={currentIndex === 0}
+            className={`p-2 rounded-xl border transition-colors ${
+              currentIndex === 0
+                ? 'opacity-35 cursor-not-allowed border-transparent text-slate-600'
+                : isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+            }`}
+            title="บทก่อนหน้า"
+          >
+            <FiChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleNextLesson}
+            disabled={currentIndex >= totalModules - 1}
+            className={`p-2 rounded-xl border transition-colors ${
+              currentIndex >= totalModules - 1
+                ? 'opacity-35 cursor-not-allowed border-transparent text-slate-600'
+                : 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-fuchsia-500 shadow-sm cursor-pointer'
+            }`}
+            title="บทถัดไป"
+          >
+            <FiChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Syllabus Dropdown Menu / Floating Modal */}
+      {isMobileSyllabusOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex flex-col pt-24 px-3 pb-6 animate-in fade-in duration-150">
+          {/* Backdrop Tap to Close */}
+          <div className="fixed inset-0" onClick={() => setIsMobileSyllabusOpen(false)} />
+
+          <div className={`relative max-w-md w-full mx-auto rounded-2xl border shadow-2xl flex flex-col max-h-[75vh] overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200 z-10 ${
+            isDark ? 'bg-slate-900 border-slate-750' : 'bg-white border-slate-200 shadow-xl'
+          }`}>
+            {/* Drawer Header */}
+            <div className={`p-4 border-b flex items-center justify-between ${
+              isDark ? 'border-slate-800' : 'border-slate-200'
+            }`}>
+              <div>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                  isDark ? 'text-fuchsia-400' : 'text-fuchsia-700'
+                }`}>
+                  สารบัญหลักสูตร (Syllabus)
+                </span>
+                <h3 className={`text-sm font-black mt-0.5 truncate max-w-[250px] ${
+                  isDark ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {course.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsMobileSyllabusOpen(false)}
+                className={`p-2 rounded-full transition-colors ${
+                  isDark ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Progress Bar inside drawer */}
+            <div className={`px-4 py-3 border-b ${
+              isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between text-xs mb-1.5 font-bold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>ความคืบหน้ารวม</span>
+                <span className={
+                  isCompleted 
+                    ? isDark ? 'text-emerald-400 font-mono' : 'text-emerald-700 font-mono font-bold'
+                    : isDark ? 'text-fuchsia-400 font-mono' : 'text-fuchsia-700 font-mono font-bold'
+                }>
+                  {isCompleted ? '✓ ผ่านแล้ว 100%' : `${progressPercent}%`}
+                </span>
+              </div>
+              <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+                <div 
+                  className={`h-full transition-all duration-300 ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-fuchsia-500 to-violet-500'}`}
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs gap-2">
+                <button
+                  onClick={() => {
+                    setIsMobileSyllabusOpen(false);
+                    setIsGlossaryOpen(true);
+                  }}
+                  className={`font-bold flex items-center gap-1 ${
+                    isDark ? 'text-cyan-300 hover:text-cyan-200' : 'text-cyan-700 hover:text-cyan-900'
+                  }`}
+                >
+                  <FiZap className="w-3.5 h-3.5" />
+                  <span>คลังคำย่อ/สูตร</span>
+                </button>
+                {isTrainerOrAdmin && (
+                  <button
+                    onClick={() => {
+                      setIsMobileSyllabusOpen(false);
+                      setIsTrainerGuideOpen(true);
+                    }}
+                    className={`font-bold underline flex items-center gap-1 ${
+                      isDark ? 'text-purple-300 hover:text-purple-200' : 'text-purple-700 hover:text-purple-900'
+                    }`}
+                  >
+                    <span>📘 แผน 4 วัน</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Syllabus Lessons List in Drawer */}
+            <div className="overflow-y-auto p-3 space-y-2 flex-1">
+              {course.modules?.map((module, index) => {
+                const isSelected = activeModule?.id === module.id;
+                const isDone = completedModuleIds.includes(module.id) || isCompleted;
+                const unlocked = isModuleUnlocked(index);
+
+                return (
+                  <div
+                    key={module.id}
+                    onClick={() => handleSelectModule(module, index)}
+                    className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${
+                      !unlocked 
+                        ? isDark 
+                          ? 'bg-slate-900/60 border-slate-800/80 text-slate-500 opacity-60 cursor-not-allowed select-none'
+                          : 'bg-slate-100/80 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed select-none'
+                        : isSelected
+                          ? isDark
+                            ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white ring-1 ring-fuchsia-500/50 shadow-sm cursor-pointer'
+                            : 'bg-fuchsia-50 border-fuchsia-500 text-fuchsia-950 ring-1 ring-fuchsia-500/50 shadow-sm cursor-pointer'
+                          : isDone
+                            ? isDark
+                              ? 'bg-slate-850/80 border-emerald-500/30 text-slate-200 hover:border-emerald-500/50 cursor-pointer'
+                              : 'bg-white border-emerald-200 text-slate-800 hover:border-emerald-400 cursor-pointer'
+                            : isDark
+                              ? 'bg-slate-850 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200 cursor-pointer'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex-shrink-0">
+                      {isDone ? (
+                        <FiCheckCircle className="text-emerald-500 w-5 h-5" />
+                      ) : !unlocked ? (
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                          isDark ? 'border-slate-800 text-slate-500' : 'border-slate-300 text-slate-400'
+                        }`}>
+                          <FiLock className="w-2.5 h-2.5" />
+                        </div>
+                      ) : isSelected ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-fuchsia-500 flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-fuchsia-500" />
+                        </div>
+                      ) : (
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold ${
+                          isDark ? 'border-slate-700 text-slate-500' : 'border-slate-300 text-slate-600'
+                        }`}>
+                          {index + 1}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between text-[11px] mb-0.5">
+                        <span className={`font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          บทเรียนที่ {index + 1}
+                        </span>
+                        {isDone ? (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
+                            isDark ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                          }`}>
+                            ผ่านแล้ว
+                          </span>
+                        ) : !unlocked ? (
+                          <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                            <FiLock className="w-2.5 h-2.5" /> ล็อก
+                          </span>
+                        ) : isSelected ? (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                            isDark ? 'text-fuchsia-300 bg-fuchsia-500/20' : 'text-fuchsia-800 bg-fuchsia-100'
+                          }`}>
+                            กำลังเรียน
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className={`text-xs font-bold leading-snug line-clamp-2 ${
+                        isSelected 
+                          ? isDark ? 'text-white' : 'text-fuchsia-950 font-black'
+                          : !unlocked 
+                            ? isDark ? 'text-slate-600' : 'text-slate-400'
+                            : isDark ? 'text-slate-300' : 'text-slate-800'
+                      }`}>
+                        {module.title}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div
+        className={`viewer-content ${isDesktopSidebarOpen ? 'viewer-content--sidebar-open' : 'viewer-content--sidebar-closed'}`}
+        ref={contentTopRef}
+      >
+        <div className="content-body">
+          {/* Completed Golden Banner */}
+          {isCompleted && (
+            <div className={`p-4 mb-6 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${
+              isDark
+                ? 'bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border-emerald-500/30 text-emerald-200'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
+                  isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  <FiAward />
+                </div>
+                <div>
+                  <div className={`text-sm font-bold flex flex-wrap items-center gap-2 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    <span>คุณผ่านการอบรมหลักสูตรนี้สำเร็จ 100%</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
+                      isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold'
+                    }`}>
+                      {earnedCertId || courseStatus?.certificateId || 'SNC-CERT'}
+                    </span>
+                  </div>
+                  <div className={`text-xs mt-0.5 flex flex-wrap items-center gap-2 ${
+                    isDark ? 'text-slate-300' : 'text-slate-600 font-medium'
+                  }`}>
+                    <span>สมรรถนะได้รับการประเมินตาม ISO 9001 Clause 7.2 พร้อมรับการตรวจออดิท</span>
+                    {latestExamScore && (
+                      <span className={`inline-flex items-center gap-1 font-mono font-bold px-2 py-0.5 rounded text-[11px] border ${
+                        isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      }`}>
+                        คะแนนสอบ: {latestExamScore.score}/{latestExamScore.total} ข้อ ({latestExamScore.percentage}%) · {latestExamScore.mode === 'expert' ? 'โหมดสายเทพ 🔥' : 'โหมดปกติ 🟢'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-1 sm:pt-0">
+                <button
+                  onClick={() => setIsCertificateModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 hover:scale-105 active:scale-95"
+                  title="เปิดดูและพิมพ์ใบประกาศนียบัตรรับรองสมรรถนะ"
+                >
+                  <FiAward className="w-3.5 h-3.5" />
+                  <span>พิมพ์ใบประกาศฯ</span>
+                </button>
+                <button
+                  onClick={() => navigate('/learning/profile')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 ${
+                    isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-300'
+                  }`}
+                >
+                  <FiShield className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>พาสปอร์ต</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quick-Access Engineering Glossary & Complete Teaching Kit Pill Buttons */}
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <button
+              onClick={() => setIsGlossaryOpen(true)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 shadow-xs group cursor-pointer ${
+                isDark
+                  ? 'bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 border-cyan-500/30 hover:border-cyan-400'
+                  : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-200'
+              }`}
+              title="เปิดคลังคำย่อ สูตรคำนวณ และที่มาของตัวเลขทางวิศวกรรม"
+            >
+              <span className="p-1 rounded-md bg-cyan-500/20 text-cyan-400 group-hover:scale-110 transition-transform">
+                <FiBookOpen className="w-3.5 h-3.5" />
+              </span>
+              <span>📖 คลังคำย่อและสูตรวิศวกรรม (Engineering Glossary &amp; Formulas)</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                isDark ? 'bg-cyan-500/20 text-cyan-200' : 'bg-cyan-100 text-cyan-800'
+              }`}>
+                {course?.id === 'c-enterprise-app'
+                  ? 'IT/OT · ISA-95 · DOM · REST API · JSON · Webhook · UAT'
+                  : 'WD · FOV · MP · NPU · INT8 · OBB · PPM'}
+              </span>
+            </button>
+
+            {isTrainerOrAdmin && (course?.id === 'c-enterprise-app' || course?.id === 'c-machine-vision') && (
+              <button
+                onClick={() => setIsTrainerGuideOpen(true)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-2 shadow-md group cursor-pointer ${
+                  isDark
+                    ? 'bg-gradient-to-r from-fuchsia-950/80 via-purple-950/80 to-indigo-950/80 hover:from-fuchsia-900 hover:to-indigo-900 text-fuchsia-200 border-fuchsia-500/50'
+                    : 'bg-gradient-to-r from-fuchsia-50 via-purple-50 to-indigo-50 hover:from-fuchsia-100 hover:to-indigo-100 text-fuchsia-900 border-fuchsia-300'
+                }`}
+                title="เปิดชุดคู่มือวิทยากร 102 สไลด์ + บทพูด + ทบทวนผู้สอน 14 หัวข้อ + เฉลย Workshop + ข้อสอบ"
+              >
+                <span className="text-sm">🎓</span>
+                <span>
+                  {course?.id === 'c-enterprise-app'
+                    ? 'เปิดชุดคู่มือผู้สอน & บทพูด 102 สไลด์ครบชุด (Complete Teaching Kit)'
+                    : 'คู่มือวิทยากรและแผนการสอน 3 วัน (Trainer Companion)'}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {activeModule && (
+            <ErrorBoundary key={activeModule.id} moduleName={activeModule.title}>
+              {activeModule.isDynamic || activeModule.steps ? (
+                <DynamicCourseRenderer module={activeModule} course={course} />
+              ) : (
+                <CourseContent courseId={course.id} moduleContent={activeModule.content} />
+              )}
+            </ErrorBoundary>
+          )}
+
+          {/* W3Schools-Style Active Recall Checkpoint Card */}
+          {currentCheckpoint && (
+            <div className={`mt-8 p-5 md:p-6 rounded-2xl border transition-all duration-300 ${
+              isDark
+                ? checkpointStatus === 'correct'
+                  ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-teal-950/40 border-emerald-500/40 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+                  : checkpointStatus === 'incorrect'
+                    ? 'bg-gradient-to-br from-rose-950/30 via-slate-900 to-slate-900 border-rose-500/40 shadow-xl shadow-rose-500/10'
+                    : 'bg-gradient-to-br from-purple-950/30 via-slate-900 to-indigo-950/30 border-purple-500/30 shadow-xl shadow-purple-500/10'
+                : checkpointStatus === 'correct'
+                  ? 'bg-emerald-50/60 border-emerald-300 shadow-md ring-1 ring-emerald-400/40'
+                  : checkpointStatus === 'incorrect'
+                    ? 'bg-rose-50/60 border-rose-300 shadow-md ring-1 ring-rose-400/40'
+                    : 'bg-white border-purple-200 shadow-sm ring-1 ring-purple-100'
+            }`}>
+              {/* Checkpoint Header */}
+              <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b ${
+                isDark ? 'border-slate-800/80' : 'border-slate-200'
+              }`}>
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-base shadow-sm border ${
+                    isDark ? 'bg-purple-500/20 border-purple-500/30 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-700'
+                  }`}>
+                    🎯
+                  </span>
+                  <div>
+                    <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      Checkpoint ท้ายบทเรียน (Active Recall)
+                    </h4>
+                    <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      {totalCheckpointsInModule > 1
+                        ? `ตอบคำถามทบทวนท้ายบทเรียนให้ครบทั้ง ${totalCheckpointsInModule} ข้อ (ผ่านแล้ว ${passedCountInModule}/${totalCheckpointsInModule} ข้อ) เพื่อปลดล็อกบทเรียนถัดไป`
+                        : 'ตอบคำถามวัดความเข้าใจสั้นๆ 1 ข้อด้านล่างให้ถูกต้องเพื่อปลดล็อกบทเรียนถัดไป'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  {isCurrentModuleUnlocked ? (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 shadow-sm ${
+                      isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    }`}>
+                      <FiCheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>ผ่านครบแล้ว (+5 EXP)</span>
+                    </span>
+                  ) : (
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
+                      isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                    }`}>
+                      <FiLock className="w-3.5 h-3.5 text-amber-500" />
+                      <span>
+                        {totalCheckpointsInModule > 1
+                          ? `ผ่านแล้ว ${passedCountInModule}/${totalCheckpointsInModule} ข้อ (+5 EXP)`
+                          : 'ปลดล็อกเมื่อตอบถูก (+5 EXP)'}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Multi-question Selector Pills (shown when module has > 1 checkpoint question) */}
+              {totalCheckpointsInModule > 1 && (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  {checkpointList.map((cpItem, qIdx) => {
+                    const isQPassed = Boolean(passedCheckpointMap[qIdx]) || isCurrentModuleUnlocked;
+                    const isQActive = qIdx === activeCheckpointIdx;
+                    return (
+                      <button
+                        key={cpItem.id || qIdx}
+                        type="button"
+                        onClick={() => handleSwitchCheckpointQuestion(qIdx)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isQActive
+                            ? isDark
+                              ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-500/20'
+                              : 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                            : isQPassed
+                              ? isDark
+                                ? 'bg-emerald-950/50 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/50'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                              : isDark
+                                ? 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        {isQPassed ? (
+                          <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-black/20 flex items-center justify-center text-[10px]">
+                            {qIdx + 1}
+                          </span>
+                        )}
+                        <span>ข้อที่ {qIdx + 1}/{totalCheckpointsInModule}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Question */}
+              <div className="mb-4">
+                {totalCheckpointsInModule > 1 && (
+                  <div className="mb-1.5">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${
+                      isDark
+                        ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                        : 'bg-purple-50 text-purple-800 border-purple-200'
+                    }`}>
+                      คำถามทบทวนข้อที่ {activeCheckpointIdx + 1} จาก {totalCheckpointsInModule}
+                    </span>
+                  </div>
+                )}
+                <p className={`text-sm font-semibold leading-relaxed ${isDark ? 'text-slate-100' : 'text-slate-900 font-bold'}`}>
+                  {currentCheckpoint.question}
+                </p>
+              </div>
+
+              {/* 4 Choices (A, B, C, D) */}
+              <div className="grid grid-cols-1 gap-2.5 mb-4">
+                {currentCheckpoint.options.map((opt, optIdx) => {
+                  const isSelected = checkpointSelected === optIdx;
+                  const isCorrectChoice = optIdx === currentCheckpoint.correctAnswer;
+                  const isAnswered = checkpointStatus !== null;
+
+                  let btnClass = isDark
+                    ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:border-slate-600'
+                    : 'bg-white hover:bg-purple-50/60 text-slate-800 border-slate-200 hover:border-purple-300 shadow-sm font-medium';
+                  let badgeClass = isDark
+                    ? 'bg-slate-700/80 text-slate-300 border-slate-600'
+                    : 'bg-slate-100 text-slate-700 border-slate-300';
+
+                  if (isAnswered) {
+                    if (isCorrectChoice) {
+                      btnClass = isDark
+                        ? 'bg-emerald-500/20 text-emerald-100 border-emerald-500 ring-1 ring-emerald-500/40 shadow-sm font-medium'
+                        : 'bg-emerald-50 text-emerald-950 border-emerald-500 ring-2 ring-emerald-500/30 shadow-sm font-bold';
+                      badgeClass = isDark
+                        ? 'bg-emerald-500 text-white border-emerald-400 font-bold'
+                        : 'bg-emerald-600 text-white border-emerald-500 font-bold';
+                    } else if (isSelected && !isCorrectChoice) {
+                      btnClass = isDark
+                        ? 'bg-rose-500/20 text-rose-200 border-rose-500 ring-1 ring-rose-500/40 font-medium'
+                        : 'bg-rose-50 text-rose-950 border-rose-500 ring-2 ring-rose-500/30 font-bold';
+                      badgeClass = isDark
+                        ? 'bg-rose-500 text-white border-rose-400 font-bold'
+                        : 'bg-rose-600 text-white border-rose-500 font-bold';
+                    } else {
+                      btnClass = isDark
+                        ? 'bg-slate-900/60 text-slate-500 border-slate-800/80 opacity-60'
+                        : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60';
+                      badgeClass = isDark
+                        ? 'bg-slate-800 text-slate-500 border-slate-700'
+                        : 'bg-slate-100 text-slate-400 border-slate-200';
+                    }
+                  } else if (isSelected) {
+                    btnClass = isDark
+                      ? 'bg-purple-600/30 text-white border-purple-500 ring-1 ring-purple-500/50'
+                      : 'bg-purple-50 text-purple-950 border-purple-500 ring-2 ring-purple-500/30 font-semibold shadow-sm';
+                    badgeClass = isDark
+                      ? 'bg-purple-500 text-white border-purple-400'
+                      : 'bg-purple-600 text-white border-purple-500 font-bold';
+                  }
+
+                  return (
+                    <button
+                      key={optIdx}
+                      type="button"
+                      onClick={() => handleSelectCheckpointOption(optIdx)}
+                      className={`w-full text-left p-3.5 rounded-xl border text-xs sm:text-sm transition-all duration-200 flex items-start gap-3 min-h-[44px] cursor-pointer ${btnClass}`}
+                    >
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 border shadow-sm ${badgeClass}`}>
+                        {isAnswered && isCorrectChoice ? (
+                          <FiCheck className="w-3.5 h-3.5" />
+                        ) : isAnswered && isSelected && !isCorrectChoice ? (
+                          <FiX className="w-3.5 h-3.5" />
+                        ) : (
+                          String.fromCharCode(65 + optIdx)
+                        )}
+                      </span>
+                      <span className="flex-1 leading-relaxed">
+                        {opt.replace(/^[A-D]:\s*/, '')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Result Feedback & Hint */}
+              {checkpointStatus === 'incorrect' && (
+                <div className={`p-4 rounded-xl border text-xs space-y-2 animate-fadeIn ${
+                  isDark ? 'bg-rose-500/10 border-rose-500/30 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900'
+                }`}>
+                  <div className={`flex items-center gap-2 font-bold ${isDark ? 'text-rose-300' : 'text-rose-800'}`}>
+                    <FiAlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                    <span>ยังไม่ถูกต้อง! ลองทบทวนเนื้อหาและเลือกคำตอบใหม่อีกครั้ง</span>
+                  </div>
+                  {checkpointShowHint && currentCheckpoint.hint && (
+                    <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+                      isDark ? 'bg-slate-900/80 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'
+                    }`}>
+                      <span className="text-base flex-shrink-0">💡</span>
+                      <div className="leading-relaxed">
+                        <strong className={isDark ? 'text-amber-200' : 'text-amber-800'}>คำใบ้: </strong>
+                        <span>{currentCheckpoint.hint}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {checkpointStatus === 'correct' && (
+                <div className={`p-4 rounded-xl border text-xs space-y-2 animate-fadeIn ${
+                  isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                }`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className={`flex items-center gap-2 font-bold text-sm ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>
+                      <FiCheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                      <span>ยอดเยี่ยมมาก! ตอบถูกต้องตามหลักวิศวกรรม/มาตรฐานอุตสาหกรรม</span>
+                    </div>
+                    {isCurrentModuleUnlocked ? (
+                      <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
+                        isDark ? 'text-emerald-400 bg-emerald-500/20' : 'text-emerald-900 bg-emerald-100 border border-emerald-300'
+                      }`}>
+                        ✓ ปลดล็อกบทเรียนแล้ว
+                      </span>
+                    ) : (
+                      <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full font-bold ${
+                        isDark ? 'text-amber-300 bg-amber-500/20' : 'text-amber-900 bg-amber-100 border border-amber-300'
+                      }`}>
+                        ผ่านข้อนี้แล้ว ({passedCountInModule}/{totalCheckpointsInModule})
+                      </span>
+                    )}
+                  </div>
+                  {currentCheckpoint.explanation && (
+                    <div className={`p-3 rounded-lg border text-xs leading-relaxed ${
+                      isDark ? 'bg-slate-900/80 border-emerald-500/20 text-slate-300' : 'bg-white border-emerald-200 text-slate-800 shadow-sm'
+                    }`}>
+                      <strong className={isDark ? 'text-emerald-400' : 'text-emerald-700'}>คำอธิบายเฉลย: </strong>
+                      <span>{currentCheckpoint.explanation}</span>
+                    </div>
+                  )}
+                  {totalCheckpointsInModule > 1 && !isCurrentModuleUnlocked && (() => {
+                    const nextUnansweredIdx = checkpointList.findIndex((_, idx) => !passedCheckpointMap[idx] && idx !== activeCheckpointIdx);
+                    const targetIdx = nextUnansweredIdx !== -1 ? nextUnansweredIdx : (activeCheckpointIdx + 1 < totalCheckpointsInModule ? activeCheckpointIdx + 1 : -1);
+                    if (targetIdx === -1) return null;
+                    return (
+                      <div className={`pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t ${
+                        isDark ? 'border-emerald-500/20' : 'border-emerald-200'
+                      }`}>
+                        <span className={`text-xs font-semibold ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                          👉 ยังเหลือคำถามทบทวนในบทนี้อีก {totalCheckpointsInModule - passedCountInModule} ข้อ จึงจะปลดล็อกบทเรียนถัดไป
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchCheckpointQuestion(targetIdx)}
+                          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>ไปทำข้อถัดไป (ข้อที่ {targetIdx + 1}/{totalCheckpointsInModule}) →</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                  {totalCheckpointsInModule > 1 && isCurrentModuleUnlocked && activeCheckpointIdx < totalCheckpointsInModule - 1 && (
+                    <div className="pt-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchCheckpointQuestion(activeCheckpointIdx + 1)}
+                        className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>ดูข้อถัดไป (ข้อที่ {activeCheckpointIdx + 2}/{totalCheckpointsInModule}) →</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Bottom Lesson Navigation & Complete/Assessment Buttons */}
+          <div className={`flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-6 border-t ${
+            isDark ? 'border-slate-800' : 'border-slate-200'
+          }`}>
+            {currentIndex > 0 ? (
+              <button 
+                onClick={handlePrevLesson}
+                className={`w-full sm:w-auto px-6 py-2.5 rounded-lg font-medium transition-colors border flex items-center justify-center gap-2 ${
+                  isDark 
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' 
+                    : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300 shadow-sm'
+                }`}
+              >
+                ← Previous Lesson
+              </button>
+            ) : <div className="hidden sm:block"></div>}
+            
+            {currentIndex < totalModules - 1 ? (
+              <button 
+                onClick={handleNextLesson}
+                className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-fuchsia-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 cursor-pointer"
+              >
+                <span>Next Lesson →</span>
+              </button>
+            ) : (
+              /* Final Lesson: Take assessment or view certificate */
+              isCompleted ? (
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      setAssessmentResult(null);
+                      setShowReviewAnswers(false);
+                      setUserAnswers({});
+                      setShowAssessmentModal(true);
+                    }}
+                    className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 shadow-sm ${
+                      isDark 
+                        ? 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-emerald-500/30' 
+                        : 'bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm'
+                    }`}
+                  >
+                    <FiRefreshCw className="w-4 h-4" />
+                    <span>ทำแบบทดสอบทบทวน (Retake Exam)</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate('/learning/profile')}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"
+                  >
+                    <FiAward className="w-5 h-5" />
+                    <span>ดูพาสปอร์ตสมรรถนะ</span>
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setAssessmentResult(null);
+                    setShowReviewAnswers(false);
+                    setUserAnswers({});
+                    setShowAssessmentModal(true);
+                  }}
+                  className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-emerald-600 hover:from-fuchsia-500 hover:to-emerald-500 text-white rounded-xl font-black text-sm transition-all shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2.5 hover:-translate-y-0.5 animate-pulse cursor-pointer"
+                >
+                  <FiHelpCircle className="w-5 h-5 text-amber-300" />
+                  <span>เข้าสู่แบบทดสอบวัดผลท้ายหลักสูตร (Take Final Assessment)</span>
+                </button>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Official Certificate Modal */}
+      <CertificateModal
+        isOpen={isCertificateModalOpen}
+        onClose={() => setIsCertificateModalOpen(false)}
+        data={{
+          recipientName: currentUser?.name || 'ณภัทร นุ่มทอง',
+          empId: currentUser?.emp_id || '1096902163',
+          department: currentUser?.department || 'แผนกผลิตปั๊มขึ้นรูป (MT/PE)',
+          courseTitle: course?.title,
+          courseId: course?.id,
+          certificateId: earnedCertId || courseStatus?.certificateId || 'SNC-CERT-2026-9901',
+          completedDate: courseStatus?.completedAt 
+            ? new Date(courseStatus.completedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+            : new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
+          scorePercentage: courseStatus?.quizPercentage || latestExamScore?.percentage || 100,
+          quizScore: courseStatus?.quizScore ?? latestExamScore?.score ?? null,
+          quizTotal: courseStatus?.quizTotal ?? latestExamScore?.total ?? null,
+          examMode: (courseStatus?.quizTotal >= 40 || latestExamScore?.total >= 40) ? 'expert' : 'standard',
+          hours: course?.duration || '24 ชั่วโมงฝึกอบรม (3 วันปฏิบัติการ)',
+          instructorName: 'ณภัทร นุ่มทอง',
+          instructorTitle: 'วิทยากรผู้เชี่ยวชาญด้านสถาปัตยกรรมดิจิทัลองค์กร (Lead Enterprise Architect)'
+        }}
+      />
+
+      {/* 4-Day Trainer Delivery Guide Modal */}
+      {isTrainerOrAdmin && (
+        <TrainerGuideModal
+          isOpen={isTrainerGuideOpen}
+          onClose={() => setIsTrainerGuideOpen(false)}
+          courseId={course?.id}
+        />
+      )}
+
+      {/* Engineering Glossary & Formulas Reference Modal */}
+      <IndustrialGlossaryModal
+        isOpen={isGlossaryOpen}
+        onClose={() => setIsGlossaryOpen(false)}
+      />
+    </div>
+  );
+}

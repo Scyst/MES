@@ -180,7 +180,7 @@ export default function HomeDashboard() {
     { title: 'My Profile & 4D', desc: 'ข้อมูลส่วนตัวและผลการประเมิน 4 มิติ', icon: Users, colorClass: 'bg-blue-100 text-blue-700', to: '/profile' },
     { title: 'Team Planner', desc: 'กระดานแผนงานและปฏิทินทีม', icon: Calendar, colorClass: 'bg-purple-100 text-purple-700', to: '/planner' },
     { title: 'Shuttle Bus', desc: 'ระบบจองรถรับ-ส่งพนักงาน', icon: Bus, colorClass: 'bg-emerald-100 text-emerald-700', to: '/transport' },
-    { title: 'MES Learning Hub', desc: 'ศูนย์การเรียนรู้ & สอบวัดผล (Academy)', icon: GraduationCap, colorClass: 'bg-indigo-100 text-indigo-700', to: '/iot-toolbox/sandbox-b9/LearningHub/' },
+    { title: 'MES Learning Hub', desc: 'ศูนย์การเรียนรู้ & สอบวัดผล (Academy)', icon: GraduationCap, colorClass: 'bg-indigo-100 text-indigo-700', to: '/learning' },
     { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php' },
     { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟร์คลิฟต์', icon: Truck, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftUI.php' },
@@ -414,13 +414,13 @@ export default function HomeDashboard() {
               บัญชีของคุณเปิดใช้งานในฐานะ <b>ผู้เข้าอบรม (Trainee)</b> เรียบร้อยแล้ว สามารถเข้าศึกษาบทเรียน ทำแบบฝึกหัด และเข้าสอบวัดระดับความรู้เพื่อบันทึกประวัติทักษะได้ทันที
             </p>
             <div className="pt-1 flex flex-wrap gap-2.5">
-              <a
-                href="/iot-toolbox/sandbox-b9/LearningHub/"
+              <Link
+                to="/learning"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-800 font-bold rounded-xl shadow-md hover:bg-blue-50 transition-all cursor-pointer text-xs xl:text-sm"
               >
                 <span>เข้าสู่ศูนย์เรียนรู้ Learning Hub</span>
                 <ChevronRight size={16} />
-              </a>
+              </Link>
               <Link
                 to="/profile"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/20 text-white font-medium rounded-xl transition-all cursor-pointer border border-white/20 text-xs xl:text-sm"

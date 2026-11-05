@@ -19,6 +19,7 @@ const TeamPlannerApp = lazy(() => import('../modules/TeamPlanner/TeamPlannerApp'
 const InboundHubPage = lazy(() => import('../modules/InboundHub/pages/InboundHubPage'));
 const StandalonePartnerPortalPage = lazy(() => import('../modules/InboundHub/pages/StandalonePartnerPortalPage'));
 const DocumentCenterPage = lazy(() => import('../modules/DocumentCenter/pages/DocumentCenterPage'));
+const LearningHubApp = lazy(() => import('../modules/LearningHub/LearningHubApp'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -85,6 +86,15 @@ export default function App() {
                   </Suspense>
                 </ErrorBoundary>
               </ProtectedRoute>
+            } />
+
+            {/* MES Learning Hub (Engineering Academy - Dedicated Workspace) */}
+            <Route path="/learning/*" element={
+              <ErrorBoundary>
+                <Suspense fallback={<div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center font-bold">กำลังโหลดศูนย์เรียนรู้ MES Learning Hub...</div>}>
+                  <LearningHubApp />
+                </Suspense>
+              </ErrorBoundary>
             } />
 
             {/* Protected Routes */}
