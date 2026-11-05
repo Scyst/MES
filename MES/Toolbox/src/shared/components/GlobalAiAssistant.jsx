@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { aiCopilotApi } from '../services/aiCopilotApi';
-import { 
-  Bot, Sparkles, Send, X, Trash2, Copy, Check, Calendar, 
-  Zap, FileText, RefreshCw, AlertCircle, ChevronDown, MessageSquare
+import {
+  Bot, Sparkles, Send, X, Trash2, Copy, Check, Calendar,
+  Zap, FileText, RefreshCw, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare
 } from 'lucide-react';
 
 const SUGGESTED_QUICK_ACTIONS = [
@@ -53,7 +53,12 @@ export default function GlobalAiAssistant() {
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const chipsRef = useRef(null);
   const currentModuleName = getModuleName(location.pathname);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftState, setScrollLeftState] = useState(0);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -68,6 +73,45 @@ export default function GlobalAiAssistant() {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
+
+  // Convert mouse wheel vertically to horizontal scroll on chips
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el || !isOpen) return;
+    const onWheel = (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY * 0.9;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [isOpen]);
+
+  const scrollChips = (offset) => {
+    if (chipsRef.current) {
+      chipsRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    if (!chipsRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - chipsRef.current.offsetLeft);
+    setScrollLeftState(chipsRef.current.scrollLeft);
+  };
+
+  const handleMouseLeaveOrUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !chipsRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - chipsRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    chipsRef.current.scrollLeft = scrollLeftState - walk;
+  };
 
   if (!hasAccess) return null;
 
@@ -184,9 +228,8 @@ export default function GlobalAiAssistant() {
 
       {/* 🌟 Slide-Over Drawer Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-50 bg-white dark:bg-slate-900 shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-50 bg-white dark:bg-slate-900 shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         {/* Header */}
         <div className="p-4 bg-gradient-to-r from-[#0f2027] via-[#203a43] to-[#2c5364] text-white flex flex-col gap-2 shrink-0">
@@ -239,11 +282,10 @@ export default function GlobalAiAssistant() {
               <button
                 type="button"
                 onClick={() => setSummaryStyle('concise')}
-                className={`px-2 py-0.5 rounded font-semibold text-[11px] transition-all cursor-pointer ${
-                  summaryStyle === 'concise'
+                className={`px-2 py-0.5 rounded font-semibold text-[11px] transition-all cursor-pointer ${summaryStyle === 'concise'
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-white/80 hover:text-white'
-                }`}
+                  }`}
               >
                 <Zap size={11} className="inline mr-1" />
                 สรุปสั้น
@@ -251,11 +293,10 @@ export default function GlobalAiAssistant() {
               <button
                 type="button"
                 onClick={() => setSummaryStyle('formal')}
-                className={`px-2 py-0.5 rounded font-semibold text-[11px] transition-all cursor-pointer ${
-                  summaryStyle === 'formal'
+                className={`px-2 py-0.5 rounded font-semibold text-[11px] transition-all cursor-pointer ${summaryStyle === 'formal'
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-white/80 hover:text-white'
-                }`}
+                  }`}
               >
                 <FileText size={11} className="inline mr-1" />
                 ทางการ
@@ -274,11 +315,10 @@ export default function GlobalAiAssistant() {
                 className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}
               >
                 <div
-                  className={`max-w-[90%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-xs ${
-                    isUser
+                  className={`max-w-[90%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-xs ${isUser
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-xs'
                       : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-bl-xs'
-                  }`}
+                    }`}
                 >
                   {msg.text}
 
@@ -349,20 +389,51 @@ export default function GlobalAiAssistant() {
         </div>
 
         {/* Suggested Quick Action Chips */}
-        <div className="px-3.5 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
-            <span className="text-slate-400 shrink-0 text-[10px]">แนะนำ:</span>
-            {SUGGESTED_QUICK_ACTIONS.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => handleSend(tag)}
-                disabled={loading}
-                className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer whitespace-nowrap"
-              >
-                {tag}
-              </button>
-            ))}
+        <div className="px-2 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 shrink-0 text-[10px] pl-1">แนะนำ:</span>
+
+            {/* Scroll Left Button */}
+            <button
+              type="button"
+              onClick={() => scrollChips(-180)}
+              className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-2xs shrink-0 cursor-pointer transition-transform active:scale-90"
+              title="เลื่อนซ้าย"
+            >
+              <ChevronLeft size={13} />
+            </button>
+
+            {/* Scrollable Chips Track */}
+            <div
+              ref={chipsRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeaveOrUp}
+              onMouseUp={handleMouseLeaveOrUp}
+              onMouseMove={handleMouseMove}
+              className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 text-[11px] select-none scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 cursor-grab active:cursor-grabbing scroll-smooth"
+            >
+              {SUGGESTED_QUICK_ACTIONS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleSend(tag)}
+                  disabled={loading}
+                  className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Scroll Right Button */}
+            <button
+              type="button"
+              onClick={() => scrollChips(180)}
+              className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-2xs shrink-0 cursor-pointer transition-transform active:scale-90"
+              title="เลื่อนขวา"
+            >
+              <ChevronRight size={13} />
+            </button>
           </div>
         </div>
 
