@@ -12,10 +12,11 @@ const getMoodEmoji = (score) => {
 };
 
 const SUGGESTED_PROMPTS = [
-  'ยอดผลิต ต้นทุน และกำไรวันที่ 8 สิงหาคม',
-  'เน้นวิเคราะห์ของเสีย (Scrap & Hold)',
-  'เจาะลึกต้นทุนค่าไฟและ OT',
-  'สรุปสั้น 3 บรรทัดส่ง LINE'
+  'สรุป 3 บรรทัดส่ง LINE ผู้บริหาร',
+  'แจกแจงกำลังพลกะเช้าและกะดึกวันนี้',
+  'ตรวจเช็กของเสีย (Scrap & Hold) ทุกโมเดล',
+  'สรุปยอดผลิตและรายได้สะสมเดือนนี้ (MTD)',
+  'วิเคราะห์ต้นทุนค่าไฟ แก๊ส และ OT'
 ];
 
 export default function MorningBriefModal({ isOpen, onClose, initialData }) {
@@ -314,7 +315,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAi(); }}
-                      placeholder="💡 พิมพ์ถาม เช่น 'อยากรู้ยอดผลิต ต้นทุนและกำไรของวันที่แปดสิงหาคม', 'สรุปสั้น 3 บรรทัด'..."
+                      placeholder="💡 พิมพ์ถามได้อิสระ เช่น 'ขอข้อมูลเดือน 11 หน่อย', 'แจกแจงพนักงานกะเช้า-ดึก', 'สรุป 3 บรรทัดส่ง LINE'..."
                       className="w-full bg-white border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none shadow-2xs transition-all"
                     />
                     <div className="absolute right-1.5 flex items-center gap-1">
@@ -377,7 +378,12 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                     {aiBriefing.auto_switched_date && (
                       <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs">
                         <Calendar size={13} className="text-emerald-600" />
-                        <span>ดึงข้อมูลวันที่ {aiBriefing.auto_switched_date} จาก SQL Server ให้อัตโนมัติเรียบร้อย</span>
+                        <span>
+                          {aiBriefing.is_month
+                            ? `ดึงข้อมูลภาพรวมสะสม (${aiBriefing.month_label || aiBriefing.auto_switched_date}) จาก SQL Server เรียบร้อย`
+                            : `ดึงข้อมูลวันที่ ${aiBriefing.auto_switched_date} จาก SQL Server ให้อัตโนมัติเรียบร้อย`
+                          }
+                        </span>
                       </div>
                     )}
 

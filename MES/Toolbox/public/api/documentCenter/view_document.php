@@ -10,6 +10,7 @@ ini_set('display_errors', 0);
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
+require_once __DIR__ . '/../../utils/logger.php';
 
 // Helper to locate library files
 function findLibraryFile($relativeTail) {
@@ -107,7 +108,7 @@ try {
     }
 
     $currentUser = $_SESSION['user'];
-    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ipAddress = getClientIpAddress();
 
     $stmt = $pdo->prepare("SELECT file_name, file_path, file_type FROM dbo.{$documentsTable} WITH (NOLOCK) WHERE id = ?");
     $stmt->execute([$docId]);
@@ -118,12 +119,22 @@ try {
         die("Document record not found.");
     }
 
-    // Log document access to audit table
+    // Log document access to audit tables
     try {
         $logStmt = $pdo->prepare("INSERT INTO dbo.{$documentLogsTable} (document_id, user_id, ip_address) VALUES (?, ?, ?)");
         $logStmt->execute([$docId, $currentUser['id'], $ipAddress]);
+
+        writeLog(
+            $pdo,
+            $forceDownload ? 'DOWNLOAD_DOCUMENT' : 'VIEW_DOCUMENT',
+            'DOCUMENT_CENTER',
+            $docId,
+            null,
+            ['file_name' => $document['file_name'], 'download' => $forceDownload],
+            ($forceDownload ? 'ดาวน์โหลดเอกสาร: ' : 'เปิดอ่านเอกสาร: ') . $document['file_name']
+        );
     } catch (Exception $logEx) {
-        // Continue even if logging encounters minor issue
+        // Keep streaming even if log fails
     }
 
     $uploadDir = getDocUploadDir();
@@ -183,7 +194,6 @@ try {
             $pdf->Output('I', $document['file_name']);
         }
     } else {
-        // Stream non-PDF files or fallback if PDF libs not available
         header('Cache-Control: private, max-age=0, must-revalidate');
         header('Pragma: public');
         if ($forceDownload) {
@@ -196,6 +206,9 @@ try {
         readfile($filePath);
     }
 } catch (Throwable $e) {
+    if (isset($pdo)) {
+        writeErrorLog($pdo, 'DOCUMENT_VIEW', $e->getMessage(), ['doc_id' => $docId ?? null]);
+    }
     http_response_code(500);
     die("An error occurred while streaming document: " . htmlspecialchars($e->getMessage()));
 }

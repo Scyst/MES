@@ -3,6 +3,7 @@
  * documentCenterAPI.php
  * Central Self-Contained API Endpoint for Toolbox Document Center
  * MES & IIoT Toolbox - SNC Former (B9)
+ * Standard: Industrial Audit Trail Protocol (SYSTEM_LOGS) & Strict Security
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -79,7 +80,6 @@ try {
 
             // 1.1 Fetch explicit and implicit folders if not in global search mode
             if (empty($searchTerm)) {
-                // Explicit folder records (file_type = 'folder')
                 $sqlFolders = "
                     SELECT d.id, d.file_name, d.category, CONVERT(VARCHAR, d.created_at, 126) AS created_at,
                            COALESCE(NULLIF(LTRIM(RTRIM(u.fullname)), ''), NULLIF(LTRIM(RTRIM(m.name_th)), ''), u.username) AS uploaded_by,
@@ -309,8 +309,18 @@ try {
             $sql = "INSERT INTO dbo.{$documentsTable} (file_name, file_type, category, uploaded_by_user_id, file_path, file_size) VALUES (?, 'folder', ?, ?, '', 0)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$folderName, $parentPath, $currentUser['id']]);
+            $newFolderId = (int)$pdo->lastInsertId();
 
-            writeLog('DOCUMENT_CREATE_FOLDER', "Created folder {$folderName} in {$parentPath}", 'INFO');
+            // Audit Trail Logging
+            writeLog(
+                $pdo,
+                'CREATE_FOLDER',
+                'DOCUMENT_CENTER',
+                $newFolderId ?: $folderName,
+                null,
+                ['folder_name' => $folderName, 'category' => $parentPath],
+                "สร้างโฟลเดอร์ '{$folderName}' ในเส้นทาง '{$parentPath}'"
+            );
 
             echo json_encode(['success' => true, 'message' => "สร้างโฟลเดอร์ '{$folderName}' เรียบร้อยแล้ว"]);
             break;
@@ -380,8 +390,24 @@ try {
                     $category,
                     $currentUser['id']
                 ]);
+                $newDocId = (int)$pdo->lastInsertId();
 
-                writeLog('DOCUMENT_UPLOAD', "Uploaded file {$originalFileName} ({$file['size']} bytes) to {$category}", 'INFO');
+                // Audit Trail Logging
+                writeLog(
+                    $pdo,
+                    'UPLOAD_DOCUMENT',
+                    'DOCUMENT_CENTER',
+                    $newDocId ?: $originalFileName,
+                    null,
+                    [
+                        'file_name' => $originalFileName,
+                        'file_path' => $newFileName,
+                        'category' => $category,
+                        'size' => $file['size'],
+                        'description' => $description
+                    ],
+                    "อัปโหลดเอกสาร '{$originalFileName}' ในโฟลเดอร์ '{$category}'"
+                );
 
                 echo json_encode(['success' => true, 'message' => "อัปโหลดเอกสาร '{$originalFileName}' สำเร็จแล้ว"]);
             } else {
@@ -420,7 +446,7 @@ try {
                 throw new Exception('ไฟล์ไม่ถูกต้อง หรือมีขนาดเกิน 50MB', 400);
             }
 
-            $stmtOld = $pdo->prepare("SELECT file_path, file_name FROM dbo.{$documentsTable} WHERE id = ?");
+            $stmtOld = $pdo->prepare("SELECT id, file_name, file_path, file_type, file_size, category FROM dbo.{$documentsTable} WHERE id = ?");
             $stmtOld->execute([$documentId]);
             $oldDoc = $stmtOld->fetch(PDO::FETCH_ASSOC);
             if (!$oldDoc) {
@@ -445,7 +471,20 @@ try {
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$originalFileName, $newFileName, $file['type'] ?: 'application/octet-stream', $file['size'], $documentId]);
 
-                writeLog('DOCUMENT_REVISE', "Revised document ID {$documentId} to new file {$originalFileName}", 'INFO');
+                // Audit Trail Logging
+                writeLog(
+                    $pdo,
+                    'REVISE_DOCUMENT',
+                    'DOCUMENT_CENTER',
+                    $documentId,
+                    $oldDoc,
+                    [
+                        'file_name' => $originalFileName,
+                        'file_path' => $newFileName,
+                        'file_size' => $file['size']
+                    ],
+                    "อัปเดต Revision เอกสาร ID {$documentId} เป็นไฟล์ '{$originalFileName}'"
+                );
 
                 echo json_encode(['success' => true, 'message' => "อัปเดตเวอร์ชันเอกสาร '{$originalFileName}' สำเร็จแล้ว"]);
             } else {
@@ -523,14 +562,23 @@ try {
                 ");
                 $stmtC2->execute([$oldFullPath, $newFullPath, $oldPrefix]);
 
-                $pdo->commit();
-                writeLog('DOCUMENT_RENAME_FOLDER', "Renamed folder {$oldFullPath} to {$newFullPath}", 'INFO');
+                // Audit Trail Logging
+                writeLog(
+                    $pdo,
+                    'RENAME_FOLDER',
+                    'DOCUMENT_CENTER',
+                    $docId ?: $newFullPath,
+                    ['old_folder_path' => $oldFullPath],
+                    ['new_folder_path' => $newFullPath],
+                    "เปลี่ยนชื่อโฟลเดอร์จาก '{$oldFullPath}' เป็น '{$newFullPath}'"
+                );
 
+                $pdo->commit();
                 echo json_encode(['success' => true, 'message' => 'เปลี่ยนชื่อโฟลเดอร์สำเร็จ', 'new_name' => $newName]);
             } else {
                 if (!$docId) throw new Exception('ไม่พบรหัสเอกสาร', 400);
 
-                $stmtDoc = $pdo->prepare("SELECT file_name, category FROM dbo.{$documentsTable} WHERE id = ?");
+                $stmtDoc = $pdo->prepare("SELECT id, file_name, category FROM dbo.{$documentsTable} WHERE id = ?");
                 $stmtDoc->execute([$docId]);
                 $doc = $stmtDoc->fetch(PDO::FETCH_ASSOC);
                 if (!$doc) throw new Exception('ไม่พบเอกสารที่ระบุ', 404);
@@ -552,7 +600,16 @@ try {
                 $stmtUpdateName = $pdo->prepare("UPDATE dbo.{$documentsTable} SET file_name = ? WHERE id = ?");
                 $stmtUpdateName->execute([$finalName, $docId]);
 
-                writeLog('DOCUMENT_RENAME_FILE', "Renamed document ID {$docId} to {$finalName}", 'INFO');
+                // Audit Trail Logging
+                writeLog(
+                    $pdo,
+                    'RENAME_DOCUMENT',
+                    'DOCUMENT_CENTER',
+                    $docId,
+                    ['file_name' => $doc['file_name']],
+                    ['file_name' => $finalName],
+                    "เปลี่ยนชื่อเอกสาร ID {$docId} จาก '{$doc['file_name']}' เป็น '{$finalName}'"
+                );
 
                 echo json_encode(['success' => true, 'message' => 'เปลี่ยนชื่อเอกสารสำเร็จ', 'new_name' => $finalName]);
             }
@@ -571,6 +628,11 @@ try {
             $documentId = (int)($inputData['document_id'] ?? 0);
             if (!$documentId) throw new Exception('Document ID is required.', 400);
 
+            $stmtOld = $pdo->prepare("SELECT id, file_name, file_description, category FROM dbo.{$documentsTable} WHERE id = ?");
+            $stmtOld->execute([$documentId]);
+            $oldDoc = $stmtOld->fetch(PDO::FETCH_ASSOC);
+            if (!$oldDoc) throw new Exception('ไม่พบเอกสารในระบบ', 404);
+
             $targetCategory = trim($inputData['category'] ?? '');
             $newDescription = trim($inputData['description'] ?? '');
 
@@ -578,7 +640,16 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$newDescription ?: null, $targetCategory, $documentId]);
 
-            writeLog('DOCUMENT_MOVE', "Moved document ID {$documentId} to category '{$targetCategory}'", 'INFO');
+            // Audit Trail Logging
+            writeLog(
+                $pdo,
+                'MOVE_DOCUMENT',
+                'DOCUMENT_CENTER',
+                $documentId,
+                $oldDoc,
+                ['category' => $targetCategory, 'file_description' => $newDescription],
+                "ย้ายเอกสาร ID {$documentId} ('{$oldDoc['file_name']}') ไปยังโฟลเดอร์ '{$targetCategory}'"
+            );
 
             echo json_encode(['success' => true, 'message' => 'ย้ายเอกสารไปยังหมวดหมู่เป้าหมายเรียบร้อยแล้ว']);
             break;
@@ -617,7 +688,7 @@ try {
             $uploadDir = getDocumentUploadDir();
 
             // Find files to delete physically
-            $sqlSelect = "SELECT file_path, file_name, file_type, category FROM dbo.{$documentsTable} WHERE id IN ($placeholders)";
+            $sqlSelect = "SELECT id, file_path, file_name, file_type, category FROM dbo.{$documentsTable} WHERE id IN ($placeholders)";
             $stmtSelect = $pdo->prepare($sqlSelect);
             $stmtSelect->execute($docIds);
             $itemsToDelete = $stmtSelect->fetchAll(PDO::FETCH_ASSOC);
@@ -627,7 +698,7 @@ try {
             foreach ($itemsToDelete as $item) {
                 if ($item['file_type'] === 'folder') {
                     $folderPath = ($item['category'] === '') ? $item['file_name'] : $item['category'] . '/' . $item['file_name'];
-                    $sqlSub = "SELECT id, file_path FROM dbo.{$documentsTable} WHERE category = ? OR category LIKE ? + '/%'";
+                    $sqlSub = "SELECT id, file_path, file_name FROM dbo.{$documentsTable} WHERE category = ? OR category LIKE ? + '/%'";
                     $stmtSub = $pdo->prepare($sqlSub);
                     $stmtSub->execute([$folderPath, $folderPath]);
                     $subItems = $stmtSub->fetchAll(PDO::FETCH_ASSOC);
@@ -659,8 +730,18 @@ try {
                 }
             }
 
+            // Audit Trail Logging
+            writeLog(
+                $pdo,
+                'DELETE_DOCUMENT',
+                'DOCUMENT_CENTER',
+                implode(',', $allIdsToDelete),
+                $itemsToDelete,
+                null,
+                "ลบเอกสาร/โฟลเดอร์ถาวรจำนวน {$deletedCount} รายการ (รหัส: " . implode(',', $allIdsToDelete) . ")"
+            );
+
             $pdo->commit();
-            writeLog('DOCUMENT_DELETE', "Deleted {$deletedCount} document item(s)", 'WARNING');
 
             echo json_encode([
                 'success' => true,
@@ -674,6 +755,10 @@ try {
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
+    }
+    // Structured error log
+    if (isset($pdo)) {
+        writeErrorLog($pdo, 'DOCUMENT_CENTER', $e->getMessage(), $_REQUEST);
     }
     $errorCode = (is_int($e->getCode()) && $e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500;
     http_response_code($errorCode);

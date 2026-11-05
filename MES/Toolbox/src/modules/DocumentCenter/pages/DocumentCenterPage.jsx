@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FolderOpen, Search, Upload, FolderPlus, Trash2,
-  RefreshCw, CheckCircle2, AlertCircle, X, Shield, Filter
+  RefreshCw, CheckCircle2, AlertCircle, X
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { documentCenterApi } from '../../../shared/services/documentCenterApi';
@@ -160,56 +160,49 @@ export default function DocumentCenterPage() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col p-4 md:p-6 bg-slate-50/50 dark:bg-slate-950/40 gap-4 overflow-hidden">
+    <div className="mes-page-container flex flex-col h-full gap-3 overflow-hidden">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold animate-in slide-in-from-bottom-5 duration-200 border ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold animate-in slide-in-from-bottom-5 duration-200 border ${
             toast.type === 'error'
               ? 'bg-red-50 dark:bg-red-950/90 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
               : 'bg-emerald-50 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
           }`}
         >
-          {toast.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+          {toast.type === 'error' ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
           <span>{toast.message}</span>
           <button
             type="button"
             onClick={() => setToast(null)}
-            className="ml-2 text-slate-400 hover:text-slate-600"
+            className="ml-2 text-slate-400 hover:text-slate-600 cursor-pointer"
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         </div>
       )}
 
-      {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-            <FolderOpen size={20} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
-                Document Center
-              </h1>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                ⚡ SPA Ported
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              ศูนย์กลางจัดเก็บและจัดการเอกสารโรงงาน (WI, SOP, Drawing, 3D CAD Models) พร้อมระบบลายน้ำอัตโนมัติ
-            </p>
-          </div>
+      {/* Header section (Uses standard .mes-page-header tokens) */}
+      <div className="mes-page-header mb-0">
+        <div>
+          <h1 className="mes-page-title">
+            <FolderOpen className="text-blue-600 w-6 h-6" /> Document Center
+            <span className="mes-badge bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              ⚡ SPA Ported
+            </span>
+          </h1>
+          <p className="mes-page-subtitle">
+            ศูนย์กลางจัดเก็บและจัดการเอกสารโรงงาน (WI, SOP, Drawing, 3D CAD Models) พร้อมระบบลายน้ำความปลอดภัย DLP
+          </p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons (Uses standard .mes-btn tokens) */}
         <div className="flex items-center gap-2 flex-wrap">
           {canManage && selectedIds.size > 0 && (
             <button
               type="button"
               onClick={handleBatchDeleteClick}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-all shadow-2xs"
+              className="mes-btn-danger"
             >
               <Trash2 size={14} />
               <span>ลบที่เลือก ({selectedIds.size})</span>
@@ -220,9 +213,9 @@ export default function DocumentCenterPage() {
             type="button"
             onClick={handleRefresh}
             title="รีเฟรชข้อมูล"
-            className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors shadow-2xs"
+            className="mes-btn-icon cursor-pointer"
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
 
           {canManage && (
@@ -230,18 +223,18 @@ export default function DocumentCenterPage() {
               <button
                 type="button"
                 onClick={() => setIsNewFolderOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-all shadow-2xs"
+                className="mes-btn-secondary cursor-pointer"
               >
-                <FolderPlus size={15} className="text-amber-500" />
+                <FolderPlus size={14} className="text-amber-500" />
                 <span>+ โฟลเดอร์ใหม่</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsUploadOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-500/25 transition-all"
+                className="mes-btn-primary cursor-pointer"
               >
-                <Upload size={15} />
+                <Upload size={14} />
                 <span>+ อัปโหลดเอกสาร</span>
               </button>
             </>
@@ -249,28 +242,28 @@ export default function DocumentCenterPage() {
         </div>
       </div>
 
-      {/* Breadcrumb & Search Bar Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+      {/* Unified Toolbar (Uses standard .mes-filter-bar tokens) */}
+      <div className="mes-filter-bar">
         <BreadcrumbBar
           currentFolderPath={currentFolderPath}
           onNavigate={handleNavigateFolder}
         />
 
         {/* Global Search Input */}
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full lg:w-72">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="ค้นหาชื่อไฟล์, คำอธิบาย, ผู้อัปโหลด..."
-            className="w-full pl-8 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 dark:text-slate-100"
+            className="mes-input pl-8 pr-7"
           />
           <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
           {searchTerm && (
             <button
               type="button"
               onClick={() => handleSearchChange('')}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X size={14} />
             </button>

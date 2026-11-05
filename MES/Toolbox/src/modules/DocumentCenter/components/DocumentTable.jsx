@@ -4,6 +4,7 @@ import {
   Archive, File, MoreVertical, Eye, Download, Edit2,
   FolderInput, RefreshCw, Trash2, ChevronLeft, ChevronRight, User
 } from 'lucide-react';
+import SecurityWatermark from '../../../shared/components/SecurityWatermark';
 
 function getFileIcon(fileName, isFolder) {
   if (isFolder) {
@@ -55,7 +56,6 @@ export default function DocumentTable({
 }) {
   const [activeMenuId, setActiveMenuId] = useState(null);
 
-  // Close dropdown on outside click
   React.useEffect(() => {
     const handleOutside = () => setActiveMenuId(null);
     window.addEventListener('click', handleOutside);
@@ -66,48 +66,51 @@ export default function DocumentTable({
   const allSelected = selectableItems.length > 0 && selectableItems.every((it) => selectedIds.has(it.id));
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col flex-1 min-h-0 overflow-hidden">
+    <div className="w-full flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden relative">
+      {/* DLP Security Watermark on Document Grid */}
+      <SecurityWatermark classification="DOCUMENT CENTER • RESTRICTED" />
+
       {/* Table Container */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto">
+      <div className="flex-1 overflow-x-auto overflow-y-auto relative z-10">
         <table className="w-full text-left text-xs border-collapse">
-          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 backdrop-blur-xs">
-            <tr className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+          <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-850 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 uppercase font-semibold text-[11px]">
+            <tr>
               {canManage && (
-                <th className="w-10 px-3 py-3 text-center">
+                <th className="w-10 px-3 py-2.5 text-center">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={(e) => onSelectAll(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
                   />
                 </th>
               )}
-              <th className="px-4 py-3 min-w-[260px]">ชื่อไฟล์ / โฟลเดอร์ (File Name)</th>
-              <th className="px-3 py-3 min-w-[180px]">คำอธิบาย (Description)</th>
-              <th className="px-3 py-3 w-32">หมวดหมู่ (Folder)</th>
-              <th className="px-3 py-3 w-24 text-right">ขนาด (Size)</th>
-              <th className="px-3 py-3 w-36">ผู้อัปโหลด (Uploader)</th>
-              <th className="px-3 py-3 w-28 text-center">วันที่ (Date)</th>
-              <th className="px-3 py-3 w-16 text-center">จัดการ</th>
+              <th className="px-3 py-2.5 min-w-[280px]">ชื่อไฟล์ / โฟลเดอร์ (File Name)</th>
+              <th className="px-3 py-2.5 min-w-[180px]">คำอธิบาย (Description)</th>
+              <th className="px-3 py-2.5 w-36">หมวดหมู่ (Folder)</th>
+              <th className="px-3 py-2.5 w-24 text-right">ขนาด (Size)</th>
+              <th className="px-3 py-2.5 w-44">ผู้อัปโหลด (Uploader)</th>
+              <th className="px-3 py-2.5 w-28 text-center">วันที่ (Date)</th>
+              <th className="px-3 py-2.5 w-14 text-center">จัดการ</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
             {loading ? (
               <tr>
-                <td colSpan={canManage ? 8 : 7} className="py-16 text-center text-slate-400">
+                <td colSpan={canManage ? 8 : 7} className="py-20 text-center text-slate-400">
                   <div className="inline-flex items-center gap-2 font-medium">
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <span>กำลังโหลดเอกสาร...</span>
+                    <span>กำลังโหลดรายการเอกสาร...</span>
                   </div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 8 : 7} className="py-16 text-center text-slate-400">
+                <td colSpan={canManage ? 8 : 7} className="py-20 text-center text-slate-400">
                   <div className="max-w-xs mx-auto">
-                    <Folder size={36} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                    <p className="font-bold text-slate-600 dark:text-slate-300">โฟลเดอร์นี้ยังไม่มีเอกสาร</p>
-                    <p className="text-[11px] mt-0.5">ท่านสามารถอัปโหลดเอกสารใหม่ หรือสร้างโฟลเดอร์ย่อยได้</p>
+                    <Folder size={40} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+                    <p className="font-bold text-slate-600 dark:text-slate-300 text-sm">โฟลเดอร์นี้ยังไม่มีเอกสาร</p>
+                    <p className="text-[11px] mt-0.5 text-slate-400">ท่านสามารถอัปโหลดเอกสารใหม่ หรือสร้างโฟลเดอร์ย่อยได้</p>
                   </div>
                 </td>
               </tr>
@@ -120,29 +123,29 @@ export default function DocumentTable({
                 return (
                   <tr
                     key={item.id ? `doc-${item.id}` : `folder-${item.file_name}-${idx}`}
-                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
-                      isSelected ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                    className={`hover:bg-slate-50/90 dark:hover:bg-slate-800/50 transition-colors ${
+                      isSelected ? 'bg-blue-50/60 dark:bg-blue-950/30' : ''
                     }`}
                   >
                     {/* Checkbox */}
                     {canManage && (
-                      <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                         {item.id ? (
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => onToggleSelect(item.id)}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                            className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
                           />
                         ) : (
-                          <span className="text-slate-300 dark:text-slate-600">-</span>
+                          <span className="text-slate-300 dark:text-slate-600 text-xs">-</span>
                         )}
                       </td>
                     )}
 
                     {/* File Name & Icon */}
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {getFileIcon(item.file_name, isFolder)}
                         <div className="min-w-0 flex-1">
                           {isFolder ? (
@@ -154,7 +157,7 @@ export default function DocumentTable({
                                   : item.file_name;
                                 onNavigateFolder(newPath);
                               }}
-                              className="font-bold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block text-left w-full"
+                              className="font-bold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block text-left w-full cursor-pointer text-xs"
                             >
                               {item.file_name}
                             </button>
@@ -163,7 +166,7 @@ export default function DocumentTable({
                               <button
                                 type="button"
                                 onClick={() => onPreview(item)}
-                                className="font-medium text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate text-left"
+                                className="font-semibold text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate text-left cursor-pointer text-xs"
                               >
                                 {item.file_name}
                               </button>
@@ -178,7 +181,7 @@ export default function DocumentTable({
                                       category: item.category,
                                     });
                                   }}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-200 transition-colors"
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-200 transition-colors"
                                   title="เปิดดู 3D Model ที่ผูกอยู่กับเอกสารนี้"
                                 >
                                   <Box size={11} />
@@ -192,49 +195,49 @@ export default function DocumentTable({
                     </td>
 
                     {/* Description */}
-                    <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 truncate max-w-[240px]">
                       {item.file_description || '-'}
                     </td>
 
                     {/* Category Folder */}
-                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 truncate max-w-[140px]">
-                      <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400 truncate">
+                      <span className="inline-block px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
                         {item.category || 'Root'}
                       </span>
                     </td>
 
                     {/* File Size */}
-                    <td className="px-3 py-2.5 text-right font-mono text-slate-600 dark:text-slate-400">
+                    <td className="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-[11px]">
                       {isFolder ? '-' : formatBytes(item.file_size)}
                     </td>
 
                     {/* Uploader */}
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         {item.uploader_avatar ? (
                           <img
                             src={item.uploader_avatar}
                             alt=""
-                            className="w-5 h-5 rounded-full object-cover shrink-0"
+                            className="w-5 h-5 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
                           />
                         ) : (
                           <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center shrink-0 text-[10px]">
-                            <User size={12} />
+                            <User size={11} />
                           </div>
                         )}
-                        <span className="truncate text-slate-700 dark:text-slate-300">
+                        <span className="truncate text-slate-700 dark:text-slate-300 text-xs">
                           {item.uploaded_by || item.uploader_username || '-'}
                         </span>
                       </div>
                     </td>
 
                     {/* Created Date */}
-                    <td className="px-3 py-2.5 text-center text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                    <td className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                       {item.created_at ? item.created_at.slice(0, 10) : '-'}
                     </td>
 
                     {/* Actions Menu */}
-                    <td className="px-3 py-2.5 text-center relative" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-2 text-center relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -249,7 +252,7 @@ export default function DocumentTable({
 
                       {/* Dropdown Menu */}
                       {isMenuOpen && (
-                        <div className="absolute right-3 top-8 z-30 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 text-left text-xs animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute right-2 top-8 z-30 w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 text-left text-xs animate-in fade-in zoom-in-95 duration-100">
                           {!isFolder && (
                             <>
                               <button
@@ -258,7 +261,7 @@ export default function DocumentTable({
                                   setActiveMenuId(null);
                                   onPreview(item);
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                               >
                                 <Eye size={13} className="text-blue-500" />
                                 <span>เปิดดูเอกสาร</span>
@@ -270,7 +273,7 @@ export default function DocumentTable({
                                   setActiveMenuId(null);
                                   onDownload(item);
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                               >
                                 <Download size={13} className="text-emerald-500" />
                                 <span>ดาวน์โหลด</span>
@@ -286,7 +289,7 @@ export default function DocumentTable({
                                   setActiveMenuId(null);
                                   onRename(item);
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                               >
                                 <Edit2 size={13} className="text-indigo-500" />
                                 <span>เปลี่ยนชื่อ</span>
@@ -300,7 +303,7 @@ export default function DocumentTable({
                                       setActiveMenuId(null);
                                       onMove(item);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                                   >
                                     <FolderInput size={13} className="text-teal-500" />
                                     <span>ย้ายโฟลเดอร์</span>
@@ -312,7 +315,7 @@ export default function DocumentTable({
                                       setActiveMenuId(null);
                                       onRevise(item);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                                   >
                                     <RefreshCw size={13} className="text-amber-500" />
                                     <span>อัปเดตเวอร์ชัน</span>
@@ -328,7 +331,7 @@ export default function DocumentTable({
                                   setActiveMenuId(null);
                                   onDelete(item);
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
                               >
                                 <Trash2 size={13} />
                                 <span>ลบ{isFolder ? 'โฟลเดอร์' : 'เอกสาร'}</span>
@@ -348,7 +351,7 @@ export default function DocumentTable({
 
       {/* Pagination Footer */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 flex items-center justify-between gap-4 text-xs">
+        <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 flex items-center justify-between gap-4 text-xs relative z-10">
           <p className="text-slate-500 dark:text-slate-400">
             แสดงหน้า <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.currentPage}</span> จาก{' '}
             <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.totalPages}</span> (ทั้งหมด{' '}
@@ -360,7 +363,7 @@ export default function DocumentTable({
               type="button"
               disabled={pagination.currentPage <= 1}
               onClick={() => onPageChange(pagination.currentPage - 1)}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               <ChevronLeft size={14} />
             </button>
@@ -371,7 +374,7 @@ export default function DocumentTable({
               type="button"
               disabled={pagination.currentPage >= pagination.totalPages}
               onClick={() => onPageChange(pagination.currentPage + 1)}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               <ChevronRight size={14} />
             </button>
