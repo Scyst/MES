@@ -32,5 +32,15 @@ export const aiCopilotApi = {
       withCredentials: true
     });
     return response.data;
+  },
+
+  /**
+   * Fetch Proactive Red-Flags for morning executive awareness
+   * @returns {Promise<{success: boolean, data: {evaluated_at: string, total_red_flags: number, flags: Array}, message: string}>}
+   */
+  getRedFlags: async () => {
+    const url = `${import.meta.env.BASE_URL}api/ai/morningBriefAi.php?action=get_red_flags`;
+    const response = await axios.get(url, { withCredentials: true });
+    return response.data;
   }
 };

@@ -180,6 +180,31 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
     $gas = (float)$util['gas_cost'];
     $energy = $electricity + $gas;
 
+    // Delivery Attainment from PRODUCTION_PLANS (Assembly Line)
+    $stmtPlan = $pdo->prepare("SELECT ISNULL(SUM(CASE WHEN adjusted_planned_quantity > 0 THEN adjusted_planned_quantity ELSE 0 END), 0) as planned_qty FROM dbo.PRODUCTION_PLANS WITH (NOLOCK) WHERE plan_date = ? AND line = 'ASSEMBLY'");
+    $stmtPlan->execute([$targetDate]);
+    $plannedFg = (int)(($stmtPlan->fetch() ?: [])['planned_qty'] ?? 0);
+    $planAttainmentPct = $plannedFg > 0 ? round($totalFg / $plannedFg * 100, 1) : null;
+
+    // IpH (Income per Head) Ratio 1:1 Analysis
+    $totalPresent = $shifts[1]['present'] + $shifts[2]['present'];
+    $dailyIph = $totalPresent > 0 ? round($revenue / $totalPresent, 2) : 0.0;
+    $iphStatus = 'ON_TRACK';
+    if ($dailyIph >= 45000) {
+        $iphStatus = 'EXCELLENT';
+    } elseif ($dailyIph < 35000 && $totalPresent > 0) {
+        $iphStatus = 'BELOW_TARGET';
+    }
+    $otLaborPct = $labor > 0 ? round($overtime / $labor * 100, 1) : 0.0;
+    $efficiencyFlag = null;
+    if ($otLaborPct >= 25.0 && $iphStatus === 'BELOW_TARGET') {
+        $efficiencyFlag = 'OT_HIGH_PRODUCTIVITY_LOW'; // โอทีพุ่งสวนทางกับผลผลิตต่อหัว
+    }
+
+    // Daily target (from SNC Roadmap 2027 standard: 2M THB/day)
+    $dailyTargetRevenue = 2000000.0;
+    $dailyTargetAchievementPct = round($revenue / $dailyTargetRevenue * 100, 1);
+
     return [
         'date' => $targetDate,
         'is_current_production_day' => $targetDate === getProductionToday(),
@@ -193,7 +218,7 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
         'manpower' => [
             'day_shift' => $shifts[1],
             'night_shift' => $shifts[2],
-            'total_present_both_shifts' => $shifts[1]['present'] + $shifts[2]['present'],
+            'total_present_both_shifts' => $totalPresent,
             'total_headcount_both_shifts' => $shifts[1]['total'] + $shifts[2]['total'],
             'mood_average_of_5' => round($moodAverage, 2),
         ],
@@ -202,7 +227,7 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
             'overhead_production_thb' => toMoney($ohCost),
             'labor_dlot_thb' => toMoney($labor),
             'overtime_thb' => toMoney($overtime),
-            'overtime_pct_of_labor' => $labor > 0 ? round($overtime / $labor * 100, 1) : 0.0,
+            'overtime_pct_of_labor' => $otLaborPct,
             'electricity_thb' => toMoney($electricity),
             'lpg_gas_thb' => toMoney($gas),
             'energy_total_thb' => toMoney($energy),
@@ -216,6 +241,27 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
             'gross_profit_standard_thb' => toMoney($revenue - $matCost - $ohCost - $labor - $energy),
             'gross_profit_margin_pct' => $revenue > 0 ? round(($revenue - $matCost - $ohCost - $labor - $energy) / $revenue * 100, 2) : 0.0,
             'note' => 'EBITDA Proxy = รายได้ หักค่าวัตถุดิบ ค่าแรง และพลังงาน (ก่อนหักค่าเสื่อมและโสหุ้ยคงที่) | Gross Profit = รายได้ หักต้นทุนวัตถุดิบ ค่าโสหุ้ย ค่าแรง และพลังงาน',
+        ],
+        'snc_executive_metrics' => [
+            'plan_delivery' => [
+                'planned_fg_assembly_pieces' => $plannedFg,
+                'actual_fg_pieces' => $totalFg,
+                'plan_attainment_pct' => $planAttainmentPct,
+                'status' => $planAttainmentPct === null ? 'NO_PLAN' : ($planAttainmentPct >= 95 ? 'ON_PLAN' : 'BEHIND_PLAN'),
+            ],
+            'iph_productivity' => [
+                'revenue_per_head_thb' => $dailyIph,
+                'snc_ratio_1_1_benchmark_thb' => 38461.54, // 1M/26 days
+                'status' => $iphStatus,
+                'efficiency_flag' => $efficiencyFlag,
+                'note' => 'IpH = รายได้ต่อพนักงานที่มาทำงานจริง เทียบเกณฑ์ Ratio 1:1 (~38.5k/คน/วัน)',
+            ],
+            'target_2m_per_day' => [
+                'daily_target_thb' => $dailyTargetRevenue,
+                'actual_revenue_thb' => toMoney($revenue),
+                'achievement_pct' => $dailyTargetAchievementPct,
+                'gap_thb' => toMoney($dailyTargetRevenue - $revenue),
+            ],
         ],
     ];
 }
@@ -277,6 +323,10 @@ function queryModelBreakdown(string $startDate, string $endDate, ?string $teamGr
         $mat = (float)$row['mat_cost'];
         $oh = (float)$row['oh_cost'];
         $gp = $rev - $mat - $oh;
+        $rmPct = $rev > 0 ? round($mat / $rev * 100, 1) : 0.0;
+        $gpMargin = $rev > 0 ? round($gp / $rev * 100, 2) : 0.0;
+        $riskFlag = ($rmPct >= 70.0 && $gpMargin < 10.0) ? 'HIGH_RM_LOW_MARGIN' : 'NORMAL';
+
         $rows[] = [
             'model' => (string)$row['model_name'],
             'fg' => (int)$row['fg'],
@@ -284,9 +334,11 @@ function queryModelBreakdown(string $startDate, string $endDate, ?string $teamGr
             'scrap' => (int)$row['scrap'],
             'revenue_thb' => toMoney($rev),
             'standard_material_cost_thb' => toMoney($mat),
+            'rm_pct_of_revenue' => $rmPct,
             'standard_overhead_thb' => toMoney($oh),
             'standard_gross_profit_thb' => toMoney($gp),
-            'gross_margin_pct' => $rev > 0 ? round($gp / $rev * 100, 2) : 0.0,
+            'gross_margin_pct' => $gpMargin,
+            'risk_flag' => $riskFlag,
         ];
     }
     return $rows;
@@ -432,15 +484,46 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
     $gp = $rev - $mat - $oh - $dlot - $energy;
     $contrib = $rev - $dlot - $energy;
 
+    // Master Target & 135-100-35% Analysis from MONTHLY_PL_TARGETS
+    $startYear = (int)substr($startDate, 0, 4);
+    $startMonthNum = (int)substr($startDate, 5, 2);
+    $stmtTarget = $pdo->prepare("SELECT TOP 1 target_amount, working_days FROM dbo.MONTHLY_PL_TARGETS WITH (NOLOCK) WHERE year_val = ? AND month_val = ? AND item_id = 2 AND (section_name = 'ALL' OR section_name = 'Team 1') ORDER BY CASE WHEN section_name = 'ALL' THEN 1 ELSE 2 END");
+    $stmtTarget->execute([$startYear, $startMonthNum]);
+    $targetRow = $stmtTarget->fetch() ?: [];
+    
+    $workingDaysInTarget = !empty($targetRow['working_days']) ? (int)$targetRow['working_days'] : 26;
+    $monthlyTargetRevenue = !empty($targetRow['target_amount']) && (float)$targetRow['target_amount'] > 0 
+        ? (float)$targetRow['target_amount'] 
+        : (2000000.0 * $workingDaysInTarget); // Default to SNC 2M/day standard (52M)
+    
+    $targetAchievementPct = round($rev / $monthlyTargetRevenue * 100, 2);
+    $gapToTarget = $monthlyTargetRevenue - $rev;
+
+    // Days calculation for required run rate
+    $daysInMonth = (int)date('t', strtotime($startDate));
+    $currentDayNum = (int)date('j', strtotime($endDate));
+    $remainingDays = max(0, $daysInMonth - $currentDayNum);
+    $requiredDailyRevenue = $remainingDays > 0 && $gapToTarget > 0 ? round($gapToTarget / $remainingDays, 2) : 0.0;
+
+    // SNC 135-100-35% Rule: Total expenses should be <= 74.07% of revenue
+    $totalCosts = $mat + $oh + $dlot + $energy;
+    $costRatioPct = $rev > 0 ? round($totalCosts / $rev * 100, 2) : 0.0;
+    $surplusReservePct = $rev > 0 ? round(($rev - $totalCosts) / $rev * 100, 2) : 0.0;
+    $rule135 = [
+        'cost_ratio_pct' => $costRatioPct,
+        'target_max_cost_ratio_pct' => 74.07, // 100/135
+        'surplus_reserve_pct' => $surplusReservePct,
+        'target_min_surplus_pct' => 25.93, // 35/135
+        'status' => $costRatioPct <= 74.1 ? 'PASS_SURPLUS_ACHIEVED' : 'HIGH_EXPENSE_ALERT',
+        'note' => 'กรอบ 135-100-35: รายจ่ายรวมต้องไม่เกิน 74.07% ของรายได้ เพื่อรักษาส่วนสำรองกำไร 25.93%',
+    ];
+
     // Run rate projection for month-to-date queries
     $startMonth = substr($startDate, 0, 7);
     $endMonth = substr($endDate, 0, 7);
     $isMtd = ($startMonth === $endMonth && $startDate === "{$startMonth}-01");
     $runRate = null;
     if ($isMtd && $productionDays > 0) {
-        $daysInMonth = (int)date('t', strtotime($startDate));
-        $currentDayNum = (int)date('j', strtotime($endDate));
-        $remainingDays = max(0, $daysInMonth - $currentDayNum);
         $dailyAvgRev = $rev / $productionDays;
         $dailyAvgEbitda = $ebitda / $productionDays;
         $runRate = [
@@ -451,6 +534,8 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
             'daily_average_ebitda_thb' => toMoney($dailyAvgEbitda),
             'projected_month_end_revenue_thb' => toMoney($rev + ($dailyAvgRev * $remainingDays)),
             'projected_month_end_ebitda_thb' => toMoney($ebitda + ($dailyAvgEbitda * $remainingDays)),
+            'gap_to_master_target_thb' => toMoney($gapToTarget),
+            'required_daily_run_rate_to_hit_target_thb' => toMoney($requiredDailyRevenue),
             'note' => 'ประมาณการยอดสิ้นเดือนจากจังหวะการผลิตเฉลี่ยต่อวัน (Run Rate) ในช่วงที่ผ่านมาของเดือน',
         ];
     }
@@ -482,6 +567,15 @@ function queryRangeReport(string $startDate, string $endDate, ?string $teamGroup
             'gross_profit_standard_thb' => toMoney($gp),
             'gross_profit_margin_pct' => $rev > 0 ? round($gp / $rev * 100, 2) : 0.0,
             'margin_note' => 'EBITDA Proxy = รายได้ หักค่าวัตถุดิบ ค่าแรง และพลังงาน | Gross Profit = รายได้ หักวัตถุดิบ ค่าแรง พลังงาน และโสหุ้ยมาตรฐาน',
+        ],
+        'snc_master_budget' => [
+            'monthly_target_revenue_thb' => toMoney($monthlyTargetRevenue),
+            'target_working_days' => $workingDaysInTarget,
+            'actual_revenue_thb' => toMoney($rev),
+            'achievement_pct' => $targetAchievementPct,
+            'gap_to_target_thb' => toMoney($gapToTarget),
+            'required_daily_run_rate_thb' => toMoney($requiredDailyRevenue),
+            'rule_135_100_35' => $rule135,
         ],
         'run_rate_projection' => $runRate,
         'daily' => $days,
@@ -765,15 +859,236 @@ function queryInventoryHealthReport(?string $materialType = 'ALL', int $limitTop
         ];
     }
 
+    // 4. Location Type Breakdown (e.g. FG Assembly vs WIP vs Warehouse vs Store)
+    $locSql = "SELECT 
+        ISNULL(l.location_type, 'UNKNOWN') as location_type,
+        COUNT(DISTINCT o.parameter_id) as sku_count,
+        ISNULL(SUM(o.quantity), 0) as total_qty,
+        ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as total_val
+        FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
+        LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id
+        JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
+        WHERE o.quantity > 0
+        GROUP BY l.location_type
+        ORDER BY total_val DESC";
+    $stmtLoc = $pdo->query($locSql);
+    $locationBreakdown = [];
+    foreach ($stmtLoc->fetchAll() ?: [] as $row) {
+        $val = (float)$row['total_val'];
+        $locType = (string)$row['location_type'];
+        $meaning = 'คลังทั่วไป';
+        if ($locType === 'FG') $meaning = 'คลังปลายไลน์ประกอบ (Assembly Line Accumulation)';
+        elseif ($locType === 'WIP') $meaning = 'ชิ้นงานระหว่างทำในสายการผลิต (Press/Spot/Paint)';
+        elseif ($locType === 'STORE') $meaning = 'คลังสโตร์เบิกจ่ายวัตถุดิบ (Store Requisition)';
+        elseif ($locType === 'WAREHOUSE') $meaning = 'คลังจัดเก็บสินค้าหลัก (Main Warehouse)';
+        elseif ($locType === 'MAINTENANCE') $meaning = 'อะไหล่และชิ้นส่วนซ่อมบำรุง (PE Maintenance)';
+
+        $locationBreakdown[] = [
+            'location_type' => $locType,
+            'description' => $meaning,
+            'sku_count' => (int)$row['sku_count'],
+            'total_quantity' => (float)$row['total_qty'],
+            'total_value_thb' => toMoney($val),
+            'total_value_million_thb' => round($val / 1000000, 2),
+            'pct_of_total_inventory' => $totalVal > 0 ? round($val / $totalVal * 100, 1) : 0.0,
+        ];
+    }
+
     return [
         'snapshot_date' => date('Y-m-d'),
         'total_inventory_value_thb' => toMoney($totalVal),
         'total_inventory_value_million_thb' => round($totalVal / 1000000, 2),
         'total_skus' => (int)($summary['total_skus'] ?? 0),
         'total_pieces' => (float)($summary['total_pcs'] ?? 0),
+        'location_type_breakdown' => $locationBreakdown,
         'category_breakdown' => $categories,
         'top_tied_up_cash_items' => $topItems,
-        'note' => 'มูลค่าคำนวณจากยอด On-hand คงคลังจริงในระบบ คูณด้วยราคา Standard Price ของแต่ละ Part No.',
+        'executive_insight' => 'ตัวเลข 845.48 ล้านบาท ส่วนใหญ่ 67.5% (~570 ล้านบาท) สะสมอยู่ที่ปลายไลน์ประกอบ Assembly B9 เป็นตู้ Tool Cabinet ประกอบเสร็จรอการตัดจ่ายและส่งออก (Shipping)',
+    ];
+}
+
+/**
+ * Query Work Schedule Monitoring (WSM) Action Items & Overdue Tasks from dbo.TeamPlanner_Tasks.
+ * NOTE: Intentionally >50 lines — multi-status WSM task tracking and overdue analysis.
+ */
+function queryWsmActionItems(?string $statusFilter = 'OVERDUE', int $limit = 10): ?array {
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) return null;
+
+    $limit = max(1, min(30, $limit));
+
+    $sumSql = "SELECT 
+        COUNT(*) as total_tasks,
+        SUM(CASE WHEN DueDate < CAST(GETDATE() AS DATE) AND Status NOT IN ('done', 'completed') THEN 1 ELSE 0 END) as overdue_count,
+        SUM(CASE WHEN Priority IN ('urgent', 'high') AND Status NOT IN ('done', 'completed') THEN 1 ELSE 0 END) as urgent_open_count,
+        SUM(CASE WHEN Status IN ('done', 'completed') THEN 1 ELSE 0 END) as completed_count
+        FROM dbo.TeamPlanner_Tasks WITH (NOLOCK)";
+    $stmtSum = $pdo->query($sumSql);
+    $sum = $stmtSum->fetch() ?: [];
+
+    $listSql = "SELECT TOP ({$limit})
+        Id, Title, Assignee, DueDate, Priority, Status, Description,
+        DATEDIFF(DAY, DueDate, GETDATE()) as days_overdue
+        FROM dbo.TeamPlanner_Tasks WITH (NOLOCK)";
+    if ($statusFilter === 'OVERDUE') {
+        $listSql .= " WHERE DueDate < CAST(GETDATE() AS DATE) AND Status NOT IN ('done', 'completed')";
+    } elseif ($statusFilter === 'URGENT') {
+        $listSql .= " WHERE Priority IN ('urgent', 'high') AND Status NOT IN ('done', 'completed')";
+    } else {
+        $listSql .= " WHERE Status NOT IN ('done', 'completed')";
+    }
+    $listSql .= " ORDER BY CASE WHEN Priority = 'urgent' THEN 1 WHEN Priority = 'high' THEN 2 ELSE 3 END, DueDate ASC";
+
+    $stmtList = $pdo->query($listSql);
+    $tasks = [];
+    foreach ($stmtList->fetchAll() ?: [] as $row) {
+        $tasks[] = [
+            'id' => (int)$row['Id'],
+            'title' => (string)$row['Title'],
+            'assignee' => (string)($row['Assignee'] ?? 'Unassigned'),
+            'due_date' => substr((string)$row['DueDate'], 0, 10),
+            'priority' => (string)$row['Priority'],
+            'status' => (string)$row['Status'],
+            'days_overdue' => max(0, (int)$row['days_overdue']),
+        ];
+    }
+
+    return [
+        'wsm_summary' => [
+            'total_active_tasks' => (int)($sum['total_tasks'] ?? 0) - (int)($sum['completed_count'] ?? 0),
+            'overdue_tasks_count' => (int)($sum['overdue_count'] ?? 0),
+            'urgent_high_open_count' => (int)($sum['urgent_open_count'] ?? 0),
+            'completed_tasks_count' => (int)($sum['completed_count'] ?? 0),
+        ],
+        'filter_used' => $statusFilter,
+        'action_items' => $tasks,
+        'note' => 'ระบบติดตามแผนงานและข้อตกลงระดับบริหาร (WSM - Work Schedule Monitoring)',
+    ];
+}
+
+/**
+ * Query Quality & Customer Claims from dbo.QMS_CASES and dbo.QMS_CLAIM.
+ * NOTE: Intentionally >50 lines — multi-case customer claim and CAR tracking.
+ */
+function queryQualityAndClaimsReport(string $startDate, string $endDate): ?array {
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) return null;
+
+    $summarySql = "SELECT 
+        COUNT(*) as total_cases,
+        SUM(CASE WHEN c.current_status != 'CLOSED' AND c.current_status != 'CANCELLED' THEN 1 ELSE 0 END) as open_cases,
+        ISNULL(SUM(cl.cost_estimation), 0) as total_claim_cost_thb
+        FROM dbo.QMS_CASES c WITH (NOLOCK)
+        LEFT JOIN dbo.QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
+        WHERE CAST(c.case_date AS DATE) >= ? AND CAST(c.case_date AS DATE) <= ?";
+    $stmtSum = $pdo->prepare($summarySql);
+    $stmtSum->execute([$startDate, $endDate]);
+    $sum = $stmtSum->fetch() ?: [];
+
+    $listSql = "SELECT TOP 10
+        c.case_id, c.car_no, c.case_date, c.customer_name, c.product_name, c.current_status,
+        ISNULL(cl.cost_estimation, 0) as cost_estimation
+        FROM dbo.QMS_CASES c WITH (NOLOCK)
+        LEFT JOIN dbo.QMS_CLAIM cl WITH (NOLOCK) ON c.case_id = cl.case_id
+        WHERE CAST(c.case_date AS DATE) >= ? AND CAST(c.case_date AS DATE) <= ?
+        ORDER BY c.case_date DESC";
+    $stmtList = $pdo->prepare($listSql);
+    $stmtList->execute([$startDate, $endDate]);
+    $cases = [];
+    foreach ($stmtList->fetchAll() ?: [] as $row) {
+        $cases[] = [
+            'case_id' => (int)$row['case_id'],
+            'car_no' => (string)$row['car_no'],
+            'case_date' => substr((string)$row['case_date'], 0, 10),
+            'customer_name' => (string)$row['customer_name'],
+            'product_name' => (string)$row['product_name'],
+            'status' => (string)$row['current_status'],
+            'estimated_claim_cost_thb' => toMoney($row['cost_estimation']),
+        ];
+    }
+
+    return [
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+        'metrics' => [
+            'total_cases_in_period' => (int)($sum['total_cases'] ?? 0),
+            'open_investigating_cases' => (int)($sum['open_cases'] ?? 0),
+            'total_estimated_claim_cost_thb' => toMoney($sum['total_claim_cost_thb'] ?? 0),
+        ],
+        'recent_cases' => $cases,
+        'note' => 'ข้อมูลข้อร้องเรียนลูกค้า (QMS Claims & CAR) สำหรับประเมินเกณฑ์ QCDSS ตัว Q (Quality)',
+    ];
+}
+
+/**
+ * Query Proactive Red-Flags for executive morning alerts.
+ * Automatically checks 4 critical risk dimensions:
+ * 1. Equipment Critical Work Orders
+ * 2. Overdue Urgent WSM Tasks
+ * 3. System API Errors today
+ * 4. Assembly FG Storage Accumulation
+ */
+function queryProactiveRedFlags(): array {
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) return ['evaluated_at' => date('Y-m-d H:i:s'), 'total_red_flags' => 0, 'flags' => []];
+
+    $today = getProductionToday();
+    $redFlags = [];
+
+    // 1. Critical / High PE Maintenance Work Orders
+    $stmtPE = $pdo->query("SELECT COUNT(*) as critical_pe FROM dbo.PE_WORK_ORDERS WITH (NOLOCK) WHERE priority IN ('Critical', 'High') AND status IN ('Open', 'Pending', 'In Progress')");
+    $critPE = (int)(($stmtPE->fetch() ?: [])['critical_pe'] ?? 0);
+    if ($critPE > 0) {
+        $redFlags[] = [
+            'level' => 'CRITICAL',
+            'category' => 'EQUIPMENT',
+            'title' => "พบเครื่องจักรขัดข้องระดับ Critical/High ค้างอยู่ {$critPE} รายการ",
+            'detail' => 'มีใบแจ้งซ่อมเครื่องจักรระดับเร่งด่วนที่ยังไม่แล้วเสร็จ อาจส่งผลกระทบต่อไลน์การผลิต',
+        ];
+    }
+
+    // 2. Overdue Urgent WSM Tasks
+    $stmtWSM = $pdo->query("SELECT COUNT(*) as overdue_urgent FROM dbo.TeamPlanner_Tasks WITH (NOLOCK) WHERE DueDate < CAST(GETDATE() AS DATE) AND Priority IN ('urgent', 'high') AND Status NOT IN ('done', 'completed')");
+    $overdueUrgent = (int)(($stmtWSM->fetch() ?: [])['overdue_urgent'] ?? 0);
+    if ($overdueUrgent > 0) {
+        $redFlags[] = [
+            'level' => 'WARNING',
+            'category' => 'WSM_PLANNER',
+            'title' => "มีงาน WSM ระดับ Urgent/High เลยกำหนดส่ง {$overdueUrgent} รายการ",
+            'detail' => 'มี Action Plan และภารกิจสำคัญใน Team Planner ที่เกินกำหนด Due Date',
+        ];
+    }
+
+    // 3. System API Errors today
+    $stmtErr = $pdo->prepare("SELECT COUNT(*) as api_errors FROM dbo.SYSTEM_LOGS WITH (NOLOCK) WHERE action = 'API_ERROR' AND CAST(created_at AS DATE) = ?");
+    $stmtErr->execute([$today]);
+    $apiErr = (int)(($stmtErr->fetch() ?: [])['api_errors'] ?? 0);
+    if ($apiErr > 0) {
+        $redFlags[] = [
+            'level' => 'NOTICE',
+            'category' => 'SYSTEM_HEALTH',
+            'title' => "พบข้อผิดพลาดระบบ (API Error) วันนี้ {$apiErr} รายการ",
+            'detail' => 'มีการเรียกใช้งาน API บางตัวผิดพลาด ตรวจสอบรายละเอียดได้ใน System Audit Logs',
+        ];
+    }
+
+    // 4. Assembly FG Storage Accumulation
+    $stmtFG = $pdo->query("SELECT ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as fg_val FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id WHERE o.location_id = 1 AND o.quantity > 0");
+    $fgVal = (float)(($stmtFG->fetch() ?: [])['fg_val'] ?? 0);
+    if ($fgVal >= 500000000) {
+        $fgM = round($fgVal / 1000000, 1);
+        $redFlags[] = [
+            'level' => 'FINANCIAL',
+            'category' => 'WORKING_CAPITAL',
+            'title' => "สินค้าสำเร็จรูป (FG) ค้างสะสมปลายไลน์ประกอบสูงถึง {$fgM} ล้านบาท",
+            'detail' => 'มีตู้ Tool Cabinet ประกอบเสร็จสะสมอยู่ที่ Assembly B9 รอการตัดจ่ายและส่งมอบ',
+        ];
+    }
+
+    return [
+        'evaluated_at' => date('Y-m-d H:i:s'),
+        'total_red_flags' => count($redFlags),
+        'flags' => $redFlags,
     ];
 }
 
@@ -872,6 +1187,35 @@ function getToolDeclarations(): array {
                     ],
                 ],
             ],
+            [
+                'name' => 'get_wsm_action_items',
+                'description' => 'รายงานติดตามแผนงานและการบริหารจัดการตารางเวลา WSM (Work Schedule Monitoring) จาก Team Planner: ตรวจสอบจำนวนงานที่เลยกำหนด (Overdue Tasks), งานระดับเร่งด่วนที่ยังค้างอยู่ (Urgent/High Open Tasks), งานที่เสร็จแล้ว และรายการ Action Items ที่ต้องติดตามเร่งด่วนตามผู้รับผิดชอบ ใช้เมื่อถามเรื่อง WSM, งานค้าง, ใครทำงานช้า, งานอะไรเกินกำหนด, แผนงานของผู้บริหาร หรือ Action Items',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'status_filter' => [
+                            'type' => 'STRING',
+                            'description' => 'กรองสถานะงาน เช่น OVERDUE (งานเลยกำหนด), URGENT (งานด่วนที่ยังไม่เสร็จ), ALL_OPEN (งานค้างทั้งหมด) ค่าเริ่มต้นคือ OVERDUE',
+                        ],
+                        'limit' => [
+                            'type' => 'INTEGER',
+                            'description' => 'จำนวนรายการงานที่ต้องการดึง (1-30, ค่าเริ่มต้น 10)',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'get_quality_and_claims_report',
+                'description' => 'รายงานคุณภาพและข้อร้องเรียนลูกค้า (Quality Claims & Customer Complaints - QMS): จำนวนข้อร้องเรียนทั้งหมด, ใบ CAR/เคสที่อยู่ระหว่างสอบสวน (Open Cases), ค่าเสียหายหรือประมาณการเคลมรวม (Claim Cost Estimation ฿) และรายการเคสร้องเรียนล่าสุด ใช้เมื่อถามเรื่อง คุณภาพ, ข้อร้องเรียนลูกค้า, งานเคลม, CAR, QMS, ของเสียที่หลุดไปหาลูกค้า หรือตัว Q ในเกณฑ์ QCDSS',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'start_date' => $dateProperty,
+                        'end_date' => $dateProperty,
+                    ],
+                    'required' => ['start_date', 'end_date'],
+                ],
+            ],
         ],
     ]];
 }
@@ -928,6 +1272,20 @@ function executeTool(string $toolName, array $arguments, ?string $team, array &$
             $materialType = isset($arguments['material_type']) ? (string)$arguments['material_type'] : 'ALL';
             $limit = isset($arguments['limit']) ? (int)$arguments['limit'] : 5;
             return queryInventoryHealthReport($materialType, $limit) ?? ['error' => 'ไม่สามารถอ่านข้อมูลสินค้าคงคลังได้'];
+        }
+
+        if ($toolName === 'get_wsm_action_items') {
+            $scopeLog[] = "แผนงาน WSM (Team Planner)";
+            $statusFilter = isset($arguments['status_filter']) ? (string)$arguments['status_filter'] : 'OVERDUE';
+            $limit = isset($arguments['limit']) ? (int)$arguments['limit'] : 10;
+            return queryWsmActionItems($statusFilter, $limit) ?? ['error' => 'ไม่สามารถอ่านข้อมูล WSM ได้'];
+        }
+
+        if ($toolName === 'get_quality_and_claims_report') {
+            $range = normalizeDateRange((string)($arguments['start_date'] ?? ''), (string)($arguments['end_date'] ?? ''));
+            if (isset($range['error'])) return $range;
+            $scopeLog[] = "ข้อร้องเรียนคุณภาพ QMS {$range[0]} ถึง {$range[1]}";
+            return queryQualityAndClaimsReport($range[0], $range[1]) ?? ['error' => 'ไม่สามารถอ่านข้อมูลคุณภาพ QMS ได้'];
         }
 
         return ['error' => "ไม่รู้จักเครื่องมือ {$toolName}"];

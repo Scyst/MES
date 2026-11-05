@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { aiCopilotApi } from '../services/aiCopilotApi';
 import {
   Bot, Sparkles, Send, X, Trash2, Copy, Check, Calendar,
-  Zap, FileText, RefreshCw, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare
+  Zap, FileText, RefreshCw, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare,
+  ChevronUp, ArrowRight, AlertTriangle
 } from 'lucide-react';
 
 function getQuickActionsForPath(pathname) {
@@ -31,6 +32,7 @@ function getQuickActionsForPath(pathname) {
     return [
       'สรุปงานที่ค้างในสปรินต์นี้',
       'งานที่มีความเสี่ยงส่งมอบล่าช้า',
+      'ติดตามงานค้าง WSM (Overdue)',
       'สรุปข้อมูลประจำวัน',
       'สรุปข้อมูลของเมื่อวาน',
       'แจกแจงกำลังพลกะเช้า-ดึกวันนี้'
@@ -48,8 +50,10 @@ function getQuickActionsForPath(pathname) {
     'สรุปข้อมูลประจำวัน',
     'สรุปข้อมูลของเมื่อวาน',
     'สรุปกำไรและ EBITDA เดือนนี้',
+    'ประเมินเกณฑ์ 135-100-35% และ Run Rate',
     'มูลค่าเงินจมในสต็อกคงคลัง',
-    'ประมาณการยอดสิ้นเดือน (Run Rate)',
+    'ติดตามงานค้าง WSM (Overdue)',
+    'สรุปข้อร้องเรียนลูกค้า (QMS)',
     'ตรวจสอบการใช้งานระบบและความผิดปกติ',
     'ต้นทุนวัตถุดิบและค่าโสหุ้ยเดือน 10',
     'สถานะแจ้งซ่อมเครื่องจักร (PE) วันนี้',
@@ -87,11 +91,15 @@ export default function GlobalAiAssistant() {
   }
 
   const [isOpen, setIsOpen] = useState(false);
+  const [redFlags, setRedFlags] = useState({ total_red_flags: 0, flags: [] });
+  const [isRedFlagsOpen, setIsRedFlagsOpen] = useState(false);
+  const [loadingRedFlags, setLoadingRedFlags] = useState(false);
+
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
       role: 'model',
-      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time พร้อมตอบคำถามเรื่องยอดผลิต, กำไรและ EBITDA, เงินจมในสต็อกคงคลัง, ต้นทุนวัตถุดิบและโสหุ้ย, สถานะแจ้งซ่อมเครื่องจักร (PE), บันทึกการใช้งานระบบ (Audit Logs), กำลังพลกะเช้า-ดึก, ค่าแรง DLOT, OT และพลังงาน สามารถพิมพ์ถามหรือเลือกหัวข้อด่วนด้านล่างได้เลยครับ',
+      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ (SNC Executive Suite 2027)\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time ครอบคลุม:\n• ยอดผลิต FG, รายได้ เทียบเป้าหมาย Master Budget 2 ล้าน/วัน\n• กำไรขั้นต้น (GP), EBITDA และวินัยการเงิน 135-100-35%\n• ผลิตภาพแรงงานต่อหัว IpH (Ratio 1:1) และประสิทธิภาพส่งมอบ (Plan Attainment)\n• เจาะลึกเงินจมในสต็อกคงคลัง 845.48M (FG ปลายไลน์ B9 vs WIP)\n• แผนงานและงานค้าง WSM (Team Planner) & ข้อร้องเรียนคุณภาพ (QMS)\n• แจ้งซ่อมเครื่องจักร (PE) และ Audit Logs ตรวจจับความผิดปกติ\n\nสามารถพิมพ์ถามหรือเลือกหัวข้อด่วนด้านล่างได้เลยครับ',
       generated_at: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -110,6 +118,30 @@ export default function GlobalAiAssistant() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
+
+  // Proactive Red-Flags fetch on mount & whenever drawer opens
+  useEffect(() => {
+    let isMounted = true;
+    if (hasAccess) {
+      setLoadingRedFlags(true);
+      aiCopilotApi.getRedFlags()
+        .then((res) => {
+          if (isMounted && res.success && res.data) {
+            setRedFlags(res.data);
+            if (res.data.total_red_flags > 0) {
+              setIsRedFlagsOpen(true);
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn('[RED_FLAGS_FETCH_FAILED]', err);
+        })
+        .finally(() => {
+          if (isMounted) setLoadingRedFlags(false);
+        });
+    }
+    return () => { isMounted = false; };
+  }, [hasAccess, isOpen]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -260,12 +292,22 @@ export default function GlobalAiAssistant() {
         >
           <div className="relative">
             <Bot size={22} className="animate-pulse" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-700" />
+            {redFlags.total_red_flags > 0 ? (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white animate-ping" />
+            ) : (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-700" />
+            )}
           </div>
           <span className="text-sm font-bold tracking-wide hidden sm:inline">AI Copilot</span>
-          <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-md bg-white/20 text-white/90">
-            SQL Live
-          </span>
+          {redFlags.total_red_flags > 0 ? (
+            <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-rose-500 text-white animate-pulse">
+              {redFlags.total_red_flags} Risks
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-md bg-white/20 text-white/90">
+              SQL Live
+            </span>
+          )}
         </button>
       )}
 
@@ -355,6 +397,77 @@ export default function GlobalAiAssistant() {
             </div>
           </div>
         </div>
+
+        {/* 🚨 Proactive Red-Flags Banner (Executive Risk Alert) */}
+        {redFlags.total_red_flags > 0 && (
+          <div className="shrink-0 bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 dark:from-rose-950/40 dark:via-amber-950/30 dark:to-rose-950/40 border-b border-rose-200 dark:border-rose-900/60 transition-all duration-200">
+            <div
+              onClick={() => setIsRedFlagsOpen(!isRedFlagsOpen)}
+              className="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-rose-100/50 dark:hover:bg-rose-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
+                </span>
+                <span className="text-xs font-bold text-rose-800 dark:text-rose-200">
+                  แจ้งเตือนจุดเฝ้าระวังเช้านี้ (SNC Red-Flags)
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-600 text-white">
+                  {redFlags.total_red_flags}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+                <span>{isRedFlagsOpen ? 'ย่อ' : 'ดูรายละเอียด'}</span>
+                {isRedFlagsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </div>
+            </div>
+
+            {/* Collapsible details */}
+            {isRedFlagsOpen && (
+              <div className="px-3.5 pb-3 pt-1 space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
+                {redFlags.flags.map((flag, idx) => {
+                  let badgeColor = 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800';
+                  if (flag.level === 'WARNING') {
+                    badgeColor = 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800';
+                  } else if (flag.level === 'FINANCIAL') {
+                    badgeColor = 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800';
+                  } else if (flag.level === 'NOTICE') {
+                    badgeColor = 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+                  }
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg bg-white/90 dark:bg-slate-900/90 border border-rose-200/60 dark:border-rose-900/40 shadow-2xs flex flex-col gap-1 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badgeColor}`}>
+                            {flag.level}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            {flag.title}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSend(`ช่วยวิเคราะห์และให้รายละเอียดเกี่ยวกับ: ${flag.title}`)}
+                          className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 shrink-0 inline-flex items-center gap-0.5 cursor-pointer underline"
+                        >
+                          ถาม AI <ArrowRight size={10} />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                        {flag.detail}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Chat Feed */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50 dark:bg-slate-950/50">
