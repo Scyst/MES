@@ -247,16 +247,12 @@ export default function GlobalAiAssistant() {
 
   return (
     <>
-      {/* 🌟 Floating Action Button (FAB) - Bottom Right with smart spacing for multi-widget pages */}
+      {/* 🌟 Floating Action Button (FAB) - Anchored at Bottom Right universally */}
       {!isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className={`${
-            location.pathname.startsWith('/planner')
-              ? 'fixed bottom-22 right-4 md:bottom-22 md:right-6'
-              : 'fixed bottom-6 right-6'
-          } z-[90] group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-white/20`}
+          className="fixed bottom-6 right-6 z-[90] group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-white/20"
           title="เปิด MES AI Copilot (ผู้ช่วยอัจฉริยะประจำโรงงาน)"
         >
           <div className="relative">

@@ -217,7 +217,7 @@ export default function ChatWidget({ currentUser, tasks = [], projects = [], onS
 
   return (
     <>
-      <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[60] flex flex-col items-end">
+      <div className="fixed bottom-22 right-4 md:bottom-22 md:right-6 z-[60] flex flex-col items-end">
         {isOpen ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl w-80 md:w-96 overflow-hidden animate-slide-up flex flex-col h-[500px] max-h-[75vh]">
             
