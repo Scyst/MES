@@ -14,9 +14,9 @@ const getMoodEmoji = (score) => {
 const SUGGESTED_PROMPTS = [
   'สรุป 3 บรรทัดส่ง LINE ผู้บริหาร',
   'แจกแจงกำลังพลกะเช้าและกะดึกวันนี้',
-  'ตรวจเช็กของเสีย (Scrap & Hold) ทุกโมเดล',
-  'สรุปยอดผลิตและรายได้สะสมเดือนนี้ (MTD)',
-  'วิเคราะห์ต้นทุนค่าไฟ แก๊ส และ OT'
+  'โมเดลใดมีของเสียมากที่สุดในเดือนนี้',
+  'สรุปยอดผลิตและรายได้สะสมเดือนนี้',
+  'เปรียบเทียบสัปดาห์นี้กับสัปดาห์ที่แล้ว'
 ];
 
 export default function MorningBriefModal({ isOpen, onClose, initialData }) {
@@ -90,11 +90,6 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
       const res = await dailyLogApi.getMorningBriefAi(data, selectedTeam, promptToSend, styleToSend);
       if (res.success && res.data?.briefing) {
         setAiBriefing(res.data);
-        // Automatically sync modal date & numbers if AI auto-queried a different target date
-        if (res.data.auto_switched_date && res.data.updated_brief_data) {
-          setSelectedDate(res.data.auto_switched_date);
-          setData(res.data.updated_brief_data);
-        }
       } else {
         setAiError(res.message || 'ไม่สามารถวิเคราะห์ข้อมูลด้วย AI ได้');
       }
@@ -315,7 +310,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateAi(); }}
-                      placeholder="💡 พิมพ์ถามได้อิสระ เช่น 'ขอข้อมูลเดือน 11 หน่อย', 'แจกแจงพนักงานกะเช้า-ดึก', 'สรุป 3 บรรทัดส่ง LINE'..."
+                      placeholder="💡 พิมพ์ถามได้อิสระ เช่น 'ขอข้อมูลเดือน 11', 'เปรียบเทียบสัปดาห์นี้กับสัปดาห์ที่แล้ว', 'ยอดผลิต 1-5 พ.ย.'..."
                       className="w-full bg-white border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none shadow-2xs transition-all"
                     />
                     <div className="absolute right-1.5 flex items-center gap-1">
@@ -374,17 +369,17 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
 
                 {aiBriefing && !aiLoading && (
                   <div className="mt-3 pt-2">
-                    {/* Auto-Switched Date Indicator */}
-                    {aiBriefing.auto_switched_date && (
+                    {/* Data Scope Indicator */}
+                    {aiBriefing.data_scope?.length > 0 && (
                       <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs">
                         <Calendar size={13} className="text-emerald-600" />
-                        <span>
-                          {aiBriefing.is_month
-                            ? `ดึงข้อมูลภาพรวมสะสม (${aiBriefing.month_label || aiBriefing.auto_switched_date}) จาก SQL Server เรียบร้อย`
-                            : `ดึงข้อมูลวันที่ ${aiBriefing.auto_switched_date} จาก SQL Server ให้อัตโนมัติเรียบร้อย`
-                          }
-                        </span>
+                        <span>ดึงข้อมูลจาก SQL Server: {aiBriefing.data_scope.join(' | ')}</span>
                       </div>
+                    )}
+                    {aiBriefing.cached && (
+                      <span className="ml-2 mb-2 inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-semibold">
+                        ผลลัพธ์ล่าสุดภายใน 1 นาที
+                      </span>
                     )}
 
                     <div className="bg-white/95 border border-indigo-100 rounded-xl p-4 text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-2xs font-sans">
