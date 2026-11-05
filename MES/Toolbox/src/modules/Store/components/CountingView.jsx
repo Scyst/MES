@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft, Barcode, Volume2, VolumeX, Zap, CheckCircle2,
-  AlertTriangle, RotateCcw, Send, Sparkles, Eye, EyeOff, Search
+  AlertTriangle, RotateCcw, Send, Sparkles, Eye, EyeOff, Search,
+  Camera
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
+import QuickScannerModal from './QuickScannerModal';
 
 // Synthesizer Audio Feedback (Web Audio API)
 function playBeep(type = 'success') {
@@ -51,6 +53,7 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
   const [successBanner, setSuccessBanner] = useState('');
   const [isSubmittingFinish, setIsSubmittingFinish] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
 
   const inputRef = useRef(null);
 
@@ -274,14 +277,25 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
         </label>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            placeholder="สแกนแท็กพาเลท หรือพิมพ์รหัสแท็ก..."
-            className="flex-1 text-base sm:text-sm font-mono font-bold px-4 py-3 rounded-xl border-2 border-blue-500/30 focus:border-blue-600 focus:outline-none bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 min-h-[44px]"
-          />
+          <div className="flex-1 flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="สแกนแท็กพาเลท หรือพิมพ์รหัสแท็ก..."
+              className="flex-1 text-base sm:text-sm font-mono font-bold px-4 py-3 rounded-xl border-2 border-blue-500/30 focus:border-blue-600 focus:outline-none bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 min-h-[44px]"
+            />
+            <button
+              type="button"
+              onClick={() => setIsCameraScannerOpen(true)}
+              title="เปิดกล้องมือถือสแกนบาร์โค้ด / QR Code"
+              className="px-3.5 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-blue-500/30 min-h-[44px] flex-shrink-0 touch-manipulation"
+            >
+              <Camera className="w-5 h-5" />
+              <span className="hidden sm:inline">สแกนกล้อง</span>
+            </button>
+          </div>
 
           <div className="flex gap-2">
             <input
@@ -481,6 +495,15 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
           )}
         </div>
       </div>
+
+      {/* Live Camera Scanner Modal */}
+      <QuickScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onSearch={(scannedCode) => {
+          setTagInput(scannedCode);
+        }}
+      />
     </div>
   );
 }
