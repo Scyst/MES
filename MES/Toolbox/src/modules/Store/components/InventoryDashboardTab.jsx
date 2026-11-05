@@ -161,11 +161,15 @@ export default function InventoryDashboardTab() {
             className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 flex-1 sm:flex-initial"
           >
             <option value="ALL">ทุกหมวดวัตถุดิบ (ALL)</option>
-            {categories.map((c, idx) => (
-              <option key={idx} value={c.type || c.material_type || c}>
-                {c.name || c.category_name || c.material_type || c}
-              </option>
-            ))}
+            {categories.map((c, idx) => {
+              const val = typeof c === 'string' ? c : (c?.type || c?.material_type || String(idx));
+              const label = typeof c === 'string' ? c : (c?.name || c?.type || c?.material_type || `หมวด ${idx + 1}`);
+              return (
+                <option key={idx} value={String(val)}>
+                  {String(label)}
+                </option>
+              );
+            })}
           </select>
 
           {/* Hide Zero Qty Toggle */}

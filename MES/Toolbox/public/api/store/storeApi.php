@@ -3623,7 +3623,7 @@ try {
             ];
             break;
 }
-echo json_encode($response);
+echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
 
 } catch (Throwable $e) {
     handleApiError($e, isset($pdo) ? $pdo : null, $_POST);

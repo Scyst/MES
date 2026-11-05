@@ -193,11 +193,14 @@ export default function CycleCountTab() {
             className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200"
           >
             <option value="ALL">ทุกโซน ({locations.length})</option>
-            {zones.map((z, idx) => (
-              <option key={idx} value={z}>
-                {z}
-              </option>
-            ))}
+            {zones.map((z, idx) => {
+              const zoneVal = typeof z === 'string' ? z : (z?.zone_name || z?.name || String(z));
+              return (
+                <option key={idx} value={String(zoneVal)}>
+                  {String(zoneVal)}
+                </option>
+              );
+            })}
           </select>
 
           <button
