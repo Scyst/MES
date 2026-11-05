@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FolderOpen, Search, Upload, FolderPlus, Trash2,
   RefreshCw, CheckCircle2, AlertCircle, X
@@ -17,6 +18,8 @@ import DocumentPreviewModal from '../components/DocumentPreviewModal';
 
 export default function DocumentCenterPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFolderPath = searchParams.get('folder') || '';
 
   // Permissions: admin, creator, qc, supervisor, or permission code manage_documents
   const canManage = Boolean(
@@ -30,7 +33,6 @@ export default function DocumentCenterPage() {
   // Core Data States
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentFolderPath, setCurrentFolderPath] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [folderTree, setFolderTree] = useState([]);
   const [pagination, setPagination] = useState({
@@ -93,11 +95,16 @@ export default function DocumentCenterPage() {
     }
   }, []);
 
-  // Initial Load
+  // Initial Load of Folder Tree
   useEffect(() => {
-    loadDocuments(1, '', '');
     loadFolderTree();
-  }, [loadDocuments, loadFolderTree]);
+  }, [loadFolderTree]);
+
+  // Load documents whenever currentFolderPath in URL changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+    loadDocuments(1, searchTerm, currentFolderPath);
+  }, [currentFolderPath, loadDocuments]);
 
   // Handle Search input change with 350ms debounce
   const handleSearchChange = (val) => {
@@ -111,12 +118,19 @@ export default function DocumentCenterPage() {
     }, 350);
   };
 
-  // Navigate into / out of folders
+  // Navigate into / out of folders (sync with URL Search Params for browser back/forward)
   const handleNavigateFolder = (newPath) => {
-    setCurrentFolderPath(newPath);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newPath) {
+        next.set('folder', newPath);
+      } else {
+        next.delete('folder');
+      }
+      return next;
+    });
     setSearchTerm('');
     setSelectedIds(new Set());
-    loadDocuments(1, '', newPath);
   };
 
   // Page change
@@ -276,6 +290,7 @@ export default function DocumentCenterPage() {
         items={items}
         loading={loading}
         canManage={canManage}
+        currentFolderPath={currentFolderPath}
         selectedIds={selectedIds}
         onToggleSelect={handleToggleSelect}
         onSelectAll={handleSelectAll}
