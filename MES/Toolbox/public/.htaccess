@@ -1,5 +1,17 @@
 DirectoryIndex index.html
 Options -MultiViews
+
+# Block direct web access to secrets, schema dumps and server-side config artifacts
+<FilesMatch "(^\.env.*|\.(sql|log|ini|bak|md))$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
 RewriteEngine On
 RewriteBase /iot-toolbox/sandbox-b9/Toolbox/
 

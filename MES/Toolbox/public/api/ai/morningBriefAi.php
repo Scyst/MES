@@ -8,6 +8,8 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
+require_once __DIR__ . '/../../utils/logger.php';
+require_once __DIR__ . '/../../db.php';
 
 // Only allow authenticated users
 if (!isset($_SESSION['user'])) {
@@ -16,6 +18,28 @@ if (!isset($_SESSION['user'])) {
         'success' => false,
         'data' => null,
         'message' => 'กรุณาเข้าสู่ระบบก่อนใช้งาน AI Executive Briefing'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Financial data (revenue, labor cost) is restricted to the same roles as the Morning Brief itself
+if (!hasRole(['admin', 'creator'])) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'data' => null,
+        'message' => 'ไม่มีสิทธิ์ใช้งาน AI Executive Briefing (เฉพาะผู้บริหารและผู้ดูแลระบบ)'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$csrfHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfHeader)) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'data' => null,
+        'message' => 'CSRF Token Validation Failed.'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -188,12 +212,9 @@ function parseDateOrMonthFromText(string $text, int $defaultYear = 2026): ?array
 // HELPER 2: Query Single Day with Shift Breakdown
 // -------------------------------------------------------------
 function queryMorningBriefFromDb(string $targetDate, ?string $teamGroup = null): ?array {
-    $dbFile = __DIR__ . '/../../db.php';
-    if (!file_exists($dbFile)) return null;
+    global $pdo;
 
     try {
-        require_once $dbFile;
-        /** @var PDO $pdo */
         if (!isset($pdo) || !($pdo instanceof PDO)) return null;
 
         $teamParam = ($teamGroup === 'ALL' || empty($teamGroup)) ? null : $teamGroup;
@@ -351,12 +372,9 @@ function queryMorningBriefFromDb(string $targetDate, ?string $teamGroup = null):
 // HELPER 3: Query Full Month Aggregate (MTD)
 // -------------------------------------------------------------
 function queryMonthlyBriefFromDb(string $startDate, string $endDate, ?string $teamGroup = null): ?array {
-    $dbFile = __DIR__ . '/../../db.php';
-    if (!file_exists($dbFile)) return null;
+    global $pdo;
 
     try {
-        require_once $dbFile;
-        /** @var PDO $pdo */
         if (!isset($pdo) || !($pdo instanceof PDO)) return null;
 
         $teamParam = ($teamGroup === 'ALL' || empty($teamGroup)) ? null : $teamGroup;
@@ -664,6 +682,16 @@ STYLE;
 EOT;
 }
 
+$prompt .= <<<RULES
+
+
+[กฎความถูกต้องของข้อมูล (บังคับ)]
+- ใช้เฉพาะตัวเลขที่ให้ไว้ข้างต้นเท่านั้น ห้ามประมาณหรือแต่งตัวเลขเพิ่ม หากไม่มีข้อมูลให้บอกตรงๆ ว่า "ไม่มีข้อมูลในระบบ"
+- ค่า "กำไรส่วนเกินเบื้องต้น" = รายได้ FG − (ค่าแรง DLOT + ค่าไฟ + ค่าแก๊ส) ยังไม่หักต้นทุนวัตถุดิบและค่าโสหุ้ยอื่น จึงไม่ใช่กำไรสุทธิ ต้องระบุคำเตือนนี้สั้นๆ ทุกครั้งที่กล่าวถึงตัวเลขนี้ (โดยเฉพาะเมื่อผู้ใช้ถามถึง "กำไร")
+- หากข้อมูลที่ถูกถามเป็นของวันปัจจุบัน ให้แจ้งว่าเป็นตัวเลข ณ เวลาที่ประมวลผล ยังไม่ใช่ยอดปิดวัน
+- หากผู้ใช้ถามช่วงเวลาที่ระบบยังไม่รองรับ (เช่น ช่วงหลายวัน, รายสัปดาห์, รายโมเดลย้อนหลัง) ให้แจ้งตรงๆ ว่าตอนนี้ดูได้เฉพาะ "รายวัน" และ "รายเดือน" พร้อมแนะนำให้พิมพ์ระบุวันหรือเดือนทีละช่วง
+RULES;
+
 if (!empty($customPrompt)) {
     $cleanPrompt = htmlspecialchars($customPrompt);
     $prompt .= "\n\n[คำถามหรือคำสั่งเจาะจงจากผู้ใช้]\n\"{$cleanPrompt}\"\nโปรดตอบคำถามนี้เป็นอันดับแรกให้ชัดเจนและตรงประเด็นที่สุด";
@@ -679,7 +707,7 @@ $payload = [
     ],
     'generationConfig' => [
         'temperature' => 0.2,
-        'maxOutputTokens' => 1024
+        'maxOutputTokens' => 2048
     ]
 ];
 
@@ -746,6 +774,16 @@ if ($replyText === null) {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+writeLog(
+    $pdo,
+    'AI_QUERY',
+    'MORNING_BRIEF_AI',
+    $monthlyData !== null ? ($monthlyData['start_date'] ?? '') : ($briefData['raw_date'] ?? ''),
+    null,
+    ['team' => $team, 'style' => $summaryStyle, 'model' => $usedModel],
+    mb_substr($customPrompt !== '' ? $customPrompt : '(default brief)', 0, 200)
+);
 
 echo json_encode([
     'success' => true,
