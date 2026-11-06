@@ -1,0 +1,91 @@
+# QA/QC & ISO Document Learning Tracker
+
+Tracker for processing documents from `P:\ISO` for the MES Learning Hub.
+
+## Folders
+- [ ] 2-11-23
+- [ ] 5.SNC SERENITY COMPANY
+- [ ] Audit ferguson
+- [ ] Audit GMP
+- [ ] Audit Lowes 2023
+- [ ] Audit Lowes 2024
+- [ ] Audit-Shap
+- [ ] DCC.Support-Audit
+- [ ] ISO 14001 -2025
+- [ ] ISO 14001 SNC
+- [ ] ISO 45001
+- [ ] ISO9001-2015
+  - [x] QM (Quality Manual - SCAN)
+  - [ ] QM (อื่นๆ)
+  - [ ] Procedure
+    - [x] SP-QCS-001 การตรวจและการทดสอบวัตถุดิบ
+    - [x] SP-QCS-002 การตรวจและการทดสอบระหว่างกระบวนการผลิต
+    - [x] SP-QCS-003 การตรวจและการทดสอบสินค้าสำเร็จรูป
+    - [x] SP-QCS-004 การจัดการสิ่งที่ไม่เป็นไปตามข้อกำหนด
+    - [x] SP-QCS-006 การปฏิบัติการแก้ไข
+    - [x] SP-QCS-007 การจัดการคำร้องเรียนของลูกค้า
+    - [x] SP-QCS-008 การปฏิบัติการป้องกัน
+    - [x] SP-QCS-009 การสอบเทียบ
+    - [x] SP-QCS-005 การรับรองวัตถุดิบและ Part ใหม่
+    - [x] SP-QCS-010 การวัดความพึงพอใจของลูกค้า
+    - [x] SP-QCS-012 การควบคุมชิ้นงานตัวอย่าง
+    - [x] SP-QCS-013 & 014 การเรียกคืนผลิตภัณฑ์ (Recall)
+    - [ ] Procedure (SCAN/QC อื่นๆ)
+    - [x] SP-PDD-001 การวางแผนและกระบวนการผลิต
+    - [x] SP-PDD-002 การออกแบบกระบวนการ
+    - [x] SP-PDD-003 การเปลี่ยนแปลงกระบวนการผลิต
+    - [x] SP-PDD-004 การประเมินความล้มเหลวของสายการผลิต (FMEA)
+    - [x] SP-PDD-005 การตรวจสอบเครื่องจักรและอุปกรณ์
+    - [x] SP-PDD-006 การบำรุงรักษาตามระยะเวลาและการซ่อมกรณีฉุกเฉิน
+    - [x] SP-PDD-007 การปรับปรุงอย่างต่อเนื่อง
+    - [x] SP-PDD-008 การจัดทำตารางควบคุมคุณภาพในกรรมวิธีการผลิต (PQCT)
+    - [x] SP-PDD-009 การจัดทำขั้นตอนในการปฏิบัติงาน (WI)
+    - [x] SP-PDD-010 การจัดทำ Limit Sample
+    - [x] SP-PDD-011 Heat Exchanger Production Control
+    - [x] SP-PDD-015 การสอบกลับผลิตภัณฑ์ (Traceability)
+    - [x] Procedure (SCAN/PD ครบถ้วน)
+    - [x] SP-STO-001 กระบวนการจัดการสินค้าสำเร็จรูป (FGMS)
+    - [x] SP-STO-002 การควบคุมวัตถุดิบในสินค้าคงคลัง (Stock Control)
+    - [x] SP-STO-003 การควบคุมสารที่เป็นอันตราย (RoHS)
+    - [x] SP-STO-004 การควบคุมการเคลื่อนย้าย จัดเก็บ และบรรจุภัณฑ์
+    - [x] SP-STO-005 มาตรการการจัดการการเรียกคืนผลิตภัณฑ์ (อ้างอิง-เอกสารยกเลิก)
+    - [x] Procedure (SCAN/STO ครบถ้วน)
+    - [x] SP-PUD-002 กระบวนการสั่งซื้อวัตถุดิบ (Raw Material Purchase)
+    - [x] SP-PUD-003 การคัดเลือกและประเมินผู้ขาย (Searching & Evaluation Control)
+    - [x] SP-PUD-004 กระบวนการสั่งซื้อสินค้าทั่วไป (General Purchase)
+    - [x] SP-PUD-005 การจัดทำสัญญาคุณภาพกับ Supplier (Supplier Quality Agreement)
+    - [x] SP-PUD-006 นโยบายและขั้นตอนการจัดซื้อ (Purchasing Policy Procedure)
+    - [x] SP-PUD-009 กระบวนการรับและจ่ายสินค้าสำเร็จรูป (Finish Goods Receive and Issue)
+    - [x] SP-PUD-010 การคัดเลือกและประเมินผู้ขายและผู้รับเหมาช่วง (Supplier & Subcontractor Evaluation)
+    - [x] SP-PUD-011 กระบวนการจัดหา (Procurement Procedure)
+    - [x] Procedure (SCAN/PU ครบถ้วน)
+    - [x] SP-RDD-005 การควบคุมการเปลี่ยนแปลงทางวิศวกรรม (Engineering Change Control)
+    - [x] Procedure (SCAN/RD ครบถ้วน)
+    - [x] SP-MTD-001 การบำรุงรักษาเครื่องจักรเชิงป้องกัน (Preventive Maintenance)
+    - [x] SP-MTD-002 ระเบียบการแจ้งซ่อมและการซ่อมกรณีฉุกเฉิน (Repair Request and Emergency Repairs)
+    - [x] SP-MTD-003 การจัดการระบบเทคโนโลยีสารสนเทศ (Management IT)
+    - [x] SP-MTD-004 การบำรุงรักษาเครื่องจักรเชิงป้องกัน (Preventive Maintenance - Rev.01)
+    - [x] SP-MTD-005 การควบคุมจิ๊กและฟิกซ์เจอร์ (Jig & Fixture Control)
+    - [x] Procedure (SCAN/MN ครบถ้วน)
+    - [x] SP-MIS-001 การรักษาความปลอดภัยข้อมูลแผนก MIS
+    - [x] SP-MIS-002 ขั้นตอนการเปลี่ยน PASSWORD และการเบิกใช้ PASSWORD ขั้นสูง
+    - [x] Procedure (SCAN/MIS ครบถ้วน)
+  - [ ] KPI
+  - [ ] ISO 14001 -2015
+- [ ] ISOIEC17025
+- [ ] MERQ
+- [ ] PPAP
+- [ ] Procedure
+- [ ] เอกสาร -HS
+- [ ] เอกสาร SCAN
+- [ ] เอกสารภายนอก
+
+## Root Files
+- [ ] Book1.xlsx
+- [x] SP-QCS-013 การเรียกคืนผลิตภัณฑ์ (Recall)-1.docx
+- [x] SP-QCS-014 การเรียกคืนผลิตภัณฑ์ (Recall)-2.pdf
+- [ ] S__2572304.jpg
+- [ ] ประวัติฝึกอบรม-ทินวัฒน์.zip
+- [ ] ประวัติฝึกอบรม-สุทธิดา.zip
+- [ ] ประวัติฝึกอบรม-สุภัทรชัย.zip
+- [ ] รายชื่อผู้เข้าอบรม.zip
