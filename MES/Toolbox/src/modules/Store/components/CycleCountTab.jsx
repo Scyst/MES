@@ -545,7 +545,7 @@ export default function CycleCountTab({ onNavigateTab }) {
 
       {/* 4. Sticky Bottom Action Bar - ONLY show when a location is selected */}
       {selectedLocation && (
-        <div className="fixed bottom-0 left-0 right-0 p-2.5 sm:p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-30 shadow-2xl animate-slideUp">
+        <div className="fixed bottom-0 left-0 right-0 p-2.5 sm:p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-[95] shadow-2xl animate-slideUp">
           <div className="max-w-xl mx-auto flex items-center justify-between gap-2.5">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-xs text-slate-500">

@@ -92,6 +92,22 @@ export default function GlobalAiAssistant() {
   }
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isDocked, setIsDocked] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mes_ai_docked');
+      if (saved !== null) return saved === '1';
+    } catch (e) {}
+    return typeof window !== 'undefined' && window.innerWidth < 640;
+  });
+
+  const toggleDocked = (val, e) => {
+    if (e) e.stopPropagation();
+    setIsDocked(val);
+    try {
+      localStorage.setItem('mes_ai_docked', val ? '1' : '0');
+    } catch (err) {}
+  };
+
   const [redFlags, setRedFlags] = useState({ total_red_flags: 0, flags: [] });
   const [isRedFlagsOpen, setIsRedFlagsOpen] = useState(false);
   const [loadingRedFlags, setLoadingRedFlags] = useState(false);
@@ -343,33 +359,71 @@ export default function GlobalAiAssistant() {
 
   return (
     <>
-      {/* 🌟 Floating Action Button (FAB) - Anchored at Bottom Right universally */}
+      {/* 🌟 Floating Action Button (FAB) - Supports Full Pill & Edge-Docked Mode */}
       {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-[90] group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-white/20"
-          title="เปิด MES AI Copilot (ผู้ช่วยอัจฉริยะประจำโรงงาน)"
-        >
-          <div className="relative">
-            <Bot size={22} className="animate-pulse" />
-            {redFlags.total_red_flags > 0 ? (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white animate-ping" />
-            ) : (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-700" />
-            )}
+        isDocked ? (
+          <div className="fixed bottom-24 right-0 z-[85] flex items-center bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-l-2xl shadow-lg border-y border-l border-white/25 overflow-hidden transition-all duration-200 hover:shadow-xl">
+            <button
+              type="button"
+              onClick={(e) => toggleDocked(false, e)}
+              className="pl-1.5 pr-1 py-3 text-white/75 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="กางปุ่ม AI Copilot"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="pl-1 pr-2.5 py-2.5 flex items-center gap-1.5 cursor-pointer hover:bg-white/10 transition-colors"
+              title="เปิด MES AI Copilot"
+            >
+              <div className="relative">
+                <Bot size={19} />
+                {redFlags.total_red_flags > 0 ? (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white animate-ping" />
+                ) : (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-indigo-700" />
+                )}
+              </div>
+            </button>
           </div>
-          <span className="text-sm font-bold tracking-wide hidden sm:inline">AI Copilot</span>
-          {redFlags.total_red_flags > 0 ? (
-            <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-rose-500 text-white animate-pulse">
-              {redFlags.total_red_flags} Risks
-            </span>
-          ) : (
-            <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-md bg-white/20 text-white/90">
-              SQL Live
-            </span>
-          )}
-        </button>
+        ) : (
+          <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[85] flex items-center bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white rounded-full shadow-xl border border-white/20 overflow-hidden transition-all duration-200">
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="flex items-center gap-2 pl-4 pr-2.5 py-2.5 sm:py-3 hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              title="เปิด MES AI Copilot (ผู้ช่วยอัจฉริยะประจำโรงงาน)"
+            >
+              <div className="relative">
+                <Bot size={20} className="animate-pulse" />
+                {redFlags.total_red_flags > 0 ? (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white animate-ping" />
+                ) : (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-700" />
+                )}
+              </div>
+              <span className="text-xs sm:text-sm font-bold tracking-wide hidden sm:inline">AI Copilot</span>
+              {redFlags.total_red_flags > 0 ? (
+                <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-rose-500 text-white animate-pulse">
+                  {redFlags.total_red_flags} Risks
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-md bg-white/20 text-white/90">
+                  SQL Live
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => toggleDocked(true, e)}
+              className="pr-2.5 pl-1.5 py-2.5 sm:py-3 border-l border-white/15 text-white/75 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+              title="ยุบปุ่ม AI ชิดขอบจอ"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        )
       )}
 
       {/* 🌟 Backdrop with Supreme Z-Index */}
