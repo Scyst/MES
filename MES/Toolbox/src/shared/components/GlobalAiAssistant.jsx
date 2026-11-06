@@ -101,7 +101,7 @@ export default function GlobalAiAssistant() {
     {
       id: 'welcome',
       role: 'model',
-      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ (SNC Executive Suite 2027)\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time พร้อมความสามารถใหม่:\n• 🌐 **สืบค้นอินเทอร์เน็ตภายนอก (Web Search):** เช็คราคากลางเหล็ก HRC, อลูมิเนียม, Alarm Code เครื่องจักร\n• 📷 **วิเคราะห์ภาพถ่าย (AI Vision):** แนบรูปถ่ายของเสีย รอยเชื่อม งานพ่นสี เพื่อตรวจจับ Defect และหาสาเหตุ\n• 📊 **ตัวชี้วัดบริหาร SNC 2027:** ยอดผลิตเทียบเป้า 2M/วัน, กฎ 135-100-35%, ผลิตภาพ IpH (Ratio 1:1), แผนงาน WSM & QMS\n\nสามารถพิมพ์ถาม แนบภาพถ่าย (หรือกด Ctrl+V วางภาพ) หรือเลือกหัวข้อด่วนได้เลยครับ',
+      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการโรงงาน B9 Real-time\n\nเชื่อมต่อข้อมูลยอดผลิต, EBITDA, วินัยการเงิน 135-100-35%, สต็อก, WSM, ท่องเน็ต (🌐) หรือแนบภาพตรวจ Defect (📷) พิมพ์ถามหรือเลือกหัวขอด้านล่างได้เลยครับ',
       generated_at: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -171,9 +171,8 @@ export default function GlobalAiAssistant() {
         .then((res) => {
           if (isMounted && res.success && res.data) {
             setRedFlags(res.data);
-            if (res.data.total_red_flags > 0) {
-              setIsRedFlagsOpen(true);
-            }
+            // Keep collapsed by default so it stays clean and uncluttered on mobile
+            setIsRedFlagsOpen(false);
           }
         })
         .catch((err) => {
@@ -452,29 +451,29 @@ export default function GlobalAiAssistant() {
           <div className="shrink-0 bg-gradient-to-r from-rose-50 via-amber-50 to-rose-50 dark:from-rose-950/40 dark:via-amber-950/30 dark:to-rose-950/40 border-b border-rose-200 dark:border-rose-900/60 transition-all duration-200">
             <div
               onClick={() => setIsRedFlagsOpen(!isRedFlagsOpen)}
-              className="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-rose-100/50 dark:hover:bg-rose-900/30 transition-colors"
+              className="px-3 py-1.5 sm:py-2 flex items-center justify-between cursor-pointer hover:bg-rose-100/50 dark:hover:bg-rose-900/30 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-rose-600"></span>
                 </span>
-                <span className="text-xs font-bold text-rose-800 dark:text-rose-200">
-                  แจ้งเตือนจุดเฝ้าระวังเช้านี้ (SNC Red-Flags)
+                <span className="text-[11px] sm:text-xs font-bold text-rose-800 dark:text-rose-200">
+                  จุดเฝ้าระวังความเสี่ยงเช้านี้
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-600 text-white">
+                <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-600 text-white">
                   {redFlags.total_red_flags}
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-rose-700 dark:text-rose-300">
                 <span>{isRedFlagsOpen ? 'ย่อ' : 'ดูรายละเอียด'}</span>
-                {isRedFlagsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {isRedFlagsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
               </div>
             </div>
 
             {/* Collapsible details */}
             {isRedFlagsOpen && (
-              <div className="px-3.5 pb-3 pt-1 space-y-1.5 max-h-48 overflow-y-auto scrollbar-thin">
+              <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 max-h-36 sm:max-h-48 overflow-y-auto scrollbar-thin">
                 {redFlags.flags.map((flag, idx) => {
                   let badgeColor = 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800';
                   if (flag.level === 'WARNING') {
@@ -488,26 +487,26 @@ export default function GlobalAiAssistant() {
                   return (
                     <div
                       key={idx}
-                      className="p-2.5 rounded-lg bg-white/90 dark:bg-slate-900/90 border border-rose-200/60 dark:border-rose-900/40 shadow-2xs flex flex-col gap-1 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all"
+                      className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/95 border border-rose-200/60 dark:border-rose-900/40 shadow-2xs flex flex-col gap-0.5"
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ${badgeColor}`}>
+                          <span className={`text-[8.5px] font-bold px-1 py-0.2 rounded border uppercase shrink-0 ${badgeColor}`}>
                             {flag.level}
                           </span>
-                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          <span className="text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                             {flag.title}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleSend(`ช่วยวิเคราะห์และให้รายละเอียดเกี่ยวกับ: ${flag.title}`)}
-                          className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 shrink-0 inline-flex items-center gap-0.5 cursor-pointer underline"
+                          className="text-[9.5px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 shrink-0 inline-flex items-center gap-0.5 cursor-pointer underline"
                         >
-                          ถาม AI <ArrowRight size={10} />
+                          ถาม AI <ArrowRight size={9} />
                         </button>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
                         {flag.detail}
                       </p>
                     </div>
@@ -729,8 +728,8 @@ export default function GlobalAiAssistant() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder={attachedImage ? "พิมพ์คำสั่ง เช่น 'วิเคราะห์ Defect ของชิ้นงานนี้'..." : "ถามอะไรก็ได้ เช่น 'เช็คราคาเหล็ก HRC', 'ยอดผลิตวันนี้' (หรือ Ctrl+V วางภาพ)..."}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 rounded-xl pl-3 pr-10 py-2.5 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 resize-none outline-none transition-all max-h-24"
+                placeholder={attachedImage ? "พิมพ์คำสั่งภาพนี้..." : "พิมพ์ถาม หรือกด 📷 แนบภาพ..."}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 rounded-xl pl-3 pr-10 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 resize-none outline-none transition-all max-h-24"
               />
               <button
                 type="button"
@@ -743,9 +742,13 @@ export default function GlobalAiAssistant() {
               </button>
             </div>
           </div>
-          <div className="flex justify-between items-center mt-1 px-1 text-[10px] text-slate-400">
+          <div className="hidden sm:flex justify-between items-center mt-1 px-1 text-[10px] text-slate-400">
             <span>กด Enter ส่ง (Shift+Enter ขึ้นบรรทัดใหม่ | Ctrl+V วางภาพ)</span>
             <span className="flex items-center gap-1"><Globe size={10} /> Web Search + AI Vision + SQL Live</span>
+          </div>
+          <div className="flex sm:hidden justify-between items-center mt-1 px-1 text-[9px] text-slate-400">
+            <span>แตะส่ง หรือกด 📷 แนบภาพ</span>
+            <span className="flex items-center gap-0.5 text-indigo-500 font-semibold"><Globe size={9} /> SQL Live</span>
           </div>
         </div>
       </div>
