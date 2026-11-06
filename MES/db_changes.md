@@ -13,6 +13,7 @@ All schema changes to the production database must be documented here.
 
 #### 1. dbo.sp_MT_ProcessTransaction
 - เพิ่มคำสั่ง `DELETE FROM dbo.MT_INVENTORY_ONHAND WHERE item_id = @item_id AND location_id = @location_id AND quantity <= 0;` หลังการ `MERGE` ยอดคงคลัง
+- เพิ่มการตรวจสอบสต๊อกคงเหลือ (`WITH (UPDLOCK)`) เมื่อ `@transaction_type = 'ADJUST'` และ `@quantity < 0` เพื่อป้องกันการปรับลดสต๊อกติดลบ (`ISNULL(@adj_current_qty, 0) < ABS(@quantity)`)
 
 ---
 

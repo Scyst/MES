@@ -17,6 +17,8 @@ const SparePartsModule = (() => {
             PEApp.animateValue(document.getElementById('kpiLowStock'), 0, kpi.low_stock || 0);
             const valEl = document.getElementById('kpiTotalValue');
             if (valEl) valEl.textContent = PEApp.formatCurrency(kpi.total_value || 0);
+            const monthIssuesEl = document.getElementById('kpiMonthIssues');
+            if (monthIssuesEl) PEApp.animateValue(monthIssuesEl, 0, kpi.month_issues || 0);
 
             // Low stock badge
             const badge = document.getElementById('lowStockBadge');
@@ -144,6 +146,7 @@ const SparePartsModule = (() => {
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><button type="button" class="dropdown-item py-2" onclick="SparePartsModule.openReceiveModal('${r.item_id}', '${locKey}', SparePartsModule.getCardQty('${r.item_id}', '${locKey}'))"><i class="fas fa-arrow-down text-success me-2"></i>รับเข้า</button></li>
                             <li><button type="button" class="dropdown-item py-2" ${onHand <= 0 ? 'disabled' : ''} onclick="SparePartsModule.openTransferModal('${r.item_id}', '${locKey}', SparePartsModule.getCardQty('${r.item_id}', '${locKey}'))"><i class="fas fa-exchange-alt text-primary me-2"></i>ย้ายคลัง</button></li>
+                            <li><button type="button" class="dropdown-item py-2" onclick="SparePartsModule.openAdjustModal('${r.item_id}', '${locKey}')"><i class="fas fa-sliders-h text-warning me-2"></i>ปรับปรุงสต๊อก (รับผิด/นับจริง)</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button type="button" class="dropdown-item py-2" onclick="SparePartsModule.openItemModal('${r.item_id}')"><i class="fas fa-cog text-secondary me-2"></i>ตั้งค่า Item Master</button></li>
                         </ul>
@@ -193,6 +196,7 @@ const SparePartsModule = (() => {
                 <td class="pe-text-center pe-text-sm" data-label="Unit">${PEApp.escapeHtml(r.uom || '-')}</td>
                 <td class="pe-text-center" data-label="Actions">
                     ${statusBadge}
+                    <button type="button" class="pe-btn pe-btn-ghost pe-btn-sm ms-1" onclick="SparePartsModule.openAdjustModal('${r.item_id}', '${locKey}')" title="ปรับปรุงสต๊อก"><i class="fas fa-sliders-h text-warning"></i></button>
                 </td>
             </tr>`;
         });
@@ -1123,44 +1127,77 @@ const SparePartsModule = (() => {
         const tbody = document.getElementById('spHistoryTableBody');
         if (!tbody) return;
 
+        const typeFilter = document.getElementById('spHistoryTypeFilter')?.value || '';
         let filtered = allHistoryData;
+        if (typeFilter) {
+            filtered = filtered.filter(r => {
+                if (typeFilter === 'TRANSFER') {
+                    return r.transaction_type === 'TRANSFER_IN' || r.transaction_type === 'TRANSFER_OUT';
+                }
+                return r.transaction_type === typeFilter;
+            });
+        }
         if (searchQuery) {
             filtered = filtered.filter(r =>
                 (r.item_code || '').toLowerCase().includes(searchQuery) ||
                 (r.item_name || '').toLowerCase().includes(searchQuery) ||
                 (r.created_by_name || '').toLowerCase().includes(searchQuery) ||
                 (r.wo_number || '').toLowerCase().includes(searchQuery) ||
-                (r.machine_code || '').toLowerCase().includes(searchQuery)
+                (r.machine_code || '').toLowerCase().includes(searchQuery) ||
+                (r.notes || '').toLowerCase().includes(searchQuery)
             );
         }
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="7" class="pe-text-center pe-text-muted" style="padding:60px;">No transactions found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="pe-text-center pe-text-muted" style="padding:60px;">No transactions found</td></tr>`;
             return;
         }
 
         tbody.innerHTML = filtered.map(r => {
             let typeBadge = '';
             let qtyClass = '';
+            let qtyPrefix = '';
+            const rawQty = parseFloat(r.quantity) || 0;
+            const isCancelledReceive = r.transaction_type === 'RECEIVE' && (r.notes || '').includes('[ยกเลิกแล้ว');
+
             if (r.transaction_type === 'RECEIVE') {
-                typeBadge = '<span class="pe-badge pe-status-active"><i class="fas fa-arrow-down me-1"></i>IN</span>';
-                qtyClass = 'text-success fw-bold';
+                typeBadge = isCancelledReceive
+                    ? '<span class="pe-badge" style="background:#6c757d;color:#fff;text-decoration:line-through;"><i class="fas fa-arrow-down me-1"></i>IN (ยกเลิก)</span>'
+                    : '<span class="pe-badge pe-status-active"><i class="fas fa-arrow-down me-1"></i>IN</span>';
+                qtyClass = isCancelledReceive ? 'text-muted text-decoration-line-through' : 'text-success fw-bold';
+                qtyPrefix = '+';
             } else if (r.transaction_type === 'ISSUE') {
                 typeBadge = '<span class="pe-badge pe-status-inactive"><i class="fas fa-arrow-up me-1"></i>OUT</span>';
                 qtyClass = 'text-danger fw-bold';
+                qtyPrefix = '-';
+            } else if (r.transaction_type === 'ADJUST') {
+                typeBadge = '<span class="pe-badge" style="background:#d97706;color:#fff;"><i class="fas fa-sliders-h me-1"></i>ปรับสต๊อก</span>';
+                qtyClass = rawQty < 0 ? 'text-danger fw-bold' : 'text-success fw-bold';
+                qtyPrefix = rawQty > 0 ? '+' : (rawQty < 0 ? '-' : '');
             } else if (r.transaction_type === 'TRANSFER_IN') {
                 typeBadge = '<span class="pe-badge" style="background:#0d6efd;color:#fff;"><i class="fas fa-exchange-alt me-1"></i>ย้ายเข้า</span>';
                 qtyClass = 'text-primary fw-bold';
+                qtyPrefix = '+';
             } else if (r.transaction_type === 'TRANSFER_OUT') {
                 typeBadge = '<span class="pe-badge" style="background:#fd7e14;color:#fff;"><i class="fas fa-exchange-alt me-1"></i>ย้ายออก</span>';
                 qtyClass = 'text-warning fw-bold';
+                qtyPrefix = '-';
             } else {
                 typeBadge = `<span class="pe-badge" style="background:#6c757d;color:#fff;">${PEApp.escapeHtml(r.transaction_type)}</span>`;
                 qtyClass = 'pe-text-muted';
             }
             
-            const jobStr = r.wo_number ? `<b>[${r.wo_number}]</b> ${r.machine_code}<br><small class="text-muted">${r.issue_title}</small>` : '-';
+            const jobStr = r.wo_number ? `<b>[${PEApp.escapeHtml(r.wo_number)}]</b> ${PEApp.escapeHtml(r.machine_code || '')}<br><small class="text-muted">${PEApp.escapeHtml(r.issue_title || '')}</small>` : '-';
             const dateStr = new Date(r.created_at).toLocaleString('en-GB');
+
+            let actionHtml = '<span class="text-muted">-</span>';
+            if (r.transaction_type === 'RECEIVE') {
+                if (isCancelledReceive) {
+                    actionHtml = '<span class="badge bg-secondary"><i class="fas fa-ban me-1"></i>ยกเลิกแล้ว</span>';
+                } else {
+                    actionHtml = `<button type="button" class="btn btn-sm btn-outline-danger" style="min-height:36px;" onclick="SparePartsModule.cancelReceiveTransaction('${r.transaction_id}')" title="ยกเลิกรายการรับเข้าที่คีย์ผิด"><i class="fas fa-undo-alt me-1"></i>ยกเลิกรับเข้า</button>`;
+                }
+            }
 
             return `
             <tr>
@@ -1171,11 +1208,265 @@ const SparePartsModule = (() => {
                     <span class="pe-text-sm pe-text-muted">${PEApp.escapeHtml(r.item_name)}</span>
                 </td>
                 <td class="pe-text-sm" data-label="Location">${PEApp.escapeHtml(r.location_name || '-')}</td>
-                <td class="pe-text-end ${qtyClass}" data-label="Qty">${PEApp.formatNumber(Math.abs(r.quantity))} <span class="pe-text-xs pe-text-muted">${PEApp.escapeHtml(r.uom)}</span></td>
+                <td class="pe-text-end ${qtyClass}" data-label="Qty">${qtyPrefix}${PEApp.formatNumber(Math.abs(rawQty))} <span class="pe-text-xs pe-text-muted">${PEApp.escapeHtml(r.uom)}</span></td>
                 <td class="pe-text-sm" data-label="User">${PEApp.escapeHtml(r.created_by_name || 'System')}</td>
                 <td class="pe-text-sm" data-label="Job/Note">${r.notes ? `<i>${PEApp.escapeHtml(r.notes)}</i><br>` : ''}${jobStr}</td>
+                <td class="pe-text-center" data-label="Actions">${actionHtml}</td>
             </tr>`;
         }).join('');
+    }
+
+    async function cancelReceiveTransaction(txId) {
+        const tx = allHistoryData.find(r => String(r.transaction_id) === String(txId));
+        if (!tx) {
+            PEApp.showToast('ไม่พบข้อมูลรายการที่ต้องการยกเลิก', 'error');
+            return;
+        }
+
+        let reason = '';
+        if (typeof Swal !== 'undefined') {
+            const result = await Swal.fire({
+                title: 'ยืนยันการยกเลิกรายการรับเข้า',
+                html: `
+                    <div class="text-start" style="font-size:0.95rem;">
+                        <div class="p-2 rounded mb-3" style="background:#f8f9fa;border:1px solid #dee2e6;">
+                            <div><b>อะไหล่:</b> [${PEApp.escapeHtml(tx.item_code)}] ${PEApp.escapeHtml(tx.item_name)}</div>
+                            <div><b>คลังจัดเก็บ:</b> ${PEApp.escapeHtml(tx.location_name || '-')}</div>
+                            <div><b>จำนวนที่จะหักคืนสต๊อก:</b> <span class="text-danger fw-bold">-${PEApp.formatNumber(Math.abs(tx.quantity))} ${PEApp.escapeHtml(tx.uom || '')}</span></div>
+                        </div>
+                        <div class="text-muted small mb-2">
+                            <i class="fas fa-info-circle text-warning me-1"></i> ระบบจะปรับลดยอดสต๊อกคืนโดยบันทึกเป็นรายการปรับปรุงยอด (Adjust) <b>ไม่นับเป็นการเบิกใช้งาน (Issue) และไม่คิดเป็นงบค่าใช้จ่าย</b>
+                        </div>
+                    </div>
+                `,
+                input: 'text',
+                inputLabel: 'ระบุสาเหตุการยกเลิก (จำเป็น)',
+                inputValue: 'คีย์รับเข้าผิดรายการ / ผิดจำนวน',
+                inputPlaceholder: 'เช่น คีย์รับเข้าผิดรายการ หรือระบุจำนวนผิด',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-undo-alt me-1"></i> ยืนยันยกเลิกรับเข้า',
+                cancelButtonText: 'ปิด',
+                inputValidator: (value) => {
+                    if (!value || !value.trim()) {
+                        return 'กรุณาระบุสาเหตุการยกเลิกรายการรับเข้า';
+                    }
+                }
+            });
+            if (!result.isConfirmed) return;
+            reason = result.value.trim();
+        } else {
+            reason = prompt(`ยืนยันยกเลิกรายการรับเข้า [${tx.item_code}] ${tx.item_name} จำนวน ${Math.abs(tx.quantity)} ${tx.uom || ''}?\nกรุณาระบุสาเหตุ:`, 'คีย์รับเข้าผิดรายการ / ผิดจำนวน');
+            if (!reason || !reason.trim()) return;
+            reason = reason.trim();
+        }
+
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                action: 'cancel_receive',
+                transaction_id: txId,
+                reason: reason
+            });
+            PEApp.showToast('ยกเลิกรายการรับเข้าและปรับลดสต๊อกเรียบร้อยแล้ว', 'success');
+            await loadHistory();
+            await loadData();
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        }
+    }
+
+    // ===== STOCK ADJUSTMENT (ปรับปรุงสต๊อก / แก้ไขรับเข้าผิด) =====
+    let adjustItemsList = [];
+
+    function getSelectedAdjustMode() {
+        return document.querySelector('input[name="spAdjMode"]:checked')?.value || 'DEDUCT';
+    }
+
+    async function openAdjustModal(itemId = null, locationId = null) {
+        try {
+            if (!window.spMasterLocations || !window.spMasterLocations.length || !adjustItemsList.length) {
+                const res = await PEApp.apiCall('sparePartsAPI.php', { action: 'get_master_data' });
+                window.spMasterLocations = res.data.locations || [];
+                adjustItemsList = res.data.items || [];
+            }
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+            return;
+        }
+
+        const datalist = document.getElementById('spAdjItemList');
+        datalist.innerHTML = '';
+        window.spAdjustTextMap = new Map();
+        adjustItemsList.forEach(i => {
+            const text = `[${i.item_code}] ${i.item_name}`;
+            window.spAdjustTextMap.set(text, i.item_id);
+            datalist.appendChild(new Option(text));
+        });
+
+        document.getElementById('spAdjItemInput').value = '';
+        document.getElementById('spAdjItem').value = '';
+        document.getElementById('spAdjModeDeduct').checked = true;
+        document.getElementById('spAdjQty').value = '';
+        document.getElementById('spAdjReason').value = 'คีย์รับเข้าผิดรายการ / ผิดจำนวน';
+
+        const locSel = document.getElementById('spAdjLocation');
+        locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>' +
+            (window.spMasterLocations || []).map(l => `<option value="${l.location_id}">${PEApp.escapeHtml(l.location_name)}</option>`).join('');
+
+        if (itemId) {
+            const foundItem = adjustItemsList.find(i => String(i.item_id) === String(itemId))
+                || allData.find(r => String(r.item_id) === String(itemId));
+            if (foundItem) {
+                document.getElementById('spAdjItemInput').value = `[${foundItem.item_code}] ${foundItem.item_name}`;
+                document.getElementById('spAdjItem').value = foundItem.item_id;
+                populateAdjustLocations(foundItem.item_id, locationId);
+            }
+        }
+
+        onAdjustModeChange();
+        PEApp.showModal('spAdjustModal');
+    }
+
+    function populateAdjustLocations(itemId, preferredLocationId = null) {
+        const locSel = document.getElementById('spAdjLocation');
+        locSel.innerHTML = '<option value="">-- เลือกคลังจัดเก็บ --</option>';
+        const itemStocks = allData.filter(r => String(r.item_id) === String(itemId) && r.location_id);
+
+        (window.spMasterLocations || []).forEach(l => {
+            const stockRow = itemStocks.find(s => String(s.location_id) === String(l.location_id));
+            const qty = stockRow ? parseFloat(stockRow.onhand_qty) || 0 : 0;
+            const uom = stockRow?.uom || adjustItemsList.find(i => String(i.item_id) === String(itemId))?.uom || '';
+            locSel.add(new Option(`${l.location_name} (คงเหลือ: ${PEApp.formatNumber(qty)} ${uom})`, l.location_id));
+        });
+
+        if (preferredLocationId) {
+            locSel.value = preferredLocationId;
+        } else if (itemStocks.length === 1) {
+            locSel.value = itemStocks[0].location_id;
+        }
+    }
+
+    function onAdjustItemInput() {
+        const text = document.getElementById('spAdjItemInput').value;
+        const itemId = window.spAdjustTextMap?.get(text) || '';
+        document.getElementById('spAdjItem').value = itemId;
+        if (itemId) {
+            populateAdjustLocations(itemId);
+        }
+        updateAdjustPreview();
+    }
+
+    function onAdjustModeChange() {
+        const mode = getSelectedAdjustMode();
+        const label = document.getElementById('spAdjQtyLabel');
+        const qtyInput = document.getElementById('spAdjQty');
+        if (mode === 'DEDUCT') {
+            label.innerHTML = 'จำนวนที่ต้องการหักลด <span class="pe-text-danger">*</span>';
+            qtyInput.min = '1';
+        } else if (mode === 'ADD') {
+            label.innerHTML = 'จำนวนที่ต้องการปรับเพิ่ม <span class="pe-text-danger">*</span>';
+            qtyInput.min = '1';
+        } else {
+            label.innerHTML = 'ยอดคงเหลือจริงตามการตรวจนับ (ตั้งยอดใหม่) <span class="pe-text-danger">*</span>';
+            qtyInput.min = '0';
+        }
+        updateAdjustPreview();
+    }
+
+    function updateAdjustPreview() {
+        const itemId = document.getElementById('spAdjItem')?.value || '';
+        const locationId = document.getElementById('spAdjLocation')?.value || '';
+        const mode = getSelectedAdjustMode();
+        const rawInput = parseFloat(document.getElementById('spAdjQty')?.value);
+        const inputQty = isNaN(rawInput) ? 0 : rawInput;
+
+        const row = (itemId && locationId) ? getStockRow(itemId, locationId) : null;
+        const currentQty = row ? (parseFloat(row.onhand_qty) || 0) : 0;
+        const uom = row?.uom || adjustItemsList.find(i => String(i.item_id) === String(itemId))?.uom || '';
+
+        let deltaQty = 0;
+        let newQty = currentQty;
+        if (!isNaN(rawInput)) {
+            if (mode === 'DEDUCT') {
+                deltaQty = -inputQty;
+                newQty = currentQty - inputQty;
+            } else if (mode === 'ADD') {
+                deltaQty = inputQty;
+                newQty = currentQty + inputQty;
+            } else {
+                deltaQty = inputQty - currentQty;
+                newQty = inputQty;
+            }
+        }
+
+        const curEl = document.getElementById('spAdjCurrentQty');
+        const deltaEl = document.getElementById('spAdjDeltaQty');
+        const newEl = document.getElementById('spAdjNewQty');
+
+        if (curEl) curEl.textContent = `${PEApp.formatNumber(currentQty)} ${uom}`;
+        if (deltaEl) {
+            const sign = deltaQty > 0 ? '+' : '';
+            deltaEl.textContent = `${sign}${PEApp.formatNumber(deltaQty)} ${uom}`;
+            deltaEl.className = 'fw-bold ' + (deltaQty < 0 ? 'text-danger' : (deltaQty > 0 ? 'text-success' : 'text-muted'));
+        }
+        if (newEl) {
+            newEl.textContent = `${PEApp.formatNumber(newQty)} ${uom}`;
+            newEl.className = 'fs-5 fw-bold ' + (newQty < 0 ? 'text-danger' : 'text-primary');
+        }
+    }
+
+    function setAdjustReason(text) {
+        const el = document.getElementById('spAdjReason');
+        if (el) el.value = text;
+    }
+
+    async function submitAdjustStock() {
+        const itemId = document.getElementById('spAdjItem').value;
+        const locationId = document.getElementById('spAdjLocation').value;
+        const mode = getSelectedAdjustMode();
+        const rawQty = parseFloat(document.getElementById('spAdjQty').value);
+        const reason = (document.getElementById('spAdjReason').value || '').trim();
+
+        if (!itemId || !locationId) {
+            PEApp.showToast('กรุณาเลือกอะไหล่และคลังจัดเก็บให้ครบถ้วน', 'warning');
+            return;
+        }
+        if (isNaN(rawQty) || (mode !== 'SET_EXACT' && rawQty <= 0) || (mode === 'SET_EXACT' && rawQty < 0)) {
+            PEApp.showToast('กรุณาระบุจำนวนที่ต้องการปรับปรุงให้ถูกต้อง', 'warning');
+            return;
+        }
+        if (!reason) {
+            PEApp.showToast('กรุณาระบุสาเหตุการปรับปรุงสต๊อก', 'warning');
+            return;
+        }
+        if (!navigator.onLine) {
+            PEApp.showToast('ไม่มีการเชื่อมต่ออินเทอร์เน็ต ไม่สามารถทำรายการได้', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('spAdjSaveBtn');
+        btn.disabled = true;
+        try {
+            await PEApp.apiCall('sparePartsAPI.php', {}, 'POST', {
+                action: 'adjust_stock',
+                item_id: itemId,
+                location_id: locationId,
+                adjust_mode: mode,
+                quantity: rawQty,
+                reason: reason
+            });
+            PEApp.showToast('ปรับปรุงยอดสต๊อกเรียบร้อยแล้ว', 'success');
+            PEApp.hideModal('spAdjustModal');
+            await loadData();
+            if (document.getElementById('sp-history-pane')?.classList.contains('active')) {
+                await loadHistory();
+            }
+        } catch (e) {
+            PEApp.showToast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function setKpiFilter(statusValue) {
@@ -1190,6 +1481,7 @@ const SparePartsModule = (() => {
         loadData, filterTable, toggleView, openReceiveModal, submitTransaction, exportExcel, onItemInput, setKpiFilter,
         stepCardQty, getCardQty, addIssueToCart, changeCartQty, removeIssueCartItem, clearIssueCart, openIssueCart, submitIssueCart,
         openTransferModal, onTransferItemInput, addTransferLine, removeTransferLine, submitTransfer,
+        openAdjustModal, onAdjustItemInput, onAdjustModeChange, updateAdjustPreview, setAdjustReason, submitAdjustStock, cancelReceiveTransaction,
         switchTab, loadMasterList, filterMasterTable, toggleMasterView, renderMasterTable, openItemModal, saveItem, toggleItemStatus, exportMasterExcel, importMasterExcel,
         loadHistory, filterHistoryTable, renderHistoryTable, previewImage, removeImage, addToCart, removeCartItem
     };

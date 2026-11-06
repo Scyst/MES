@@ -44,13 +44,18 @@ try {
             // Locations for filter
             $locations = $pdo->query("SELECT location_id, location_name FROM dbo.LOCATIONS WHERE is_active = 1 AND location_type = 'MAINTENANCE' ORDER BY location_name")->fetchAll(PDO::FETCH_ASSOC);
 
+            // Monthly Issues KPI (strictly ISSUE transactions only, excluding ADJUST / TRANSFER)
+            $monthIssuesStmt = $pdo->query("SELECT ISNULL(SUM(ABS(quantity)), 0) FROM dbo.MT_TRANSACTIONS WITH (NOLOCK) WHERE transaction_type = 'ISSUE' AND created_at >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)");
+            $monthIssues = (float)$monthIssuesStmt->fetchColumn();
+
             echo json_encode([
                 'success' => true,
                 'data' => $data,
                 'kpi' => [
                     'total_sku' => $totalSKU,
                     'low_stock' => $lowStock,
-                    'total_value' => $totalValue
+                    'total_value' => $totalValue,
+                    'month_issues' => $monthIssues
                 ],
                 'locations' => $locations
             ]);
@@ -447,11 +452,193 @@ try {
             echo json_encode(['success' => true, 'data' => null, 'message' => 'ย้ายคลังสำเร็จ']);
             break;
 
+        case 'cancel_receive':
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $input['csrf_token'] ?? '';
+            if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'data' => null, 'message' => 'CSRF token validation failed.']);
+                exit;
+            }
+
+            $txId = (int)($input['transaction_id'] ?? 0);
+            $reason = mb_substr(trim((string)($input['reason'] ?? '')), 0, 300);
+
+            if ($txId <= 0) {
+                throw new Exception("ไม่พบรหัสรายการธุรกรรมที่ต้องการยกเลิก");
+            }
+            if ($reason === '') {
+                throw new Exception("กรุณาระบุสาเหตุการยกเลิกรายการรับเข้า");
+            }
+
+            $pdo->beginTransaction();
+
+            $txStmt = $pdo->prepare("SELECT t.transaction_id, t.item_id, t.location_id, t.quantity, t.transaction_type, t.notes,
+                                            i.item_code, i.item_name, l.location_name
+                                     FROM dbo.MT_TRANSACTIONS t WITH (UPDLOCK, ROWLOCK)
+                                     JOIN dbo.MT_ITEMS i WITH (NOLOCK) ON t.item_id = i.item_id
+                                     LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON t.location_id = l.location_id
+                                     WHERE t.transaction_id = ?");
+            $txStmt->execute([$txId]);
+            $tx = $txStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$tx) {
+                throw new Exception("ไม่พบรายการธุรกรรมในระบบ");
+            }
+            if ($tx['transaction_type'] !== 'RECEIVE') {
+                throw new Exception("สามารถยกเลิกได้เฉพาะรายการรับเข้า (RECEIVE) เท่านั้น");
+            }
+            if (mb_strpos((string)($tx['notes'] ?? ''), '[ยกเลิกแล้ว') !== false) {
+                throw new Exception("รายการรับเข้านี้ถูกยกเลิกไปแล้ว");
+            }
+
+            $cancelQty = round((float)$tx['quantity'], 3);
+            if ($cancelQty <= 0) {
+                throw new Exception("จำนวนในรายการรับเข้าไม่ถูกต้อง");
+            }
+
+            $lockStmt = $pdo->prepare("SELECT quantity FROM dbo.MT_INVENTORY_ONHAND WITH (UPDLOCK, ROWLOCK) WHERE item_id = ? AND location_id = ?");
+            $lockStmt->execute([$tx['item_id'], $tx['location_id']]);
+            $currentQty = round((float)($lockStmt->fetchColumn() ?: 0), 3);
+
+            if ($currentQty < $cancelQty) {
+                $locName = $tx['location_name'] ?? 'คลังต้นทาง';
+                throw new Exception("สต๊อกคงเหลือในคลัง {$locName} ไม่เพียงพอสำหรับการยกเลิกรายการรับเข้า (คงเหลือ {$currentQty} แต่ต้องหักคืน {$cancelQty}) หากมีการย้ายคลังหรือเบิกออกไปแล้ว กรุณาใช้เมนู 'ปรับสต๊อก' ที่คลังปัจจุบันแทน");
+            }
+
+            $updOnhand = $pdo->prepare("UPDATE dbo.MT_INVENTORY_ONHAND SET quantity = quantity - ?, last_updated = GETDATE() WHERE item_id = ? AND location_id = ?");
+            $updOnhand->execute([$cancelQty, $tx['item_id'], $tx['location_id']]);
+
+            $cleanZeroStmt = $pdo->prepare("DELETE FROM dbo.MT_INVENTORY_ONHAND WHERE item_id = ? AND location_id = ? AND quantity <= 0");
+            $cleanZeroStmt->execute([$tx['item_id'], $tx['location_id']]);
+
+            $oldNotes = trim((string)($tx['notes'] ?? ''));
+            $updatedOrigNotes = mb_substr(trim(($oldNotes !== '' ? $oldNotes . ' ' : '') . "[ยกเลิกแล้ว: {$reason}]"), 0, 500);
+            $updTxStmt = $pdo->prepare("UPDATE dbo.MT_TRANSACTIONS SET notes = ? WHERE transaction_id = ?");
+            $updTxStmt->execute([$updatedOrigNotes, $txId]);
+
+            $adjustNote = mb_substr("[ยกเลิกรายการรับเข้า #{$txId}] {$reason}", 0, 500);
+            $insAdjStmt = $pdo->prepare("INSERT INTO dbo.MT_TRANSACTIONS (item_id, location_id, quantity, transaction_type, ref_job_id, notes, created_by_user_id, created_at, pe_wo_id) VALUES (?, ?, ?, 'ADJUST', NULL, ?, ?, GETDATE(), NULL)");
+            $insAdjStmt->execute([$tx['item_id'], $tx['location_id'], -$cancelQty, $adjustNote, $userId]);
+
+            writeLog(
+                $pdo,
+                'CANCEL_MT_RECEIVE',
+                'PE_SPARE_PARTS',
+                $txId,
+                ['transaction_id' => $txId, 'item_code' => $tx['item_code'], 'location_id' => $tx['location_id'], 'onhand_before' => $currentQty],
+                ['cancelled_qty' => $cancelQty, 'onhand_after' => max(0, round($currentQty - $cancelQty, 3)), 'reason' => $reason],
+                "Cancelled mistaken RECEIVE transaction #{$txId} ({$tx['item_code']})"
+            );
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'data' => null, 'message' => 'ยกเลิกรายการรับเข้าและปรับลดสต๊อกเรียบร้อยแล้ว']);
+            break;
+
+        case 'adjust_stock':
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $input['csrf_token'] ?? '';
+            if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'data' => null, 'message' => 'CSRF token validation failed.']);
+                exit;
+            }
+
+            $itemId = (int)($input['item_id'] ?? 0);
+            $locationId = (int)($input['location_id'] ?? 0);
+            $adjustMode = trim((string)($input['adjust_mode'] ?? 'DEDUCT'));
+            $inputQty = round((float)($input['quantity'] ?? 0), 3);
+            $reason = mb_substr(trim((string)($input['reason'] ?? '')), 0, 400);
+
+            if ($itemId <= 0 || $locationId <= 0) {
+                throw new Exception("กรุณาเลือกอะไหล่และคลังจัดเก็บให้ครบถ้วน");
+            }
+            if (!in_array($adjustMode, ['DEDUCT', 'ADD', 'SET_EXACT'], true)) {
+                throw new Exception("รูปแบบการปรับปรุงสต๊อกไม่ถูกต้อง");
+            }
+            if ($reason === '') {
+                throw new Exception("กรุณาระบุสาเหตุการปรับปรุงสต๊อก");
+            }
+            if ($adjustMode === 'SET_EXACT' && ($inputQty < 0 || $inputQty > 999999)) {
+                throw new Exception("ยอดคงเหลือจริงต้องอยู่ระหว่าง 0 ถึง 999,999");
+            }
+            if ($adjustMode !== 'SET_EXACT' && ($inputQty <= 0 || $inputQty > 999999)) {
+                throw new Exception("จำนวนที่ต้องการปรับปรุงต้องมากกว่า 0 และไม่เกิน 999,999");
+            }
+
+            $pdo->beginTransaction();
+
+            $itemCheck = $pdo->prepare("SELECT item_code, item_name FROM dbo.MT_ITEMS WITH (NOLOCK) WHERE item_id = ? AND is_active = 1");
+            $itemCheck->execute([$itemId]);
+            $itemRow = $itemCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$itemRow) {
+                throw new Exception("ไม่พบข้อมูลอะไหล่ในระบบ หรืออะไหล่ถูกระงับการใช้งาน");
+            }
+
+            $locCheck = $pdo->prepare("SELECT location_name FROM dbo.LOCATIONS WITH (NOLOCK) WHERE location_id = ? AND is_active = 1");
+            $locCheck->execute([$locationId]);
+            $locRow = $locCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$locRow) {
+                throw new Exception("ไม่พบคลังจัดเก็บในระบบ");
+            }
+
+            $lockStmt = $pdo->prepare("SELECT quantity FROM dbo.MT_INVENTORY_ONHAND WITH (UPDLOCK, ROWLOCK) WHERE item_id = ? AND location_id = ?");
+            $lockStmt->execute([$itemId, $locationId]);
+            $currentQty = round((float)($lockStmt->fetchColumn() ?: 0), 3);
+
+            if ($adjustMode === 'DEDUCT') {
+                $deltaQty = -$inputQty;
+                $newQty = round($currentQty - $inputQty, 3);
+            } elseif ($adjustMode === 'ADD') {
+                $deltaQty = $inputQty;
+                $newQty = round($currentQty + $inputQty, 3);
+            } else {
+                $deltaQty = round($inputQty - $currentQty, 3);
+                $newQty = $inputQty;
+            }
+
+            if (abs($deltaQty) < 0.0001) {
+                throw new Exception("ยอดสต๊อกไม่มีการเปลี่ยนแปลง (ยอดเดิมเท่ากับยอดที่ระบุ)");
+            }
+            if ($newQty < 0) {
+                throw new Exception("ไม่สามารถปรับลดสต๊อกเกินจำนวนคงเหลือได้ (คงเหลือปัจจุบัน {$currentQty})");
+            }
+
+            $modeLabel = $adjustMode === 'DEDUCT' ? 'ปรับลดสต๊อก' : ($adjustMode === 'ADD' ? 'ปรับเพิ่มสต๊อก' : 'ตั้งยอดตามนับจริง');
+            $fullNote = mb_substr("[{$modeLabel}: {$currentQty} -> {$newQty}] {$reason}", 0, 500);
+
+            $logStmt = $pdo->prepare("INSERT INTO dbo.MT_TRANSACTIONS (item_id, location_id, quantity, transaction_type, ref_job_id, notes, created_by_user_id, created_at, pe_wo_id) VALUES (?, ?, ?, 'ADJUST', NULL, ?, ?, GETDATE(), NULL)");
+            $logStmt->execute([$itemId, $locationId, $deltaQty, $fullNote, $userId]);
+
+            $mergeStmt = $pdo->prepare("MERGE INTO dbo.MT_INVENTORY_ONHAND AS target
+                USING (SELECT ? AS item_id, ? AS location_id) AS source
+                ON (target.item_id = source.item_id AND target.location_id = source.location_id)
+                WHEN MATCHED THEN UPDATE SET target.quantity = target.quantity + ?, target.last_updated = GETDATE()
+                WHEN NOT MATCHED THEN INSERT (item_id, location_id, quantity, last_updated) VALUES (source.item_id, source.location_id, ?, GETDATE());");
+            $mergeStmt->execute([$itemId, $locationId, $deltaQty, $deltaQty]);
+
+            $cleanZeroStmt = $pdo->prepare("DELETE FROM dbo.MT_INVENTORY_ONHAND WHERE item_id = ? AND location_id = ? AND quantity <= 0");
+            $cleanZeroStmt->execute([$itemId, $locationId]);
+
+            writeLog(
+                $pdo,
+                'ADJUST_MT_STOCK',
+                'PE_SPARE_PARTS',
+                $itemId,
+                ['item_id' => $itemId, 'item_code' => $itemRow['item_code'], 'location_id' => $locationId, 'onhand_before' => $currentQty],
+                ['adjust_mode' => $adjustMode, 'delta_qty' => $deltaQty, 'onhand_after' => $newQty, 'reason' => $reason],
+                "Adjusted spare part stock ({$itemRow['item_code']} at {$locRow['location_name']}): {$currentQty} -> {$newQty}"
+            );
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'data' => ['old_qty' => $currentQty, 'new_qty' => $newQty, 'delta_qty' => $deltaQty], 'message' => 'ปรับปรุงยอดสต๊อกเรียบร้อยแล้ว']);
+            break;
+
         case 'get_transactions':
             $limit = (int)($input['limit'] ?? 200);
             
             $sql = "SELECT TOP " . $limit . " 
                         t.transaction_id, 
+                        t.item_id,
+                        t.location_id,
                         t.transaction_type, 
                         t.quantity, 
                         t.notes, 
@@ -460,7 +647,7 @@ try {
                         i.item_name, 
                         i.uom,
                         l.location_name,
-                        u.fullname AS created_by_name,
+                        ISNULL(NULLIF(u.fullname, ''), u.username) AS created_by_name,
                         j.wo_number, 
                         m.machine_code,
                         j.issue_title

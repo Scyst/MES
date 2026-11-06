@@ -125,6 +125,9 @@
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" style="border-color:var(--pe-primary);color:var(--pe-primary);" onclick="SparePartsModule.openTransferModal()">
                             <i class="fas fa-exchange-alt"></i> ย้ายคลัง
                         </button>
+                        <button class="pe-btn pe-btn-ghost pe-btn-sm" style="border-color:#d97706;color:#d97706;" onclick="SparePartsModule.openAdjustModal()" title="ปรับปรุงยอดสต๊อก (รับผิด/นับจริง)">
+                            <i class="fas fa-sliders-h"></i> ปรับสต๊อก
+                        </button>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.exportExcel()" title="Export">
                             <i class="fas fa-file-excel" style="color:var(--pe-success);"></i> <?php _e('pe.btn_export'); ?>
                         </button>
@@ -236,6 +239,13 @@
                     </div>
                     <div class="pe-filter-spacer"></div>
                     <div class="d-flex gap-2 flex-wrap">
+                        <select class="pe-filter-select" id="spHistoryTypeFilter" onchange="SparePartsModule.filterHistoryTable()" style="max-width: 170px;">
+                            <option value="">ทุกประเภทรายการ</option>
+                            <option value="RECEIVE">รับเข้า (IN)</option>
+                            <option value="ISSUE">เบิกออก (OUT)</option>
+                            <option value="ADJUST">ปรับสต๊อก (ADJUST)</option>
+                            <option value="TRANSFER">ย้ายคลัง (TRANSFER)</option>
+                        </select>
                         <button class="pe-btn pe-btn-ghost pe-btn-sm" onclick="SparePartsModule.loadHistory()" title="Refresh">
                             <i class="fas fa-sync-alt"></i> <?php _e('pe.btn_refresh'); ?>
                         </button>
@@ -251,7 +261,8 @@
                                 <th style="width: 15%;"><?php _e('pe.th_location'); ?></th>
                                 <th class="pe-text-end" style="width: 10%;"><?php _e('pe.th_qty'); ?></th>
                                 <th style="width: 15%;"><?php _e('pe.th_user'); ?></th>
-                                <th style="width: 10%;"><?php _e('pe.th_job_note'); ?></th>
+                                <th style="width: 12%;"><?php _e('pe.th_job_note'); ?></th>
+                                <th class="pe-text-center" style="width: 10%;">การจัดการ</th>
                             </tr>
                         </thead>
                         <tbody id="spHistoryTableBody">
