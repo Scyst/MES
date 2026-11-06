@@ -40,16 +40,13 @@ export default function StoreApp() {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <h1 className="text-sm sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight truncate">
+              <h1 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight truncate">
                 Store & Warehouse Management
               </h1>
               <span className="mes-badge bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] sm:text-xs px-1.5 py-0.2">
                 ⚡ SPA Ported
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-1 hidden sm:block">
-              ศูนย์กลางคลังสินค้า: ตรวจนับสต็อกแบบ Visual Map (Blind Count), รายงานสต็อกคงเหลือ, และระบบอนุมัติตัดยอด
-            </p>
           </div>
         </div>
 

@@ -152,24 +152,19 @@ export default function CycleCountTab({ onNavigateTab }) {
   return (
     <div className="flex flex-col h-full space-y-3 animate-fadeIn relative pb-20">
       {/* 1. IRA Health & Metrics Header Card */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex-shrink-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+      <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
               <Award className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100">
-                  ดัชนีความแม่นยำสต็อก (Inventory Record Accuracy - IRA)
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  พฤศจิกายน 2569
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                เกณฑ์ประเมินการตรวจนับรอบ Blind Count ประจำเดือนเพื่อความถูกต้อง 100% ก่อนปิดงบ
-              </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                ดัชนีความแม่นยำสต็อก (IRA)
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                พฤศจิกายน 2569
+              </span>
             </div>
           </div>
 
@@ -197,7 +192,7 @@ export default function CycleCountTab({ onNavigateTab }) {
         </div>
 
         {/* 3 Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5">
           {/* 1. Item-Level IRA */}
           <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-100 dark:border-slate-700/80 flex items-center justify-between shadow-2xs">
             <div>
@@ -388,120 +383,118 @@ export default function CycleCountTab({ onNavigateTab }) {
             <p className="text-xs text-slate-400 mt-1">ลองเปลี่ยนสถานะตัวกรอง หรือค้นหาชื่อคลังอื่น</p>
           </div>
         ) : (
-          Object.entries(groupedByZone).map(([zoneName, locs]) => {
-            const completedInZone = locs.filter(l => l.session_status === 'COMPLETED').length;
-            const inProgressInZone = locs.filter(l => l.session_status === 'IN_PROGRESS').length;
-            const isAllCompleted = completedInZone === locs.length && locs.length > 0;
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {Object.entries(groupedByZone).map(([zoneName, locs]) => {
+              const completedInZone = locs.filter(l => l.session_status === 'COMPLETED').length;
+              const inProgressInZone = locs.filter(l => l.session_status === 'IN_PROGRESS').length;
+              const isAllCompleted = completedInZone === locs.length && locs.length > 0;
 
-            return (
-              <div
-                key={zoneName}
-                className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3"
-              >
-                {/* Zone Header Bar */}
-                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                      <Layers className="w-4 h-4" />
+              return (
+                <div
+                  key={zoneName}
+                  className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col justify-between transition-all hover:border-slate-300 dark:hover:border-slate-700"
+                >
+                  {/* Zone Header Bar */}
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <Layers className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide truncate" title={zoneName}>
+                          {zoneName}
+                        </h3>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide truncate">
-                        {zoneName}
-                      </h3>
-                      <p className="text-[10px] text-slate-400">
-                        {locs.length} ตำแหน่งจัดเก็บ
-                      </p>
+
+                    {/* Zone Completion Status Pill */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isAllCompleted ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                          <Check className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>ครบ {locs.length}</span>
+                        </span>
+                      ) : inProgressInZone > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          <span>นับ ({completedInZone}/{locs.length})</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                          รอ ({locs.length})
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Zone Completion Status Pill */}
-                  <div className="flex items-center gap-2">
-                    {isAllCompleted ? (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 shadow-2xs">
-                        <Check className="w-3 h-3 text-emerald-600" />
-                        <span>ตรวจครบแล้ว ({locs.length}/{locs.length})</span>
-                      </span>
-                    ) : inProgressInZone > 0 ? (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        <span>กำลังตรวจนับ ({completedInZone}/{locs.length})</span>
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        <span>รอตรวจ ({locs.length} คลัง)</span>
-                      </span>
-                    )}
+                  {/* Warehouse Rack Grid (Compact 3-4 cols per Bay card) */}
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                    {locs.map((loc) => {
+                      const isSelected = selectedLocation?.location_id === loc.location_id;
+                      const status = loc.session_status || 'PENDING';
+                      const hasRecount = (loc.recount_needed_count || 0) > 0;
+
+                      let btnStyle = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 hover:border-slate-400 hover:bg-slate-50';
+                      let statusLabel = 'รอตรวจ';
+                      let statusColor = 'text-slate-400';
+
+                      if (status === 'IN_PROGRESS') {
+                        btnStyle = 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-200 shadow-xs ring-1 ring-amber-300';
+                        statusLabel = 'กำลังเช็ค';
+                        statusColor = 'text-amber-700 font-bold';
+                      } else if (status === 'COMPLETED') {
+                        btnStyle = 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100';
+                        statusLabel = 'เสร็จสิ้น';
+                        statusColor = 'text-emerald-700 font-bold';
+                      }
+
+                      if (isSelected) {
+                        btnStyle = 'bg-blue-50/90 dark:bg-blue-950/60 border-2 border-blue-600 dark:border-blue-500 text-blue-800 dark:text-blue-200 shadow-md ring-4 ring-blue-500/20 transform -translate-y-0.5';
+                      }
+
+                      return (
+                        <button
+                          key={loc.location_id}
+                          type="button"
+                          onClick={() => setSelectedLocation(isSelected ? null : loc)}
+                          className={`h-13 sm:h-14 rounded-lg border flex flex-col items-center justify-center p-1 transition-all duration-150 active:scale-95 cursor-pointer touch-manipulation relative group ${btnStyle}`}
+                        >
+                          {/* Status Icon Indicator on Top-Left */}
+                          {status === 'COMPLETED' ? (
+                            <span className="absolute top-1 left-1 w-3 h-3 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] shadow-2xs">
+                              ✓
+                            </span>
+                          ) : status === 'IN_PROGRESS' ? (
+                            <span className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                          ) : null}
+
+                          {/* Recount Needed Badge on Top-Right */}
+                          {hasRecount && (
+                            <span 
+                              className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-rose-600 text-white font-mono font-bold text-[8.5px] shadow-xs flex items-center gap-0.5"
+                              title={`มี ${loc.recount_needed_count} รายการรอนับซ้ำรอบ 2`}
+                            >
+                              ! {loc.recount_needed_count}
+                            </span>
+                          )}
+
+                          {/* Location Rack Name */}
+                          <span className="text-xs sm:text-sm font-mono font-black tracking-tight truncate w-full text-center">
+                            {loc.location_name}
+                          </span>
+
+                          {/* Status Label */}
+                          <span className={`text-[8.5px] sm:text-[9px] truncate max-w-full text-center ${statusColor}`}>
+                            {statusLabel}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-
-                {/* Warehouse Rack Grid (Auto-Fill responsive slots - No more awkward stretching!) */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-2 sm:gap-2.5">
-                  {locs.map((loc) => {
-                    const isSelected = selectedLocation?.location_id === loc.location_id;
-                    const status = loc.session_status || 'PENDING';
-                    const hasRecount = (loc.recount_needed_count || 0) > 0;
-
-                    let btnStyle = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 hover:border-slate-400 hover:bg-slate-50';
-                    let statusLabel = 'รอตรวจ';
-                    let statusColor = 'text-slate-400';
-
-                    if (status === 'IN_PROGRESS') {
-                      btnStyle = 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-200 shadow-xs ring-1 ring-amber-300';
-                      statusLabel = 'กำลังเช็ค';
-                      statusColor = 'text-amber-700 font-bold';
-                    } else if (status === 'COMPLETED') {
-                      btnStyle = 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100';
-                      statusLabel = 'เสร็จสิ้น';
-                      statusColor = 'text-emerald-700 font-bold';
-                    }
-
-                    if (isSelected) {
-                      btnStyle = 'bg-blue-50/90 dark:bg-blue-950/60 border-2 border-blue-600 dark:border-blue-500 text-blue-800 dark:text-blue-200 shadow-md ring-4 ring-blue-500/20 transform -translate-y-0.5';
-                    }
-
-                    return (
-                      <button
-                        key={loc.location_id}
-                        type="button"
-                        onClick={() => setSelectedLocation(loc)}
-                        className={`h-14 sm:h-16 rounded-xl border flex flex-col items-center justify-center p-1.5 transition-all duration-150 active:scale-95 cursor-pointer touch-manipulation relative group ${btnStyle}`}
-                      >
-                        {/* Status Icon Indicator on Top-Left */}
-                        {status === 'COMPLETED' ? (
-                          <span className="absolute top-1 left-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] shadow-2xs">
-                            ✓
-                          </span>
-                        ) : status === 'IN_PROGRESS' ? (
-                          <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                        ) : null}
-
-                        {/* Recount Needed Badge on Top-Right */}
-                        {hasRecount && (
-                          <span 
-                            className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 rounded-full bg-rose-600 text-white font-mono font-bold text-[9px] shadow-xs flex items-center gap-0.5"
-                            title={`มี ${loc.recount_needed_count} รายการรอนับซ้ำรอบ 2`}
-                          >
-                            ! {loc.recount_needed_count}
-                          </span>
-                        )}
-
-                        {/* Location Rack Name */}
-                        <span className="text-xs sm:text-sm font-mono font-black tracking-tight truncate w-full text-center">
-                          {loc.location_name}
-                        </span>
-
-                        {/* Status Label */}
-                        <span className={`text-[9px] truncate max-w-full text-center ${statusColor}`}>
-                          {statusLabel}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
 
