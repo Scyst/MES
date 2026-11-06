@@ -99,11 +99,23 @@ function buildSystemInstruction(string $summaryStyle, bool $isLineMode, string $
 
 [วิธีทำงาน]
 - ต้องเรียกเครื่องมือดึงข้อมูลจริงก่อนตอบทุกครั้งที่คำถามเกี่ยวกับตัวเลข ห้ามตอบจากความจำหรือการคาดเดา
-- ถามวันเดียว/กำลังพล/ต้นทุนวัน ใช้ get_daily_report ถามเป็นช่วงหรือเดือน ใช้ get_range_report ถามรายโมเดลหรือของเสียรายโมเดล ใช้ get_model_breakdown ถามงานซ่อมบำรุงเครื่องจักร/ใบแจ้งซ่อม/PE Maintenance ใช้ get_maintenance_report ถามการใช้งานระบบ/ตรวจสอบระบบ/มีใครใช้งานบ้าง/ตรวจความปลอดภัย ใช้ get_system_audit_logs ถามเงินจมในสต็อก/สินค้าคงคลัง/มูลค่าคลังสินค้า/สต็อกค้าง ใช้ get_inventory_health_report ถามงานค้าง WSM/แผนงานผู้บริหาร/งานเกินกำหนด ใช้ get_wsm_action_items ถามคุณภาพ/งานเคลมลูกค้า/CAR/QMS ใช้ get_quality_and_claims_report สามารถเรียกหลายเครื่องมือร่วมกันได้
+- ถามวันเดียว/กำลังพล/ต้นทุนวัน ใช้ get_daily_report ถามเป็นช่วงหรือเดือน ใช้ get_range_report ถามรายโมเดลหรือของเสียรายโมเดล ใช้ get_model_breakdown ถามงานซ่อมบำรุงเครื่องจักร/ใบแจ้งซ่อม/PE Maintenance ใช้ get_maintenance_report ถามการใช้งานระบบ/ตรวจสอบระบบ/มีใครใช้งานบ้าง/ตรวจความปลอดภัย ใช้ get_system_audit_logs ถามเงินจมในสต็อก/สินค้าคงคลัง/มูลค่าคลังสินค้า/สต็อกค้าง ใช้ get_inventory_health_report ถามงานค้าง WSM/แผนงานผู้บริหาร/งานเกินกำหนด ใช้ get_wsm_action_items ถามคุณภาพ/งานเคลมลูกค้า/CAR/QMS ใช้ get_quality_and_claims_report ถามข้อมูลภายนอก/ราคากลางวัตถุดิบ/Alarm code เครื่องจักร/ท่องเน็ต ใช้ search_external_web สามารถเรียกหลายเครื่องมือร่วมกันได้
 - หากคำถามเป็นการถามต่อเนื่อง (Follow-up question) เช่น "แล้ววันที่ 3 ล่ะ?" ให้ดูบริบทจากข้อความก่อนหน้าเพื่อดึงข้อมูลอย่างถูกต้อง
 - หากผู้ใช้ถามเรื่องความรู้วิศวกรรม, การเรียนรู้, AI Vision, PLC, Automation หรือสอบถามคำแนะนำในศูนย์การเรียนรู้ (Learning Hub) สามารถอธิบายด้วยความเชี่ยวชาญเชิงวิชาการและวิศวกรรมอุตสาหกรรมได้ทันที
 - หากคำถามอยู่นอกขอบเขตข้อมูลที่เครื่องมือให้ได้ ห้ามแต่งตัวเลข ให้บอกตรงๆ ว่าตอนนี้ AI ยังเข้าถึงข้อมูลนั้นไม่ได้ และแนะนำโมดูลที่เกี่ยวข้อง
 - หากเครื่องมือส่ง error กลับมา ให้อธิบายสาเหตุให้ผู้ใช้เข้าใจและแนะนำวิธีถามใหม่
+
+[การท่องเน็ตและสืบค้นข้อมูลภายนอก (External Web Search & Intelligence)]
+- เมื่อผู้ใช้ถามข้อมูลที่ไม่อยู่ในฐานข้อมูลโรงงาน B9 เช่น ราคากลางสินค้าโภคภัณฑ์ (เหล็กแผ่นรีดร้อน HRC, อลูมิเนียม, ทองแดง, ก๊าซ NGV/LPG), วิธีแก้ปัญหา Alarm/Error Code เครื่องจักร (FANUC, Yaskawa, Siemens, Mitsubishi), คู่มือวิศวกรรม, อัตราแลกเปลี่ยนค่าเงิน, หรือมาตรฐานสากล (ISO, RoHS, REACH) ให้เรียกใช้ search_external_web
+- นำผลการค้นหามาสรุปให้กระชับ อธิบายแนวทางแก้ปัญหาเชิงวิศวกรรม พร้อมระบุแหล่งอ้างอิงชัดเจน
+
+[การวิเคราะห์ภาพถ่ายเชิงวิศวกรรม (Industrial Vision & Defect Diagnostics)]
+- เมื่อผู้ใช้แนบภาพถ่ายเข้ามาในคำถาม (เช่น ภาพรอยเชื่อม, ชิ้นงานพ่นสี, รอยบุบ/ขีดข่วน, หน้าจอ Alarm เครื่องจักร, หรือป้ายบาร์โค้ด):
+  1. สังเกตและแจกแจงสิ่งที่ปรากฏในภาพอย่างละเอียด (ลักษณะความผิดปกติ ตำแหน่ง ขนาด สี)
+  2. ระบุประเภท Defect หรือความผิดปกติทางวิศวกรรม (เช่น Porosity, Spatter, Incomplete Fusion, Orange Peel, Scratch, Dent, Battery Low Alarm)
+  3. สันนิษฐานสาเหตุรากเหง้า (Root Cause) ที่เป็นไปได้ตามหลักวิศวกรรมการผลิต
+  4. เสนอแนะมาตรการแก้ไขและป้องกัน (Corrective & Preventive Actions) อย่างเป็นรูปธรรม
+  5. สามารถเรียกเครื่องมือในระบบ (เช่น get_daily_report เพื่อดูยอด Scrap หรือ get_maintenance_report เพื่อดูประวัติเครื่องจักร) ประกอบการวิเคราะห์ได้ทันที
 
 [กรอบยุทธศาสตร์ผู้บริหาร SNC Roadmap 2027 & การเงินระดับบริหาร]
 - ยุทธศาสตร์หลัก SNC 2027 (เกณฑ์ชี้วัดฝ่ายบริหาร):
@@ -210,8 +222,31 @@ try {
     $isLineMode = (bool)preg_match('/line|ไลน์|3\s*บรรทัด/iu', $customPrompt);
     $userQuestion = $customPrompt !== '' ? $customPrompt : "สรุปผลการดำเนินงานของวันที่ {$selectedDate}";
 
+    // Multimodal Vision: process attached image if present (JPEG, PNG, WebP)
+    $imagePart = null;
+    $rawImage = $input['image'] ?? null;
+    $imageHash = '';
+    if (is_array($rawImage) && !empty($rawImage['data'])) {
+        $mime = (string)($rawImage['mime_type'] ?? 'image/jpeg');
+        $b64 = (string)$rawImage['data'];
+        if (preg_match('/^data:([^;]+);base64,(.+)$/', $b64, $m)) {
+            $mime = $m[1];
+            $b64 = $m[2];
+        }
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (in_array($mime, $allowedMimes, true) && strlen($b64) <= 8 * 1024 * 1024) {
+            $imagePart = [
+                'inlineData' => [
+                    'mimeType' => $mime,
+                    'data' => $b64,
+                ]
+            ];
+            $imageHash = md5($b64);
+        }
+    }
+
     $historyHash = !empty($historyContents) ? md5(json_encode($historyContents)) : '';
-    $cacheKey = md5(implode('|', [$_SESSION['user']['id'] ?? 'anon', $team, $summaryStyle, $userQuestion, $selectedDate, $productionToday, $pageContext, $historyHash, (string)intdiv(time(), AI_CACHE_TTL_SECONDS)]));
+    $cacheKey = md5(implode('|', [$_SESSION['user']['id'] ?? 'anon', $team, $summaryStyle, $userQuestion, $selectedDate, $productionToday, $pageContext, $historyHash, $imageHash, (string)intdiv(time(), AI_CACHE_TTL_SECONDS)]));
     $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'mes_ai_brief_' . $cacheKey . '.json';
     if (is_file($cacheFile)) {
         $cached = json_decode((string)@file_get_contents($cacheFile), true);
@@ -222,8 +257,18 @@ try {
     }
 
     $systemInstruction = buildSystemInstruction($summaryStyle, $isLineMode, $productionToday, $selectedDate, $team, $pageContext);
-    $contents = array_merge($historyContents, [['role' => 'user', 'parts' => [['text' => $userQuestion]]]]);
+
+    $userParts = [];
+    if ($imagePart !== null) {
+        $userParts[] = $imagePart;
+    }
+    $userParts[] = ['text' => $userQuestion];
+
+    $contents = array_merge($historyContents, [['role' => 'user', 'parts' => $userParts]]);
     $scopeLog = [];
+    if ($imagePart !== null) {
+        $scopeLog[] = "วิเคราะห์ภาพถ่าย (AI Vision)";
+    }
     $toolsUsed = [];
     $replyText = null;
     $usedModel = null;

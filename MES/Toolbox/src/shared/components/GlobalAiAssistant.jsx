@@ -5,7 +5,7 @@ import { aiCopilotApi } from '../services/aiCopilotApi';
 import {
   Bot, Sparkles, Send, X, Trash2, Copy, Check, Calendar,
   Zap, FileText, RefreshCw, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare,
-  ChevronUp, ArrowRight, AlertTriangle
+  ChevronUp, ArrowRight, AlertTriangle, Camera, Globe, Image as ImageIcon
 } from 'lucide-react';
 
 function getQuickActionsForPath(pathname) {
@@ -48,7 +48,8 @@ function getQuickActionsForPath(pathname) {
   }
   return [
     'สรุปข้อมูลประจำวัน',
-    'สรุปข้อมูลของเมื่อวาน',
+    'เช็คราคากลางเหล็ก HRC โลก (ท่องเน็ต)',
+    'ค้นหาวิธีแก้ Alarm เครื่องจักร (คู่มือ)',
     'สรุปกำไรและ EBITDA เดือนนี้',
     'ประเมินเกณฑ์ 135-100-35% และ Run Rate',
     'มูลค่าเงินจมในสต็อกคงคลัง',
@@ -94,12 +95,13 @@ export default function GlobalAiAssistant() {
   const [redFlags, setRedFlags] = useState({ total_red_flags: 0, flags: [] });
   const [isRedFlagsOpen, setIsRedFlagsOpen] = useState(false);
   const [loadingRedFlags, setLoadingRedFlags] = useState(false);
+  const [attachedImage, setAttachedImage] = useState(null); // { mime, base64, previewUrl, name }
 
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
       role: 'model',
-      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ (SNC Executive Suite 2027)\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time ครอบคลุม:\n• ยอดผลิต FG, รายได้ เทียบเป้าหมาย Master Budget 2 ล้าน/วัน\n• กำไรขั้นต้น (GP), EBITDA และวินัยการเงิน 135-100-35%\n• ผลิตภาพแรงงานต่อหัว IpH (Ratio 1:1) และประสิทธิภาพส่งมอบ (Plan Attainment)\n• เจาะลึกเงินจมในสต็อกคงคลัง 845.48M (FG ปลายไลน์ B9 vs WIP)\n• แผนงานและงานค้าง WSM (Team Planner) & ข้อร้องเรียนคุณภาพ (QMS)\n• แจ้งซ่อมเครื่องจักร (PE) และ Audit Logs ตรวจจับความผิดปกติ\n\nสามารถพิมพ์ถามหรือเลือกหัวข้อด่วนด้านล่างได้เลยครับ',
+      text: 'สวัสดีครับ ผมคือ **MES AI Copilot** ผู้ช่วยฝ่ายบริหารและปฏิบัติการอัจฉริยะ (SNC Executive Suite 2027)\n\nเชื่อมต่อกับฐานข้อมูล SQL Server โรงงาน B9 แบบ Real-time พร้อมความสามารถใหม่:\n• 🌐 **สืบค้นอินเทอร์เน็ตภายนอก (Web Search):** เช็คราคากลางเหล็ก HRC, อลูมิเนียม, Alarm Code เครื่องจักร\n• 📷 **วิเคราะห์ภาพถ่าย (AI Vision):** แนบรูปถ่ายของเสีย รอยเชื่อม งานพ่นสี เพื่อตรวจจับ Defect และหาสาเหตุ\n• 📊 **ตัวชี้วัดบริหาร SNC 2027:** ยอดผลิตเทียบเป้า 2M/วัน, กฎ 135-100-35%, ผลิตภาพ IpH (Ratio 1:1), แผนงาน WSM & QMS\n\nสามารถพิมพ์ถาม แนบภาพถ่าย (หรือกด Ctrl+V วางภาพ) หรือเลือกหัวข้อด่วนได้เลยครับ',
       generated_at: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -111,6 +113,7 @@ export default function GlobalAiAssistant() {
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const chipsRef = useRef(null);
   const currentModuleName = getModuleName(location.pathname);
   const quickActions = getQuickActionsForPath(location.pathname);
@@ -118,6 +121,46 @@ export default function GlobalAiAssistant() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
+
+  const handleImageFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 8 * 1024 * 1024) {
+      setError('ขนาดรูปภาพต้องไม่เกิน 8MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const base64Data = (dataUrl || '').split(',')[1] || '';
+      setAttachedImage({
+        mime: file.type,
+        base64: base64Data,
+        previewUrl: dataUrl,
+        name: file.name
+      });
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+  };
+
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          handleImageFile(file);
+          break;
+        }
+      }
+    }
+  };
 
   // Proactive Red-Flags fetch on mount & whenever drawer opens
   useEffect(() => {
@@ -200,13 +243,16 @@ export default function GlobalAiAssistant() {
 
   const handleSend = async (overridePrompt) => {
     const textToSend = typeof overridePrompt === 'string' ? overridePrompt : input;
-    if (!textToSend.trim() || loading) return;
+    const currentImg = attachedImage;
+    if ((!textToSend.trim() && !currentImg) || loading) return;
 
+    const promptText = textToSend.trim() || (currentImg ? 'ช่วยวิเคราะห์และตรวจสอบภาพถ่ายนี้อย่างละเอียด' : '');
     const userMsgId = 'u_' + Date.now();
     const newUserMsg = {
       id: userMsgId,
       role: 'user',
-      text: textToSend.trim(),
+      text: promptText,
+      imagePreview: currentImg?.previewUrl || null,
       generated_at: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -220,16 +266,19 @@ export default function GlobalAiAssistant() {
 
     setMessages((prev) => [...prev, newUserMsg]);
     setInput('');
+    setAttachedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setLoading(true);
     setError(null);
 
     try {
       const res = await aiCopilotApi.ask({
-        prompt: textToSend.trim(),
+        prompt: promptText,
         history: historyPayload,
         pageContext: currentModuleName,
         summaryStyle,
-        team: user?.team_group || 'ALL'
+        team: user?.team_group || 'ALL',
+        image: currentImg ? { mime_type: currentImg.mime, data: currentImg.base64 } : null
       });
 
       if (res.success && res.data?.briefing) {
@@ -484,6 +533,19 @@ export default function GlobalAiAssistant() {
                       : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-bl-xs'
                     }`}
                 >
+                  {/* Attached user image in chat bubble */}
+                  {msg.imagePreview && (
+                    <div className="mb-2 overflow-hidden rounded-xl border border-white/20 shadow-xs max-w-xs">
+                      <img
+                        src={msg.imagePreview}
+                        alt="Attached defect/part"
+                        className="max-h-48 w-full object-cover rounded-xl hover:scale-102 transition-transform cursor-pointer"
+                        onClick={() => window.open(msg.imagePreview, '_blank')}
+                        title="คลิกเพื่อเปิดดูภาพขนาดเต็ม"
+                      />
+                    </div>
+                  )}
+
                   {msg.text}
 
                   {/* Scope badges & tools indicator */}
@@ -603,29 +665,87 @@ export default function GlobalAiAssistant() {
 
         {/* Input Bar */}
         <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
-          <div className="relative flex items-center">
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="ถามอะไรก็ได้ เช่น 'ขอข้อมูลเดือน 11', 'เทียบสัปดาห์นี้กับที่แล้ว'..."
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 rounded-xl pl-3 pr-12 py-2.5 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 resize-none outline-none transition-all max-h-24"
+          {/* Attached image preview bar */}
+          {attachedImage && (
+            <div className="mb-2 flex items-center justify-between p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2 min-w-0">
+                <img
+                  src={attachedImage.previewUrl}
+                  alt="Preview"
+                  className="w-10 h-10 object-cover rounded-lg border border-indigo-300 dark:border-indigo-700 shrink-0 shadow-2xs"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200 truncate">
+                    {attachedImage.name || 'ภาพถ่ายแนบ'}
+                  </p>
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400">
+                    พร้อมส่งให้ AI วิเคราะห์
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAttachedImage(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                className="p-1 rounded-full text-indigo-500 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="ยกเลิกแนบรูป"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+
+          <div className="relative flex items-center gap-1.5">
+            {/* Hidden file input for camera/image selection */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelect}
             />
+
+            {/* Photo / Camera button */}
             <button
               type="button"
-              onClick={() => handleSend()}
-              disabled={loading || !input.trim()}
-              className="absolute right-1.5 p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
-              title="ส่งคำถาม (Enter)"
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
+                attachedImage
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+              }`}
+              title="แนบรูปภาพหรือภาพถ่ายของเสีย (หรือกด Ctrl+V ในช่องพิมพ์)"
             >
-              <Send size={14} />
+              <Camera size={16} />
             </button>
+
+            <div className="relative flex-1 flex items-center">
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                placeholder={attachedImage ? "พิมพ์คำสั่ง เช่น 'วิเคราะห์ Defect ของชิ้นงานนี้'..." : "ถามอะไรก็ได้ เช่น 'เช็คราคาเหล็ก HRC', 'ยอดผลิตวันนี้' (หรือ Ctrl+V วางภาพ)..."}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 rounded-xl pl-3 pr-10 py-2.5 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 resize-none outline-none transition-all max-h-24"
+              />
+              <button
+                type="button"
+                onClick={() => handleSend()}
+                disabled={loading || (!input.trim() && !attachedImage)}
+                className="absolute right-1.5 p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
+                title="ส่งคำถาม (Enter)"
+              >
+                <Send size={14} />
+              </button>
+            </div>
           </div>
           <div className="flex justify-between items-center mt-1 px-1 text-[10px] text-slate-400">
-            <span>กด Enter เพื่อส่งคำถาม (Shift+Enter ขึ้นบรรทัดใหม่)</span>
-            <span>Gemini Function Calling + SQL Live</span>
+            <span>กด Enter ส่ง (Shift+Enter ขึ้นบรรทัดใหม่ | Ctrl+V วางภาพ)</span>
+            <span className="flex items-center gap-1"><Globe size={10} /> Web Search + AI Vision + SQL Live</span>
           </div>
         </div>
       </div>

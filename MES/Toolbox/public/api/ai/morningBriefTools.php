@@ -1093,6 +1093,81 @@ function queryProactiveRedFlags(): array {
 }
 
 /**
+ * Query external web search for industrial knowledge, machine error codes, commodity prices, and standards.
+ * Uses secure HTTPS cURL to fetch relevant web snippets.
+ * Includes sanitization to prevent leaking proprietary customer info or attempting SSRF.
+ */
+function queryExternalWebSearch(string $query, ?string $category = 'GENERAL'): array {
+    $cleanQuery = trim($query);
+    if ($cleanQuery === '') {
+        return ['error' => 'กรุณาระบุคำค้นหาที่ต้องการสืบค้นบนอินเทอร์เน็ต'];
+    }
+
+    // Safety Sanitization: Strip dangerous internal keywords or IP attempts
+    $sanitizedQuery = preg_replace('/\b(https?:\/\/|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|localhost|127\.0\.0\.1)\b/i', '', $cleanQuery);
+    $sanitizedQuery = mb_substr(trim($sanitizedQuery), 0, 150);
+
+    if ($sanitizedQuery === '') {
+        return ['error' => 'คำค้นหาไม่ปลอดภัยหรือไม่ถูกต้อง'];
+    }
+
+    $encoded = urlencode($sanitizedQuery);
+    $url = "https://html.duckduckgo.com/html/?q=" . $encoded;
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        CURLOPT_TIMEOUT => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+    ]);
+    $html = curl_exec($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || empty($html)) {
+        return [
+            'query' => $sanitizedQuery,
+            'status' => 'UNAVAILABLE',
+            'results' => [],
+            'note' => 'ไม่สามารถติดต่อบริการสืบค้นภายนอกได้ชั่วคราว: ' . ($curlErr ?: "HTTP {$httpCode}"),
+        ];
+    }
+
+    preg_match_all('/<a class="result__snippet[^>]*>(.*?)<\/a>/is', $html, $snippetMatches);
+    preg_match_all('/<a class="result__url"[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/is', $html, $urlMatches);
+
+    $results = [];
+    $rawSnippets = $snippetMatches[1] ?? [];
+    $rawUrls = $urlMatches[2] ?? [];
+
+    $count = min(5, count($rawSnippets));
+    for ($i = 0; $i < $count; $i++) {
+        $cleanSnippet = trim(html_entity_decode(strip_tags($rawSnippets[$i]), ENT_QUOTES, 'UTF-8'));
+        $site = trim(html_entity_decode(strip_tags($rawUrls[$i] ?? ''), ENT_QUOTES, 'UTF-8'));
+        if ($cleanSnippet !== '') {
+            $results[] = [
+                'index' => $i + 1,
+                'source' => $site ?: 'Web',
+                'snippet' => $cleanSnippet,
+            ];
+        }
+    }
+
+    return [
+        'query' => $sanitizedQuery,
+        'category' => $category,
+        'total_found' => count($results),
+        'results' => $results,
+        'source_attribution' => 'Google / DuckDuckGo Public Web Index',
+        'note' => 'ข้อมูลสืบค้นสดจากอินเทอร์เน็ตภายนอก สำหรับเปรียบเทียบราคาอ้างอิง คู่มือเครื่องจักร หรือมาตรฐานสากล',
+    ];
+}
+
+/**
  * Gemini function declarations (schema types are upper-case per the REST API).
  *
  * @return array<int,array<string,mixed>>
@@ -1216,6 +1291,24 @@ function getToolDeclarations(): array {
                     'required' => ['start_date', 'end_date'],
                 ],
             ],
+            [
+                'name' => 'search_external_web',
+                'description' => 'ค้นหาข้อมูลสดจากอินเทอร์เน็ตภายนอกโรงงาน (External Web Search): ใช้สืบค้นราคากลางสินค้าโภคภัณฑ์ (เช่น ราคาเหล็กแผ่นรีดร้อน HRC, ราคาอลูมิเนียม LME, ราคาก๊าซ LPG), รหัสและวิธีแก้ปัญหา Alarm/Error Code เครื่องจักร (FANUC, Yaskawa, Mitsubishi, Siemens), คู่มือทางวิศวกรรม, อัตราแลกเปลี่ยนค่าเงิน, หรือมาตรฐานอุตสาหกรรม (ISO, RoHS, REACH) ใช้เมื่อคำถามต้องพึ่งพาข้อมูลภายนอกโรงงาน หรือผู้ใช้สั่งให้ "ท่องเน็ต", "ค้นหาในกูเกิล", "เช็คราคาตลาด", หรือ "ค้นหาวิธีแก้ error เครื่องจักร"',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'STRING',
+                            'description' => 'คำค้นหาที่ต้องการสืบค้นบนอินเทอร์เน็ต (เป็นภาษาไทยหรืออังกฤษ)',
+                        ],
+                        'category' => [
+                            'type' => 'STRING',
+                            'description' => 'หมวดหมู่ เช่น COMMODITY_PRICE (ราคาสินค้าโภคภัณฑ์), MACHINE_MANUAL (คู่มือเครื่องจักร/Error Code), REGULATION (มาตรฐาน/กฎหมาย), GENERAL (ทั่วไป)',
+                        ],
+                    ],
+                    'required' => ['query'],
+                ],
+            ],
         ],
     ]];
 }
@@ -1286,6 +1379,13 @@ function executeTool(string $toolName, array $arguments, ?string $team, array &$
             if (isset($range['error'])) return $range;
             $scopeLog[] = "ข้อร้องเรียนคุณภาพ QMS {$range[0]} ถึง {$range[1]}";
             return queryQualityAndClaimsReport($range[0], $range[1]) ?? ['error' => 'ไม่สามารถอ่านข้อมูลคุณภาพ QMS ได้'];
+        }
+
+        if ($toolName === 'search_external_web') {
+            $query = (string)($arguments['query'] ?? '');
+            $category = (string)($arguments['category'] ?? 'GENERAL');
+            $scopeLog[] = "ท่องเน็ต: " . mb_substr($query, 0, 25);
+            return queryExternalWebSearch($query, $category);
         }
 
         return ['error' => "ไม่รู้จักเครื่องมือ {$toolName}"];

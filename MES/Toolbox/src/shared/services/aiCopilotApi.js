@@ -14,9 +14,10 @@ export const aiCopilotApi = {
    * @param {string} [params.summaryStyle] - 'concise' | 'formal'
    * @param {string} [params.team] - 'ALL' | 'TEAM 1' | 'TEAM 2'
    * @param {Object} [params.briefData] - Optional current brief data
+   * @param {Object} [params.image] - Optional base64 image data { mime_type, data }
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
-  ask: async ({ prompt, history = [], pageContext = '', summaryStyle = 'concise', team = 'ALL', briefData = null }) => {
+  ask: async ({ prompt, history = [], pageContext = '', summaryStyle = 'concise', team = 'ALL', briefData = null, image = null }) => {
     const url = `${import.meta.env.BASE_URL}api/ai/morningBriefAi.php`;
     const response = await axios.post(url, {
       custom_prompt: prompt,
@@ -24,7 +25,8 @@ export const aiCopilotApi = {
       page_context: pageContext,
       summary_style: summaryStyle,
       team,
-      brief_data: briefData
+      brief_data: briefData,
+      image
     }, {
       headers: {
         'Content-Type': 'application/json'
