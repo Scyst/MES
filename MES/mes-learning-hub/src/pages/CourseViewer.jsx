@@ -1520,6 +1520,24 @@ export default function CourseViewer() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-1 sm:pt-0">
+                {availableAssessmentModes.includes('expert') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssessmentMode('expert');
+                      setAssessmentResult(null);
+                      setShowReviewAnswers(false);
+                      setUserAnswers({});
+                      setAssessmentError('');
+                      setShowAssessmentModal(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 text-white hover:scale-105 active:scale-95 cursor-pointer"
+                    title="ท้าทายข้อสอบระดับสูง Expert Mode (40 ข้อ)"
+                  >
+                    <FiZap className="w-3.5 h-3.5" />
+                    <span>🔥 สอบโหมดสายเทพ (40 ข้อ)</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setIsCertificateModalOpen(true)}
                   className="px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 hover:scale-105 active:scale-95"
@@ -1903,20 +1921,36 @@ export default function CourseViewer() {
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => {
+                      setAssessmentMode('standard');
                       setAssessmentResult(null);
                       setShowReviewAnswers(false);
                       setUserAnswers({});
                       setShowAssessmentModal(true);
                     }}
-                    className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 shadow-sm ${
+                    className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
                       isDark 
                         ? 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-emerald-500/30' 
                         : 'bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm'
                     }`}
                   >
                     <FiRefreshCw className="w-4 h-4" />
-                    <span>ทำแบบทดสอบทบทวน (Retake Exam)</span>
+                    <span>สอบทบทวนโหมดปกติ (20 ข้อ)</span>
                   </button>
+                  {availableAssessmentModes.includes('expert') && (
+                    <button
+                      onClick={() => {
+                        setAssessmentMode('expert');
+                        setAssessmentResult(null);
+                        setShowReviewAnswers(false);
+                        setUserAnswers({});
+                        setShowAssessmentModal(true);
+                      }}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 text-white rounded-xl font-black transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <FiZap className="w-4 h-4" />
+                      <span>🔥 สอบโหมดสายเทพ (40 ข้อ)</span>
+                    </button>
+                  )}
                   <button 
                     onClick={() => navigate('/profile')}
                     className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2"

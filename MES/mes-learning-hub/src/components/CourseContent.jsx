@@ -73,6 +73,24 @@ import {
 } from '../data/content/EnterpriseAppLessons';
 
 import {
+  BackendApiMod1,
+  BackendApiMod2,
+  BackendApiMod3,
+  BackendApiMod4,
+  BackendApiMod5,
+  DatabaseSqlMod1,
+  DatabaseSqlMod2,
+  DatabaseSqlMod3,
+  DatabaseSqlMod4,
+  DatabaseSqlMod5,
+  IiotEdgeMod1,
+  IiotEdgeMod2,
+  IiotEdgeMod3,
+  IiotEdgeMod4,
+  IiotEdgeMod5
+} from '../data/content/EnterpriseFullStackBlueprintLessons';
+
+import {
   MachineVisionMod1,
   MachineVisionMod2,
   MachineVisionMod3,
@@ -224,6 +242,23 @@ export default function CourseContent({ courseId, moduleContent }) {
     'enterprise-app-webdev': <EnterpriseAppMod3 />,
     'enterprise-app-integration': <EnterpriseAppMod4 />,
     'enterprise-app-qa-security': <EnterpriseAppMod5 />,
+
+    // Full-Stack Continuation Track (Stage 2: Backend API, Stage 3: Database SQL, Stage 4: IIoT Edge)
+    'backend-m1-architecture': <BackendApiMod1 />,
+    'backend-m2-endpoints': <BackendApiMod2 />,
+    'backend-m3-pdo-security': <BackendApiMod3 />,
+    'backend-m4-auth-csrf': <BackendApiMod4 />,
+    'backend-m5-audit-resilience': <BackendApiMod5 />,
+    'db-m1-schema-design': <DatabaseSqlMod1 />,
+    'db-m2-sql-queries': <DatabaseSqlMod2 />,
+    'db-m3-oee-stored-procs': <DatabaseSqlMod3 />,
+    'db-m4-acid-transactions': <DatabaseSqlMod4 />,
+    'db-m5-indexing-performance': <DatabaseSqlMod5 />,
+    'iiot-m1-protocols': <IiotEdgeMod1 />,
+    'iiot-m2-plc-registers': <IiotEdgeMod2 />,
+    'iiot-m3-nodered-flows': <IiotEdgeMod3 />,
+    'iiot-m4-mqtt-uns-sql': <IiotEdgeMod4 />,
+    'iiot-m5-edge-resilience': <IiotEdgeMod5 />,
 
     // 2. Basic Machine Vision and Sensor Inspection Course for Smart Factories (8 Lessons + Legacy Aliases)
     'vision-m1-basics': <MachineVisionMod1 />,

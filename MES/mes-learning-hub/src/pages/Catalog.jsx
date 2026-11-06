@@ -1,3 +1,4 @@
+import { EnterpriseFullStackRoadmapWidget } from '../data/content/EnterpriseFullStackBlueprintLessons';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -41,6 +42,7 @@ const MAIN_CATEGORIES = [
 
 const SUB_CATEGORY_PILLS = [
   { id: 'all', label: 'ทั้งหมด (All)', tag: null },
+  { id: 'fullstack-mes', label: '💻 ซอฟต์แวร์โรงงาน & Full-Stack MES', tag: 'สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม' },
   { id: 'advanced-skills', label: '✨ ทักษะวิชาชีพขั้นสูง (Advanced Skills)', tag: 'ทักษะวิชาชีพขั้นสูง' },
   { id: 'robotics', label: '🤖 หุ่นยนต์ & AI Vision', tag: 'ระบบอัตโนมัติและหุ่นยนต์' },
   { id: 'tooling', label: '⚙️ วิศวกรรมแม่พิมพ์ & CNC', tag: 'วิศวกรรมเครื่องจักรและแม่พิมพ์' },
@@ -804,6 +806,7 @@ export default function Catalog() {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
                       isDark ? 'bg-slate-900/80 text-white' : 'bg-white text-slate-900 shadow-sm'
                     }`}>
+                      {track.id === 'enterprise-fullstack' && <FiLayers className="text-purple-400" />}
                       {track.id === 'advanced-skills' && <FiStar className="text-amber-400" />}
                       {track.id === 'robotics-automation' && <FiCpu className="text-fuchsia-400" />}
                       {track.id === 'manufacturing-tooling' && <FiTool className="text-cyan-400" />}
@@ -846,6 +849,11 @@ export default function Catalog() {
                   </div>
                 </div>
 
+                {/* Interactive 5-Stage Full-Stack Blueprint Roadmap for the Software Track */}
+                {track.id === 'enterprise-fullstack' && (
+                  <EnterpriseFullStackRoadmapWidget compact={true} />
+                )}
+
                 {/* Track Courses Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {trackCourses.map(course => renderCourseCard(course))}
@@ -875,6 +883,10 @@ export default function Catalog() {
               <span>กลับสู่หน้าแรก (จัดหมวดหมู่มาตรฐาน)</span>
             </button>
           </div>
+
+          {(selectedCategory === 'โปรแกรมและระบบดิจิทัล' || selectedSubCategory === 'fullstack-mes') && (
+            <EnterpriseFullStackRoadmapWidget compact={true} />
+          )}
 
           {processedCourses.length > 0 ? (
             <div className="course-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

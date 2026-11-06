@@ -1,3 +1,4 @@
+import { EnterpriseFullStackRoadmapWidget } from './EnterpriseFullStackBlueprintLessons';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { 
@@ -2133,6 +2134,9 @@ export function EnterpriseAppMod5() {
           </div>
         )}
       </section>
+
+      {/* 5.3 Next Step: Full-Stack Engineering Continuation Roadmap */}
+      <EnterpriseFullStackRoadmapWidget compact={false} />
     </div>
   );
 }
