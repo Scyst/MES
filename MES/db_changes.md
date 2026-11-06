@@ -4,6 +4,18 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-06 — PE Spare Parts Auto-Cleanup Zero On-Hand Records
+
+**Agent:** Antigravity  
+**Feature:** ปรับปรุง Stored Procedure `dbo.sp_MT_ProcessTransaction` ให้ลบ Record ใน `dbo.MT_INVENTORY_ONHAND` อัตโนมัติเมื่อยอดคงคลังใน Location นั้นถูกเบิกจ่ายหรือปรับลดจนเหลือ `<= 0` เพื่อป้องกันไม่ให้เกิดการ์ดรายการอะไหล่ซ้ำ (Ghost 0-PCS Card) บนหน้า PE Enterprise Spare Parts
+
+### Schema / Stored Procedure Alterations
+
+#### 1. dbo.sp_MT_ProcessTransaction
+- เพิ่มคำสั่ง `DELETE FROM dbo.MT_INVENTORY_ONHAND WHERE item_id = @item_id AND location_id = @location_id AND quantity <= 0;` หลังการ `MERGE` ยอดคงคลัง
+
+---
+
 ## 2026-11-05 — OEE Dashboard Labor Cost Parity & Dual View Enhancement
 
 **Agent:** Antigravity  

@@ -24,7 +24,7 @@ try {
                         i.min_stock, i.max_stock, 
                         ISNULL(o.quantity, 0) AS onhand_qty
                     FROM dbo.MT_ITEMS i WITH (NOLOCK)
-                    LEFT JOIN dbo.MT_INVENTORY_ONHAND o WITH (NOLOCK) ON i.item_id = o.item_id
+                    LEFT JOIN dbo.MT_INVENTORY_ONHAND o WITH (NOLOCK) ON i.item_id = o.item_id AND o.quantity > 0
                     LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id
                     WHERE i.is_active = 1
                     ORDER BY i.item_code ASC";
@@ -229,8 +229,12 @@ try {
             $delStmt->execute([$txId]);
 
             // 3. Refund stock
-            $refundStmt = $pdo->prepare("UPDATE dbo.MT_INVENTORY_ONHAND SET quantity = quantity + ?, last_updated = GETDATE() WHERE item_id = ? AND location_id = ?");
-            $refundStmt->execute([$refundQty, $tx['item_id'], $tx['location_id']]);
+            $refundStmt = $pdo->prepare("MERGE INTO dbo.MT_INVENTORY_ONHAND AS target
+                USING (SELECT ? AS item_id, ? AS location_id) AS source
+                ON (target.item_id = source.item_id AND target.location_id = source.location_id)
+                WHEN MATCHED THEN UPDATE SET target.quantity = target.quantity + ?, target.last_updated = GETDATE()
+                WHEN NOT MATCHED THEN INSERT (item_id, location_id, quantity, last_updated) VALUES (source.item_id, source.location_id, ?, GETDATE());");
+            $refundStmt->execute([$tx['item_id'], $tx['location_id'], $refundQty, $refundQty]);
 
             // 4. Recalculate Work Order Cost
             $costSql = "SELECT ISNULL(SUM(ABS(t.quantity) * i.unit_price), 0) AS total_cost
@@ -405,6 +409,7 @@ try {
                 ON (target.item_id = source.item_id AND target.location_id = source.location_id)
                 WHEN MATCHED THEN UPDATE SET target.quantity = target.quantity + ?, target.last_updated = GETDATE()
                 WHEN NOT MATCHED THEN INSERT (item_id, location_id, quantity, last_updated) VALUES (source.item_id, source.location_id, ?, GETDATE());");
+            $cleanZeroStmt = $pdo->prepare("DELETE FROM dbo.MT_INVENTORY_ONHAND WHERE item_id = ? AND location_id = ? AND quantity <= 0");
 
             foreach ($items as $item) {
                 $itemId = (int)($item['item_id'] ?? 0);
@@ -433,6 +438,7 @@ try {
 
                 $logStmt->execute([$itemId, $fromId, -$quantity, 'TRANSFER_OUT', $noteOut, $userId]);
                 $mergeStmt->execute([$itemId, $fromId, -$quantity, -$quantity]);
+                $cleanZeroStmt->execute([$itemId, $fromId]);
                 $logStmt->execute([$itemId, $toId, $quantity, 'TRANSFER_IN', $noteIn, $userId]);
                 $mergeStmt->execute([$itemId, $toId, $quantity, $quantity]);
             }
