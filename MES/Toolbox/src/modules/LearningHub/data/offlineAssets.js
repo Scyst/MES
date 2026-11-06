@@ -40,6 +40,50 @@ export const CATEGORY_OFFLINE_IMAGES = {
   'การบริหารและการเพิ่มผลผลิต': `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 340"><defs><linearGradient id="bg6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23130826"/><stop offset="100%" stop-color="%23311042"/></linearGradient><linearGradient id="neon6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23f472b6"/><stop offset="100%" stop-color="%23c084fc"/></linearGradient><pattern id="grid6" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" fill="none" stroke="%237e22ce" stroke-width="0.5" stroke-opacity="0.25"/></pattern></defs><rect width="600" height="340" fill="url(%23bg6)"/><rect width="600" height="340" fill="url(%23grid6)"/><path d="M 210 185 A 95 95 0 0 1 390 185" fill="none" stroke="%234c1d95" stroke-width="16" stroke-linecap="round"/><path d="M 210 185 A 95 95 0 0 1 365 125" fill="none" stroke="url(%23neon6)" stroke-width="16" stroke-linecap="round"/><circle cx="300" cy="185" r="18" fill="%23581c87" stroke="%23e879f9" stroke-width="3"/><line x1="300" y1="185" x2="350" y2="130" stroke="white" stroke-width="4.5" stroke-linecap="round"/><text x="300" y="165" font-family="monospace" font-size="20" font-weight="bold" fill="white" text-anchor="middle">88.5%</text><text x="45" y="42" font-family="monospace" font-size="11" font-weight="bold" fill="%23f472b6" letter-spacing="1.5">OEE::OVERALL_EQUIPMENT_EFFICIENCY</text><text x="45" y="58" font-family="monospace" font-size="10" fill="%237e22ce">BENCHMARK: >85% · 8 WASTES ELIMINATED</text><rect x="135" y="275" width="330" height="36" rx="18" fill="%230f172a" fill-opacity="0.85" stroke="%237e22ce" stroke-width="1"/><text x="300" y="298" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="800" fill="%23f8fafc" letter-spacing="2" text-anchor="middle">PRODUCTIVITY &amp; LEAN GEMBA</text></svg>`
 };
 
+// Industrial Photography Repository for Courses (Offline Air-gapped Assets)
+export const COURSE_PHOTO_MAP = {
+  'c-ppap': './images/courses/c-ppap.jpg',
+  'c-iso-9001': './images/courses/c-iso-9001.jpg',
+  'c-iso-14001': './images/courses/c-iso-14001.jpg',
+  'c-iso-45001': './images/courses/c-iso-45001.jpg',
+  'c-iso-17025': './images/courses/c-iso-17025.jpg',
+  'c-customer-audits': './images/courses/c-customer-audits.jpg',
+  'c-live-qa': './images/courses/c-live-qa.jpg',
+  'c3': './images/courses/c3.jpg',
+  'c4': './images/courses/c4.jpg',
+  'c1': './images/courses/c1.jpg',
+  'c2': './images/courses/c2.jpg',
+  'c-enterprise-app': './images/courses/c-enterprise-app.jpg',
+  'c-industrial-backend-api': './images/courses/c-industrial-backend-api.jpg',
+  'c-industrial-database-sql': './images/courses/c-industrial-database-sql.jpg',
+  'c-iiot-nodered-edge': './images/courses/c-iiot-nodered-edge.jpg',
+  'c-machine-vision': './images/courses/c-machine-vision.jpg',
+  'c-cad-cam': './images/courses/c-cad-cam.jpg',
+  'c-cnc-4-0': './images/courses/c-cnc-4-0.jpg',
+  'c-ev-conversion': './images/courses/c-ev-conversion.jpg',
+  'c-plc-automation': './images/courses/c-plc-automation.jpg',
+  'c-robot-automation': './images/courses/c-robot-automation.jpg',
+  'c-machine-vision-v2': './images/courses/c-machine-vision-v2.jpg',
+  'enterprise-fullstack': './images/courses/enterprise-fullstack.jpg',
+  'advanced-skills': './images/courses/advanced-skills.jpg',
+  'robotics-automation': './images/courses/robotics-automation.jpg',
+  'manufacturing-tooling': './images/courses/manufacturing-tooling.jpg',
+  'quality-iso-audits': './images/courses/quality-iso-audits.jpg',
+};
+
+export function getCourseImage(courseId, category = '') {
+  if (COURSE_PHOTO_MAP[courseId]) {
+    return COURSE_PHOTO_MAP[courseId];
+  }
+  if (COURSE_OFFLINE_IMAGES[courseId]) {
+    return COURSE_OFFLINE_IMAGES[courseId];
+  }
+  if (category && CATEGORY_OFFLINE_IMAGES[category]) {
+    return CATEGORY_OFFLINE_IMAGES[category];
+  }
+  return DEFAULT_COURSE_IMAGE;
+}
+
 export const DEFAULT_COURSE_IMAGE = CATEGORY_OFFLINE_IMAGES['เครื่องจักรและวิศวกรรมการผลิต'];
 export const COURSE_OFFLINE_IMAGES = {
   // Stage 1: Enterprise Front-End & Industrial UI

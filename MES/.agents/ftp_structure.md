@@ -298,6 +298,7 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/utility
 /Toolbox/assets
 /Toolbox/images
+/Toolbox/images/courses
 /Toolbox/images/defects
 /Toolbox/images/enterprise_slides
 /Toolbox/images/hardware
