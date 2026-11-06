@@ -36,7 +36,7 @@ export const FULLSTACK_ROADMAP_STAGES = [
     color: 'from-purple-600 to-fuchsia-600',
     borderColor: 'border-purple-500/40',
     bgGlow: 'bg-purple-500/10',
-    textColor: 'text-purple-300',
+    textColor: 'text-purple-600 dark:text-purple-300',
     skills: ['ISA-95 & IT/OT', 'IEC 60204-1 UX/UI', 'HTML5 & Flexbox', 'JS ES6+ & DOM', 'Fetch API & Webhook', 'UAT & BVA Testing'],
     summary: 'พื้นฐานการสร้างหน้าจอ Dashboard โรงงาน, การควบคุม DOM ด้วย JavaScript, และการดึงข้อมูลจาก API ที่มีอยู่แล้วมาแสดงผลและแจ้งเตือน'
   },
@@ -50,7 +50,7 @@ export const FULLSTACK_ROADMAP_STAGES = [
     color: 'from-blue-600 to-cyan-600',
     borderColor: 'border-cyan-500/40',
     bgGlow: 'bg-cyan-500/10',
-    textColor: 'text-cyan-300',
+    textColor: 'text-cyan-600 dark:text-cyan-300',
     skills: ['REST API Server', 'JSON Contract', 'PDO Prepared Statements', 'SQL Injection Defense', 'Session / JWT / RBAC', 'CSRF & Audit Log'],
     summary: 'ก้าวข้ามจากผู้เรียกใช้ API สู่ "ผู้สร้าง API Server": เขียนโค้ดฝั่งหลังบ้านรับคำสั่ง GET/POST/PUT/DELETE, ตรวจสอบสิทธิ์, และเชื่อมฐานข้อมูลอย่างปลอดภัย'
   },
@@ -64,7 +64,7 @@ export const FULLSTACK_ROADMAP_STAGES = [
     color: 'from-emerald-600 to-teal-600',
     borderColor: 'border-emerald-500/40',
     bgGlow: 'bg-emerald-500/10',
-    textColor: 'text-emerald-300',
+    textColor: 'text-emerald-600 dark:text-emerald-300',
     skills: ['ER Schema Design', 'Work Order & BOM', 'SQL JOIN & Windowing', 'OEE Stored Procedures', 'ACID Transactions', 'Indexing & Tuning'],
     summary: 'ออกแบบตารางฐานข้อมูลการผลิตจริงบน SQL Server, เขียนคำสั่ง SQL วิเคราะห์ยอดผลิต/ของเสีย, คำนวณ OEE อัตโนมัติ, และทำ Transaction ป้องกันสต็อกเพี้ยน'
   },
@@ -78,7 +78,7 @@ export const FULLSTACK_ROADMAP_STAGES = [
     color: 'from-amber-500 to-orange-600',
     borderColor: 'border-amber-500/40',
     bgGlow: 'bg-amber-500/10',
-    textColor: 'text-amber-300',
+    textColor: 'text-amber-700 dark:text-amber-300',
     skills: ['Modbus TCP & Registers', 'OPC-UA & MQTT UNS', 'Node-RED Flows', 'ADC Signal Scaling', 'Store-and-Forward', 'OT Network Security'],
     summary: 'เชื่อมต่อเครื่องจักรจริงเข้าสู่ฐานข้อมูล: ใช้ Node-RED อ่านค่า Register จาก PLC ผ่าน Modbus TCP / MQTT แล้วบันทึกเข้า SQL Server อัตโนมัติแบบเรียลไทม์'
   },
@@ -93,7 +93,7 @@ export const FULLSTACK_ROADMAP_STAGES = [
     color: 'from-rose-600 to-pink-600',
     borderColor: 'border-rose-500/40',
     bgGlow: 'bg-rose-500/10',
-    textColor: 'text-rose-300',
+    textColor: 'text-rose-600 dark:text-rose-300',
     skills: ['React 18 + Vite', 'Component Architecture', 'State & Custom Hooks', 'Defense-in-Depth', 'SAP ERP Sync', 'Production Deployment'],
     summary: 'บูรณาการทุกทักษะเข้าสู่สถาปัตยกรรมระบบ MES ระดับองค์กรด้วย React + Vite เชื่อมต่อระบบวางแผนทรัพยากร SAP ERP ครบวงจร'
   }
@@ -136,7 +136,7 @@ export function EnterpriseFullStackRoadmapWidget({ compact = false }) {
           return (
             <div
               key={item.stage}
-              className={`rounded-2xl border p-4 flex flex-col justify-between transition-all duration-300 relative overflow-hidden ${item.borderColor} bg-slate-950/85 hover:border-white/40 hover:-translate-y-0.5 shadow-lg`}
+              className={`rounded-2xl border p-4 flex flex-col justify-between transition-all duration-300 relative overflow-hidden ${item.borderColor} bg-white dark:bg-slate-950/85 hover:border-slate-400 dark:hover:border-white/40 hover:-translate-y-0.5 shadow-md dark:shadow-lg`}
             >
               <div>
                 <div className="flex items-center justify-between gap-1 mb-2">
@@ -156,13 +156,13 @@ export function EnterpriseFullStackRoadmapWidget({ compact = false }) {
                   )}
                 </div>
 
-                <h3 className="text-sm font-black text-white leading-snug mb-1.5">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white leading-snug mb-1.5">
                   {item.title}
                 </h3>
-                <p className="text-[11px] font-semibold text-amber-300/90 mb-2">
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-300/90 mb-2">
                   🎯 {item.role}
                 </p>
-                <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
                   {item.summary}
                 </p>
 
@@ -172,7 +172,7 @@ export function EnterpriseFullStackRoadmapWidget({ compact = false }) {
                     {item.skills.map((sk, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 font-medium"
+                        className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-medium"
                       >
                         {sk}
                       </span>
@@ -186,7 +186,7 @@ export function EnterpriseFullStackRoadmapWidget({ compact = false }) {
                   <button
                     type="button"
                     onClick={() => setExpandedStage(isExpanded ? null : item.stage)}
-                    className="text-[11px] text-slate-400 hover:text-white text-left font-medium cursor-pointer"
+                    className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-left font-medium cursor-pointer"
                   >
                     {isExpanded ? '▲ ซ่อนทักษะย่อย' : `▼ ดูทักษะที่ได้รับ (${item.skills.length} ทักษะ)`}
                   </button>
