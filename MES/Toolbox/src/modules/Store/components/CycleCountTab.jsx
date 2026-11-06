@@ -18,6 +18,7 @@ export default function CycleCountTab({ onNavigateTab }) {
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
+  const [showMobileIraDetails, setShowMobileIraDetails] = useState(false);
 
   // Modals
   const [isZoneSettingsOpen, setIsZoneSettingsOpen] = useState(false);
@@ -152,8 +153,9 @@ export default function CycleCountTab({ onNavigateTab }) {
   return (
     <div className="flex flex-col h-full space-y-3 animate-fadeIn relative pb-20">
       {/* 1. IRA Health & Metrics Header Card */}
-      <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex-shrink-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+      <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs flex-shrink-0">
+        {/* Desktop Header */}
+        <div className="hidden sm:flex flex-row items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
               <Award className="w-4 h-4" />
@@ -175,7 +177,7 @@ export default function CycleCountTab({ onNavigateTab }) {
                 setIsHealthModalOpen(true);
                 fetchHealthMetrics();
               }}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1.5 border border-blue-200 dark:border-blue-800"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 cursor-pointer"
             >
               <BarChart2 className="w-3.5 h-3.5" />
               <span>รายงานสุขภาพคลัง (IRA)</span>
@@ -183,7 +185,7 @@ export default function CycleCountTab({ onNavigateTab }) {
             <button
               type="button"
               onClick={() => setIsZoneSettingsOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 dark:border-slate-700"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 cursor-pointer"
             >
               <Settings className="w-3.5 h-3.5" />
               <span>จัดการโซน</span>
@@ -191,8 +193,51 @@ export default function CycleCountTab({ onNavigateTab }) {
           </div>
         </div>
 
-        {/* 3 Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5">
+        {/* Mobile Mini Header (Single Sleek Row on Mobile) */}
+        <div className="sm:hidden flex items-center justify-between">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 font-bold">
+              <Award className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0 flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+              <span>IRA {overall.item_ira !== undefined ? `${Number(overall.item_ira).toFixed(1)}%` : '98.5%'}</span>
+              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 font-bold">A+</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-[11px] text-blue-600 font-mono font-bold">{completedLocationsCount}/{totalLocationsCount}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsHealthModalOpen(true);
+                fetchHealthMetrics();
+              }}
+              title="รายงาน IRA"
+              className="p-1 rounded-lg text-blue-700 bg-blue-50 border border-blue-200"
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsZoneSettingsOpen(true)}
+              title="จัดการโซน"
+              className="p-1 rounded-lg text-slate-700 bg-slate-100 border border-slate-200"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMobileIraDetails(!showMobileIraDetails)}
+              className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-1 rounded-lg border border-slate-200 cursor-pointer"
+            >
+              {showMobileIraDetails ? 'ย่อ' : 'รายละเอียด'}
+            </button>
+          </div>
+        </div>
+
+        {/* 3 Metric Cards: Always visible on desktop, toggleable on mobile */}
+        <div className={`${showMobileIraDetails ? 'grid' : 'hidden sm:grid'} grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 mt-2 sm:mt-0 border-t border-slate-100 dark:border-slate-800 sm:border-0`}>
           {/* 1. Item-Level IRA */}
           <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-100 dark:border-slate-700/80 flex items-center justify-between shadow-2xs">
             <div>
@@ -265,25 +310,25 @@ export default function CycleCountTab({ onNavigateTab }) {
       </div>
 
       {/* 2. Filter & Toolbar */}
-      <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 flex-shrink-0">
+      <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 flex-shrink-0">
         {/* Left: Search & Zone Dropdown */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <div className="relative flex-1 min-w-0">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="ค้นหาชื่อคลังสินค้า (Location เช่น A1, BR-L1)..."
-              className="w-full text-xs pl-9 pr-8 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              placeholder="ค้นหาคลัง (เช่น A1, B1)..."
+              className="w-full text-xs pl-8 pr-7 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -291,9 +336,9 @@ export default function CycleCountTab({ onNavigateTab }) {
           <select
             value={selectedZone}
             onChange={(e) => setSelectedZone(e.target.value)}
-            className="text-xs py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 font-semibold cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+            className="text-xs py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 font-semibold cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 max-w-[130px] sm:max-w-[160px] truncate flex-shrink-0"
           >
-            <option value="ALL">ทุกโซน ({locations.length} คลัง)</option>
+            <option value="ALL">ทุกโซน ({locations.length})</option>
             {zones.map((z, idx) => {
               const zoneVal = typeof z === 'string' ? z : (z?.zone_name || z?.name || String(z));
               return (
@@ -308,18 +353,18 @@ export default function CycleCountTab({ onNavigateTab }) {
             type="button"
             onClick={fetchData}
             title="รีเฟรชข้อมูลคลัง"
-            className="h-9 w-9 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer flex-shrink-0"
+            className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
-        {/* Right: Status Filter Pills (Killer UX) */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Right: Status Filter Pills (Single-row horizontal scroll on mobile) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap flex-nowrap py-0.5 -mx-0.5 px-0.5 sm:mx-0 sm:px-0">
           <button
             type="button"
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               statusFilter === 'ALL'
                 ? 'bg-slate-900 text-white shadow-2xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
@@ -331,46 +376,46 @@ export default function CycleCountTab({ onNavigateTab }) {
           <button
             type="button"
             onClick={() => setStatusFilter('PENDING')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               statusFilter === 'PENDING'
                 ? 'bg-slate-700 text-white shadow-2xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-slate-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
             <span>รอตรวจ ({statusCounts.pending})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setStatusFilter('IN_PROGRESS')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               statusFilter === 'IN_PROGRESS'
                 ? 'bg-amber-600 text-white shadow-2xs'
                 : 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             <span>กำลังเช็ค ({statusCounts.inProgress})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setStatusFilter('COMPLETED')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               statusFilter === 'COMPLETED'
                 ? 'bg-emerald-600 text-white shadow-2xs'
                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
             }`}
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-3 h-3" />
             <span>เสร็จสิ้น ({statusCounts.completed})</span>
           </button>
         </div>
       </div>
 
       {/* 3. Visual Warehouse Map Area (Scrollable with Responsive Rack Slots) */}
-      <div className="flex-1 overflow-y-auto space-y-3.5 pb-24">
+      <div className={`flex-1 overflow-y-auto space-y-3 ${selectedLocation ? 'pb-28' : 'pb-6'}`}>
         {loading && locations.length === 0 ? (
           <div className="py-24 text-center text-slate-400">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-3" />
@@ -498,48 +543,49 @@ export default function CycleCountTab({ onNavigateTab }) {
         )}
       </div>
 
-      {/* 4. Sticky Bottom Action Bar (Clear, Prominent & Unobtrusive) */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-30 shadow-2xl">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
-          {selectedLocation ? (
-            <>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                  <span>คลังที่เลือก:</span>
-                  <span className="font-mono font-black text-sm text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                    {selectedLocation.location_name}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                  {selectedLocation.zone_name} · สถานะ: {selectedLocation.session_status === 'COMPLETED' ? 'ตรวจเสร็จแล้ว' : selectedLocation.session_status === 'IN_PROGRESS' ? 'กำลังตรวจนับ' : 'ยังไม่ตรวจ'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleStartSession(selectedLocation)}
-                className="py-3 px-5 rounded-xl font-black text-xs sm:text-sm text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/25 cursor-pointer touch-manipulation shrink-0"
-              >
-                <Play className="w-4 h-4 fill-current" />
-                <span>
-                  {selectedLocation.session_status === 'IN_PROGRESS' 
-                    ? 'นับสต็อกต่อ (Continue)' 
-                    : selectedLocation.session_status === 'COMPLETED'
-                    ? 'ตรวจนับซ้ำ (Recount)'
-                    : 'เริ่มตรวจนับคลังนี้'}
+      {/* 4. Sticky Bottom Action Bar - ONLY show when a location is selected */}
+      {selectedLocation && (
+        <div className="fixed bottom-0 left-0 right-0 p-2.5 sm:p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-30 shadow-2xl animate-slideUp">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-2.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="hidden sm:inline">คลังที่เลือก:</span>
+                <span className="font-mono font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md truncate">
+                  {selectedLocation.location_name}
                 </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </>
-          ) : (
-            <div className="w-full text-center py-1 text-slate-400 text-xs flex items-center justify-center gap-1.5 font-medium">
-              <MapPin className="w-4 h-4 text-blue-500" />
-              <span>แตะหรือคลิกเลือกคลังสินค้าบนแผนผังด้านบนเพื่อเริ่มตรวจนับสต็อก (Blind Count)</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLocation(null)}
+                  className="text-slate-400 hover:text-slate-600 p-0.5 text-xs cursor-pointer ml-1"
+                  title="ยกเลิกการเลือก"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">
+                {selectedLocation.zone_name} · {selectedLocation.session_status === 'COMPLETED' ? 'ตรวจเสร็จแล้ว' : selectedLocation.session_status === 'IN_PROGRESS' ? 'กำลังตรวจนับ' : 'ยังไม่ตรวจ'}
+              </p>
             </div>
-          )}
+
+            <button
+              type="button"
+              onClick={() => handleStartSession(selectedLocation)}
+              className="py-2.5 px-4 sm:py-3 sm:px-5 rounded-xl font-bold text-xs sm:text-sm text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition-all flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-blue-500/25 cursor-pointer touch-manipulation shrink-0"
+            >
+              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
+              <span>
+                {selectedLocation.session_status === 'IN_PROGRESS' 
+                  ? 'นับสต็อกต่อ' 
+                  : selectedLocation.session_status === 'COMPLETED'
+                  ? 'ตรวจนับซ้ำ'
+                  : 'เริ่มตรวจนับคลังนี้'}
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modals */}
       <ZoneSettingsModal

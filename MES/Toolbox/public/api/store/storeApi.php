@@ -21,15 +21,21 @@ try {
         throw new Exception('Unauthorized Access');
     }
 
+    $jsonPayload = [];
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $jsonPayload = json_decode(file_get_contents('php://input'), true);
-        if (is_array($jsonPayload)) {
-            $_POST = array_merge($_POST, $jsonPayload);
+        $rawInput = file_get_contents('php://input');
+        if (!empty($rawInput)) {
+            $decoded = json_decode($rawInput, true);
+            if (is_array($decoded)) {
+                $jsonPayload = $decoded;
+                $_POST = array_merge($_POST, $decoded);
+                $_REQUEST = array_merge($_REQUEST, $decoded);
+            }
         }
     }
 
     $currentUser = $_SESSION['user'];
-    $action = $_REQUEST['action'] ?? '';
+    $action = $_REQUEST['action'] ?? $_POST['action'] ?? $jsonPayload['action'] ?? '';
     $storeLocationId = 1008;
     $writeActions = [
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
@@ -44,8 +50,9 @@ try {
     ];
     
     if (in_array($action, $writeActions) && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        $clientToken = $_POST['csrf_token'] ?? json_decode(file_get_contents('php://input'), true)['csrf_token'] ?? '';
-        if (empty($clientToken) || !hash_equals($_SESSION['csrf_token'], $clientToken)) {
+        $clientToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? $jsonPayload['csrf_token'] ?? '';
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+        if (empty($clientToken) || empty($sessionToken) || !hash_equals($sessionToken, $clientToken)) {
             http_response_code(403);
             throw new Exception('CSRF Token Validation Failed. Please refresh the page.');
         }
