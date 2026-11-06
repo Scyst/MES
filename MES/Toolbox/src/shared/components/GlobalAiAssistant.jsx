@@ -205,7 +205,10 @@ export default function GlobalAiAssistant() {
           }
         })
         .catch((err) => {
-          console.warn('[RED_FLAGS_FETCH_FAILED]', err);
+          const status = err?.response?.status || err?.status;
+          if (status !== 401) {
+            console.warn('[RED_FLAGS_FETCH_FAILED]', err);
+          }
         })
         .finally(() => {
           if (isMounted) setLoadingRedFlags(false);

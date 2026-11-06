@@ -162,7 +162,7 @@ export default function AuditLogsTab() {
                     </td>
                     <td className="py-2 px-3 w-[110px]">
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        log.action === 'API_ERROR' || log.action === 'SYSTEM_ERROR' ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300' :
+                        log.action === 'API_ERROR' || log.action === 'SYSTEM_ERROR' || log.action === 'LOGIN_FAILED' || log.action === 'LOGIN_BLOCKED' ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300' :
                         log.action === 'LOGIN' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' :
                         log.action === 'UPDATE' || log.action === 'UPDATE_USER' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300' :
                         log.action === 'DELETE' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300' :

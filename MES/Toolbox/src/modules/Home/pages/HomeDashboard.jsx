@@ -131,7 +131,10 @@ export default function HomeDashboard() {
         }
       }
     } catch (error) {
-      console.error('Error fetching home data:', error);
+      const status = error?.response?.status || error?.status;
+      if (status !== 401) {
+        console.error('Error fetching home data:', error);
+      }
     } finally {
       setLoading(false);
     }
