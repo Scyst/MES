@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { getAllMergedCourses, getCurrentUser, isUserInstructorOrAdmin } from '../data/communityStore';
 import { getUserCourseStatus } from '../data/trainingAuditStore';
-import { DEFAULT_COURSE_IMAGE, COURSE_OFFLINE_IMAGES, CATEGORY_OFFLINE_IMAGES } from '../data/offlineAssets';
+import { DEFAULT_COURSE_IMAGE, COURSE_OFFLINE_IMAGES, CATEGORY_OFFLINE_IMAGES, COURSE_PHOTO_MAP } from '../data/offlineAssets';
 import { CURATED_TRACKS } from '../data/courses';
 import { 
   FiClock, 
@@ -245,7 +245,7 @@ export default function Catalog() {
       >
         <div className="card-image-wrap relative h-48 w-full overflow-hidden bg-slate-950 flex-shrink-0 border-b border-slate-700/60">
           <img 
-            src={course.image || DEFAULT_COURSE_IMAGE} 
+            src={(course.image && !course.image.startsWith('data:image/svg+xml')) ? course.image : (COURSE_PHOTO_MAP[course.id] || course.image || DEFAULT_COURSE_IMAGE)} 
             alt={course.title} 
             className="card-image w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
             onError={(e) => { 
