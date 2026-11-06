@@ -2275,13 +2275,24 @@ try {
         case 'get_location_zones':
             $stmt = $pdo->query("
                 SELECT 
-                    location_id, 
-                    location_name, 
-                    ISNULL(zone_name, N'อื่น ๆ (Others)') as zone_name,
-                    production_line
-                FROM dbo.LOCATIONS WITH (NOLOCK)
-                WHERE location_type = 'STORE' AND is_active = 1
-                ORDER BY location_name
+                    l.location_id, 
+                    l.location_name, 
+                    ISNULL(l.zone_name, N'อื่น ๆ (Others)') as zone_name,
+                    l.production_line,
+                    s.status as session_status,
+                    s.session_id,
+                    (SELECT COUNT(*) 
+                     FROM dbo.INVENTORY_CYCLE_COUNTS cc WITH (NOLOCK) 
+                     WHERE cc.location_id = l.location_id AND cc.is_flagged_recount = 1 AND cc.status = 'PENDING') as recount_needed_count
+                FROM dbo.LOCATIONS l WITH (NOLOCK)
+                OUTER APPLY (
+                    SELECT TOP 1 cs.session_id, cs.status 
+                    FROM dbo.CYCLE_COUNT_SESSIONS cs WITH (NOLOCK)
+                    WHERE cs.location_id = l.location_id
+                    ORDER BY cs.session_id DESC
+                ) s
+                WHERE l.location_type = 'STORE' AND l.is_active = 1
+                ORDER BY l.location_name
             ");
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
