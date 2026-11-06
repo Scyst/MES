@@ -295,12 +295,16 @@ export const courses = [
   // --- Category: โปรแกรมและระบบดิจิทัล (Software & Digital Systems) ---
   {
     id: 'c3',
-    title: 'React + Vite Architecture Guide',
+    title: 'Stage 5A: React + Vite Production Architecture Guide (MES SPA)',
     description: 'คู่มือโครงสร้างและสถาปัตยกรรมแอปพลิเคชันเว็บโรงงาน (React + Vite): โครงสร้างโฟลเดอร์, การจัดการ State, โมดูลระบบ, เทคโนโลยี Stack, และมาตรฐานการพัฒนาโปรแกรมร่วมกันของทีมวิศวกรรม',
-    instructor: 'Engineering Team',
+    instructor: 'Engineering Team (MES Architecture Group)',
     duration: '1.5 hours',
     category: 'โปรแกรมและระบบดิจิทัล',
     image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
+    tags: ["React", "Vite", "SPA", "Full-Stack", "MES", "Frontend"],
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -326,12 +330,16 @@ export const courses = [
   },
   {
     id: 'c4',
-    title: 'Enterprise System & Security (MES x SAP)',
+    title: 'Stage 5B: Enterprise System & Security Architecture (MES x SAP)',
     description: 'คู่มือระบบหลังบ้าน ความปลอดภัยเครือข่าย และการเชื่อมต่อข้อมูลองค์กร: แผนผังสถาปัตยกรรม Edge-App-ERP, การป้องกันภัยคุกคาม (CSRF/SQL Injection), ระบบสิทธิ์ผู้ใช้งาน (RBAC), และการเชื่อมโยงระบบ SAP',
-    instructor: 'Engineering Team',
+    instructor: 'Engineering Team (MES Security Group)',
     duration: '2.5 hours',
     category: 'โปรแกรมและระบบดิจิทัล',
     image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
+    tags: ["Security", "SAP", "ERP", "CSRF", "RBAC", "Full-Stack", "MES"],
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
     modules: [
       {
         id: 'm1',
@@ -464,6 +472,467 @@ export const courses = [
         id: 'm5',
         title: '5. Software Testing, QA Standards & Deployment (Test Case, UAT, Documentation & Cybersecurity)',
         content: 'enterprise-app-qa-security'
+      }
+    ]
+  },
+
+
+  // =========================================================================
+  // --- Enterprise Full-Stack Continuation Track (Stages 2, 3, 4) ---
+  // =========================================================================
+  {
+    id: 'c-industrial-backend-api',
+    title: 'Stage 2: Industrial Backend & RESTful API Engineering (Node.js & PHP PDO)',
+    isFeatured: false,
+    featuredBadge: '🚀 STAGE 2 · BACKEND & API SERVER',
+    description: 'หลักสูตรต่อยอดจาก Front-End สู่การเป็นผู้สร้าง REST API Server ระดับโรงงาน: สถาปัตยกรรมฝั่ง Server, มาตรฐาน JSON Contract, การรับส่งข้อมูล GET/POST/PUT/DELETE, การเชื่อมต่อฐานข้อมูลด้วย PDO Prepared Statements ป้องกัน SQL Injection 100%, ระบบยืนยันตัวตน Session/JWT/RBAC/CSRF, และการบันทึก Audit Trail มาตรฐาน ISO',
+    instructor: 'ทีมวิศวกรรมซอฟต์แวร์และสถาปัตยกรรมระบบ (MES Full-Stack Academy)',
+    duration: '18 hours (3 days)',
+    category: 'โปรแกรมและระบบดิจิทัล',
+    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
+    tags: ["Backend", "REST API", "PHP", "Node.js", "PDO", "SQL Injection", "CSRF", "Full-Stack", "MES"],
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
+    modules: [
+      {
+        id: 'm1',
+        title: '1. สถาปัตยกรรมฝั่ง Server & การออกแบบ RESTful API Contract มาตรฐานโรงงาน',
+        content: 'backend-m1-architecture',
+        checkpoint: {
+          question: 'ตามมาตรฐานสถาปัตยกรรม MES API ทุก Endpoint ต้องส่งผลลัพธ์ JSON กลับในโครงสร้าง 3 คีย์หลักใดเสมอ?',
+          options: [
+            'A: {"success": bool, "data": mixed, "message": string}',
+            'B: {"status": int, "html": string, "error": bool}',
+            'C: {"ok": true, "rows": array}',
+            'D: ส่งเป็นข้อความธรรมดาโดยไม่ต้องแปลงเป็น JSON'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในหัวข้อ API Response Contract มาตรฐานเดียวกันทั้งองค์กร',
+          explanation: 'การกำหนดมาตรฐาน {"success", "data", "message"} เหมือนกันทุก API ช่วยให้ฝั่ง Front-End ดักจับสถานะและแสดงแจ้งเตือนได้อย่างเป็นระบบ'
+        }
+      },
+      {
+        id: 'm2',
+        title: '2. การสร้าง API Endpoint จริง (GET, POST, PUT, DELETE) & Server-Side Validation',
+        content: 'backend-m2-endpoints',
+        checkpoint: {
+          question: 'เหตุใดจึงต้องตรวจสอบความถูกต้องของข้อมูล (Input Validation) ที่ฝั่ง Server ซ้ำอีกครั้ง แม้ว่าหน้าเว็บจะมี JavaScript ตรวจแล้ว?',
+          options: [
+            'A: เพราะการตรวจที่ฝั่ง Client สามารถถูกข้ามหรือแก้ไขผ่าน DevTools / การยิง API ตรงได้เสมอ',
+            'B: เพื่อทำให้เซิร์ฟเวอร์ทำงานช้าลง',
+            'C: เพราะเบราว์เซอร์ไม่สามารถรัน JavaScript ได้',
+            'D: ไม่จำเป็นต้องตรวจซ้ำ'
+          ],
+          correctAnswer: 0,
+          hint: 'พิจารณาหลักการ Client-side validation is a UX convenience, NOT a security boundary',
+          explanation: 'ผู้ไม่หวังดีสามารถส่ง HTTP Request ตรงเข้า API โดยไม่ผ่านหน้าเว็บ ดังนั้น Server จึงเป็นปราการด่านสุดท้ายที่ต้องตรวจสอบชนิดข้อมูลและขอบเขตตัวเลขทุกครั้ง'
+        }
+      },
+      {
+        id: 'm3',
+        title: '3. การเชื่อมต่อฐานข้อมูลด้วย Prepared Statements & การป้องกัน SQL Injection 100%',
+        content: 'backend-m3-pdo-security',
+        checkpoint: {
+          question: 'กลไกใดที่ป้องกันช่องโหว่ SQL Injection ได้อย่างเด็ดขาด 100% ในการเขียนโค้ดเชื่อมต่อฐานข้อมูล?',
+          options: [
+            'A: การใช้ Parameterized Queries (PDO Prepared Statements) แยกคำสั่ง SQL ออกจากข้อมูลตัวแปร',
+            'B: การนำตัวแปร $_POST มาต่อ String เข้ากับคำสั่ง SELECT โดยตรง',
+            'C: การซ่อนชื่อตารางด้วยรหัสลับ',
+            'D: การตรวจสอบเฉพาะที่หน้า HTML ด้วย required attribute'
+          ],
+          correctAnswer: 0,
+          hint: 'ทดลองในห้องแล็บ Interactive SQL Injection Defense ด้านบน',
+          explanation: 'Prepared Statements จะส่งโครงสร้างคำสั่ง SQL ไปคอมไพล์ที่ฐานข้อมูลก่อน แล้วจึงส่งค่าตัวแปรตามเข้าไปในฐานะข้อมูลล้วนๆ ทำให้ไม่สามารถฉีดคำสั่งแทรกซ้อนได้'
+        }
+      },
+      {
+        id: 'm4',
+        title: '4. ระบบยืนยันตัวตน Session Hygiene, JWT, RBAC & CSRF Token Enforcement',
+        content: 'backend-m4-auth-csrf',
+        checkpoint: {
+          question: 'ทุกคำสั่งที่เปลี่ยนแปลงข้อมูลในฐานข้อมูล (POST, PUT, DELETE) ต้องตรวจสอบสิ่งใดควบคู่กับ Session เพื่อป้องกันการปลอมแปลงคำสั่งข้ามเว็บไซต์?',
+          options: [
+            'A: ตรวจสอบ CSRF Token (Cross-Site Request Forgery Token)',
+            'B: ตรวจสอบความละเอียดหน้าจอของผู้ใช้',
+            'C: ตรวจสอบยี่ห้อโทรศัพท์มือถือ',
+            'D: ตรวจสอบความเร็วอินเทอร์เน็ต'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในหัวข้อ CSRF Token Enforcement',
+          explanation: 'การตรวจสอบ CSRF Token ด้วย hash_equals() ยืนยันว่าคำสั่งแก้ไขข้อมูลถูกกดมาจากหน้าเว็บจริงของระบบเรา ไม่ใช่สคริปต์แอบแฝงจากเว็บภายนอก'
+        }
+      },
+      {
+        id: 'm5',
+        title: '5. Error Handling, Transaction Rollback & ระบบบันทึก Audit Trail มาตรฐาน ISO',
+        content: 'backend-m5-audit-resilience',
+        checkpoint: {
+          question: 'เมื่อเกิดข้อผิดพลาดขึ้นระหว่างการอัปเดตหลายตารางในบล็อก try...catch สิ่งแรกที่ต้องทำในบล็อก catch คือข้อใด?',
+          options: [
+            'A: สั่งยกเลิกธุรกรรมที่ค้างอยู่ ($pdo->rollBack()) เพื่อคืนค่าข้อมูลกลับสู่สถานะเดิมก่อนเกิดข้อผิดพลาด',
+            'B: สั่ง commit() ข้อมูลที่ทำค้างไว้ครึ่งเดียวทันที',
+            'C: แสดงรหัสผ่านฐานข้อมูลออกทางหน้าจอเพื่อช่วยวิเคราะห์ปัญหา',
+            'D: ลบตารางทิ้งแล้วสร้างใหม่'
+          ],
+          correctAnswer: 0,
+          hint: 'พิจารณาหลักการ Atomicity ในการจัดการ Transaction',
+          explanation: 'การทำ rollBack() รับประกันว่าข้อมูลจะไม่ค้างคาครึ่งๆ กลางๆ (เช่น หักสต็อกแล้วแต่บันทึกประวัติไม่สำเร็จ) พร้อมทั้งบันทึก Error Log และส่งข้อความที่ปลอดภัยกลับไปหาผู้ใช้'
+        }
+      }
+    ],
+    quiz: [
+      {
+        id: 'be-q1',
+        question: 'ข้อใดคือโครงสร้างมาตรฐานของ JSON Response ที่ API ในระบบ MES ต้องส่งกลับเสมอ?',
+        options: [
+          'A: {"success": boolean, "data": mixed, "message": string}',
+          'B: {"result": string, "code": number}',
+          'C: {"payload": array}',
+          'D: ไม่จำกัดรูปแบบ'
+        ],
+        correctAnswer: 0,
+        explanation: 'โครงสร้าง {"success", "data", "message"} เป็นสัญญา (API Contract) มาตรฐานที่ช่วยให้ Front-End และ Mobile App ทำงานร่วมกับทุก API ได้อย่างไม่มีข้อผิดพลาด'
+      },
+      {
+        id: 'be-q2',
+        question: 'เหตุใดจึงห้ามนำตัวแปรจากผู้ใช้มาต่อ String ในคำสั่ง SQL เช่น "SELECT * FROM USERS WHERE id = " + $id?',
+        options: [
+          'A: เพราะทำให้เกิดช่องโหว่ SQL Injection ที่ผู้โจมตีสามารถแทรกคำสั่งขโมยหรือทำลายฐานข้อมูลได้',
+          'B: เพราะทำให้ตัวอักษรแสดงผลเป็นภาษาต่างดาว',
+          'C: เพราะใช้หน่วยความจำมากกว่าปกติเล็กน้อย',
+          'D: เพราะ SQL Server ไม่รองรับเครื่องหมายอัญประกาศเดี่ยว'
+        ],
+        correctAnswer: 0,
+        explanation: 'การต่อ String เปิดโอกาสให้ผู้โจมตีป้อนค่าเช่น OR 1=1 เพื่อบิดเบือนตรรกะของคำสั่ง SQL จึงต้องใช้ Prepared Statements เท่านั้น'
+      },
+      {
+        id: 'be-q3',
+        question: 'การตั้งค่าคุกกี้ Session ด้วยแฟล็ก HttpOnly มีประโยชน์อย่างไรต่อความปลอดภัยของพนักงานที่ใช้มือถือส่วนตัว?',
+        options: [
+          'A: ป้องกันไม่ให้สคริปต์ JavaScript แปลกปลอม (XSS) เข้ามาอ่านหรือขโมยค่า Session ID จากเบราว์เซอร์ได้',
+          'B: ทำให้เว็บไซต์ทำงานโดยไม่ต้องใช้อินเทอร์เน็ต',
+          'C: ช่วยลดขนาดรูปภาพบนหน้าเว็บอัตโนมัติ',
+          'D: ปิดกั้นการใช้ HTTPS'
+        ],
+        correctAnswer: 0,
+        explanation: 'แฟล็ก HttpOnly สั่งให้เบราว์เซอร์ซ่อนคุกกี้จาก document.cookie จึงป้องกันการขโมยเซสชันผ่านช่องโหว่ XSS ได้อย่างมีประสิทธิภาพ'
+      },
+      {
+        id: 'be-q4',
+        question: 'ตามมาตรฐานการตรวจออดิทโรงงาน การแก้ไขหรือลบข้อมูลสำคัญในฐานข้อมูลต้องบันทึกสิ่งใดลงใน Audit Log เสมอ?',
+        options: [
+          'A: ข้อมูลก่อนแก้ไข (oldData), ข้อมูลหลังแก้ไข (newData), รหัสผู้ทำรายการ และเวลาที่ทำรายการ',
+          'B: บันทึกเฉพาะชื่อหน้าเว็บที่เปิดใช้งาน',
+          'C: บันทึกเฉพาะเมื่อเกิด Error เท่านั้น',
+          'D: ไม่ต้องบันทึกเพื่อประหยัดพื้นที่ฮาร์ดดิสก์'
+        ],
+        correctAnswer: 0,
+        explanation: 'การบันทึกทั้ง oldData และ newData ทำให้สามารถตรวจสอบย้อนกลับได้ 100% ว่ามีการเปลี่ยนแปลงค่าใดไปเป็นค่าใด'
+      }
+    ]
+  },
+  {
+    id: 'c-industrial-database-sql',
+    title: 'Stage 3: Industrial Database Engineering & SQL Server for MES',
+    isFeatured: false,
+    featuredBadge: '🗄️ STAGE 3 · DATABASE & SQL SERVER',
+    description: 'หลักสูตรการออกแบบและบริหารจัดการฐานข้อมูลโรงงานด้วย Microsoft SQL Server: การออกแบบ ER Schema (Work Order, BOM, Inventory, Traceability), คำสั่ง SQL เชิงลึกและ Server-Side Pagination, การเขียน Stored Procedures คำนวณ OEE แบบ Real-Time, การควบคุม ACID Transactions ป้องกันสต็อกเพี้ยน, และการทำ Indexing รองรับข้อมูลระดับล้านแถว',
+    instructor: 'ทีมวิศวกรรมฐานข้อมูลและระบบการผลิต (MES Data Architecture Group)',
+    duration: '24 hours (4 days)',
+    category: 'โปรแกรมและระบบดิจิทัล',
+    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
+    tags: ["SQL Server", "Database", "OEE", "Stored Procedure", "Transaction", "Indexing", "Full-Stack", "MES"],
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
+    modules: [
+      {
+        id: 'm1',
+        title: '1. การออกแบบตารางฐานข้อมูลโรงงาน (ER Diagram: Work Order, BOM, Inventory & Traceability)',
+        content: 'db-m1-schema-design',
+        checkpoint: {
+          question: 'ในการเก็บข้อมูลน้ำหนักวัตถุดิบหรือจำนวนสต็อกที่ต้องการความแม่นยำทศนิยม 3 ตำแหน่ง ควรเลือกใช้ชนิดข้อมูลใดใน SQL Server?',
+          options: [
+            'A: DECIMAL(12,3) หรือ DECIMAL(18,3) เพื่อป้องกันความคลาดเคลื่อนจากการปัดเศษทศนิยมฐานสอง',
+            'B: FLOAT เพราะปัดเศษแบบประมาณค่าได้',
+            'C: VARCHAR(255) เพื่อเก็บตัวเลขเป็นข้อความ',
+            'D: BIT'
+          ],
+          correctAnswer: 0,
+          hint: 'พิจารณาความแม่นยำทางวิศวกรรมและการบัญชีคลังสินค้า',
+          explanation: 'ชนิดข้อมูล DECIMAL เก็บค่าตัวเลขทศนิยมแบบ Exact Numeric จึงไม่มีปัญหาทศนิยมเพี้ยนเหมือน FLOAT'
+        }
+      },
+      {
+        id: 'm2',
+        title: '2. คำสั่ง SQL สำหรับสายการผลิต (SELECT, JOIN, Aggregation & Pagination OFFSET-FETCH)',
+        content: 'db-m2-sql-queries',
+        checkpoint: {
+          question: 'ทำไมจึงห้ามใช้คำสั่ง SELECT * โดยไม่มีการจำกัดจำนวนแถว (TOP หรือ OFFSET-FETCH) กับตารางบันทึกการผลิตขนาดใหญ่?',
+          options: [
+            'A: เพราะจะดึงข้อมูลจำนวนมหาศาลออกมากินหน่วยความจำและแบนด์วิดท์จนทำให้เซิร์ฟเวอร์และมือถือของผู้ใช้ค้าง',
+            'B: เพราะ SQL Server ไม่รู้จักเครื่องหมายดอกจัน (*)',
+            'C: เพราะจะทำให้ข้อมูลในตารางถูกลบ',
+            'D: ไม่มีผลกระทบใดๆ'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในหัวข้อ Server-Side Pagination และ Query Efficiency',
+          explanation: 'ตารางธุรกรรมในโรงงานมีข้อมูลสะสมหลายแสนถึงหลายล้านแถว จึงต้องระบุเฉพาะคอลัมน์ที่ใช้งานและทำ Server-Side Pagination เสมอ'
+        }
+      },
+      {
+        id: 'm3',
+        title: '3. Stored Procedures & การคำนวณดัชนี OEE / Cycle Time / Scrap Rate แบบ Real-Time',
+        content: 'db-m3-oee-stored-procs',
+        checkpoint: {
+          question: 'ในการเขียนคำสั่ง SQL คำนวณเปอร์เซ็นต์ OEE หรือของเสีย ฟังก์ชันใดช่วยป้องกันไม่ให้เกิด Error หารด้วยศูนย์ (Divide by Zero) เมื่อเพิ่งเริ่มกะและยอดผลิตยังเป็น 0?',
+          options: [
+            'A: การใช้ NULLIF(ตัวหาร, 0) ร่วมกับ ISNULL/COALESCE',
+            'B: การบวก 100 เข้าไปในตัวหารเสมอ',
+            'C: การลบแถวที่เป็น 0 ทิ้งจากฐานข้อมูล',
+            'D: ไม่สามารถป้องกันได้ใน SQL'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในโค้ดตัวอย่าง Stored Procedure คำนวณ OEE',
+          explanation: 'NULLIF(total_pcs, 0) จะเปลี่ยนค่าตัวหารที่เป็น 0 ให้กลายเป็น NULL ทำให้ผลหารเป็น NULL แทนที่จะเกิดข้อผิดพลาดแครชทั้งคิวรี'
+        }
+      },
+      {
+        id: 'm4',
+        title: '4. ACID Transactions, Isolation Levels & การป้องกัน Race Condition ตอนตัดสต็อก',
+        content: 'db-m4-acid-transactions',
+        checkpoint: {
+          question: 'เมื่อพนักงาน 2 คนยิงบาร์โค้ดเบิกสินค้าชิ้นสุดท้ายพร้อมกันในเสี้ยววินาที คำสั่ง Table Hint ใดใน Transaction ที่ช่วยล็อกแถวข้อมูลไม่ให้อ่านค่าซ้ำซ้อนกัน?',
+          options: [
+            'A: WITH (UPDLOCK, ROWLOCK) ขณะอ่านยอดคงเหลือเพื่อเตรียมอัปเดต',
+            'B: WITH (NOLOCK) เพื่ออ่านข้อมูลโดยไม่สนใจการล็อก',
+            'C: ORDER BY RAND()',
+            'D: TRUNCATE TABLE'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในตัวอย่างโค้ดการตัดสต็อกไร้ปัญหา Race Condition',
+          explanation: 'UPDLOCK จะเข้าล็อกแถวที่กำลังจะแก้ไขไว้ก่อน ทำให้ธุรกรรมที่เข้ามาพร้อมกันต้องรอจนกว่าธุรกรรมแรกจะตัดสต็อกและ COMMIT เสร็จสิ้น'
+        }
+      },
+      {
+        id: 'm5',
+        title: '5. Indexing Strategy, Query Optimization & การดูแลรักษาฐานข้อมูลระดับล้านแถว',
+        content: 'db-m5-indexing-performance',
+        checkpoint: {
+          question: 'การเขียนเงื่อนไข WHERE ข้อใดที่ทำให้ SQL Server สามารถใช้งาน Index ได้อย่างเต็มประสิทธิภาพ (SARGable Query)?',
+          options: [
+            "A: WHERE recorded_at >= '2026-11-06' AND recorded_at < '2026-11-07'",
+            "B: WHERE CONVERT(VARCHAR, recorded_at, 112) = '20261106'",
+            'C: WHERE YEAR(recorded_at) = 2026 AND MONTH(recorded_at) = 11',
+            "D: WHERE SUBSTRING(machine_code, 1, 3) = 'PRS'"
+          ],
+          correctAnswer: 0,
+          hint: 'ห้ามครอบฟังก์ชันลงบนคอลัมน์ฝั่งซ้ายของเครื่องหมายเปรียบเทียบ',
+          explanation: 'การเปรียบเทียบคอลัมน์โดยตรงกับช่วงเวลาช่วยให้ SQL Server ทำ Index Seek กระโดดไปยังตำแหน่งข้อมูลได้ทันทีโดยไม่ต้องกวาดอ่านทั้งตาราง'
+        }
+      }
+    ],
+    quiz: [
+      {
+        id: 'db-q1',
+        question: 'สูตรมาตรฐานสากลในการคำนวณค่าประสิทธิผลโดยรวมของเครื่องจักร (OEE) ในระบบฐานข้อมูล MES คือข้อใด?',
+        options: [
+          'A: Availability × Performance × Quality',
+          'B: (Good Count + Reject Count) ÷ Planned Time',
+          'C: Voltage × Current × Power Factor',
+          'D: Target Quantity - Completed Quantity'
+        ],
+        correctAnswer: 0,
+        explanation: 'OEE คำนวณจากผลคูณของอัตราการเดินเครื่อง (Availability), ประสิทธิภาพความเร็วการผลิต (Performance), และอัตราคุณภาพชิ้นงานดี (Quality)'
+      },
+      {
+        id: 'db-q2',
+        question: 'คุณสมบัติ Atomicity ในหลักการ ACID Transactions ของฐานข้อมูลโรงงานหมายถึงอะไร?',
+        options: [
+          'A: ชุดคำสั่งในธุรกรรมเดียวกันต้องทำงานสำเร็จครบทุกขั้นตอนทั้งหมด มิฉะนั้นต้องถูกยกเลิก (Rollback) กลับสู่สภาพเดิมทั้งหมด',
+          'B: การอนุญาตให้ตารางเก็บข้อมูลซ้ำซ้อนกันได้โดยไม่มีขีดจำกัด',
+          'C: การบีบอัดขนาดไฟล์ฐานข้อมูลให้เล็กลงอัตโนมัติ',
+          'D: การรันคำสั่งโดยไม่ต้องตรวจสอบสิทธิ์ผู้ใช้'
+        ],
+        correctAnswer: 0,
+        explanation: 'Atomicity รับประกันว่าจะไม่มีข้อมูลตกค้างครึ่งๆ กลางๆ เช่น หากตัดยอดคลังสำเร็จแต่ลงประวัติการเบิกล้มเหลว ระบบต้องคืนยอดคลังกลับทันที'
+      },
+      {
+        id: 'db-q3',
+        question: 'การใช้ INCLUDE (good_qty, reject_qty) ในการสร้าง Non-Clustered Index (Covering Index) ช่วยเพิ่มความเร็วได้อย่างไร?',
+        options: [
+          'A: ทำให้ SQL Server อ่านค่ายอดผลิตได้จบในตัว Index ทันทีโดยไม่ต้องเสียเวลาวิ่งกลับไปเปิดอ่านตารางหลัก (Key Lookup)',
+          'B: ทำให้ไม่ต้องเขียนคำสั่ง WHERE อีกต่อไป',
+          'C: ช่วยลบข้อมูลเก่าทิ้งอัตโนมัติทุกเที่ยงคืน',
+          'D: เปลี่ยนชนิดข้อมูลจากตัวเลขเป็นรูปภาพ'
+        ],
+        correctAnswer: 0,
+        explanation: 'Covering Index เก็บคอลัมน์ที่ใช้แสดงผลแนบไว้ที่ปลายทางของ Index Tree จึงลดการอ่านดิสก์ (I/O) ลงได้อย่างมหาศาล'
+      },
+      {
+        id: 'db-q4',
+        question: 'หากต้องการสืบย้อนกลับ (Traceability) ว่าสินค้าสำเร็จรูปที่มีปัญหาผลิตมาจากคอยล์เหล็กม้วนใด ต้องเชื่อมโยงข้อมูลอย่างไร?',
+        options: [
+          'A: เชื่อมโยงรหัส Lot สินค้าใน PRODUCTION_LOGS เข้ากับ coil_lot_no, machine_code, wo_id และรหัสพนักงานผู้เดินเครื่อง',
+          'B: สอบถามจากความจำของพนักงานในกะนั้น',
+          'C: ดูจากวันที่สร้างตารางฐานข้อมูล',
+          'D: ไม่ต้องเก็บข้อมูลคอยล์เหล็กในฐานข้อมูล'
+        ],
+        correctAnswer: 0,
+        explanation: 'การออกแบบตาราง PRODUCTION_LOGS ให้ผูก Foreign Key และเก็บรหัส Lot วัตถุดิบคู่กับใบสั่งผลิต ทำให้สืบย้อนกลับได้ภายในไม่กี่วินาที'
+      }
+    ]
+  },
+  {
+    id: 'c-iiot-nodered-edge',
+    title: 'Stage 4: Industrial IoT (IIoT), Node-RED & PLC Edge Integration',
+    isFeatured: false,
+    featuredBadge: '📡 STAGE 4 · IIoT, NODE-RED & PLC',
+    description: 'หลักสูตรการเชื่อมโยงฮาร์ดแวร์เครื่องจักรหน้างานเข้าสู่ระบบฐานข้อมูล MES: สถาปัตยกรรม Edge Gateway, โปรโตคอล Modbus TCP / OPC-UA / MQTT, การอ่านค่า PLC Holding Registers และการแปลงสเกลสัญญาณอนาล็อก 4-20mA, การสร้าง Data Pipeline บน Node-RED, โครงสร้าง MQTT Unified Namespace (ISA-95), และระบบ Store-and-Forward ป้องกันข้อมูลสูญหายเมื่อเครือข่ายขัดข้อง',
+    instructor: 'ทีมวิศวกรรมระบบอัตโนมัติและ IIoT (Smart Factory Connectivity Group)',
+    duration: '24 hours (4 days)',
+    category: 'โปรแกรมและระบบดิจิทัล',
+    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ระบบอัตโนมัติและหุ่นยนต์", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
+    tags: ["IIoT", "Node-RED", "PLC", "Modbus", "MQTT", "OPC-UA", "Edge", "Full-Stack", "MES"],
+    level: "Level 4 (Certified Expert)",
+    isPublicEligible: true,
+    modules: [
+      {
+        id: 'm1',
+        title: '1. สถาปัตยกรรม Edge Gateway & โปรโตคอลอุตสาหกรรม (Modbus TCP, OPC-UA & MQTT)',
+        content: 'iiot-m1-protocols',
+        checkpoint: {
+          question: 'โปรโตคอลใดที่ใช้รูปแบบการสื่อสารแบบ Publish / Subscribe ผ่านตัวกลาง (Broker) และกินแบนด์วิดท์ต่ำมาก เหมาะกับการส่งข้อมูลจาก Edge Gateway ขึ้นสู่ระบบกลาง?',
+          options: [
+            'A: MQTT (Message Queuing Telemetry Transport)',
+            'B: FTP (File Transfer Protocol)',
+            'C: SMTP',
+            'D: VGA'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในตารางเปรียบเทียบโปรโตคอลเชื่อมต่อเครื่องจักรสู่ระบบ MES',
+          explanation: 'MQTT ออกแบบมาสำหรับงาน IoT และอุตสาหกรรมที่มีอุปกรณ์จำนวนมาก ใช้รูปแบบ Publish/Subscribe ที่รวดเร็วและมีระบบรับประกันการส่งข้อมูล (QoS)'
+        }
+      },
+      {
+        id: 'm2',
+        title: '2. การอ่านค่า PLC Memory Map (Coils, Holding Registers) & การแปลงข้อมูลทางวิศวกรรม',
+        content: 'iiot-m2-plc-registers',
+        checkpoint: {
+          question: 'หากอ่านค่าดิบจาก PLC Holding Register (12-bit ADC: ช่วง 0 ถึง 4095) ได้ค่าเท่ากับ 2048 เมื่อแปลงเป็นแรงดันสเกล 0.0 ถึง 10.0 Bar จะได้ค่าประมาณเท่าใด?',
+          options: [
+            'A: ประมาณ 5.00 Bar (ครึ่งหนึ่งของสเกลสูงสุด)',
+            'B: 204.8 Bar',
+            'C: 0.00 Bar',
+            'D: 10.00 Bar'
+          ],
+          correctAnswer: 0,
+          hint: 'ทดลองเลื่อนสไลเดอร์ใน IIoT Edge Gateway Simulator ด้านบนที่ค่า 2048',
+          explanation: 'ค่า 2048 คือจุดกึ่งกลางของช่วง 0–4095 ดังนั้น (2048 / 4095) × 10 Bar จึงเท่ากับ 5.00 Bar'
+        }
+      },
+      {
+        id: 'm3',
+        title: '3. การพัฒนา Data Pipeline ด้วย Node-RED (Flow Design, Function Nodes & Edge Logic)',
+        content: 'iiot-m3-nodered-flows',
+        checkpoint: {
+          question: 'ในการเขียน Flow บน Node-RED เพื่อส่งแจ้งเตือนเข้ากลุ่มแชตเมื่อเครื่องจักรขึ้นสถานะ ALARM เราควรออกแบบตรรกะอย่างไรเพื่อไม่ให้ข้อความเด้งรัวซ้ำทุกวินาที?',
+          options: [
+            'A: เก็บสถานะก่อนหน้าไว้ใน Context (flow.get/set) และส่งแจ้งเตือนเฉพาะจังหวะที่สถานะเปลี่ยนจากปกติเข้าสู่ ALARM ครั้งแรก (State Change Detection)',
+            'B: ตั้งเวลาส่งซ้ำทุกๆ 100 มิลลิวินาที',
+            'C: ถอดสายแลนออกเมื่อเกิด ALARM',
+            'D: ไม่ต้องส่งแจ้งเตือนใดๆ'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในโค้ดตัวอย่าง Function Node ป้องกันการส่งแจ้งเตือนซ้ำ',
+          explanation: 'การตรวจจับขอบขาขึ้นของการเปลี่ยนสถานะ (Rising Edge / State Transition) ช่วยให้ส่งแจ้งเตือนทันทีที่เกิดเหตุโดยไม่สแปมกลุ่มแจ้งเตือน'
+        }
+      },
+      {
+        id: 'm4',
+        title: '4. สถาปัตยกรรม MQTT Broker, Unified Namespace (UNS) & การส่งข้อมูลเข้า SQL Server',
+        content: 'iiot-m4-mqtt-uns-sql',
+        checkpoint: {
+          question: 'ข้อใดคือการตั้งชื่อ MQTT Topic ตามหลักการ Unified Namespace (UNS / ISA-95) ที่เป็นระเบียบและสื่อความหมายชัดเจนที่สุด?',
+          options: [
+            'A: snc/rayong/stamping/line-a/press-01/telemetry',
+            'B: data123/temp',
+            'C: test/my_topic/abc',
+            'D: 192.168.1.50'
+          ],
+          correctAnswer: 0,
+          hint: 'พิจารณาการเรียงลำดับชั้นตามมาตรฐาน ISA-95: Enterprise / Site / Area / Line / Machine',
+          explanation: 'การจัดลำดับชั้นตามโครงสร้างโรงงานจริงทำให้สามารถใช้ Wildcard (เช่น snc/rayong/stamping/+/+/telemetry) เพื่อดึงข้อมูลทั้งแผนกได้อย่างง่ายดาย'
+        }
+      },
+      {
+        id: 'm5',
+        title: '5. ระบบ Store-and-Forward (Offline Buffering) & เครือข่ายความปลอดภัย OT Firewall',
+        content: 'iiot-m5-edge-resilience',
+        checkpoint: {
+          question: 'กลไก Store-and-Forward บนอุปกรณ์ Edge Gateway มีหน้าที่สำคัญอย่างไรเมื่อสายแลนหลักของโรงงานเกิดขัดข้องชั่วคราว?',
+          options: [
+            'A: พักข้อมูลการผลิตพร้อมเวลาที่เกิดเหตุจริง (Source Timestamp) ลงหน่วยความจำในตัวเครื่อง Edge ไว้ก่อน แล้วทยอยส่งเข้าฐานข้อมูลอัตโนมัติเมื่อเครือข่ายกลับมาออนไลน์',
+            'B: สั่งหยุดเครื่องจักรในสายการผลิตทั้งหมดทันที',
+            'C: ทิ้งข้อมูลช่วงที่เน็ตหลุดไปทั้งหมดโดยไม่ต้องบันทึก',
+            'D: สุ่มตัวเลขขึ้นมาใส่แทนข้อมูลจริง'
+          ],
+          correctAnswer: 0,
+          hint: 'ดูในหัวข้อ Offline Buffering และทดลองกดปุ่ม OFFLINE ใน Simulator',
+          explanation: 'Store-and-Forward รับประกันว่าข้อมูลยอดผลิตและพารามิเตอร์คุณภาพจะไม่สูญหายแม้ระบบเครือข่ายหรือเซิร์ฟเวอร์กลางจะสะดุดชั่วคราว'
+        }
+      }
+    ],
+    quiz: [
+      {
+        id: 'iiot-q1',
+        question: 'พอร์ตมาตรฐาน (Default TCP Port) ของโปรโตคอล Modbus TCP และ MQTT (แบบไม่เข้ารหัส) คือข้อใดตามลำดับ?',
+        options: [
+          'A: Modbus TCP = 502 และ MQTT = 1883',
+          'B: Modbus TCP = 80 และ MQTT = 443',
+          'C: Modbus TCP = 3306 และ MQTT = 1433',
+          'D: Modbus TCP = 21 และ MQTT = 22'
+        ],
+        correctAnswer: 0,
+        explanation: 'Modbus TCP ใช้พอร์ตมาตรฐาน 502 ส่วน MQTT ใช้พอร์ต 1883 (และ 8883 สำหรับ MQTT over TLS)'
+      },
+      {
+        id: 'iiot-q2',
+        question: 'ในโปรโตคอล Modbus ตารางหน่วยความจำชนิดใดที่ใช้เก็บตัวเลขขนาด 16-bit สำหรับอ่านและเขียนค่าพารามิเตอร์หรือยอดผลิต (รหัส 4xxxx)?',
+        options: [
+          'A: Holding Registers',
+          'B: Coils',
+          'C: Discrete Inputs',
+          'D: HTML Tags'
+        ],
+        correctAnswer: 0,
+        explanation: 'Holding Registers (4xxxx) เป็นเรจิสเตอร์ขนาด 16-bit ที่รองรับทั้งการอ่าน (Function Code 03) และการเขียนค่า (Function Code 06/16)'
+      },
+      {
+        id: 'iiot-q3',
+        question: 'ฟีเจอร์ใดของ MQTT ที่ช่วยให้หน้าจอ Dashboard รู้ได้ทันทีว่าอุปกรณ์ Edge Gateway ไฟดับหรือสายแลนหลุด?',
+        options: [
+          'A: Last Will and Testament (LWT) ที่ให้ Broker ส่งข้อความแจ้งสถานะ Offline แทนอัตโนมัติเมื่อการเชื่อมต่อขาดหาย',
+          'B: การให้พนักงานโทรแจ้งทุก 5 นาที',
+          'C: การรีสตาร์ตฐานข้อมูลทุกชั่วโมง',
+          'D: การเปลี่ยนสีสายแลน'
+        ],
+        correctAnswer: 0,
+        explanation: 'LWT คือข้อความสั่งเสียที่อุปกรณ์ฝากไว้กับ MQTT Broker ตั้งแต่วินาทีที่เชื่อมต่อ หากอุปกรณ์หลุดไปโดยไม่แจ้งปิดตามปกติ Broker จะกระจายข้อความ LWT ทันที'
+      },
+      {
+        id: 'iiot-q4',
+        question: 'เมื่อระบบ Store-and-Forward ส่งข้อมูลที่ค้างอยู่ในคิวกลับเข้าฐานข้อมูลหลังเน็ตมา ควรบันทึกเวลาในคอลัมน์ recorded_at อย่างไร?',
+        options: [
+          'A: ใช้เวลาจริง ณ วินาทีที่เครื่องจักรผลิตชิ้นงานนั้น (Source Timestamp ที่แนบมากับข้อมูลในคิว)',
+          'B: ใช้เวลาปัจจุบันของเซิร์ฟเวอร์ตอนที่เน็ตเพิ่งกลับมาเสมอ',
+          'C: ปล่อยให้คอลัมน์เวลาเป็นค่าว่าง (NULL)',
+          'D: ตั้งเวลาเป็นเที่ยงคืนทั้งหมด'
+        ],
+        correctAnswer: 0,
+        explanation: 'การใช้ Source Timestamp ทำให้ข้อมูลการผลิตยังคงอยู่ในกะและช่วงเวลาที่เกิดขึ้นจริง ไม่เกิดกราฟกระโดดผิดกะเมื่อส่งข้อมูลย้อนหลัง'
       }
     ]
   },
@@ -848,6 +1317,16 @@ export const courses = [
 
 
 export const CURATED_TRACKS = [
+  {
+    id: 'enterprise-fullstack',
+    title: 'สถาปัตยกรรมซอฟต์แวร์โรงงาน & ระบบดิจิทัลครบวงจร (Enterprise Full-Stack & MES Track)',
+    subtitle: 'เส้นทางพัฒนาทักษะ 5 ระดับ: จาก Front-End Dashboard สู่การสร้าง REST API, ฐานข้อมูล SQL Server, และการเชื่อมต่อ PLC ด้วย IIoT Node-RED',
+    badge: '💻 Full-Stack MES Roadmap',
+    filterTag: 'สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม',
+    color: 'from-purple-500/20 via-indigo-500/10 to-transparent',
+    borderColor: 'border-purple-500/30',
+    tagColor: 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+  },
   {
     id: 'advanced-skills',
     title: 'หลักสูตรทักษะวิชาชีพขั้นสูง (Advanced Future Skills)',

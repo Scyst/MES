@@ -836,7 +836,7 @@ export function MachineVisionV2Mod1() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <IndustrialPhotoCard 
           src="./images/hardware/gige_camera_setup.jpg"
-          fallbackSrc="/images/hardware/gige_camera_setup.jpg"
+          fallbackSrc="./images/hardware/gige_camera_setup.jpg"
           badge="อุปกรณ์จริง (Real Setup)"
           badgeColor="cyan"
           title="กล้องอุตสาหกรรม Area Scan พร้อมเลนส์ C-Mount สำหรับสายพาน"
@@ -856,7 +856,7 @@ export function MachineVisionV2Mod1() {
 
         <IndustrialPhotoCard 
           src="./images/hardware/line_scan_camera.jpg"
-          fallbackSrc="/images/hardware/line_scan_camera.jpg"
+          fallbackSrc="./images/hardware/line_scan_camera.jpg"
           badge="อุปกรณ์จริง (Line Scan)"
           badgeColor="indigo"
           title="กล้องสแกนแนวเส้นความเร็วสูง (Line Scan Camera System)"
@@ -1067,7 +1067,7 @@ export function MachineVisionV2Mod2() {
               badge: "ROLLING SHUTTER",
               badgeColor: "rose",
               src: "./images/hardware/fan_rolling_shutter_distortion.jpg",
-              fallbackSrc: "/images/hardware/fan_rolling_shutter_distortion.jpg",
+              fallbackSrc: "./images/hardware/fan_rolling_shutter_distortion.jpg",
               specs: [
                 { label: 'กลไกรับแสง', value: 'Row-by-Row Scan' },
                 { label: 'ผลลัพธ์เชิงรูปทรง', value: 'ใบพัดบิดเบี้ยวคล้ายเคียว / กล้วยหอม' },
@@ -1081,7 +1081,7 @@ export function MachineVisionV2Mod2() {
               badge: "GLOBAL SHUTTER",
               badgeColor: "indigo",
               src: "./images/hardware/fan_global_shutter_frozen.jpg",
-              fallbackSrc: "/images/hardware/fan_global_shutter_frozen.jpg",
+              fallbackSrc: "./images/hardware/fan_global_shutter_frozen.jpg",
               specs: [
                 { label: 'กลไกรับแสง', value: 'Simultaneous 100%' },
                 { label: 'ผลลัพธ์เชิงรูปทรง', value: 'ใบพัดตรง 120° สมบูรณ์แบบ' },
@@ -1104,7 +1104,7 @@ export function MachineVisionV2Mod2() {
               badge: "SKEW ARTIFACT",
               badgeColor: "amber",
               src: "./images/hardware/global_vs_rolling_shutter_comparison.jpg",
-              fallbackSrc: "/images/hardware/global_vs_rolling_shutter_comparison.jpg",
+              fallbackSrc: "./images/hardware/global_vs_rolling_shutter_comparison.jpg",
               specs: [
                 { label: 'ปรากฏการณ์', value: 'Parallelogram Skew' },
                 { label: 'ความเร็วสายพาน', value: '60 - 120 m/min' },
@@ -1118,7 +1118,7 @@ export function MachineVisionV2Mod2() {
               badge: "HIGH-SPEED FOOTAGE",
               badgeColor: "teal",
               src: "./images/hardware/rolling_vs_global_footage_thumbnail.jpg",
-              fallbackSrc: "/images/hardware/rolling_vs_global_footage_thumbnail.jpg",
+              fallbackSrc: "./images/hardware/rolling_vs_global_footage_thumbnail.jpg",
               specs: [
                 { label: 'แหล่งอ้างอิง', value: 'High-Speed Motion Footage' },
                 { label: 'ปัญหาแสงแฟลช', value: 'เกิดแถบมืดคาดขวาง (Flash Banding)' },
@@ -1317,7 +1317,7 @@ export function MachineVisionV2Mod2() {
         <div className="pt-2">
           <IndustrialPhotoCard 
             src="./images/lighting/photometric_stereo.jpg"
-            fallbackSrc="/images/lighting/photometric_stereo.jpg"
+            fallbackSrc="./images/lighting/photometric_stereo.jpg"
             badge="การติดตั้งอุปกรณ์จริง (Photometric Rig)"
             badgeColor="indigo"
             title="ชุดหัวไฟ LED 4 ทิศทาง (Photometric Stereo Head) ในห้องแล็บวิศวกรรม"
@@ -1582,7 +1582,7 @@ export function MachineVisionV2Mod3() {
       {/* Real Hardware Spotlight: Robot Eye-in-Hand Vision */}
       <IndustrialPhotoCard 
         src="./images/mechanisms/robot_eye_in_hand.jpg"
-        fallbackSrc="/images/mechanisms/robot_eye_in_hand.jpg"
+        fallbackSrc="./images/mechanisms/robot_eye_in_hand.jpg"
         badge="ระบบหุ่นยนต์จริง (Eye-in-Hand)"
         badgeColor="amber"
         title="การติดตั้งกล้อง Eye-in-Hand บนหน้าแปลนข้อมือหุ่นยนต์ (Robot Tool Flange)"
@@ -1841,7 +1841,7 @@ export function MachineVisionV2Mod4() {
           badge: "RAW DEFECT IMAGE",
           badgeColor: "amber",
           src: "./images/defects/metal_surface_scratch.jpg",
-          fallbackSrc: "/images/defects/metal_surface_scratch.jpg",
+          fallbackSrc: "./images/defects/metal_surface_scratch.jpg",
           specs: [
             { label: 'ชนิดวัสดุ', value: 'Brushed Aluminum' },
             { label: 'ลักษณะตำหนิ', value: 'Hairline Scratch & Gouge' },
@@ -1855,7 +1855,7 @@ export function MachineVisionV2Mod4() {
           badge: "AI ANOMALY HEATMAP",
           badgeColor: "rose",
           src: "./images/defects/patchcore_defect_heatmap.jpg",
-          fallbackSrc: "/images/defects/patchcore_defect_heatmap.jpg",
+          fallbackSrc: "./images/defects/patchcore_defect_heatmap.jpg",
           specs: [
             { label: 'อัลกอริทึม', value: 'PatchCore (WideResNet50)' },
             { label: 'Anomaly Score', value: '0.94 / Threshold 0.65' },
@@ -1871,7 +1871,7 @@ export function MachineVisionV2Mod4() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <IndustrialPhotoCard 
           src="./images/defects/thread_burr_defect.jpg"
-          fallbackSrc="/images/defects/thread_burr_defect.jpg"
+          fallbackSrc="./images/defects/thread_burr_defect.jpg"
           badge="ตัวอย่างของเสียจริง (Defect Sample)"
           badgeColor="rose"
           title="เสี้ยนเกลียวโลหะและเกลียวหวาน (Metallic Thread Burr & Chipped Ridge)"
@@ -1891,7 +1891,7 @@ export function MachineVisionV2Mod4() {
 
         <IndustrialPhotoCard 
           src="./images/defects/plastic_defect_void.jpg"
-          fallbackSrc="/images/defects/plastic_defect_void.jpg"
+          fallbackSrc="./images/defects/plastic_defect_void.jpg"
           badge="ตัวอย่างของเสียจริง (Defect Sample)"
           badgeColor="amber"
           title="รอยยุบ ฟองอากาศ และรูพรุนในงานฉีดพลาสติก (Plastic Porosity & Voids)"
@@ -2283,7 +2283,7 @@ export function MachineVisionV2Mod6() {
               badge: "NVIDIA JETSON ORIN",
               badgeColor: "emerald",
               src: "./images/hardware/jetson_orin_ipc.jpg",
-              fallbackSrc: "/images/hardware/jetson_orin_ipc.jpg",
+              fallbackSrc: "./images/hardware/jetson_orin_ipc.jpg",
               specs: [
                 { label: 'พลังประมวลผล', value: '40 TOPS AI Performance' },
                 { label: 'สถาปัตยกรรม', value: 'NVIDIA Ampere GPU (1024 Cores)' },
@@ -2297,7 +2297,7 @@ export function MachineVisionV2Mod6() {
               badge: "M.2 NPU ACCELERATOR",
               badgeColor: "cyan",
               src: "./images/hardware/hailo_npu.jpg",
-              fallbackSrc: "/images/hardware/hailo_npu.jpg",
+              fallbackSrc: "./images/hardware/hailo_npu.jpg",
               specs: [
                 { label: 'ฟอร์มแฟกเตอร์', value: 'Standard M.2 2280 Key M' },
                 { label: 'พลังประมวลผล', value: '26 TOPS Neural Accelerator' },
@@ -2543,7 +2543,7 @@ export function MachineVisionV2Mod7() {
         <div className="pt-2">
           <IndustrialPhotoCard 
             src="./images/mechanisms/pneumatic_reject_cylinder.jpg"
-            fallbackSrc="/images/mechanisms/pneumatic_reject_cylinder.jpg"
+            fallbackSrc="./images/mechanisms/pneumatic_reject_cylinder.jpg"
             badge="กลไกหน้างานจริง (Reject Mechanism)"
             badgeColor="rose"
             title="ชุดกระบอกสูบและหัวเป่าลมเตะของเสียความเร็วสูง (High-Speed Pneumatic Ejector)"

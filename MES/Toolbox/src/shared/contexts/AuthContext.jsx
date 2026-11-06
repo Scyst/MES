@@ -88,7 +88,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
 
     const currentLoc = locationRef.current;
-    if (currentLoc?.pathname !== '/login' && window.location.hash !== '#/login') {
+    const currentPath = currentLoc?.pathname || '';
+    const isPublicRoute =
+      currentPath === '/login' ||
+      currentPath === '/learning' ||
+      currentPath === '/learning/' ||
+      currentPath.startsWith('/learning/course/') ||
+      currentPath.startsWith('/partner-portal') ||
+      currentPath.startsWith('/inbound-demo') ||
+      currentPath.startsWith('/transport') ||
+      window.location.hash === '#/login' ||
+      window.location.hash === '#/learning' ||
+      window.location.hash.startsWith('#/learning/course/');
+    if (!isPublicRoute) {
       navigate('/login', { state: { from: currentLoc }, replace: true });
     }
 
@@ -158,7 +170,11 @@ export const AuthProvider = ({ children }) => {
       (error) => {
         if (error.response) {
           const reqUrl = error.config?.url || '';
-          const isCheckEndpoint = reqUrl.includes('check.php') || reqUrl.includes('login.php');
+          const isCheckEndpoint =
+            reqUrl.includes('check.php') ||
+            reqUrl.includes('login.php') ||
+            reqUrl.includes('api_verify.php') ||
+            reqUrl.includes('api_learning.php');
           if (error.response.status === 401 && !isCheckEndpoint) {
             performLocalLogoutRedirect(true);
           } else if (error.response.status === 403 && !isCheckEndpoint) {
@@ -180,7 +196,11 @@ export const AuthProvider = ({ children }) => {
     window.fetch = async function (...args) {
       const response = await originalFetch.apply(this, args);
       const reqUrl = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-      const isAuthCheck = reqUrl.includes('check.php') || reqUrl.includes('login.php');
+      const isAuthCheck =
+        reqUrl.includes('check.php') ||
+        reqUrl.includes('login.php') ||
+        reqUrl.includes('api_verify.php') ||
+        reqUrl.includes('api_learning.php');
       if (!isAuthCheck) {
         if (
           response.status === 401 ||

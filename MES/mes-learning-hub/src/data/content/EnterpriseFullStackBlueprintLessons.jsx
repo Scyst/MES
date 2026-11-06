@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FiServer,
   FiDatabase,
@@ -193,7 +193,7 @@ export function EnterpriseFullStackRoadmapWidget({ compact = false }) {
                 )}
                 <button
                   type="button"
-                  onClick={() => navigate(`/course/${item.courseId}`)}
+                  onClick={() => navigate(`${courseRoutePrefix}/${item.courseId}`)}
                   className={`w-full py-2 px-3 rounded-xl text-xs font-black text-white bg-gradient-to-r ${item.color} hover:opacity-95 transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer`}
                 >
                   <span>{isDone ? 'ทบทวนหลักสูตร' : 'เข้าเรียน Stage ' + item.stage}</span>
@@ -232,22 +232,20 @@ function BackendSqlInjectionSimulator() {
           <button
             type="button"
             onClick={() => setQueryMode('vulnerable')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer border transition-all ${
-              queryMode === 'vulnerable'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer border transition-all ${queryMode === 'vulnerable'
                 ? 'bg-rose-600 text-white border-rose-400'
                 : 'bg-slate-900 text-slate-400 border-slate-800'
-            }`}
+              }`}
           >
             ❌ โค้ดเสี่ยง (ต่อ String ตรงๆ)
           </button>
           <button
             type="button"
             onClick={() => setQueryMode('prepared')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer border transition-all ${
-              queryMode === 'prepared'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer border transition-all ${queryMode === 'prepared'
                 ? 'bg-emerald-600 text-white border-emerald-400'
                 : 'bg-slate-900 text-slate-400 border-slate-800'
-            }`}
+              }`}
           >
             ✅ มาตรฐาน MES (Prepared Statement)
           </button>
@@ -428,11 +426,10 @@ function IiotPlcScalerSimulator() {
             if (!nextState) setBufferCount(c => c + 3);
             else setBufferCount(0);
           }}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border ${
-            networkOnline
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border ${networkOnline
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
               : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-          }`}
+            }`}
         >
           {networkOnline ? <FiWifi /> : <FiWifiOff />}
           <span>{networkOnline ? 'LAN โรงงาน: ONLINE (ส่งเข้า SQL ทันที)' : 'LAN โรงงาน: OFFLINE (เก็บลง Edge Buffer)'}</span>
@@ -1310,3 +1307,4 @@ if (msg.triggerReplay && queue.length > 0) {
     />
   );
 }
+

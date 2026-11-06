@@ -661,7 +661,7 @@ function ShutterComparisonSimulator() {
                     src="./images/hardware/fan_rolling_shutter_distortion.jpg"
                     alt="Rolling Shutter Fan Jello Distortion"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => { e.target.src = '/images/hardware/fan_rolling_shutter_distortion.jpg'; }}
+                    onError={(e) => { e.target.src = './images/hardware/fan_rolling_shutter_distortion.jpg'; }}
                   />
                   <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-rose-400 font-mono rounded border border-rose-500/30">
                     Rolling Distortion: Fan 3,000 RPM
@@ -688,7 +688,7 @@ function ShutterComparisonSimulator() {
                     src="./images/hardware/fan_global_shutter_frozen.jpg"
                     alt="Global Shutter Fan Frozen Motion"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => { e.target.src = '/images/hardware/fan_global_shutter_frozen.jpg'; }}
+                    onError={(e) => { e.target.src = './images/hardware/fan_global_shutter_frozen.jpg'; }}
                   />
                   <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-emerald-400 font-mono rounded border border-emerald-500/30">
                     Frozen Motion: True 120° Geometry
@@ -716,7 +716,7 @@ function ShutterComparisonSimulator() {
                     src="./images/hardware/global_vs_rolling_shutter_comparison.jpg"
                     alt="e-con Systems Conveyor Benchmark"
                     className="w-full h-full object-contain bg-black transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => { e.target.src = '/images/hardware/global_vs_rolling_shutter_comparison.jpg'; }}
+                    onError={(e) => { e.target.src = './images/hardware/global_vs_rolling_shutter_comparison.jpg'; }}
                   />
                   <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-amber-400 font-mono rounded border border-amber-500/30">
                     Conveyor Skew vs Global Square
@@ -742,7 +742,7 @@ function ShutterComparisonSimulator() {
                     src="./images/hardware/rolling_vs_global_footage_thumbnail.jpg"
                     alt="High-Speed Motion Analysis Footage"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => { e.target.src = '/images/hardware/rolling_vs_global_footage_thumbnail.jpg'; }}
+                    onError={(e) => { e.target.src = './images/hardware/rolling_vs_global_footage_thumbnail.jpg'; }}
                   />
                   <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/70 backdrop-blur-xs text-[10px] text-teal-400 font-mono rounded border border-teal-500/30">
                     High-Speed Footage Analysis
@@ -867,7 +867,7 @@ function OpticalFormulasCalculator() {
               className="max-h-64 object-contain rounded"
               onError={(e) => {
                 // Fallback to direct absolute URL if base path differs
-                e.target.src = '/images/optical_geometry.jpg';
+                e.target.src = './images/optical_geometry.jpg';
               }}
             />
             <span className="text-[10px] text-slate-500 font-mono mt-2 text-center">
@@ -2515,7 +2515,7 @@ export function MachineVisionMod2() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <IndustrialPhotoCard 
             src="./images/hardware/gige_camera_setup.jpg"
-            fallbackSrc="/images/hardware/gige_camera_setup.jpg"
+            fallbackSrc="./images/hardware/gige_camera_setup.jpg"
             badge="ฮาร์ดแวร์จริง (Real Hardware)"
             badgeColor="cyan"
             title="ชุดกล้องอุตสาหกรรม 2D GigE Vision & เลนส์ C-Mount"
@@ -2536,7 +2536,7 @@ export function MachineVisionMod2() {
 
           <IndustrialPhotoCard 
             src="./images/hardware/line_scan_camera.jpg"
-            fallbackSrc="/images/hardware/line_scan_camera.jpg"
+            fallbackSrc="./images/hardware/line_scan_camera.jpg"
             badge="ฮาร์ดแวร์จริง (Real Hardware)"
             badgeColor="indigo"
             title="กล้องสแกนแนวเส้นความเร็วสูง (Line Scan Camera)"
@@ -2681,7 +2681,7 @@ export function MachineVisionMod3() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <IndustrialPhotoCard 
             src="./images/lighting/coaxial_light.jpg"
-            fallbackSrc="/images/lighting/coaxial_light.jpg"
+            fallbackSrc="./images/lighting/coaxial_light.jpg"
             badge="อุปกรณ์แสงจริง (Coaxial)"
             badgeColor="cyan"
             title="ชุดไฟร่วมแกน (Coaxial Light) ส่องชิ้นงานโลหะเงา"
@@ -2701,7 +2701,7 @@ export function MachineVisionMod3() {
 
           <IndustrialPhotoCard 
             src="./images/lighting/dome_diffuse_light.jpg"
-            fallbackSrc="/images/lighting/dome_diffuse_light.jpg"
+            fallbackSrc="./images/lighting/dome_diffuse_light.jpg"
             badge="อุปกรณ์แสงจริง (Dome Diffuse)"
             badgeColor="indigo"
             title="ไฟโดมทรงกลม (Dome Diffuse Illuminator)"
@@ -2721,7 +2721,7 @@ export function MachineVisionMod3() {
 
           <IndustrialPhotoCard 
             src="./images/lighting/ring_light.jpg"
-            fallbackSrc="/images/lighting/ring_light.jpg"
+            fallbackSrc="./images/lighting/ring_light.jpg"
             badge="อุปกรณ์แสงจริง (Ring Light)"
             badgeColor="amber"
             title="ไฟวงแหวนรอบเลนส์ (LED Direct Ring Light)"
@@ -2741,7 +2741,7 @@ export function MachineVisionMod3() {
 
           <IndustrialPhotoCard 
             src="./images/lighting/darkfield_illumination.jpg"
-            fallbackSrc="/images/lighting/darkfield_illumination.jpg"
+            fallbackSrc="./images/lighting/darkfield_illumination.jpg"
             badge="อุปกรณ์แสงจริง (Darkfield)"
             badgeColor="rose"
             title="ไฟมุมต่ำพื้นหลังมืด (Darkfield Illumination)"
@@ -2855,7 +2855,7 @@ export function MachineVisionMod4() {
           badge: "PERSPECTIVE DISTORTION",
           badgeColor: "amber",
           src: "./images/hardware/industrial_lens_cmount.jpg",
-          fallbackSrc: "/images/hardware/industrial_lens_cmount.jpg",
+          fallbackSrc: "./images/hardware/industrial_lens_cmount.jpg",
           specs: [
             { label: 'ชนิดเลนส์', value: '25mm Standard C-Mount' },
             { label: 'ลำแสงนำเข้า', value: 'มุมกรวย (Cone Beam)' },
@@ -2869,7 +2869,7 @@ export function MachineVisionMod4() {
           badge: "PERFECT PARALLEL RAYS",
           badgeColor: "emerald",
           src: "./images/hardware/telecentric_lens.jpg",
-          fallbackSrc: "/images/hardware/telecentric_lens.jpg",
+          fallbackSrc: "./images/hardware/telecentric_lens.jpg",
           specs: [
             { label: 'ชนิดเลนส์', value: 'Bi-Telecentric Telecentricity < 0.05°' },
             { label: 'ลำแสงนำเข้า', value: 'ลำแสงขนานแท้ (Parallel Rays)' },

@@ -76,3 +76,4 @@ flowchart LR
 เมื่อต้องการขยายความละเอียดของแต่ละคอร์สใน Stage 2, 3, และ 4 เพิ่มเติมในอนาคต สามารถดำเนินการต่อได้ทันทีตามลำดับ:
 1. **เพิ่มคลังข้อสอบ Dual-Mode (Standard 20 ข้อ / Expert 40 ข้อ)** ให้กับ `c-industrial-backend-api`, `c-industrial-database-sql`, และ `c-iiot-nodered-edge` ใน `assessmentBank.js`
 2. **เพิ่มโจทย์ Workshop ปฏิบัติการ (Hands-on Lab Guides)** สำหรับแต่ละ Stage (เช่น สร้างไฟล์ `api_workorder.php`, เขียน Stored Procedure จริง, และนำเข้าไฟล์ `flows.json` เข้า Node-RED)
+

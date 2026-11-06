@@ -86,11 +86,6 @@ export default function GlobalAiAssistant() {
   const userRoleLower = (user?.role || '').toLowerCase();
   const hasAccess = ['admin', 'creator'].includes(userRoleLower);
 
-  // Suppress on auth pages or external partner portal
-  if (!hasAccess || location.pathname === '/login' || location.pathname.startsWith('/partner-portal')) {
-    return null;
-  }
-
   const [isOpen, setIsOpen] = useState(false);
   const [isDocked, setIsDocked] = useState(() => {
     try {
@@ -270,7 +265,10 @@ export default function GlobalAiAssistant() {
     chipsRef.current.scrollLeft = scrollLeftState - walk;
   };
 
-  if (!hasAccess) return null;
+  // Suppress on auth pages or external partner portal
+  if (!hasAccess || location.pathname === '/login' || location.pathname.startsWith('/partner-portal')) {
+    return null;
+  }
 
   const handleSend = async (overridePrompt) => {
     const textToSend = typeof overridePrompt === 'string' ? overridePrompt : input;
