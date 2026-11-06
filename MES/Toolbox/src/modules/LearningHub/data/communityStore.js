@@ -57,34 +57,35 @@ export function isUserInstructorOrAdmin(user) {
   if (user.isAdmin === true || user.is_admin === true) return true;
   if (user.isTrainer === true || user.is_trainer === true) return true;
 
-  // 2. ตรวจสอบ System Role (sys_role)
+  // 2. ตรวจสอบ System Role (sys_role) เฉพาะบทบาทผู้ดูแลระบบหรือวิทยากรโดยตรง
+  // ตัด 'supervisor' และ 'manager' ออกเพื่อป้องกันไม่ให้หัวหน้างาน/ผู้จัดการที่มาเข้าอบรมในฐานะนักเรียนมองเห็นคู่มือผู้สอนและเฉลย
   const sysRoleLower = String(user.sys_role || '').toLowerCase();
-  const privilegedSysRoles = ['creator', 'admin', 'supervisor', 'manager', 'trainer', 'instructor'];
+  const privilegedSysRoles = ['creator', 'admin', 'trainer', 'instructor'];
   if (privilegedSysRoles.includes(sysRoleLower)) {
     return true;
   }
 
-  // 3. ตรวจสอบตำแหน่งหรือชื่อ (รองรับทั้งภาษาไทยและอังกฤษ)
-  const roleLower = String(user.role || '').toLowerCase();
+  // 3. ตรวจสอบสิทธิ์อาจารย์ใหญ่/วิทยากรหลักประจำหลักสูตร (Master Lead Instructor)
+  const empId = String(user.emp_id || user.id || '');
   const nameLower = String(user.name || '').toLowerCase();
+  if (empId === '1096902163' || nameLower.includes('ณภัทร นุ่มทอง')) {
+    return true;
+  }
+
+  // 4. ตรวจสอบตำแหน่งหรือบทบาทเฉพาะทางด้านการสอน/แอดมิน
+  // ตัด 'หัวหน้า', 'ผู้จัดการ', 'supervisor', 'manager', 'architect' ออก เพื่อความปลอดภัยสูงสุด
+  const roleLower = String(user.role || '').toLowerCase();
   const privilegedKeywords = [
     'admin',
     'creator',
     'trainer',
     'instructor',
-    'teacher',
-    'professor',
-    'architect',
-    'manager',
     'วิทยากร',
-    'ผู้สอน',
-    'อาจารย์',
-    'ผู้ดูแลระบบ',
-    'ผู้จัดการ',
-    'หัวหน้า'
+    'ผู้สอนประจำหลักสูตร',
+    'ผู้ดูแลระบบ'
   ];
 
-  return privilegedKeywords.some(kw => roleLower.includes(kw) || nameLower.includes(kw));
+  return privilegedKeywords.some(kw => roleLower.includes(kw));
 }
 
 const DEFAULT_USER = GUEST_USER;
