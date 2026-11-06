@@ -152,9 +152,22 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
   if (!isRendered) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto bg-black/60 pt-2 sm:pt-[68px] transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}>
-      <div className="min-h-full flex items-center justify-center p-2 sm:p-4 py-3 sm:py-8">
-        <div className={`bg-white rounded-2xl sm:rounded-[20px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}>
+    <div 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className={`fixed inset-0 z-50 overflow-y-auto bg-black/60 pt-[76px] sm:pt-[84px] transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}
+    >
+      <div 
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleClose();
+        }}
+        className="min-h-full flex items-start sm:items-center justify-center p-2 sm:p-4 pb-8 sm:pb-12"
+      >
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className={`bg-white rounded-2xl sm:rounded-[20px] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}
+        >
           
           {/* Header */}
           <div className="bg-gradient-to-br from-[#0f2027] via-[#203a43] to-[#2c5364] p-3.5 sm:p-5 text-white">
