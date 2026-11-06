@@ -106,17 +106,19 @@ function AppLayout() {
               <div className="flex items-center gap-2">
                 <FiInfo className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 <span>
-                  <strong>โหมดผู้เยี่ยมชม (Guest Mode):</strong> คุณสามารถอ่านและศึกษาหลักสูตรมาตรฐานทั่วไปได้อิสระ กรุณาเข้าสู่ระบบ MES หากต้องการบันทึกผลการสอบ ใบรับรอง และเข้าถึงข้อมูลภายในองค์กร
+                  <strong>โหมดศึกษาด้วยตนเอง (Self-Study Open Access):</strong> สามารถศึกษาเนื้อหาหลักสูตรมาตรฐานโรงงานและทดลองปฏิบัติการในห้องจำลองได้ทันที | เข้าสู่ระบบเพื่อบันทึกประวัติสมรรถนะบุคลากรและออกใบรับรองอย่างเป็นทางการ
                 </span>
               </div>
               <a
                 href={getMesLoginUrl()}
-                className={`inline-flex items-center gap-1 font-bold underline hover:opacity-80 ${
-                  isDark ? 'text-amber-300' : 'text-amber-800'
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                  isDark 
+                    ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 hover:bg-amber-500/30' 
+                    : 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
                 }`}
               >
                 <FiLogIn className="w-3.5 h-3.5" />
-                <span>เข้าสู่ระบบ MES</span>
+                <span>เข้าสู่ระบบบุคลากร</span>
               </a>
             </div>
           </div>

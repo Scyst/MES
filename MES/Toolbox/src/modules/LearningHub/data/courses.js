@@ -1,4 +1,4 @@
-import { CATEGORY_OFFLINE_IMAGES } from './offlineAssets';
+import { CATEGORY_OFFLINE_IMAGES, COURSE_OFFLINE_IMAGES } from './offlineAssets';
 
 export const courses = [
   // --- Category: เครื่องจักรและวิศวกรรมการผลิต (Manufacturing & Engineering) ---
@@ -300,7 +300,7 @@ export const courses = [
     instructor: 'Engineering Team (MES Architecture Group)',
     duration: '1.5 hours',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    image: COURSE_OFFLINE_IMAGES['c3'],
     subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
     tags: ["React", "Vite", "SPA", "Full-Stack", "MES", "Frontend"],
     level: "Level 4 (Certified Expert)",
@@ -335,7 +335,7 @@ export const courses = [
     instructor: 'Engineering Team (MES Security Group)',
     duration: '2.5 hours',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    image: COURSE_OFFLINE_IMAGES['c4'],
     subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
     tags: ["Security", "SAP", "ERP", "CSRF", "RBAC", "Full-Stack", "MES"],
     level: "Level 4 (Certified Expert)",
@@ -442,7 +442,7 @@ export const courses = [
     instructor: 'อาจารย์ผู้เชี่ยวชาญและทีมวิศวกรรมดิจิทัล (99 Industrial Solutions / SNC Former)',
     duration: '24 hours (4 days)',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    image: COURSE_OFFLINE_IMAGES['c-enterprise-app'],
     subCategories: ["ระบบอัตโนมัติและดิจิทัล","สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม","ทักษะวิชาชีพขั้นสูง","เปิดรับรองบุคคลภายนอก"],
     tags: ["MES","Full-Stack","UI/UX","API","IT-OT","Security","App","Enterprise","Web Development"],
     level: "Level 3 (Certified Specialist)",
@@ -489,7 +489,7 @@ export const courses = [
     instructor: 'ทีมวิศวกรรมซอฟต์แวร์และสถาปัตยกรรมระบบ (MES Full-Stack Academy)',
     duration: '18 hours (3 days)',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    image: COURSE_OFFLINE_IMAGES['c-industrial-backend-api'],
     subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
     tags: ["Backend", "REST API", "PHP", "Node.js", "PDO", "SQL Injection", "CSRF", "Full-Stack", "MES"],
     level: "Level 4 (Certified Expert)",
@@ -641,7 +641,7 @@ export const courses = [
     instructor: 'ทีมวิศวกรรมฐานข้อมูลและระบบการผลิต (MES Data Architecture Group)',
     duration: '24 hours (4 days)',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    image: COURSE_OFFLINE_IMAGES['c-industrial-database-sql'],
     subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
     tags: ["SQL Server", "Database", "OEE", "Stored Procedure", "Transaction", "Indexing", "Full-Stack", "MES"],
     level: "Level 4 (Certified Expert)",
@@ -793,7 +793,7 @@ export const courses = [
     instructor: 'ทีมวิศวกรรมระบบอัตโนมัติและ IIoT (Smart Factory Connectivity Group)',
     duration: '24 hours (4 days)',
     category: 'โปรแกรมและระบบดิจิทัล',
-    image: CATEGORY_OFFLINE_IMAGES['โปรแกรมและระบบดิจิทัล'],
+    image: COURSE_OFFLINE_IMAGES['c-iiot-nodered-edge'],
     subCategories: ["สถาปัตยกรรมซอฟต์แวร์อุตสาหกรรม", "ระบบอัตโนมัติและดิจิทัล", "ระบบอัตโนมัติและหุ่นยนต์", "ทักษะวิชาชีพขั้นสูง", "เปิดรับรองบุคคลภายนอก"],
     tags: ["IIoT", "Node-RED", "PLC", "Modbus", "MQTT", "OPC-UA", "Edge", "Full-Stack", "MES"],
     level: "Level 4 (Certified Expert)",

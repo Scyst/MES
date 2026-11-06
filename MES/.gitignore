@@ -58,5 +58,5 @@ page/cctv_downloader/api/ffmpeg.exe
 
 
 
-# MES Learning Hub Summaries
-mes-learning-hub/qa_iso_summaries/
+# MES Learning Hub Standalone (Migrated to Toolbox/src/modules/LearningHub)
+mes-learning-hub/

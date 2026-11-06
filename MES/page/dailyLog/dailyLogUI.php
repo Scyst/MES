@@ -269,7 +269,7 @@ function renderServiceLink($title, $desc, $icon, $url, $requiredPermission, $ico
                         <?php 
                         $themePrototype = 'text-success bg-success bg-opacity-10 border-success border';
                         renderServiceLink('New MES Toolbox (SPA)', 'ระบบเวอร์ชันใหม่ (ทดลองใช้งาน)', '<i class="fas fa-rocket"></i>', '/iot-toolbox/sandbox-b9/Toolbox/#/', '', $themePrototype);
-                        renderServiceLink('Learning Hub', 'ศูนย์การเรียนรู้และคู่มือออนไลน์', '<i class="fas fa-graduation-cap"></i>', '/iot-toolbox/sandbox-b9/LearningHub/index.html', '', $themePrototype);
+                        renderServiceLink('Learning Hub', 'ศูนย์การเรียนรู้และคู่มือออนไลน์', '<i class="fas fa-graduation-cap"></i>', '/iot-toolbox/sandbox-b9/Toolbox/#/learning', '', $themePrototype);
                         renderServiceLink('Team Planner', 'กระดานแผนงานและปฏิทินทีม (New)', '<i class="fas fa-calendar-check"></i>', '/iot-toolbox/sandbox-b9/Toolbox/#/planner', '', $themePrototype);
                         ?>
                     </div>

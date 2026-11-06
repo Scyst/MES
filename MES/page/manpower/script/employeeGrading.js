@@ -298,7 +298,7 @@ const App = {
                     <td class="px-1">
                         <div class="d-flex flex-column align-items-center gap-1">
                             ${renderSelect('grade_learning', emp.grade_learning, emp.system_grade_learning || null)}
-                            <a href="/iot-toolbox/sandbox-b9/LearningHub/index.html#/profile/${encodeURIComponent(emp.emp_id)}"
+                            <a href="/iot-toolbox/sandbox-b9/Toolbox/#/learning/profile/${encodeURIComponent(emp.emp_id)}"
                                target="_blank"
                                class="badge rounded-pill text-decoration-none ${(emp.skill_count || 0) >= (emp.learning_target_a || 3) ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : (emp.skill_count || 0) > 0 ? 'bg-info bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-light text-muted border'}"
                                style="font-size: 0.65rem; padding: 2px 6px;"
@@ -1638,7 +1638,7 @@ const App = {
                             <div class="small d-flex"><div style="width:25px;" class="text-center text-danger"><i class="fas fa-first-aid"></i></div><span class="text-danger fw-semibold flex-grow-1">${emp.emergency_contact_name ? emp.emergency_contact_name + ' (' + emp.emergency_contact_phone + ')' : (emp.emergency_contact_phone || '-')}</span></div>
                         </div>
                         <div class="mt-3 pt-2">
-                            <a href="/iot-toolbox/sandbox-b9/LearningHub/index.html#/profile/${encodeURIComponent(emp.emp_id)}" target="_blank" class="btn btn-sm btn-primary w-100 rounded-pill fw-bold">
+                            <a href="/iot-toolbox/sandbox-b9/Toolbox/#/learning/profile/${encodeURIComponent(emp.emp_id)}" target="_blank" class="btn btn-sm btn-primary w-100 rounded-pill fw-bold">
                                 <i class="fas fa-graduation-cap me-1"></i> เปิดพาสปอร์ตสมรรถนะ (MES Learning Hub)
                             </a>
                         </div>

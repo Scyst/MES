@@ -282,7 +282,8 @@ Node-RED: ${NODE_RED_URL}/ | User: ${NODE_RED_USER} | Pass: ${NODE_RED_PASS}
           await client.ensureDir(remoteDir);
         }
 
-        await client.uploadFrom(args.localPath, args.remotePath);
+        const fileName = path.basename(args.remotePath);
+        await client.uploadFrom(args.localPath, fileName);
         return {
           content: [{ type: "text", text: `Successfully uploaded ${args.localPath} to ${args.remotePath}` }]
         };
