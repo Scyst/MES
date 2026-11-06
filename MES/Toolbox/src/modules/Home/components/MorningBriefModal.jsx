@@ -156,7 +156,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
-      className={`fixed inset-0 z-50 overflow-y-auto bg-black/60 pt-[76px] sm:pt-[84px] transition-all duration-300 ease-in-out ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}
+      className={`fixed inset-0 z-50 overflow-y-auto bg-black/60 pt-[76px] sm:pt-[84px] transition-all duration-300 ease-in-out hidden-scrollbar sm:custom-scrollbar overscroll-contain ${isVisible ? 'opacity-100 backdrop-blur-sm' : 'opacity-0 backdrop-blur-none pointer-events-none'}`}
     >
       <div 
         onClick={(e) => {
@@ -369,7 +369,7 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
                   </div>
 
                   {/* Suggestion Chips - Horizontal Scrollable on Mobile */}
-                  <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 scrollbar-none select-none -mx-1 px-1">
+                  <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 hidden-scrollbar sm:custom-scrollbar select-none -mx-1 px-1">
                     <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 shrink-0">ยอดนิยม:</span>
                     {SUGGESTED_PROMPTS.map((tag) => (
                       <button

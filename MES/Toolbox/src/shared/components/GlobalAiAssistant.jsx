@@ -5,7 +5,7 @@ import { aiCopilotApi } from '../services/aiCopilotApi';
 import {
   Bot, Sparkles, Send, X, Trash2, Copy, Check, Calendar,
   Zap, FileText, RefreshCw, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, MessageSquare,
-  ChevronUp, ArrowRight, AlertTriangle, Camera, Globe, Image as ImageIcon
+  ChevronUp, ArrowRight, AlertTriangle, Camera, Globe, Image as ImageIcon, ArrowDown
 } from 'lucide-react';
 
 function getQuickActionsForPath(pathname) {
@@ -110,8 +110,10 @@ export default function GlobalAiAssistant() {
   const [error, setError] = useState(null);
   const [summaryStyle, setSummaryStyle] = useState('concise'); // 'concise' | 'formal'
   const [copiedId, setCopiedId] = useState(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const chatFeedRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const chipsRef = useRef(null);
@@ -121,6 +123,17 @@ export default function GlobalAiAssistant() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
+
+  const handleChatScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isUp = scrollHeight - scrollTop - clientHeight > 120;
+    setShowScrollBottom(isUp);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollBottom(false);
+  };
 
   const handleImageFile = (file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -473,7 +486,7 @@ export default function GlobalAiAssistant() {
 
             {/* Collapsible details */}
             {isRedFlagsOpen && (
-              <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 max-h-36 sm:max-h-48 overflow-y-auto scrollbar-thin">
+              <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 max-h-36 sm:max-h-48 overflow-y-auto hidden-scrollbar sm:custom-scrollbar overscroll-contain">
                 {redFlags.flags.map((flag, idx) => {
                   let badgeColor = 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800';
                   if (flag.level === 'WARNING') {
@@ -518,7 +531,11 @@ export default function GlobalAiAssistant() {
         )}
 
         {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50 dark:bg-slate-950/50">
+        <div
+          ref={chatFeedRef}
+          onScroll={handleChatScroll}
+          className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 bg-slate-50 dark:bg-slate-950/50 hidden-scrollbar sm:custom-scrollbar overscroll-contain relative"
+        >
           {messages.map((msg) => {
             const isUser = msg.role === 'user';
             return (
@@ -611,6 +628,19 @@ export default function GlobalAiAssistant() {
           )}
 
           <div ref={messagesEndRef} />
+
+          {/* Floating Scroll-to-Bottom Button */}
+          {showScrollBottom && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="sticky bottom-2 float-right mr-1 p-2 rounded-full bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer flex items-center gap-1 text-[11px] font-semibold animate-in fade-in zoom-in-90 z-20"
+              title="เลื่อนลงข้อความล่าสุด"
+            >
+              <ArrowDown size={14} />
+              <span className="hidden sm:inline">ล่าสุด</span>
+            </button>
+          )}
         </div>
 
         {/* Suggested Quick Action Chips */}
@@ -635,7 +665,7 @@ export default function GlobalAiAssistant() {
               onMouseLeave={handleMouseLeaveOrUp}
               onMouseUp={handleMouseLeaveOrUp}
               onMouseMove={handleMouseMove}
-              className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 text-[11px] select-none scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 cursor-grab active:cursor-grabbing scroll-smooth"
+              className="flex items-center gap-1.5 overflow-x-auto py-0.5 px-0.5 text-[11px] select-none hidden-scrollbar sm:custom-scrollbar cursor-grab active:cursor-grabbing scroll-smooth"
             >
               {quickActions.map((tag) => (
                 <button
