@@ -111,11 +111,19 @@ $headerBaseUrl = function_exists('getMesBaseUrl') ? getMesBaseUrl() : (defined('
                         <span class="small fw-bold text-success" id="headerRatioDisplay">0.00</span>
                     </div>
                 </li>
+                <?php if ($userRole === 'display'): ?>
+                <li>
+                    <a class="dropdown-item text-primary fw-bold rounded py-2 d-flex align-items-center" href="<?php echo $headerBaseUrl; ?>/auth/login_form.php?switch_user=1&redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>">
+                        <i class="fas fa-sign-in-alt fa-fw me-3"></i> เข้าสู่ระบบจัดการ (Sign In)
+                    </a>
+                </li>
+                <?php else: ?>
                 <li>
                     <a class="dropdown-item rounded py-2 d-flex align-items-center" href="<?php echo $headerBaseUrl; ?>/page/profile/profileUI.php">
                         <i class="fas fa-user-edit fa-fw me-3 text-muted"></i> <?php _e('header.my_profile'); ?>
                     </a>
                 </li>
+                <?php endif; ?>
                 <li>
                     <a class="dropdown-item rounded py-2 d-flex align-items-center" href="#" id="theme-switcher-btn">
                         <i class="fas fa-adjust fa-fw me-3 text-muted"></i> <?php _e('header.theme_switch'); ?>

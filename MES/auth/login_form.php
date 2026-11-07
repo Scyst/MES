@@ -16,7 +16,7 @@ $redirectTarget = isset($_GET['redirect']) && !empty($_GET['redirect'])
 // (ถ้าเป็นลิงก์ที่เริ่มด้วย http/https แต่อยู่คนละโดเมน อาจจะไม่ปลอดภัย แต่ในระบบภายในถือว่ายอมรับได้)
 
 // 2. ถ้ามี Session อยู่แล้ว ให้ดีดไปหน้าที่ตั้งใจไว้เลย (ไม่ต้องกรอกรหัสซ้ำ)
-if (isset($_SESSION['user'])) {
+if (isset($_SESSION['user']) && empty($_SESSION['user']['is_auto_kiosk']) && empty($_GET['switch_user'])) {
     header("Location: " . $redirectTarget);
     exit;
 }

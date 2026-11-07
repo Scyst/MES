@@ -1,5 +1,6 @@
 <?php
 // page/manpower/manpowerUI.php
+define('ALLOW_GUEST_ACCESS', true);
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasPermission('view_manpower') && !hasPermission('manage_manpower')) {

@@ -21,6 +21,7 @@ if (isset($_SESSION['user'])) {
     } catch (Exception $e) {}
 }
 $_SESSION = array();
+setcookie('mes_kiosk_mode', '', time() - 42000, '/');
 
 // 3. ลบ Cookie
 if (ini_get("session.use_cookies")) {

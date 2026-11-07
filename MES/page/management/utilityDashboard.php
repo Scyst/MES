@@ -1,5 +1,6 @@
 <?php
 // MES/page/management/utilityDashboard.php
+define('ALLOW_GUEST_ACCESS', true);
 require_once __DIR__ . '/../components/init.php';
 
 if (!hasPermission('view_executive')) {

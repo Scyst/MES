@@ -9,6 +9,7 @@ require_once __DIR__ . '/cam_config.php';
 $_scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $_base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 define('CAMERA_HOST', "{$_scheme}://{$_SERVER['HTTP_HOST']}{$_base}/cam_proxy.php");
+define('ALLOW_GUEST_ACCESS', true);
 require_once __DIR__ . '/../../auth/check_auth.php';
 
 // เฉพาะ creator/admin/supervisor แก้ค่า/สั่งงานได้ — role อื่นดูอย่างเดียว

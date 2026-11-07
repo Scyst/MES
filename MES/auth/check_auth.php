@@ -33,6 +33,48 @@ function isApiRequest() {
            (isset($_SERVER['HTTP_ACCEPT']) && stripos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
 }
 
+// ── Kiosk / Control Room TV Auto-Authentication (Read-Only Display Mode) ──
+$_mesReferer = $_SERVER['HTTP_REFERER'] ?? '';
+$_isExplicitKiosk = !empty($_GET['kiosk']) 
+    || !empty($_GET['tv']) 
+    || (($_COOKIE['mes_kiosk_mode'] ?? '') === '1')
+    || (bool)preg_match('/[?&](kiosk|tv)=(1|true)/i', $_mesReferer);
+$_isKioskDashboardReferer = (bool)preg_match('#/(manpowerUI|accessoriesInspectionUI|utilityDashboard|OEE_Shopfloor)\.php#i', $_mesReferer);
+
+if (!defined('ALLOW_GUEST_ACCESS') && !$_isExplicitKiosk && !isApiRequest() && !empty($_SESSION['user']['is_auto_kiosk'])) {
+    unset($_SESSION['user']);
+}
+
+if (!isset($_SESSION['user']) && ($_isExplicitKiosk || (defined('ALLOW_GUEST_ACCESS') && ALLOW_GUEST_ACCESS === true) || (isApiRequest() && $_isKioskDashboardReferer))) {
+    $_SESSION['user'] = [
+        'id'               => 106,
+        'username'         => 'tv_control_room',
+        'fullname'         => 'Control Room Display',
+        'role'             => 'display',
+        'position'         => 'TV / Control Room Display',
+        'line'             => 'ALL',
+        'emp_id'           => 'TV_CONTROL_ROOM',
+        'team_group'       => 'ALL',
+        'profile_picture'  => null,
+        'theme_preference' => 'light',
+        'preferred_lang'   => 'th',
+        'account_type'     => 'kiosk',
+        'is_kiosk'         => true,
+        'is_auto_kiosk'    => !$_isExplicitKiosk,
+        'permissions'      => [
+            'view_dashboard', 'view_production', 'view_manpower',
+            'view_warehouse', 'view_transport', 'view_documents',
+            'view_qms', 'view_pl', 'view_planning', 'view_executive'
+        ]
+    ];
+    if ($_isExplicitKiosk && !headers_sent()) {
+        setcookie('mes_kiosk_mode', '1', time() + (86400 * 3650), '/');
+        if (session_id()) {
+            setcookie(session_name(), session_id(), time() + (86400 * 30), '/');
+        }
+    }
+}
+
 if (!defined('ALLOW_GUEST_ACCESS') && !isset($_SESSION['user'])) {
     if (isApiRequest()) {
         header('Content-Type: application/json; charset=utf-8');
