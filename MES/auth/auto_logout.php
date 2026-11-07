@@ -2,7 +2,21 @@
 // MES/auth/auto_logout.php
 if (!isset($_SESSION['user'])) return;
 // Dedicated TV / Kiosk Display Users never timeout (24/7 continuous display)
-if (in_array($_SESSION['user']['role'] ?? '', ['display', 'kiosk']) || ($_SESSION['user']['account_type'] ?? '') === 'kiosk') return;
+$isKioskUser = in_array($_SESSION['user']['role'] ?? '', ['display', 'kiosk']) || ($_SESSION['user']['account_type'] ?? '') === 'kiosk';
+if ($isKioskUser) {
+    // Inject a silent keep-alive heartbeat every 45s to prevent PHP session timeout on the server
+    $verifyUrl = (defined('BASE_URL') ? rtrim(BASE_URL, '/') : '../..') . '/auth/api_verify.php?check=1';
+    echo <<<HTML
+    <script>
+    (function() {
+        setInterval(function() {
+            fetch("{$verifyUrl}&_t=" + Date.now(), { cache: "no-store", credentials: "same-origin" }).catch(function(){});
+        }, 45000);
+    })();
+    </script>
+HTML;
+    return;
+}
 ?>
 
 <div class="modal fade" id="inactivityModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">

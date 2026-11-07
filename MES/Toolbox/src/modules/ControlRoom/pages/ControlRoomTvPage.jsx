@@ -3,60 +3,60 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Tv, Activity, Users, Zap, Network, BarChart3, Maximize2, Minimize2,
   RefreshCw, Clock, Play, Pause, ChevronRight, CheckCircle2, Shield,
-  Layers, ExternalLink, Sparkles
+  Layers, ExternalLink, Sparkles, ScanLine
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const SCREENS = [
   {
     id: 'oee',
-    name: 'OEE Live Board',
-    thaiName: 'ภาพรวม OEE ประจำกะ',
+    name: 'OEE Shopfloor',
+    thaiName: 'ภาพรวม OEE ประจำกะ (Shopfloor)',
     icon: Activity,
-    badge: 'Shopfloor Main',
+    badge: 'Shopfloor Live',
     badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    url: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php?tv=1',
+    url: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php',
     description: 'ติดตาม OEE, สถานะ Good/Hold/Scrap, ความเร็ว Conveyor และยอดผลิตเรียลไทม์'
   },
   {
     id: 'manpower',
     name: 'Manpower Live',
-    thaiName: 'กำลังพลและผลงาน',
+    thaiName: 'กำลังพลและสถานะพนักงาน (Manpower)',
     icon: Users,
-    badge: 'Line Workforce',
+    badge: 'Workforce Live',
     badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-    url: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/manpowerUI.php?tv=1',
+    url: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/manpowerUI.php',
     description: 'ยอดพนักงานในกะ, การเข้างานแต่ละไลน์ผลิต, ทักษะ Skill Matrix และเกรดผลงาน'
   },
   {
     id: 'utility',
-    name: 'Utility & Energy',
-    thaiName: 'พลังงาน & TOU',
+    name: 'Utility Monitoring',
+    thaiName: 'พลังงาน & ค่าไฟ TOU (Utility)',
     icon: Zap,
-    badge: 'Energy IoT',
+    badge: 'Energy & Cost',
     badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    url: `${window.location.origin}${window.location.pathname}#/utility?tv=1`,
+    url: '/iot-toolbox/sandbox-b9/MES/MES/page/management/utilityDashboard.php',
     description: 'ติดตามการใช้ไฟฟ้า (kWh), ก๊าซ LPG (m³), ค่าไฟ TOU On-Peak / Off-Peak แบบเรียลไทม์'
   },
   {
     id: 'twin',
     name: 'Digital Twin',
-    thaiName: 'ผังระบบและโรงงาน',
+    thaiName: 'ดิจิทัลทวินจำลองโรงงาน (3D Simulation)',
     icon: Network,
-    badge: 'MES Architecture',
+    badge: 'Digital Twin 3D',
     badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    url: `${window.location.origin}${window.location.pathname}#/blueprint?tv=1`,
-    description: 'แผนผังสถาปัตยกรรมระบบ MES ดิจิทัลทวิน เส้นทางการไหลของข้อมูล และสถานะโหนด IoT'
+    url: '/iot-toolbox/sandbox-b9/MES/MES/page/digitalTwin/digitalTwin.html',
+    description: 'แบบจำลองเสมือนจริง 3 มิติของโรงงาน SNC Former B9 (Digital Twin Simulation)'
   },
   {
-    id: 'overview',
-    name: 'Executive Overview',
-    thaiName: 'ภาพรวมฝ่ายบริหาร',
-    icon: BarChart3,
-    badge: 'Management',
+    id: 'scan-fg',
+    name: 'Scan FG (Accessories)',
+    thaiName: 'สแกน FG ตรวจสอบชิ้นงาน (Accessories Inspection)',
+    icon: ScanLine,
+    badge: 'Vision & Inspection',
     badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    url: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php?tv=1',
-    description: 'แดชบอร์ดสรุปผลการดำเนินงานระดับบริหาร ยอดผลิตรวม และรายรับของโรงงาน'
+    url: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php',
+    description: 'ระบบสแกนตรวจสอบกล้อง Vision และตรวจนับชิ้นงานสำเร็จรูปก่อนส่งมอบ'
   }
 ];
 
