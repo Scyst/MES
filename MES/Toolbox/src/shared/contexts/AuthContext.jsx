@@ -312,11 +312,12 @@ export const AuthProvider = ({ children }) => {
 
   // 5. Login Action (with Cross-Tab LOGIN Broadcast)
   const login = useCallback(
-    async (username, password) => {
+    async (username, password, isKiosk = false) => {
       try {
         const response = await axios.post(`${import.meta.env.BASE_URL}login.php`, {
           username,
           password,
+          is_kiosk: isKiosk,
         });
         if (response.data && response.data.success) {
           userRef.current = response.data.user;

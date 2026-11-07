@@ -10,6 +10,7 @@ export default function Login() {
   const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isKiosk, setIsKiosk] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -94,7 +95,7 @@ export default function Login() {
     setError('');
     setIsLoading(true);
 
-    const result = await login(username, password);
+    const result = await login(username, password, isKiosk);
     if (result.success) {
       handlePostLoginRedirect(from);
     } else {
@@ -158,6 +159,19 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isKioskCheckbox"
+                checked={isKiosk}
+                onChange={(e) => setIsKiosk(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <label htmlFor="isKioskCheckbox" className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                คงการเข้าสู่ระบบสำหรับจอ TV / Dashboard (ไม่หมดอายุ 24/7)
+              </label>
             </div>
 
             <button

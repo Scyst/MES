@@ -49,7 +49,7 @@ try {
     } catch (Throwable $e) {}
 
     $sql = "SELECT u.id, u.username, u.password, u.role, u.line, u.emp_id, u.fullname, u.team_group,
-                   u.profile_picture, u.theme_preference, u.preferred_lang, u.is_active, m.position 
+                   u.profile_picture, u.theme_preference, u.preferred_lang, u.account_type, u.is_active, m.position 
             FROM " . USERS_TABLE . " u
             LEFT JOIN " . MANPOWER_EMPLOYEES_TABLE . " m ON u.emp_id = m.emp_id
             WHERE u.username = ?";
@@ -91,6 +91,8 @@ try {
             'profile_picture'  => $user['profile_picture'] ?? null,
             'theme_preference' => $user['theme_preference'] ?? 'light',
             'preferred_lang'   => $user['preferred_lang']   ?? 'th',
+            'account_type'     => $user['account_type']     ?? 'employee',
+            'is_kiosk'         => !empty($input['is_kiosk']) || in_array($user['role'], ['display', 'kiosk']) || ($user['account_type'] ?? '') === 'kiosk',
             'permissions'      => $permissions,
         ];
 

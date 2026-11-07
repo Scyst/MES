@@ -192,12 +192,6 @@ export default function AppLayout() {
     location.search.includes('kiosk=1') ||
     window.location.hash.includes('kiosk=1');
 
-  // Auto-redirect dedicated TV/Kiosk user accounts to Control Room Hub
-  useEffect(() => {
-    if (user && (user.role === 'display' || user.account_type === 'kiosk') && isHomeRoute) {
-      navigate('/control-room', { replace: true });
-    }
-  }, [user, isHomeRoute, navigate]);
 
   if (isTvMode) {
     return (

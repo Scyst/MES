@@ -86,6 +86,12 @@ function getFriendlyPageName($url) {
                         <label for="password" class="form-label small fw-bold">Password</label>
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_kiosk" name="is_kiosk">
+                        <label class="form-check-label small text-secondary" for="is_kiosk">
+                            <i class="fas fa-tv me-1 text-primary"></i> คงการเข้าสู่ระบบสำหรับจอ TV / Dashboard (ไม่หมดอายุ 24/7)
+                        </label>
+                    </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary fw-bold">
                             Sign In <i class="fas fa-arrow-right ms-2"></i>
@@ -163,7 +169,7 @@ function getFriendlyPageName($url) {
                 const response = await fetch('login.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, is_kiosk: !!form.is_kiosk?.checked })
                 });
                 
                 // ตรวจสอบว่าเป็น JSON หรือไม่ (ป้องกันกรณี Error 500 แล้วคืนค่าเป็น HTML)

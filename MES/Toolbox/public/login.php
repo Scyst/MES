@@ -148,6 +148,7 @@ try {
             'preferred_lang'   => $user['preferred_lang']   ?? 'th',
             'account_type'     => $user['account_type']     ?? 'employee',
             'approval_status'  => $user['approval_status']  ?? 'approved',
+            'is_kiosk'         => !empty($input['is_kiosk']) || in_array($user['role'], ['display', 'kiosk']) || ($user['account_type'] ?? '') === 'kiosk',
             'expires_at'       => $user['expires_at']       ?? null,
             'company_name'     => $user['company_name']     ?? null,
             'permissions'      => $permissions

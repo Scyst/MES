@@ -24,7 +24,6 @@ const LearningHubApp = lazy(() => import('../modules/LearningHub/LearningHubApp'
 const StoreApp = lazy(() => import('../modules/Store/StoreApp'));
 const UtilityDashboardPage = lazy(() => import('../modules/Utility/pages/UtilityDashboardPage'));
 const ForkliftPage = lazy(() => import('../modules/Forklift/pages/ForkliftPage'));
-const ControlRoomTvPage = lazy(() => import('../modules/ControlRoom/pages/ControlRoomTvPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -103,18 +102,6 @@ export default function App() {
               </ErrorBoundary>
             } />
 
-            {/* SNC Control Room & TV Kiosk Live Hub (Dedicated 24/7 Fullscreen View) */}
-            <Route path="/control-room" element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center font-mono">กำลังเชื่อมต่อระบบ SNC Control Room Live TV...</div>}>
-                    <ControlRoomTvPage />
-                  </Suspense>
-                </ErrorBoundary>
-              </ProtectedRoute>
-            } />
-            <Route path="/tv" element={<Navigate to="/control-room" replace />} />
-            <Route path="/kiosk" element={<Navigate to="/control-room" replace />} />
 
             {/* Protected Routes */}
             <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
