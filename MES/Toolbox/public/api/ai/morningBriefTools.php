@@ -662,6 +662,52 @@ function queryMaintenanceReport(string $startDate, string $endDate, ?string $lin
         ];
     }
 
+    // Active Unresolved Backlog (ALL Open/Pending/In Progress work orders regardless of requested date)
+    $activeBacklogSql = "SELECT TOP 15
+        wo_number, machine_name, line, priority, status, issue_title, requested_at,
+        DATEDIFF(day, requested_at, GETDATE()) as days_pending
+        FROM PE_WORK_ORDERS WITH (NOLOCK)
+        WHERE status IN ('Open', 'Pending', 'In Progress')";
+    $activeParams = [];
+    if (!empty($line) && $line !== 'ALL') {
+        $activeBacklogSql .= " AND line = ?";
+        $activeParams[] = $line;
+    }
+    $activeBacklogSql .= " ORDER BY CASE WHEN priority = 'Critical' THEN 1 WHEN priority = 'High' THEN 2 ELSE 3 END, requested_at DESC";
+    $stmtActive = $pdo->prepare($activeBacklogSql);
+    $stmtActive->execute($activeParams);
+    $activeWorkOrders = [];
+    foreach ($stmtActive->fetchAll() ?: [] as $row) {
+        $activeWorkOrders[] = [
+            'wo_number' => (string)$row['wo_number'],
+            'machine_name' => (string)$row['machine_name'],
+            'line' => (string)$row['line'],
+            'priority' => (string)$row['priority'],
+            'status' => (string)$row['status'],
+            'issue_title' => (string)$row['issue_title'],
+            'requested_at' => substr((string)$row['requested_at'], 0, 16),
+            'days_pending' => (int)$row['days_pending'],
+        ];
+    }
+
+    $activeSumSql = "SELECT
+        COUNT(*) as total_backlog,
+        SUM(CASE WHEN priority = 'Critical' THEN 1 ELSE 0 END) as backlog_critical,
+        SUM(CASE WHEN priority = 'High' THEN 1 ELSE 0 END) as backlog_high
+        FROM PE_WORK_ORDERS WITH (NOLOCK)
+        WHERE status IN ('Open', 'Pending', 'In Progress')";
+    $activeSumParams = [];
+    if (!empty($line) && $line !== 'ALL') {
+        $activeSumSql .= " AND line = ?";
+        $activeSumParams[] = $line;
+    }
+    $stmtActiveSum = $pdo->prepare($activeSumSql);
+    $stmtActiveSum->execute($activeSumParams);
+    $activeSum = $stmtActiveSum->fetch() ?: [];
+    $totalBacklog = (int)($activeSum['total_backlog'] ?? 0);
+    $backlogCrit = (int)($activeSum['backlog_critical'] ?? 0);
+    $backlogHigh = (int)($activeSum['backlog_high'] ?? 0);
+
     return [
         'start_date' => $startDate,
         'end_date' => $endDate,
@@ -677,6 +723,13 @@ function queryMaintenanceReport(string $startDate, string $endDate, ?string $lin
         ],
         'top_problem_machines' => $topMachines,
         'recent_urgent_work_orders' => $recentIssues,
+        'active_unresolved_backlog' => [
+            'total_open_pending' => $totalBacklog,
+            'critical_count' => $backlogCrit,
+            'high_count' => $backlogHigh,
+            'critical_and_high_total' => $backlogCrit + $backlogHigh,
+            'items' => $activeWorkOrders,
+        ],
     ];
 }
 
@@ -1212,7 +1265,7 @@ function getToolDeclarations(): array {
             ],
             [
                 'name' => 'get_maintenance_report',
-                'description' => 'รายงานแจ้งซ่อมและสถานะเครื่องจักร (PE Maintenance / Work Orders): ยอดใบงานทั้งหมด, รอดำเนินการ, ซ่อมเสร็จ, ใบงานวิกฤต (Critical/High), เครื่องจักรที่เสียบ่อยที่สุด, เวลา Downtime/เวลาซ่อมรวม และรายการแจ้งซ่อมเร่งด่วนล่าสุด ใช้เมื่อถามเรื่องเครื่องจักรเสีย, แจ้งซ่อม, ซ่อมบำรุง, PE, เครื่องจักรไหนมีปัญหา',
+                'description' => 'รายงานแจ้งซ่อมและสถานะเครื่องจักร (PE Maintenance / Work Orders): สรุปใบงานใหม่ตามช่วงวันที่ และรายการใบแจ้งซ่อมที่ \'ยังค้างอยู่ทั้งหมดในระบบ (Active Backlog / Still Open)\' โดยเฉพาะระดับ Critical/High ที่ยังค้างอยู่ไม่ว่าจะแจ้งซ่อมตั้งแต่วันไหน หากถามเรื่อง \'มีใบแจ้งซ่อมค้างไหม\', \'เครื่องจักรขัดข้องระดับ Critical/High ค้างอยู่\', หรือถามเจาะลึกจาก Red-Flags ให้ดูที่ active_unresolved_backlog เป็นหลัก',
                 'parameters' => [
                     'type' => 'OBJECT',
                     'properties' => [

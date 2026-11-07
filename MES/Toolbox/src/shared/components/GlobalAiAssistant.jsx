@@ -568,7 +568,17 @@ export default function GlobalAiAssistant() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleSend(`ช่วยวิเคราะห์และให้รายละเอียดเกี่ยวกับ: ${flag.title}`)}
+                          onClick={() => {
+                            if (flag.category === 'EQUIPMENT') {
+                              handleSend(`ช่วยแจกแจงรายละเอียดใบแจ้งซ่อมเครื่องจักรขัดข้องระดับ Critical/High ที่ยังค้างอยู่ทั้งหมด (Active Backlog) พร้อมชื่อเครื่องจักร ไลน์ผลิต และอาการเสีย`);
+                            } else if (flag.category === 'WSM_PLANNER') {
+                              handleSend(`ช่วยแจกแจงรายการงาน WSM ระดับ Urgent/High ที่เลยกำหนดส่ง (Overdue) ทั้งหมด พร้อมชื่อผู้รับผิดชอบและกำหนดส่ง`);
+                            } else if (flag.category === 'WORKING_CAPITAL') {
+                              handleSend(`ช่วยวิเคราะห์มูลค่าสินค้าสำเร็จรูป (FG) ค้างสะสมปลายไลน์ประกอบ พร้อมแนวทางบริหาร Working Capital`);
+                            } else {
+                              handleSend(`ช่วยวิเคราะห์และให้รายละเอียดเกี่ยวกับ: ${flag.title}`);
+                            }
+                          }}
                           className="text-[9.5px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 shrink-0 inline-flex items-center gap-0.5 cursor-pointer underline"
                         >
                           ถาม AI <ArrowRight size={9} />
