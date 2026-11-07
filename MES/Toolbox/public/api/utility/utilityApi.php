@@ -11,6 +11,7 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 error_reporting(0);
 ini_set('display_errors', 0);
 
+define('ALLOW_GUEST_ACCESS', true);
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
 
@@ -24,23 +25,36 @@ function sendJson($success, $data = null, $message = '') {
 }
 
 try {
-    if (!isset($_SESSION['user'])) {
-        http_response_code(401);
-        sendJson(false, null, 'Unauthorized Access: Please log in');
-    }
-
-    $currentUser = $_SESSION['user'];
-    $role = $currentUser['role'] ?? 'guest';
-    $canManage = in_array(strtolower($role), ['admin', 'creator', 'manager', 'supervisor', 'engineer']);
-
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jsonPayload = json_decode(file_get_contents('php://input'), true);
         if (is_array($jsonPayload)) {
             $_POST = array_merge($_POST, $jsonPayload);
+            $_REQUEST = array_merge($_REQUEST, $jsonPayload);
         }
     }
 
     $action = $_REQUEST['action'] ?? '';
+
+    // IoT hardware & Cron endpoints authenticate via X-API-KEY
+    $isIotAction = in_array($action, ['insert_log', 'aggregate_summary']);
+    if ($isIotAction) {
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        $apiKey = $headers['X-API-KEY'] ?? $headers['X-Api-Key'] ?? $headers['x-api-key'] ?? ($_SERVER['HTTP_X_API_KEY'] ?? '');
+        if ($apiKey !== 'MESKey2026') {
+            http_response_code(401);
+            sendJson(false, null, 'Unauthorized Access: Invalid or missing API Key');
+        }
+    } else {
+        // Human/web endpoints require a valid user session
+        if (!isset($_SESSION['user'])) {
+            http_response_code(401);
+            sendJson(false, null, 'Unauthorized Access: Please log in');
+        }
+
+        $currentUser = $_SESSION['user'];
+        $role = $currentUser['role'] ?? 'guest';
+        $canManage = in_array(strtolower($role), ['admin', 'creator', 'manager', 'supervisor', 'engineer']);
+    }
 
     switch ($action) {
         // ----------------------------------------------------
@@ -322,6 +336,86 @@ try {
             $stmt = $pdo->prepare("EXEC dbo.sp_AggregateUtilityHourly @TargetDate = :dt");
             $stmt->execute([':dt' => $targetDate]);
             sendJson(true, null, "คำนวณยอด Utility สำหรับวันที่ {$targetDate} เรียบร้อยแล้ว");
+            break;
+        }
+
+        // ----------------------------------------------------
+        // [NODE-RED IoT] INSERT UTILITY LOG BATCH
+        // ----------------------------------------------------
+        case 'insert_log': {
+            $meterName = $_REQUEST['meter_name'] ?? null;
+            $utilityType = $_REQUEST['utility_type'] ?? null;
+            $dataBatch = $_REQUEST['data_batch'] ?? null;
+
+            if (!$meterName || !$utilityType || !is_array($dataBatch)) {
+                sendJson(false, null, 'Invalid payload: meter_name, utility_type, and data_batch are required.');
+            }
+
+            $sql = "EXEC dbo.sp_InsertUtilityLog 
+                        @MeterName = :mName, @UtilityType = :uType, @LogTimestamp = :lTime, 
+                        @Voltage = :v, @CurrentAmp = :c, @PowerKw = :p, 
+                        @ReactivePower = :rp, @ApparentPower = :ap, @PowerFactor = :pf, 
+                        @Velocity = :vel, @FlowRate = :fr, @CumulativeValue = :cum,
+                        @VoltA = :va, @VoltB = :vb, @VoltC = :vc,
+                        @AmpA = :aa, @AmpB = :ab, @AmpC = :ac,
+                        @KwA = :kwa, @KwB = :kwb, @KwC = :kwc";
+            $stmt = $pdo->prepare($sql);
+
+            $insertedCount = 0;
+            foreach ($dataBatch as $data) {
+                $logTimeStr = $data['thai_time'] ?? date('Y-m-d H:i:s');
+                $logTimeStr = str_replace(['T', 'Z'], [' ', ''], $logTimeStr);
+
+                if ($utilityType === 'ELECTRIC') {
+                    $dt = new DateTime($logTimeStr);
+                    $logTimeStr = $dt->format('Y-m-d H:i:s');
+                }
+
+                $stmt->execute([
+                    ':mName' => $meterName,
+                    ':uType' => $utilityType,
+                    ':lTime' => $logTimeStr,
+                    ':v'     => $data['voltage'] ?? null,
+                    ':c'     => $data['current'] ?? null, 
+                    ':p'     => $data['power'] ?? null,
+                    ':rp'    => $data['reactive_power'] ?? null, 
+                    ':ap'    => $data['apparent_power'] ?? null,
+                    ':pf'    => $data['power_factor'] ?? null,
+                    ':vel'   => $data['velocity'] ?? null,
+                    ':fr'    => $data['flow'] ?? null, 
+                    ':cum'   => $data['cumulative'] ?? 0,
+                    ':va'    => $data['volt_a'] ?? null,
+                    ':vb'    => $data['volt_b'] ?? null,
+                    ':vc'    => $data['volt_c'] ?? null,
+                    ':aa'    => $data['amp_a'] ?? null,
+                    ':ab'    => $data['amp_b'] ?? null,
+                    ':ac'    => $data['amp_c'] ?? null,
+                    ':kwa'   => $data['kw_a'] ?? null,
+                    ':kwb'   => $data['kw_b'] ?? null,
+                    ':kwc'   => $data['kw_c'] ?? null
+                ]);
+                $insertedCount++;
+            }
+            sendJson(true, ['inserted_count' => $insertedCount], "บันทึกข้อมูล IoT สำเร็จ ({$insertedCount} รายการ)");
+            break;
+        }
+
+        // ----------------------------------------------------
+        // [CRON JOB / NODE-RED] AGGREGATE SUMMARY
+        // ----------------------------------------------------
+        case 'aggregate_summary': {
+            $today_prod = date('Y-m-d', strtotime('-8 hours'));
+            $yesterday_prod = date('Y-m-d', strtotime('-32 hours'));
+
+            $stmtToday = $pdo->prepare("EXEC dbo.sp_AggregateUtilityHourly @TargetDate = :dt1");
+            $stmtToday->execute([':dt1' => $today_prod]);
+
+            $stmtYest = $pdo->prepare("EXEC dbo.sp_AggregateUtilityHourly @TargetDate = :dt2");
+            $stmtYest->execute([':dt2' => $yesterday_prod]);
+
+            sendJson(true, [
+                'target_dates' => [$today_prod, $yesterday_prod]
+            ], "Aggregation completed successfully via trigger.");
             break;
         }
 

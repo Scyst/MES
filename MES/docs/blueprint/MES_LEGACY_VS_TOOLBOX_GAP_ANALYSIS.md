@@ -10,15 +10,15 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **4** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem` |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **6** | `Store Management`, `Document Center`, `Forklift`, `Utility`, `Daily Log`, `Transport` |
+| **✅ Ported 100% (สมบูรณ์)** | **6** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)` |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **4** | `Store Management`, `Forklift`, `Daily Log`, `Transport` |
 | **🧪 Prototype / Mock Only (ยังไม่มี Backend จริง)** | **1** | `Inbound Hub` (รันบน Local State และ Mock Data ทั้งหมด) |
 | **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 4
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 6
+    "Ported สมบูรณ์" : 6
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 4
     "Prototype Mock Only" : 1
     "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
 ```
@@ -49,15 +49,15 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ### 1.2 Document Center (ศูนย์รวมเอกสารและคู่มือปฏิบัติงาน)
 * **Legacy:** `page/documentCenter/` (11 PHP, 1 JS)
-* **Toolbox:** `Toolbox/src/modules/DocumentCenter/` (10 ไฟล์)
-* **สถานะ:** ⚠️ **ย้ายแล้ว 85% — ขาดระบบแสดงผล 3D CAD WebGL**
+* **Toolbox:** `Toolbox/src/modules/DocumentCenter/` (11 ไฟล์)
+* **สถานะ:** ✅ **ย้ายแล้ว 100% (สมบูรณ์)**
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
 | **Folder & File Explorer** | `documentCenterUI.php` | `DocumentCenterPage.jsx` | ✅ ย้ายสมบูรณ์ รองรับ Breadcrumb, Tree view, ค้นหา, กรองหมวด |
 | **Document Actions** | Modals ต่างๆ | Modals ใน React | ✅ ย้ายสมบูรณ์ (Upload, Rename, Revise version, Move folder, Delete) |
 | **PDF & Image Preview** | `viewDocModal.php` | `DocumentPreviewModal.jsx` | ✅ ย้ายสมบูรณ์ แสดงผล PDF และรูปภาพในตัว |
-| **Interactive 3D CAD Viewer** | `view3DModal.php` | `DocumentPreviewModal.jsx` (บรรทัด 86-100) | ❌ **ข้อบกพร่องสำคัญ**: ในระบบเดิมมี Three.js WebGL Viewer สามารถหมุน (Rotate), เลื่อน (Pan), ซูม (Zoom), วัดขนาดชิ้นงาน (Ruler Dimensions), เปิดโหมดเอ็กซเรย์ (X-Ray), ปรับมุมมองแกน XYZ และจับภาพหน้าจอได้ แต่ใน Toolbox ทำได้เพียงแสดงกล่องข้อความบอกให้ "ดาวน์โหลดไฟล์ไปเปิดใน SolidWorks/AutoCAD" |
+| **Interactive 3D CAD Viewer** | `view3DModal.php` | `DocumentPreviewModal.jsx` (`ThreeDViewer.jsx`) | ✅ **ย้ายสมบูรณ์**: พอร์ต Online 3D Viewer (Three.js WebGL) รองรับการหมุน (Rotate), เลื่อน (Pan), ซูม (Zoom), คำนวณขนาดกว้างxยาวxสูง (Dimensions mm), โหมดเอ็กซเรย์ (X-Ray), ถ่ายภาพหน้าจอ (Screenshot PNG), หมุนอัตโนมัติ (Auto Rotate), และสลับธีมสีพื้นหลัง |
 
 ---
 
@@ -82,7 +82,7 @@ pie title สถานะความพร้อมของโมดูลใ�
 ### 1.4 Utility & Energy Tracking (ระบบติดตามการใช้พลังงาน)
 * **Legacy:** `page/management/utilityDashboard.php`
 * **Toolbox:** `Toolbox/src/modules/Utility/` (5 ไฟล์) + `public/api/utility/`
-* **สถานะ:** ⚠️ **ย้ายแล้ว 90% — ขาด IoT Data Ingestion Endpoint**
+* **สถานะ:** ✅ **ย้ายแล้ว 100% (สมบูรณ์)**
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
@@ -90,7 +90,7 @@ pie title สถานะความพร้อมของโมดูลใ�
 | **Hourly Cost Chart (Stacked/Grouped)** | Chart.js ใน PHP | `HourlyCostChart.jsx` | ✅ ย้ายสมบูรณ์ วิเคราะห์ค่าใช้จ่ายรายชั่วโมงตามเรท TOU |
 | **TOU Rates Setting** | Modal ใน PHP | `TouSettingsModal.jsx` | ✅ ย้ายสมบูรณ์ แก้ไขเรท On-Peak, Off-Peak, ค่าแก๊ส LPG |
 | **Meters Status Table** | ตารางใน PHP | `MetersTable.jsx` | ✅ ย้ายสมบูรณ์ |
-| **Node-RED IoT Ingestion API** | Action: `insert_log` | *ไม่มีใน `utilityApi.php`* | ❌ **Backend ขาดหาย**: API ใน Toolbox รองรับเฉพาะ `get_dashboard`, `get_tou_rates`, `recalculate`, `save_tou_rates` แต่ขาด Action `insert_log` ที่ Node-RED ใช้ส่งค่ามิเตอร์ไฟฟ้าและแก๊สเข้าฐานข้อมูล |
+| **Node-RED IoT Ingestion API** | Action: `insert_log` | `utilityApi.php` (Action: `insert_log` & `aggregate_summary`) | ✅ **ย้ายสมบูรณ์**: รองรับการรับข้อมูล Batch มิเตอร์ไฟฟ้าและก๊าซจาก Node-RED พร้อมระบบคำนวณ Summary และความปลอดภัยผ่าน `X-API-KEY: MESKey2026` |
 
 ---
 
@@ -236,10 +236,10 @@ graph LR
 | **2** | `systemSettings` | `#/system-settings` | ✅ 100% | มีครบ 5 แท็บ (Item Master, BOM, Locations, Schedules, SAP) |
 | **3** | `profile` | `#/profile` | ✅ 100% | มีครบ ข้อมูลส่วนตัว, เปลี่ยนรหัส, Logs, ประเมิน 4D, สวัสดิการ |
 | **4** | `paintChem` | `#/paint-chem` | ✅ 100% | สร้าง UI ใหม่สมบูรณ์ พร้อม Sheet, Slot, History, Analytics |
-| **5** | `documentCenter` | `#/documents` | ⚠️ 85% | **ขาด 3D WebGL CAD Viewer** (ทำได้แค่ดาวน์โหลด) |
+| **5** | `documentCenter` | `#/documents` | ✅ 100% | มีครบทั้ง File Explorer, CRUD, PDF/Image Preview, และ **3D CAD WebGL Viewer** |
 | **6** | `storeManagement` | `#/store` | ⚠️ 35% | **ขาด:** Material Req, RM Receiving, Scrap Claim, Warehouse Ops, Tag Trace, Audit Print |
 | **7** | `forklift` | `#/forklift` | ⚠️ 50% | **ขาด:** Live Map Tracking, Heatmap, ESP32 IoT API, Driver QR Scan |
-| **8** | `management/utility` | `#/utility` | ⚠️ 90% | **ขาด:** API Action `insert_log` สำหรับรับข้อมูลจาก Node-RED |
+| **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
 | **9** | `dailyLog` | `#/` (Home Widgets) | ⚠️ 40% | **ขาด:** หน้าระบบเต็ม Shift Handover, Reply Thread, Mood Insight Report |
 | **10** | `fleetLog` / `transport` | `#/transport` | ⚠️ 50% | รถรับส่งพนักงานมีครบ **แต่ขาดบัญชีเที่ยวรถขนส่งสินค้า (Freight Log)** |
 | **11** | `InboundHub` (ใหม่) | `#/inbound-hub` | 🧪 Mock | ทำเฉพาะหน้าจำลอง ยังไม่มีตารางฐานข้อมูลและ PHP API จริง |
@@ -280,8 +280,8 @@ graph LR
 
 ### 🔴 Phase 1: เติมเต็มฟังก์ชันที่ขาดในโมดูลที่ย้ายแล้ว (Immediate Gaps in Ported Modules)
 1. **Store Management:** พอร์ตแท็บ `Material Request` และ `RM Receiving & Tagging` เข้าสู่ `StoreApp.jsx` พร้อมทำปุ่ม Export to Excel ใน Onhand Dashboard
-2. **Document Center:** นำไลบรารี Three.js กลับมาใส่ใน `DocumentPreviewModal.jsx` เพื่อคืนความสามารถในการดูโมเดล 3D CAD (.step, .stl, .obj) ให้วิศวกร
-3. **Utility API:** เพิ่ม Action `insert_log` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่อง
+2. [x] **Document Center:** นำไลบรารี Three.js / Online 3D Viewer เข้าสู่ `DocumentPreviewModal.jsx` (`ThreeDViewer.jsx`) เพื่อคืนความสามารถในการดูโมเดล 3D CAD (.step, .stl, .obj) พร้อมคำนวณมิติขนาดและเครื่องมือควบคุมให้วิศวกร (เสร็จสมบูรณ์ 07/11/2026)
+3. [x] **Utility API:** เพิ่ม Action `insert_log` และ `aggregate_summary` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่องและคำนวณสรุปอัตโนมัติ (เสร็จสมบูรณ์ 07/11/2026)
 4. **Inbound Hub:** สร้างตารางฐานข้อมูลจริงบน SQL Server และเขียน PHP API เพื่อเชื่อมข้อมูลจริงแทน Mock State
 
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)
