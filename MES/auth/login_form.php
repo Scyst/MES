@@ -52,6 +52,7 @@ function getFriendlyPageName($url) {
     <title>Login - TOOLBOX OS</title>
     
     <link rel="stylesheet" href="../utils/libs/bootstrap.min.css">
+    <link rel="stylesheet" href="../utils/libs/fontawesome/css/all.min.css">
     <script src="../page/components/js/theme-switcher.js"></script>
 
     <style>
@@ -90,11 +91,18 @@ function getFriendlyPageName($url) {
                             Sign In <i class="fas fa-arrow-right ms-2"></i>
                         </button>
                     </div>
-                    <div class="mt-3 pt-3 border-top text-center">
-                        <p class="text-muted small mb-2">สำหรับนักเรียน / นักศึกษาฝึกงาน / สมาชิกเข้าอบรม:</p>
-                        <a href="../../Toolbox/#/login<?php echo !empty($redirectTarget) ? '?redirect=' . urlencode($redirectTarget) : ''; ?>" class="btn btn-outline-success btn-sm w-100 fw-bold">
-                            <i class="fas fa-user-graduate me-1"></i> สมัครสมาชิก / เข้าสู่ระบบใหม่ (TOOLBOX OS)
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="text-center mb-2">
+                            <span class="text-muted small">ยังไม่มีบัญชีหรือต้องการขอสิทธิ์เพิ่ม?</span>
+                        </div>
+                        <a href="../Toolbox/#/login?register=true<?php echo !empty($redirectTarget) ? '&redirect=' . urlencode($redirectTarget) : ''; ?>" class="btn btn-outline-success w-100 fw-bold py-2 mb-2">
+                            <i class="fas fa-user-plus me-1"></i> สมัครสมาชิก / ขอสิทธิ์เข้าใช้งานระบบ
                         </a>
+                        <div class="text-center mt-2">
+                            <a href="../Toolbox/#/login<?php echo !empty($redirectTarget) ? '?redirect=' . urlencode($redirectTarget) : ''; ?>" class="text-decoration-none small text-secondary">
+                                <i class="fas fa-external-link-alt me-1"></i> เข้าใช้งานผ่านระบบใหม่ (TOOLBOX OS)
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>

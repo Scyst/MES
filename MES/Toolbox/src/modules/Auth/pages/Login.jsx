@@ -17,9 +17,28 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Read target path from router search (?redirect=...), window.location.search, or router state
-  const searchParams = new URLSearchParams(location.search || window.location.search);
+  // Read target path from router search (?redirect=...), window.location.search, or hash query string
+  const getSearchString = () => {
+    if (location.search) return location.search;
+    if (window.location.search) return window.location.search;
+    const hashIndex = window.location.hash.indexOf('?');
+    if (hashIndex !== -1) return window.location.hash.slice(hashIndex);
+    return '';
+  };
+  const searchParams = new URLSearchParams(getSearchString());
   const redirectParam = searchParams.get('redirect');
+
+  // Auto-open Register modal if ?register=true or ?action=register
+  useEffect(() => {
+    const isRegisterReq =
+      searchParams.get('register') === 'true' ||
+      searchParams.get('register') === '1' ||
+      searchParams.get('action') === 'register' ||
+      window.location.hash.includes('register=true');
+    if (isRegisterReq) {
+      setIsRegisterOpen(true);
+    }
+  }, [location.search, window.location.hash]);
 
   const from =
     redirectParam ||
