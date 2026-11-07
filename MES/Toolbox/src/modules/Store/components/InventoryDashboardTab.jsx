@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Boxes, DollarSign, AlertCircle, RefreshCw, Search, Filter,
   TrendingDown, ShieldCheck, ChevronLeft, ChevronRight, Eye,
-  QrCode, FileText, ArrowLeftRight
+  QrCode, FileText, ArrowLeftRight, Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { storeApi } from '../../../shared/services/storeApi';
 import SecurityWatermark from '../../../shared/components/SecurityWatermark';
 import ItemDetailsModal from './ItemDetailsModal';
@@ -78,6 +79,55 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
   useEffect(() => {
     fetchData();
   }, [page, materialType, hideZero]);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportExcel = () => {
+    try {
+      if (!items || items.length === 0) {
+        alert('ไม่พบข้อมูลสำหรับส่งออก');
+        return;
+      }
+      setIsExporting(true);
+
+      const exportRows = items.map((item, idx) => {
+        const partCode = item.part_no || item.item_code || item.item_no || `ITEM-${idx + 1}`;
+        const onhand = parseFloat(item.available_qty ?? item.onhand_qty ?? item.quantity ?? 0);
+        const safety = parseFloat(item.safety_stock ?? item.min_qty ?? 0);
+        const price = parseFloat(item.unit_price ?? item.standard_cost ?? item.price ?? 0);
+        const totalItemVal = parseFloat(item.total_cost ?? (onhand * price));
+        const isLow = safety > 0 && onhand < safety;
+
+        return {
+          'ลำดับ': idx + 1,
+          'Part No': partCode,
+          'SAP No': item.sap_no || '',
+          'รายละเอียดชิ้นงาน (Description)': item.part_description || item.description || '-',
+          'หมวดหมู่วัตถุดิบ': item.material_type || 'RM',
+          'พิกัดคลัง (Location)': item.location_name || 'STORE',
+          'โซน (Zone)': item.zone_name || '-',
+          'ยอดคงคลัง (Onhand)': onhand,
+          'หน่วยนับ (Unit)': item.unit || 'PCS',
+          'Safety Stock': safety > 0 ? safety : '-',
+          'ราคาต่อหน่วย (฿)': price > 0 ? price : 0,
+          'มูลค่ารวม (฿)': totalItemVal > 0 ? totalItemVal : 0,
+          'สถานะ': isLow ? '⚠️ ต่ำกว่าจุดปลอดภัย (Low Stock)' : 'ปกติ (Normal)'
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'สต็อกคงเหลือ');
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `Onhand_Inventory_${dateStr}.xlsx`);
+    } catch (err) {
+      console.error('Export Excel Error:', err);
+      alert('เกิดข้อผิดพลาดในการส่งออก Excel: ' + err.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -221,6 +271,18 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
             />
             <span>ซ่อนยอดศูนย์</span>
           </label>
+
+          {/* Export to Excel Button */}
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={isExporting || items.length === 0}
+            title="ส่งออกรายงานสต็อกคงเหลือ (Excel .xlsx)"
+            className="flex items-center gap-1.5 px-3 py-1 h-8 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{isExporting ? 'กำลังส่งออก...' : 'ส่งออก Excel'}</span>
+          </button>
 
           {/* Refresh Button on desktop */}
           <button

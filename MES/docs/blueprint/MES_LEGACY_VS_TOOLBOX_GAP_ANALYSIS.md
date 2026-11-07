@@ -12,14 +12,14 @@
 | :--- | :---: | :--- |
 | **✅ Ported 100% (สมบูรณ์)** | **6** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)` |
 | **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **4** | `Store Management`, `Forklift`, `Daily Log`, `Transport` |
-| **🧪 Prototype / Mock Only (ยังไม่มี Backend จริง)** | **1** | `Inbound Hub` (รันบน Local State และ Mock Data ทั้งหมด) |
+| **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
 | **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
     "Ported สมบูรณ์" : 6
     "Ported บางส่วน (มีฟีเจอร์ขาด)" : 4
-    "Prototype Mock Only" : 1
+    "On Hold (รอเอกสารผู้บริหาร)" : 1
     "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
 ```
 
@@ -34,7 +34,7 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
-| **Onhand Stock Dashboard** | `inventoryDashboard.php` | `InventoryDashboardTab.jsx` | ⚠️ **ขาดปุ่ม Export to Excel**, ขาดปุ่ม Sync ERP, ใน `ItemDetailsModal.jsx` ขาดแท็บ Tags Breakdown, ขาดแท็บ Pending PO และขาดแท็บประวัติเคลื่อนไหวเฉพาะไอเทม (Item Ledger) |
+| **Onhand Stock Dashboard** | `inventoryDashboard.php` | `InventoryDashboardTab.jsx` | ✅ **มีปุ่ม Export to Excel แล้ว (XLSX)** (เหลือแท็บเสริมใน `ItemDetailsModal.jsx`: Tags Breakdown, Pending PO, และ Item Ledger) |
 | **Visual Cycle Count Map** | `cycleCount.php` | `CycleCountTab.jsx` | ✅ ย้ายสมบูรณ์ รองรับ Blind Count, Zone Settings, Zone Health Modal และ Quick Scanner |
 | **Pending Approvals** | `inventoryDashboard.php` | `PendingApprovalsTab.jsx` | ✅ ย้ายสมบูรณ์ รองรับการอนุมัติ/ปฏิเสธยอดผลต่างการตรวจนับ |
 | **Stock Ledger (บัญชีสต็อก)** | `stockTransaction.php` | `StockLedgerTab.jsx` | ✅ ย้ายสมบูรณ์ มีตัวกรองวันที่ ประเภทรายการ และค้นหา |
@@ -123,11 +123,10 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ### 1.7 Inbound Hub (ศูนย์กลางรับสินค้าขาเข้า SCM-Store)
 * **Toolbox:** `Toolbox/src/modules/InboundHub/` (10 ไฟล์)
-* **สถานะ:** 🧪 **เป็นเพียงหน้าจอ Prototype / Mock State 100%**
-* **ข้อบกพร่องสำคัญ**:
-  1. โค้ดทั้งหมดใน `InboundHubContext.jsx` อ่านและเขียนข้อมูลลงบนตัวแปรหน่วยความจำ (`INITIAL_CONTAINERS`, `INITIAL_INVOICES`, `INITIAL_MARKET_RATES`) จากไฟล์ `mockInboundData.js`
-  2. เมื่อผู้ใช้งานรีเฟรชหน้าจอ (F5) ข้อมูลตู้คอนเทนเนอร์และ Tag ที่สร้างขึ้นจะหายไปทั้งหมด
-  3. ยังไม่มีตารางฐานข้อมูลจริงบน SQL Server และยังไม่มี PHP API รองรับการเชื่อมต่อกับระบบคลังสินค้าจริง
+* **สถานะ:** ⏳ **On Hold / รอเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร** (ปัจจุบันเป็นหน้าจอ Mock Prototype)
+* **หมายเหตุการพัฒนา (Status Note)**:
+  - สถานะปัจจุบัน: ทำเฉพาะหน้าจอจำลอง (Mock State) เพื่อทดสอบ UX/UI เบื้องต้น
+  - **พักการพัฒนาไว้ชั่วคราว (Hold)**: อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลและโครงสร้างข้อมูลนำเข้าจริงจากผู้บริหาร เมื่อได้รับเอกสารจะดำเนินการออกแบบตาราง SQL Server และเชื่อมต่อ PHP API ต่อไป
 
 ---
 
@@ -242,7 +241,7 @@ graph LR
 | **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
 | **9** | `dailyLog` | `#/` (Home Widgets) | ⚠️ 40% | **ขาด:** หน้าระบบเต็ม Shift Handover, Reply Thread, Mood Insight Report |
 | **10** | `fleetLog` / `transport` | `#/transport` | ⚠️ 50% | รถรับส่งพนักงานมีครบ **แต่ขาดบัญชีเที่ยวรถขนส่งสินค้า (Freight Log)** |
-| **11** | `InboundHub` (ใหม่) | `#/inbound-hub` | 🧪 Mock | ทำเฉพาะหน้าจำลอง ยังไม่มีตารางฐานข้อมูลและ PHP API จริง |
+| **11** | `InboundHub` (ใหม่) | `#/inbound-hub` | ⏳ On Hold | ทำหน้าจอจำลองไว้แล้ว — พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร |
 | **12** | `SystemBlueprint` (ใหม่)| `#/blueprint` | ✅ 100% | ผังพิมพ์เขียวและสถาปัตยกรรมระบบโรงงาน แสดงผลสมบูรณ์ |
 | **13** | `PE` (ซ่อมบำรุง) | *ไม่มีใน Toolbox* | ❌ 0% | ใบสั่งซ่อม, ฐานข้อมูลเครื่องจักร, อะไหล่, Downtime, IIoT, LOTO, ผังโรงงาน |
 | **14** | `production` | *ไม่มีใน Toolbox* | ❌ 0% | บันทึกยอดผลิต, คิวงาน KDS, พิมพ์ป้ายแท็ก WIP/FG, ตัดยอด |
@@ -282,7 +281,7 @@ graph LR
 1. **Store Management:** พอร์ตแท็บ `Material Request` และ `RM Receiving & Tagging` เข้าสู่ `StoreApp.jsx` พร้อมทำปุ่ม Export to Excel ใน Onhand Dashboard
 2. [x] **Document Center:** นำไลบรารี Three.js / Online 3D Viewer เข้าสู่ `DocumentPreviewModal.jsx` (`ThreeDViewer.jsx`) เพื่อคืนความสามารถในการดูโมเดล 3D CAD (.step, .stl, .obj) พร้อมคำนวณมิติขนาดและเครื่องมือควบคุมให้วิศวกร (เสร็จสมบูรณ์ 07/11/2026)
 3. [x] **Utility API:** เพิ่ม Action `insert_log` และ `aggregate_summary` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่องและคำนวณสรุปอัตโนมัติ (เสร็จสมบูรณ์ 07/11/2026)
-4. **Inbound Hub:** สร้างตารางฐานข้อมูลจริงบน SQL Server และเขียน PHP API เพื่อเชื่อมข้อมูลจริงแทน Mock State
+4. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง
 
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)
 1. **PE Enterprise & Maintenance:** ย้ายระบบจัดการใบสั่งซ่อม (Work Orders) และคลังอะไหล่ (Spare Parts) เป็นหน้าจอแรกใน Toolbox ภายใต้ Route `#/pe/*`
