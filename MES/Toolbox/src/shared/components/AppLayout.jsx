@@ -186,6 +186,27 @@ export default function AppLayout() {
     location.pathname === '/iot-toolbox/sandbox-b9/Toolbox/' ||
     location.pathname === '/iot-toolbox/sandbox-b9/Toolbox';
 
+  const isTvMode =
+    location.search.includes('tv=1') ||
+    window.location.hash.includes('tv=1') ||
+    location.search.includes('kiosk=1') ||
+    window.location.hash.includes('kiosk=1');
+
+  // Auto-redirect dedicated TV/Kiosk user accounts to Control Room Hub
+  useEffect(() => {
+    if (user && (user.role === 'display' || user.account_type === 'kiosk') && isHomeRoute) {
+      navigate('/control-room', { replace: true });
+    }
+  }, [user, isHomeRoute, navigate]);
+
+  if (isTvMode) {
+    return (
+      <div className="flex flex-col h-screen w-full bg-slate-950 overflow-auto p-0">
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Top Navbar */}

@@ -1,6 +1,8 @@
 <?php
 // MES/auth/auto_logout.php
 if (!isset($_SESSION['user'])) return;
+// Dedicated TV / Kiosk Display Users never timeout (24/7 continuous display)
+if (in_array($_SESSION['user']['role'] ?? '', ['display', 'kiosk']) || ($_SESSION['user']['account_type'] ?? '') === 'kiosk') return;
 ?>
 
 <div class="modal fade" id="inactivityModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">

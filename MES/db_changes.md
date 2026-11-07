@@ -4,6 +4,34 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-07 — Dedicated TV Display Role & Control Room Users
+
+**Agent:** Antigravity  
+**Feature:** จัดตั้ง Role `display` (Read-Only) ในระบบ RBAC และสร้าง User สำหรับหน้าจอ Smart TV / Control Room (`tv_control_room`, `tv_dashboard`) พร้อมยกเว้น Inactivity Auto-Logout ตลอด 24 ชั่วโมง
+
+### Schema / Role Permissions Alterations
+
+#### 1. dbo.SYS_ROLES
+- เพิ่ม Role `display` สำหรับจอแสดงผล Smart TV และ Control Room
+  - `role_code`: 'display'
+  - `role_name`: 'TV / Control Room Display'
+  - `role_level`: 92
+
+#### 2. dbo.SYS_ROLE_PERMISSIONS
+- กำหนดสิทธิ์ให้ Role `display` มีสิทธิ์เฉพาะอ่าน/ดูอย่างเดียว (Read-Only 100%):
+  - `view_dashboard`, `view_production`, `view_manpower`, `view_warehouse`, `view_transport`, `view_documents`, `view_qms`, `view_pl`, `view_planning`, `view_executive`
+  - ไม่อนุญาตสิทธิ์ `add_*`, `manage_*`, `edit_*`, `delete_*` โดยเด็ดขาดเพื่อความปลอดภัย
+
+#### 3. dbo.USERS
+- สร้างผู้ใช้งานเฉพาะสำหรับแสดงผล:
+  - `tv_control_room`: Control Room Multi-Screen Hub
+  - `tv_dashboard`: Shopfloor Live TV Display
+  - `account_type`: 'kiosk'
+  - `approval_status`: 'approved'
+  - `is_active`: 1
+
+---
+
 ## 2026-11-06 — PE Spare Parts Auto-Cleanup Zero On-Hand Records
 
 **Agent:** Antigravity  

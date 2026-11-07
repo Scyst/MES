@@ -384,6 +384,7 @@ export const AuthProvider = ({ children }) => {
       {!loading && children}
       {!loading && user && (
         <InactivityTimeoutModal
+          user={user}
           onTimeoutLogout={logout}
           onStayLoggedIn={() => checkAuth({ silent: true })}
         />

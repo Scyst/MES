@@ -4,7 +4,10 @@ import { AlertTriangle, MousePointerClick } from 'lucide-react';
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 ชั่วโมง (3,600,000 ms)
 const COUNTDOWN_SECONDS = 30; // นับถอยหลัง 30 วินาที
 
-export default function InactivityTimeoutModal({ onTimeoutLogout, onStayLoggedIn }) {
+export default function InactivityTimeoutModal({ onTimeoutLogout, onStayLoggedIn, user }) {
+  const isKiosk = user?.role === 'display' || user?.role === 'kiosk' || user?.account_type === 'kiosk';
+  if (isKiosk) return null;
+
   const [showWarning, setShowWarning] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
 

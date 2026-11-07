@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, MonitorPlay, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,6 +19,7 @@ export const MENU_DATA = [
       { name: 'MES Learning Hub (ศูนย์เรียนรู้)', icon: GraduationCap, to: '/learning' },
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
+      { name: 'Control Room (TV Mode)', icon: Tv, to: '/control-room' },
       { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
       { name: 'Forklift Booking (จองโฟล์คลิฟท์)', icon: Truck, to: '/forklift' },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
