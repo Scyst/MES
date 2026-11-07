@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Boxes, MapPin, ShieldAlert, FileText
+  Boxes, MapPin, ShieldAlert, FileText, ShoppingCart, PackagePlus
 } from 'lucide-react';
 import InventoryDashboardTab from './components/InventoryDashboardTab';
+import MaterialRequisitionTab from './components/MaterialRequisitionTab';
+import RmReceivingTab from './components/RmReceivingTab';
 import CycleCountTab from './components/CycleCountTab';
 import PendingApprovalsTab from './components/PendingApprovalsTab';
 import StockLedgerTab from './components/StockLedgerTab';
@@ -67,6 +69,32 @@ export default function StoreApp() {
 
           <button
             type="button"
+            onClick={() => setTab('requisition')}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[30px] sm:min-h-[34px] ${
+              currentTab === 'requisition'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+            <span>เบิกพัสดุ <span className="hidden sm:inline">(Requisition)</span></span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab('receiving')}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[30px] sm:min-h-[34px] ${
+              currentTab === 'receiving'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <PackagePlus className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+            <span>รับเข้า & แท็ก <span className="hidden sm:inline">(Receiving)</span></span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setTab('cycle-count')}
             className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[30px] sm:min-h-[34px] ${
               currentTab === 'cycle-count'
@@ -114,6 +142,8 @@ export default function StoreApp() {
       {/* Main Tab Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {currentTab === 'onhand' && <InventoryDashboardTab onNavigateTab={setTab} />}
+        {currentTab === 'requisition' && <MaterialRequisitionTab onNavigateTab={setTab} />}
+        {currentTab === 'receiving' && <RmReceivingTab />}
         {currentTab === 'cycle-count' && <CycleCountTab onNavigateTab={setTab} />}
         {currentTab === 'approvals' && <PendingApprovalsTab />}
         {currentTab === 'ledger' && <StockLedgerTab />}

@@ -29,21 +29,20 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ### 1.1 Store Management (ระบบบริหารคลังสินค้า)
 * **Legacy:** `page/storeManagement/` (15 PHP, 14 JS)
-* **Toolbox:** `Toolbox/src/modules/Store/` (10 ไฟล์)
-* **สถานะ:** ⚠️ **ย้ายแล้ว 35% — ขาดระบบปฏิบัติการหน้างานหลัก 6 ส่วน**
+* **Toolbox:** `Toolbox/src/modules/Store/` (13 ไฟล์)
+* **สถานะ:** ✅ **ย้ายแล้ว 85% — ระบบปฏิบัติการหน้างานหลักครบถ้วนทั้ง 6 แท็บใน SPA**
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
-| **Onhand Stock Dashboard** | `inventoryDashboard.php` | `InventoryDashboardTab.jsx` | ✅ **มีปุ่ม Export to Excel แล้ว (XLSX)** (เหลือแท็บเสริมใน `ItemDetailsModal.jsx`: Tags Breakdown, Pending PO, และ Item Ledger) |
-| **Visual Cycle Count Map** | `cycleCount.php` | `CycleCountTab.jsx` | ✅ ย้ายสมบูรณ์ รองรับ Blind Count, Zone Settings, Zone Health Modal และ Quick Scanner |
-| **Pending Approvals** | `inventoryDashboard.php` | `PendingApprovalsTab.jsx` | ✅ ย้ายสมบูรณ์ รองรับการอนุมัติ/ปฏิเสธยอดผลต่างการตรวจนับ |
-| **Stock Ledger (บัญชีสต็อก)** | `stockTransaction.php` | `StockLedgerTab.jsx` | ✅ ย้ายสมบูรณ์ มีตัวกรองวันที่ ประเภทรายการ และค้นหา |
-| **Material Requisition (เบิกพัสดุ)** | `materialReq.php` | *ไม่มีใน StoreApp* (เป็น External Link) | ❌ **ขาดหายใน SPA**: ตะกร้าช้อปปิ้งเบิกของ (E-commerce Cart), เบิกจากสต็อก vs ขอสั่งซื้อ (K2), ประวัติการสั่งเบิก และ Tracking Modal |
-| **RM Receiving & Tagging (รับวัตถุดิบ)** | `rmReceiving.php` | *ไม่มีใน StoreApp* (เป็น External Link) | ❌ **ขาดหายใน SPA**: การรับวัตถุดิบเข้าคลัง, การออกป้าย FIFO Tag, Batch Print ป้ายบาร์โค้ด, Bulk Receive เข้าสต็อก และระบบออฟไลน์ซิงค์ (`StoreOffline.js`) |
-| **Scrap & Replacement (เบิกของเสีย/ทดแทน)** | `storeRequest.php` | *ไม่มีใน StoreApp* (เป็น External Link) | ❌ **ขาดหายใน SPA**: เวิร์กโฟลว์เบิกของเสียเคลมทดแทน, การอนุมัติหัวหน้างาน (Bulk Approve/Reject), แดชบอร์ดสรุปยอดเคลม และ Export Excel |
-| **Warehouse Operations (จัดการคลัง/สลับตำแหน่ง)** | `warehouse_operations.php` | *ไม่มีใน StoreApp* (เป็น External Link) | ❌ **ขาดหายใน SPA**: โหมดรับเข้า (Receive) vs โหมดจ่ายขาย (Sell/Load), สแกนย้ายพิกัด (Bin Transfer) และ Bulk Action |
-| **Trace Tag History (สืบย้อนแท็ก)** | `tagHistory.php` | *ไม่มีใน StoreApp* | ❌ **ขาดหายใน SPA**: การสืบค้นประวัติเส้นทางของ Tag (Genealogy Trace) จากการรับเข้า -> จุดจัดเก็บ -> หน้าไลน์ -> ตู้สินค้า |
-| **ISO/IATF Audit Certificate** | `print_cycle_count_audit.php` | *ไม่มีใน StoreApp* | ❌ **ขาดหายใน SPA**: เอกสารใบรับรองผลการตรวจนับสต็อกทางการพร้อมคำนวณ % IRA (Inventory Record Accuracy) และช่องลงนามผู้ตรวจสอบ |
+| **Onhand Stock Dashboard** | `inventoryDashboard.php` | `InventoryDashboardTab.jsx` | ✅ **ย้ายสมบูรณ์**: ตารางยอดคงเหลือแบบเรียลไทม์ ตัวกรองหมวดหมู่ ค้นหา และปุ่ม Export to Excel (.xlsx) |
+| **Visual Cycle Count Map** | `cycleCount.php` | `CycleCountTab.jsx` | ✅ **ย้ายสมบูรณ์**: แผนผังจำลองคลังสินค้าตามพิกัดจริง รองรับ Blind Count, Zone Settings, Zone Health และ Quick Scanner |
+| **Pending Approvals** | `inventoryDashboard.php` | `PendingApprovalsTab.jsx` | ✅ **ย้ายสมบูรณ์**: เวิร์กโฟลว์หัวหน้างานอนุมัติ/ปฏิเสธยอดผลต่างการตรวจนับ (Variance Resolution) |
+| **Stock Ledger (บัญชีสต็อก)** | `stockTransaction.php` | `StockLedgerTab.jsx` | ✅ **ย้ายสมบูรณ์**: รายการบัญชีความเคลื่อนไหวสต็อกย้อนหลัง พร้อมตัวกรองวันที่ ประเภทธุรกรรม และค้นหา |
+| **Material Requisition (เบิกพัสดุ)** | `materialReq.php` | `MaterialRequisitionTab.jsx` | ✅ **ย้ายสมบูรณ์**: แคตตาล็อกรายการพัสดุพร้อมตัวกรองหมวดหมู่, ตะกร้าสินค้าสไตล์ E-Commerce Cart, สลับประเภทคำขอ (Stock vs K2 PR), ผูกคลังปลายทาง WIP และ MES Internal Job สำหรับหน้าไลน์, และหน้าประวัติคำขอเบิกพัสดุย้อนหลัง |
+| **RM Receiving & Tagging (รับวัตถุดิบ & แท็ก)** | `rmReceiving.php` | `RmReceivingTab.jsx` | ✅ **ย้ายสมบูรณ์**: แดชบอร์ด KPI (Total Tags, Total Qty, Printed, Pending), ตารางและบัตรแท็ก, การยืนยันรับเข้าสต็อกแบบกลุ่ม (Bulk Receive to Location), การออกป้ายแท็กพร้อมพิมพ์ QR Code และ Export Excel |
+| **Trace Tag History (สืบย้อนแท็ก)** | `tagHistory.php` | `RmReceivingTab.jsx` (`isTraceModalOpen`) | ✅ **ย้ายสมบูรณ์**: ระบบสืบค้นเส้นทางประวัติแท็ก (Tag Genealogy Timeline) แสดงข้อมูลสินค้า จำนวนคงเหลือ จุดจัดเก็บ PO และไทม์ไลน์ธุรกรรมย้อนหลังทั้งหมด |
+| **Scrap & Replacement (เบิกของเสีย/ทดแทน)** | `storeRequest.php` | *External Link* | ⏳ **Roadmap Phase 2**: เวิร์กโฟลว์เบิกของเสียเคลมทดแทนตามสิทธิ์ |
+| **ISO/IATF Audit Certificate** | `print_cycle_count_audit.php` | *External Link* | ⏳ **Roadmap Phase 2**: เอกสารใบรับรองผลตรวจนับทางการพร้อมสูตรคำนวณ % IRA |
 
 ---
 

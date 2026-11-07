@@ -183,5 +183,191 @@ export const storeApi = {
       start_date: startDate,
       end_date: endDate
     });
+  },
+
+  /**
+   * Material Requisition: Get items catalog
+   */
+  getCatalog: async ({
+    category = 'ALL',
+    subCategory = 'ALL',
+    search = '',
+    sort = 'DEFAULT',
+    page = 1
+  } = {}) => {
+    return await apiGet(BASE_URL, {
+      action: 'get_catalog',
+      category,
+      sub_category: subCategory,
+      search,
+      sort,
+      page
+    });
+  },
+
+  /**
+   * Material Requisition: Master data (WIP locations, items, user line)
+   */
+  getMasterData: async () => {
+    return await apiGet(BASE_URL, { action: 'get_master_data' });
+  },
+
+  /**
+   * Material Requisition: Active jobs for line fulfillment
+   */
+  getActiveJobs: async (line = '') => {
+    return await apiGet(BASE_URL, {
+      action: 'get_active_jobs_for_fulfillment',
+      line
+    });
+  },
+
+  /**
+   * Material Requisition: Submit requisition request
+   */
+  submitRequisition: async ({
+    cart,
+    remark = '',
+    requestType = 'STOCK',
+    reservationNumber = '',
+    internalJobNo = '',
+    destinationLocationId = null
+  }) => {
+    return await apiPost(BASE_URL, {
+      action: 'submit_requisition',
+      cart,
+      remark,
+      request_type: requestType,
+      reservation_number: reservationNumber,
+      internal_job_no: internalJobNo,
+      destination_location_id: destinationLocationId
+    });
+  },
+
+  /**
+   * Material Requisition: Get my submitted orders
+   */
+  getMyOrders: async ({ startDate = '', endDate = '' } = {}) => {
+    return await apiGet(BASE_URL, {
+      action: 'get_my_orders',
+      start_date: startDate,
+      end_date: endDate
+    });
+  },
+
+  /**
+   * Material Requisition: Get my order details by ID
+   */
+  getMyOrderDetails: async (reqId) => {
+    return await apiGet(BASE_URL, {
+      action: 'get_my_order_details',
+      req_id: reqId
+    });
+  },
+
+  /**
+   * Material Requisition: Cancel pending order
+   */
+  cancelMyOrder: async (orderId) => {
+    return await apiPost(BASE_URL, {
+      action: 'cancel_my_order',
+      order_id: orderId
+    });
+  },
+
+  /**
+   * RM Receiving: Get RM history / tags list with KPIs and pagination
+   */
+  getRmHistory: async ({
+    startDate = '',
+    endDate = '',
+    search = '',
+    status = 'ALL',
+    page = 1,
+    limit = 50,
+    exportData = false
+  } = {}) => {
+    return await apiGet(BASE_URL, {
+      action: 'get_rm_history',
+      start_date: startDate,
+      end_date: endDate,
+      search,
+      status,
+      page,
+      limit,
+      export: exportData ? 'true' : undefined
+    });
+  },
+
+  /**
+   * RM Receiving: Get tags data for printing
+   */
+  getPrintTags: async (serials = []) => {
+    return await apiPost(BASE_URL, {
+      action: 'get_print_tags',
+      serials: Array.isArray(serials) ? serials.join(',') : serials
+    });
+  },
+
+  /**
+   * RM Receiving: Update print count
+   */
+  updatePrintStatus: async (serials = []) => {
+    return await apiPost(BASE_URL, {
+      action: 'update_print_status',
+      serials: JSON.stringify(serials)
+    });
+  },
+
+  /**
+   * RM Receiving: Receive scanned tag into warehouse stock
+   */
+  receiveScannedTag: async ({ barcode, locationId }) => {
+    return await apiPost(BASE_URL, {
+      action: 'receive_scanned_tag',
+      barcode,
+      location_id: locationId
+    });
+  },
+
+  /**
+   * RM Receiving: Bulk receive tags into location
+   */
+  bulkReceiveTags: async ({ serials, locationId }) => {
+    return await apiPost(BASE_URL, {
+      action: 'bulk_receive_tags',
+      serials: JSON.stringify(serials),
+      location_id: locationId
+    });
+  },
+
+  /**
+   * RM Receiving: Delete a single tag
+   */
+  deleteTag: async (serialNo) => {
+    return await apiPost(BASE_URL, {
+      action: 'delete_tag',
+      serial_no: serialNo
+    });
+  },
+
+  /**
+   * RM Receiving: Delete bulk tags
+   */
+  deleteBulkTags: async (serials) => {
+    return await apiPost(BASE_URL, {
+      action: 'delete_bulk_tags',
+      serials: JSON.stringify(serials)
+    });
+  },
+
+  /**
+   * RM Receiving: Trace tag lifecycle and history
+   */
+  traceTag: async (serialNo) => {
+    return await apiGet(BASE_URL, {
+      action: 'trace_tag_v2',
+      serial_no: serialNo
+    });
   }
 };
