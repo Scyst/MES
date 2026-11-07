@@ -168,10 +168,11 @@ function queryDailyReport(string $targetDate, ?string $teamGroup): ?array {
     $totalHold = 0;
     $totalScrap = 0;
     foreach ($models as $model) {
-        $revenue += $model['revenue'];
-        $totalFg += $model['fg'];
-        $totalHold += $model['hold'];
-        $totalScrap += $model['scrap'];
+        $revVal = (float)($model['revenue'] ?? (isset($model['revenue_thb']) ? str_replace(',', '', (string)$model['revenue_thb']) : 0));
+        $revenue += $revVal;
+        $totalFg += (int)($model['fg'] ?? 0);
+        $totalHold += (int)($model['hold'] ?? 0);
+        $totalScrap += (int)($model['scrap'] ?? 0);
     }
 
     $labor = (float)$cost['total_dlot'];
@@ -332,10 +333,14 @@ function queryModelBreakdown(string $startDate, string $endDate, ?string $teamGr
             'fg' => (int)$row['fg'],
             'hold' => (int)$row['hold'],
             'scrap' => (int)$row['scrap'],
+            'revenue' => $rev,
             'revenue_thb' => toMoney($rev),
+            'mat_cost' => $mat,
             'standard_material_cost_thb' => toMoney($mat),
             'rm_pct_of_revenue' => $rmPct,
+            'oh_cost' => $oh,
             'standard_overhead_thb' => toMoney($oh),
+            'gross_profit' => $gp,
             'standard_gross_profit_thb' => toMoney($gp),
             'gross_margin_pct' => $gpMargin,
             'risk_flag' => $riskFlag,

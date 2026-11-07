@@ -73,6 +73,9 @@ export default function MorningBriefModal({ isOpen, onClose, initialData }) {
       const res = await dailyLogApi.getMorningBrief(team, date);
       if (res.success && res.data) {
         setData(res.data);
+        if (res.data.raw_date) {
+          setSelectedDate(res.data.raw_date);
+        }
       }
     } catch (err) {
       console.error(err);
