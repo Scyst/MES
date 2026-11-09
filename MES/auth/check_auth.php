@@ -35,17 +35,20 @@ function isApiRequest() {
 
 // ── Kiosk / Control Room TV Auto-Authentication (Read-Only Display Mode) ──
 $_mesReferer = $_SERVER['HTTP_REFERER'] ?? '';
-$_isExplicitKiosk = !empty($_GET['kiosk']) 
-    || !empty($_GET['tv']) 
+if (isset($_GET['kiosk']) && $_GET['kiosk'] === '0' && !headers_sent()) {
+    setcookie('mes_kiosk_mode', '', time() - 3600, '/');
+    unset($_COOKIE['mes_kiosk_mode']);
+}
+$_isExplicitKiosk = (!empty($_GET['kiosk']) && $_GET['kiosk'] !== '0')
+    || (!empty($_GET['tv']) && $_GET['tv'] !== '0')
     || (($_COOKIE['mes_kiosk_mode'] ?? '') === '1')
     || (bool)preg_match('/[?&](kiosk|tv)=(1|true)/i', $_mesReferer);
-$_isKioskDashboardReferer = (bool)preg_match('#/(manpowerUI|accessoriesInspectionUI|utilityDashboard|OEE_Shopfloor)\.php#i', $_mesReferer);
 
 if (!defined('ALLOW_GUEST_ACCESS') && !$_isExplicitKiosk && !isApiRequest() && !empty($_SESSION['user']['is_auto_kiosk'])) {
     unset($_SESSION['user']);
 }
 
-if (!isset($_SESSION['user']) && ($_isExplicitKiosk || (defined('ALLOW_GUEST_ACCESS') && ALLOW_GUEST_ACCESS === true) || (isApiRequest() && $_isKioskDashboardReferer))) {
+if (!isset($_SESSION['user']) && ($_isExplicitKiosk || (defined('ALLOW_GUEST_ACCESS') && ALLOW_GUEST_ACCESS === true))) {
     $_SESSION['user'] = [
         'id'               => 106,
         'username'         => 'tv_control_room',
