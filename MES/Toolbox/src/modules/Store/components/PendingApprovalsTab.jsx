@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
 import SecurityWatermark from '../../../shared/components/SecurityWatermark';
+import CycleCountAuditModal from './CycleCountAuditModal';
 
 export default function PendingApprovalsTab() {
   const [pendingCounts, setPendingCounts] = useState([]);
@@ -15,6 +16,7 @@ export default function PendingApprovalsTab() {
   const [decisionReason, setDecisionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   const fetchPendingCounts = async () => {
     setLoading(true);
@@ -92,14 +94,25 @@ export default function PendingApprovalsTab() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={fetchPendingCounts}
-          className="px-2.5 sm:px-3 py-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-amber-200/60 dark:border-amber-800/40 bg-white/60 dark:bg-slate-900/40 flex-shrink-0"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">รีเฟรช</span>
-        </button>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsAuditModalOpen(true)}
+            className="px-2.5 sm:px-3 py-1.5 text-indigo-700 hover:text-indigo-900 dark:text-indigo-300 rounded-lg sm:rounded-xl hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer border border-indigo-200 dark:border-indigo-800 bg-indigo-50/80 dark:bg-indigo-950/50"
+          >
+            <FileCheck className="w-3.5 h-3.5" />
+            <span>ใบรับรอง Audit & ประวัติ</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={fetchPendingCounts}
+            className="px-2.5 sm:px-3 py-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-amber-200/60 dark:border-amber-800/40 bg-white/60 dark:bg-slate-900/40"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">รีเฟรช</span>
+          </button>
+        </div>
       </div>
 
       {feedback && (
@@ -410,6 +423,11 @@ export default function PendingApprovalsTab() {
         </div>,
         document.body
       )}
+
+      <CycleCountAuditModal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+      />
     </div>
   );
 }

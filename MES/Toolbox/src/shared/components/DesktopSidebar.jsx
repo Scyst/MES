@@ -19,7 +19,7 @@ export const MENU_DATA = [
       { name: 'MES Learning Hub (ศูนย์เรียนรู้)', icon: GraduationCap, to: '/learning' },
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
-      { name: 'Material Request', icon: ShoppingCart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/materialReq.php', external: true },
+      { name: 'Material Request (เบิกพัสดุ)', icon: ShoppingCart, to: '/store?tab=requisition' },
       { name: 'Forklift Booking (จองโฟล์คลิฟท์)', icon: Truck, to: '/forklift' },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
       { name: 'Team Planner (แผนงานทีม)', icon: Calendar, to: '/planner' },
@@ -44,8 +44,9 @@ export const MENU_DATA = [
       { name: 'Store Management (คลังสินค้า)', icon: Store, to: '/store' },
       { name: 'Visual Cycle Count (ตรวจนับ)', icon: MapPin, to: '/store?tab=cycle-count' },
       { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub' },
-      { name: 'Warehouse Operations', icon: Warehouse, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/warehouse_operations.php', external: true },
-      { name: 'RM Receiving & Tag', icon: Inbox, href: '/iot-toolbox/sandbox-b9/MES/MES/page/storeManagement/rmReceiving.php', external: true },
+      { name: 'Store KDS & Issue (จ่ายพัสดุ)', icon: Warehouse, to: '/store?tab=kds' },
+      { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving' },
+      { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap' },
     ]
   },
   {

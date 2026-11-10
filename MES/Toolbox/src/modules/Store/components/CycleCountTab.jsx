@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Layers, Award, Search, Play, RefreshCw, CheckCircle2,
   Clock, MapPin, X, AlertTriangle, Check, ShieldCheck,
-  TrendingUp, BarChart2, Settings, ArrowRight, Loader2
+  TrendingUp, BarChart2, Settings, ArrowRight, Loader2, FileCheck2
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
 import CountingView from './CountingView';
 import ZoneSettingsModal from './ZoneSettingsModal';
 import ZoneHealthModal from './ZoneHealthModal';
+import CycleCountAuditModal from './CycleCountAuditModal';
 
 export default function CycleCountTab({ onNavigateTab }) {
   const [locations, setLocations] = useState([]);
@@ -23,6 +24,7 @@ export default function CycleCountTab({ onNavigateTab }) {
   // Modals
   const [isZoneSettingsOpen, setIsZoneSettingsOpen] = useState(false);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [healthData, setHealthData] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
 
@@ -181,6 +183,14 @@ export default function CycleCountTab({ onNavigateTab }) {
             >
               <BarChart2 className="w-3.5 h-3.5" />
               <span>รายงานสุขภาพคลัง (IRA)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAuditModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 cursor-pointer"
+            >
+              <FileCheck2 className="w-3.5 h-3.5" />
+              <span>ใบรับรอง Audit (ISO/IATF)</span>
             </button>
             <button
               type="button"
@@ -601,6 +611,12 @@ export default function CycleCountTab({ onNavigateTab }) {
         onClose={() => setIsHealthModalOpen(false)}
         healthData={healthData}
         loading={loadingHealth}
+      />
+
+      <CycleCountAuditModal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+        locations={locations}
       />
     </div>
   );

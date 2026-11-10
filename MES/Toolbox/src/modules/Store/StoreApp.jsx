@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Boxes, MapPin, ShieldAlert, FileText, ShoppingCart, PackagePlus
+  Boxes, MapPin, ShieldAlert, FileText, ShoppingCart, PackagePlus,
+  ClipboardList, AlertTriangle
 } from 'lucide-react';
 import InventoryDashboardTab from './components/InventoryDashboardTab';
 import MaterialRequisitionTab from './components/MaterialRequisitionTab';
@@ -9,6 +10,8 @@ import RmReceivingTab from './components/RmReceivingTab';
 import CycleCountTab from './components/CycleCountTab';
 import PendingApprovalsTab from './components/PendingApprovalsTab';
 import StockLedgerTab from './components/StockLedgerTab';
+import StoreKdsQueueTab from './components/StoreKdsQueueTab';
+import ScrapReplacementTab from './components/ScrapReplacementTab';
 import { storeApi } from '../../shared/services/storeApi';
 
 export default function StoreApp() {
@@ -82,6 +85,19 @@ export default function StoreApp() {
 
           <button
             type="button"
+            onClick={() => setTab('kds')}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[30px] sm:min-h-[34px] ${
+              currentTab === 'kds'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <ClipboardList className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
+            <span>จ่ายพัสดุ KDS & รับคืน</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setTab('receiving')}
             className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[30px] sm:min-h-[34px] ${
               currentTab === 'receiving'
@@ -91,6 +107,19 @@ export default function StoreApp() {
           >
             <PackagePlus className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
             <span>รับเข้า & แท็ก <span className="hidden sm:inline">(Receiving)</span></span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab('scrap')}
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap cursor-pointer touch-manipulation min-h-[30px] sm:min-h-[34px] ${
+              currentTab === 'scrap'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
+            <span>ของเสีย & ทดแทน <span className="hidden sm:inline">(Scrap)</span></span>
           </button>
 
           <button
@@ -143,7 +172,9 @@ export default function StoreApp() {
       <div className="flex-1 min-h-0 overflow-hidden">
         {currentTab === 'onhand' && <InventoryDashboardTab onNavigateTab={setTab} />}
         {currentTab === 'requisition' && <MaterialRequisitionTab onNavigateTab={setTab} />}
+        {currentTab === 'kds' && <StoreKdsQueueTab />}
         {currentTab === 'receiving' && <RmReceivingTab />}
+        {currentTab === 'scrap' && <ScrapReplacementTab />}
         {currentTab === 'cycle-count' && <CycleCountTab onNavigateTab={setTab} />}
         {currentTab === 'approvals' && <PendingApprovalsTab />}
         {currentTab === 'ledger' && <StockLedgerTab />}

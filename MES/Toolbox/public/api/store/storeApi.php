@@ -41,6 +41,7 @@ try {
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 
         'update_print_status', 'create_request', 'approve_request', 'reject_request',
+        'bulk_approve_requests', 'bulk_reject_requests',
         'bulk_receive_tags', 'manual_add_rm', 'process_transfer_request', 'bulk_process_transfer_request',
         'submit_cycle_count', 'approve_cycle_count', 'create_transfer_request', 'transfer_tag',
         'submit_requisition', 'accept_order', 'confirm_issue', 'reject_order', 'submit_k2_pr', 
@@ -3523,11 +3524,6 @@ try {
             }
             break;
 
-        default:
-            http_response_code(400);
-            throw new Exception("Invalid API Action Request: " . htmlspecialchars($action));
-            break;
-
         case 'get_scrap_dashboard':
             $status = $_GET['status'] ?? 'ALL';
             $search = $_GET['search'] ?? '';
@@ -3700,6 +3696,11 @@ try {
                 'reasons' => $reasonData,
                 'requesters' => $requesterData
             ];
+            break;
+
+        default:
+            http_response_code(400);
+            throw new Exception("Invalid API Action Request: " . htmlspecialchars($action));
             break;
 }
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
