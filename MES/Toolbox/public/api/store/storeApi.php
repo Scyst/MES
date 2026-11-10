@@ -3051,7 +3051,48 @@ try {
                     $userDel = $delInfo['fullname'] ?? 'Unknown';
                     throw new Exception("แท็กนี้ถูกลบทิ้งไปแล้วเมื่อ $dateDel โดย $userDel");
                 }
-                throw new Exception('ไม่พบข้อมูลในระบบ');
+
+                // ตรวจสอบกรณีพิมพ์หรือสแกนบาร์โค้ดไม่ครบ (Prefix Match Suggestion)
+                if (strlen($barcode) >= 6) {
+                    try {
+                        $simStmt = $pdo->prepare("SELECT TOP 3 serial_no FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no LIKE ? ORDER BY serial_no ASC");
+                        $simStmt->execute([$barcode . '%']);
+                        $simList = $simStmt->fetchAll(PDO::FETCH_COLUMN);
+                        if (!empty($simList)) {
+                            $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no LIKE ?");
+                            $cntStmt->execute([$barcode . '%']);
+                            $totalSim = (int)$cntStmt->fetchColumn();
+                            $examples = implode(', ', $simList);
+                            throw new Exception("ไม่พบแท็ก '$barcode' (พบ $totalSim แท็กที่ขึ้นต้นด้วยรหัสนี้ เช่น $examples กรุณาระบุรหัสแท็กให้ครบถ้วน)");
+                        }
+                    } catch (Exception $eSim) {
+                        if (strpos($eSim->getMessage(), 'ไม่พบแท็ก') !== false) {
+                            throw $eSim;
+                        }
+                    }
+                }
+
+                // Check if the barcode is a Part No. (in ITEMS table)
+                try {
+                    $partStmt = $pdo->prepare("
+                        SELECT i.part_description, COUNT(t.serial_no) AS tag_count, SUM(t.current_qty) AS total_qty
+                        FROM dbo.ITEMS i WITH (NOLOCK)
+                        LEFT JOIN dbo.RM_SERIAL_TAGS t WITH (NOLOCK) ON t.item_id = i.item_id AND t.current_qty > 0
+                        WHERE i.part_no = ? OR i.sap_no = ?
+                        GROUP BY i.part_description
+                    ");
+                    $partStmt->execute([$barcode, $barcode]);
+                    $partInfo = $partStmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $partInfo = false; }
+
+                if (!empty($partInfo)) {
+                    $tagCount  = intval($partInfo['tag_count'] ?? 0);
+                    $totalQty  = intval($partInfo['total_qty'] ?? 0);
+                    $partDesc  = $partInfo['part_description'] ?? '';
+                    throw new Exception("\"$barcode\" คือรหัสสินค้า (Part No.) ไม่ใช่หมายเลขแท็ก (มี $tagCount แท็ก คงเหลือรวม $totalQty ชิ้น) กรุณาสแกนหมายเลขแท็ก Serial No.");
+                }
+
+                throw new Exception("ไม่พบข้อมูลแท็ก '$barcode' ในระบบ กรุณาตรวจสอบรหัสบาร์โค้ด");
             }
 
             if ($tagInfo['total_tags'] <= 1 && empty($tagInfo['master_pallet_no'])) {
@@ -3191,6 +3232,26 @@ try {
                     $dateDel = date('d/m/Y H:i', strtotime($delInfo['deleted_at']));
                     $userDel = $delInfo['fullname'] ?? 'Unknown';
                     throw new Exception("ถูกลบเมื่อ $dateDel โดย $userDel");
+                }
+
+                // ตรวจสอบกรณีพิมพ์หรือสแกนบาร์โค้ดไม่ครบ (Prefix Match Suggestion)
+                if (strlen($barcode) >= 6) {
+                    try {
+                        $simStmt = $pdo->prepare("SELECT TOP 3 serial_no FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no LIKE ? ORDER BY serial_no ASC");
+                        $simStmt->execute([$barcode . '%']);
+                        $simList = $simStmt->fetchAll(PDO::FETCH_COLUMN);
+                        if (!empty($simList)) {
+                            $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM dbo.RM_SERIAL_TAGS WITH (NOLOCK) WHERE serial_no LIKE ?");
+                            $cntStmt->execute([$barcode . '%']);
+                            $totalSim = (int)$cntStmt->fetchColumn();
+                            $examples = implode(', ', $simList);
+                            throw new Exception("ไม่พบแท็ก '$barcode' (พบ $totalSim แท็กที่ขึ้นต้นด้วยรหัสนี้ เช่น $examples กรุณาระบุรหัสแท็กให้ครบถ้วน)");
+                        }
+                    } catch (Exception $eSim) {
+                        if (strpos($eSim->getMessage(), 'ไม่พบแท็ก') !== false) {
+                            throw $eSim;
+                        }
+                    }
                 }
 
                 // Check if the barcode is a Part No. (in ITEMS table)

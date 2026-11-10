@@ -764,7 +764,7 @@ function querySystemAuditReport(string $targetDate, ?string $actionFilter = 'ALL
     $summary = $stmtSummary->fetch() ?: [];
 
     $stmtErrors = $pdo->prepare("SELECT TOP 5
-        id, username, role, action, module, remark, created_at
+        id, username, role, action, module, new_value, remark, created_at
         FROM SYSTEM_LOGS WITH (NOLOCK)
         WHERE CAST(created_at AS DATE) = ? AND action = 'API_ERROR'
         ORDER BY created_at DESC");
@@ -776,6 +776,7 @@ function querySystemAuditReport(string $targetDate, ?string $actionFilter = 'ALL
             'username' => (string)$row['username'],
             'role' => (string)($row['role'] ?? 'unknown'),
             'module' => (string)($row['module'] ?? ''),
+            'error_message' => (string)($row['new_value'] ?? ''),
             'error_detail' => (string)($row['remark'] ?? ''),
             'time' => substr((string)$row['created_at'], 11, 8),
         ];
