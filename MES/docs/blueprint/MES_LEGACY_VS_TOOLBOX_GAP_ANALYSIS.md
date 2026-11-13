@@ -1,24 +1,24 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบ: 7 พฤศจิกายน 2026 | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 13 พฤศจิกายน 2026 (อัปเดตสถานะตาม Commit `d05bba34`) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
 ## Executive Summary (ภาพรวมสถานะการย้ายระบบ)
 
-จากการตรวจสอบโครงสร้างโค้ด หน้าจอ UI ระบบฐานข้อมูล และ API ทั้งหมดระหว่างระบบเดิม (`MES/page/` จำนวน 26 โมดูล) และระบบใหม่ (`MES/Toolbox/` สถาปัตยกรรม React SPA) สรุปภาพรวมสถานะได้ดังนี้:
+จากการตรวจสอบโครงสร้างโค้ด หน้าจอ UI ระบบฐานข้อมูล และ API ทั้งหมดระหว่างระบบเดิม (`MES/page/` จำนวน 26 โมดูล) และระบบใหม่ (`MES/Toolbox/` สถาปัตยกรรม React SPA) สรุปภาพรวมสถานะได้ดังนี้ *(หมายเหตุ: ยังมีโมดูลที่ย้ายมาจากแอปแยกอย่าง `Learning Hub` และ `Team Planner` รวมถึงโมดูลใหม่ `System Blueprint` ที่ใช้งานได้สมบูรณ์ 100% ใน Toolbox แล้ว)*:
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **6** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)` |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **4** | `Store Management`, `Forklift`, `Daily Log`, `Transport` |
+| **✅ Ported 100% (สมบูรณ์)** | **7** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`** |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **3** | `Forklift`, `Daily Log`, `Transport (พนักงานครบ 100% / ยังขาด Freight FleetLog)` |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
-| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` |
+| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 6
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 4
+    "Ported สมบูรณ์" : 7
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 3
     "On Hold (รอเอกสารผู้บริหาร)" : 1
     "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
 ```
@@ -29,8 +29,8 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ### 1.1 Store Management (ระบบบริหารคลังสินค้า)
 * **Legacy:** `page/storeManagement/` (15 PHP, 14 JS)
-* **Toolbox:** `Toolbox/src/modules/Store/` (13 ไฟล์)
-* **สถานะ:** ✅ **ย้ายแล้ว 85% — ระบบปฏิบัติการหน้างานหลักครบถ้วนทั้ง 6 แท็บใน SPA**
+* **Toolbox:** `Toolbox/src/modules/Store/` (15 ไฟล์) + `Toolbox/public/api/store/storeApi.php`
+* **สถานะ:** ✅ **ย้ายแล้ว 100% (สมบูรณ์ — ครบทั้ง 8 แท็บปฏิบัติการใน SPA + ใบรับรองผลตรวจนับ ISO/IATF เมื่อ 10/11/2026)**
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
@@ -39,10 +39,11 @@ pie title สถานะความพร้อมของโมดูลใ�
 | **Pending Approvals** | `inventoryDashboard.php` | `PendingApprovalsTab.jsx` | ✅ **ย้ายสมบูรณ์**: เวิร์กโฟลว์หัวหน้างานอนุมัติ/ปฏิเสธยอดผลต่างการตรวจนับ (Variance Resolution) |
 | **Stock Ledger (บัญชีสต็อก)** | `stockTransaction.php` | `StockLedgerTab.jsx` | ✅ **ย้ายสมบูรณ์**: รายการบัญชีความเคลื่อนไหวสต็อกย้อนหลัง พร้อมตัวกรองวันที่ ประเภทธุรกรรม และค้นหา |
 | **Material Requisition (เบิกพัสดุ)** | `materialReq.php` | `MaterialRequisitionTab.jsx` | ✅ **ย้ายสมบูรณ์**: แคตตาล็อกรายการพัสดุพร้อมตัวกรองหมวดหมู่, ตะกร้าสินค้าสไตล์ E-Commerce Cart, สลับประเภทคำขอ (Stock vs K2 PR), ผูกคลังปลายทาง WIP และ MES Internal Job สำหรับหน้าไลน์, และหน้าประวัติคำขอเบิกพัสดุย้อนหลัง |
+| **Store KDS Queue & PRD Return** | `storeDashboard.php` | `StoreKdsQueueTab.jsx` | ✅ **ย้ายสมบูรณ์ (10/11/2026)**: คิวจ่ายพัสดุสโตร์ Split-Pane, เลือกแท็ก FIFO/Manual, คิวเปิดเลขที่ K2 PR และระบบสแกนรับคืนวัตถุดิบจากฝ่ายผลิต (`PRD Return`) |
 | **RM Receiving & Tagging (รับวัตถุดิบ & แท็ก)** | `rmReceiving.php` | `RmReceivingTab.jsx` | ✅ **ย้ายสมบูรณ์**: แดชบอร์ด KPI (Total Tags, Total Qty, Printed, Pending), ตารางและบัตรแท็ก, การยืนยันรับเข้าสต็อกแบบกลุ่ม (Bulk Receive to Location), การออกป้ายแท็กพร้อมพิมพ์ QR Code และ Export Excel |
-| **Trace Tag History (สืบย้อนแท็ก)** | `tagHistory.php` | `RmReceivingTab.jsx` (`isTraceModalOpen`) | ✅ **ย้ายสมบูรณ์**: ระบบสืบค้นเส้นทางประวัติแท็ก (Tag Genealogy Timeline) แสดงข้อมูลสินค้า จำนวนคงเหลือ จุดจัดเก็บ PO และไทม์ไลน์ธุรกรรมย้อนหลังทั้งหมด |
-| **Scrap & Replacement (เบิกของเสีย/ทดแทน)** | `storeRequest.php` | *External Link* | ⏳ **Roadmap Phase 2**: เวิร์กโฟลว์เบิกของเสียเคลมทดแทนตามสิทธิ์ |
-| **ISO/IATF Audit Certificate** | `print_cycle_count_audit.php` | *External Link* | ⏳ **Roadmap Phase 2**: เอกสารใบรับรองผลตรวจนับทางการพร้อมสูตรคำนวณ % IRA |
+| **Trace Tag History (สืบย้อนแท็ก)** | `tagHistory.php` | `RmReceivingTab.jsx` (`isTraceModalOpen`) | ✅ **ย้ายสมบูรณ์**: ระบบสืบค้นเส้นทางประวัติแท็ก (Tag Genealogy Timeline) แสดงข้อมูลสินค้า จำนวนคงเหลือ จุดจัดเก็บ PO, ไทม์ไลน์ธุรกรรมย้อนหลัง และแนะนำรหัสแท็กเมื่อสแกน/พิมพ์ไม่ครบ (`Prefix Match Suggestion`) |
+| **Scrap & Replacement (เบิกของเสีย/ทดแทน)** | `storeRequest.php` | `ScrapReplacementTab.jsx` | ✅ **ย้ายสมบูรณ์ (10/11/2026)**: แดชบอร์ด KPI, แจ้งของเสียและเบิกทดแทน, อนุมัติด้วยมือแบบเดี่ยว/กลุ่ม (Strict Manual Approve/Reject), Export Excel และ Scrap Analytics Dashboard |
+| **ISO/IATF Audit Certificate** | `print_cycle_count_audit.php` | `CycleCountAuditModal.jsx` | ✅ **ย้ายสมบูรณ์ (10/11/2026)**: ทะเบียนประวัติตรวจนับย้อนหลัง, Export Excel และใบรับรองทางการ `FM-WH-CC-01 REV.02` ขนาด A4 แนวนอนพร้อม IRA % และช่องลงนาม 3 ระดับ |
 
 ---
 
@@ -235,7 +236,7 @@ graph LR
 | **3** | `profile` | `#/profile` | ✅ 100% | มีครบ ข้อมูลส่วนตัว, เปลี่ยนรหัส, Logs, ประเมิน 4D, สวัสดิการ |
 | **4** | `paintChem` | `#/paint-chem` | ✅ 100% | สร้าง UI ใหม่สมบูรณ์ พร้อม Sheet, Slot, History, Analytics |
 | **5** | `documentCenter` | `#/documents` | ✅ 100% | มีครบทั้ง File Explorer, CRUD, PDF/Image Preview, และ **3D CAD WebGL Viewer** |
-| **6** | `storeManagement` | `#/store` | ⚠️ 35% | **ขาด:** Material Req, RM Receiving, Scrap Claim, Warehouse Ops, Tag Trace, Audit Print |
+| **6** | `storeManagement` | `#/store` | ✅ 100% | มีครบทั้ง 8 แท็บ (Onhand+Export, Requisition, Store KDS & PRD Return, Receiving & Trace Tag, Scrap & Replacement, Visual Cycle Count, Approvals, Ledger) + Audit Certificate |
 | **7** | `forklift` | `#/forklift` | ⚠️ 50% | **ขาด:** Live Map Tracking, Heatmap, ESP32 IoT API, Driver QR Scan |
 | **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
 | **9** | `dailyLog` | `#/` (Home Widgets) | ⚠️ 40% | **ขาด:** หน้าระบบเต็ม Shift Handover, Reply Thread, Mood Insight Report |
@@ -277,10 +278,13 @@ graph LR
 เพื่อไม่ให้การทำงานในโรงงานสะดุด แนะนำให้ดำเนินการตามลำดับความสำคัญ (Priority Tiers) ดังนี้:
 
 ### 🔴 Phase 1: เติมเต็มฟังก์ชันที่ขาดในโมดูลที่ย้ายแล้ว (Immediate Gaps in Ported Modules)
-1. **Store Management:** พอร์ตแท็บ `Material Request` และ `RM Receiving & Tagging` เข้าสู่ `StoreApp.jsx` พร้อมทำปุ่ม Export to Excel ใน Onhand Dashboard
+1. [x] **Store Management:** พอร์ตครบ 100% ทั้ง 8 แท็บปฏิบัติการ (`Material Request`, `Store KDS & PRD Return`, `RM Receiving & Trace Tag`, `Scrap & Replacement`, `ISO/IATF Audit Certificate` และ Export to Excel) เข้าสู่ `StoreApp.jsx` (เสร็จสมบูรณ์ 10/11/2026)
 2. [x] **Document Center:** นำไลบรารี Three.js / Online 3D Viewer เข้าสู่ `DocumentPreviewModal.jsx` (`ThreeDViewer.jsx`) เพื่อคืนความสามารถในการดูโมเดล 3D CAD (.step, .stl, .obj) พร้อมคำนวณมิติขนาดและเครื่องมือควบคุมให้วิศวกร (เสร็จสมบูรณ์ 07/11/2026)
 3. [x] **Utility API:** เพิ่ม Action `insert_log` และ `aggregate_summary` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่องและคำนวณสรุปอัตโนมัติ (เสร็จสมบูรณ์ 07/11/2026)
-4. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง
+4. [ ] **Forklift Tracking & IoT Parity:** พอร์ต Live Spatial Map, Heatmap Density, Driver QR Checkout Scan และ ESP32 Telemetry API (`forkliftMapUI.php` -> `#/forklift`)
+5. [ ] **Daily Log Full SPA & Mood Insight Report:** พอร์ตหน้าสมุดบันทึกกะเต็มรูปแบบ (Shift Handover / Supervisor Reply Thread) และรายงาน Mood Analytics (`dailyLogUI.php`, `moodReport.php`)
+6. [ ] **Freight Fleet Log:** พอร์ตบัญชีเที่ยวรถและค่าขนส่งสินค้า (`page/fleetLog/fleetLog.php`) เพื่ออุดช่องว่าง Semantic Gap ของหมวด Transport
+7. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง
 
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)
 1. **PE Enterprise & Maintenance:** ย้ายระบบจัดการใบสั่งซ่อม (Work Orders) และคลังอะไหล่ (Spare Parts) เป็นหน้าจอแรกใน Toolbox ภายใต้ Route `#/pe/*`
