@@ -47,6 +47,7 @@ export const MENU_DATA = [
       { name: 'Store KDS & Issue (จ่ายพัสดุ)', icon: Warehouse, to: '/store?tab=kds' },
       { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving' },
       { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap' },
+      { name: 'Freight FleetLog (บัญชีเที่ยวรถ)', icon: Truck, to: '/fleet-log' },
     ]
   },
   {

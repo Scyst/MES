@@ -10,15 +10,15 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **8** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`** |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **2** | `Forklift`, `Transport (พนักงานครบ 100% / ยังขาด Freight FleetLog)` |
+| **✅ Ported 100% (สมบูรณ์)** | **9** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`** |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `Forklift` |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
 | **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 8
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 2
+    "Ported สมบูรณ์" : 9
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 1
     "On Hold (รอเอกสารผู้บริหาร)" : 1
     "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
 ```
@@ -111,13 +111,13 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ### 1.6 Transport System (ระบบขนส่งและยานพาหนะ)
 * **Legacy:** `page/fleetLog/fleetLog.php` (บัญชีเที่ยวรถขนส่งสินค้า) + `transport-system` (รถรับส่งพนักงาน)
-* **Toolbox:** `Toolbox/src/modules/Transport/` (26 ไฟล์)
-* **สถานะ:** ⚠️ **ความสับสนในการใช้งาน (Semantic Gap)**
+* **Toolbox:** `Toolbox/src/modules/Transport/` (26 ไฟล์) + `Toolbox/src/modules/FleetLog/` (`FleetLogPage.jsx`, `FleetKpiCards.jsx`, `FleetAnalyticsChart.jsx`, `FleetModals.jsx`) + `Toolbox/public/api/fleetLog/fleetLogApi.php`
+* **สถานะ:** ✅ **ย้ายแล้ว 100% (สมบูรณ์ — ครบทั้งรถรับ-ส่งพนักงาน `#/transport` และบัญชีเที่ยวรถขนส่งสินค้า `#/fleet-log` เมื่อ 13/11/2026)**
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
 | **Employee Shuttle Bus (รถรับ-ส่งพนักงาน)** | `transport-system` | `TransportApp.jsx` | ✅ ย้ายเข้าสู่ Toolbox สมบูรณ์ 100% (จองตั๋ว, สแกนตั๋วคนขับ, จัดการสายรถ) |
-| **Freight & Fleet Cost Logistics (บัญชีเที่ยวรถส่งของ)** | `fleetLog.php` | *ไม่มีใน Toolbox SPA* (เป็น External Link) | ❌ **ยังไม่ได้พอร์ต**: การบันทึกบัญชีค่าขนส่งสินค้าของโรงงาน (Truck Cost Breakdown, ค่าน้ำมัน, ค่าทางด่วน, เที่ยววิ่งส่งลูกค้า และการ Export Excel) |
+| **Freight & Fleet Cost Logistics (บัญชีเที่ยวรถส่งของ)** | `fleetLog.php` | `FleetLogPage.jsx` (`#/fleet-log`) | ✅ **ย้ายสมบูรณ์ (13/11/2026)**: ตารางบัญชีเที่ยวรถพร้อม KPI Breakdown (Total/Vendor/SNC/Cost Breakdown), กราฟแนวโน้มรายวัน, บันทึก/แก้ไข/ลบแบบ Manual, Quick Cost, ซิงค์ใบโหลด C-TPAT อัตโนมัติ, Pagination และ Export Excel (`.xlsx`) |
 
 ---
 
@@ -240,7 +240,7 @@ graph LR
 | **7** | `forklift` | `#/forklift` | ⚠️ 50% | **ขาด:** Live Map Tracking, Heatmap, ESP32 IoT API, Driver QR Scan |
 | **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
 | **9** | `dailyLog` | `#/daily-log`, `#/mood-report` | ✅ 100% | สมุดบันทึกกะเต็มรูปแบบ (Shift Handover, Reply Thread) และรายงาน Mood Insight + PDPA Mode |
-| **10** | `fleetLog` / `transport` | `#/transport` | ⚠️ 50% | รถรับส่งพนักงานมีครบ **แต่ขาดบัญชีเที่ยวรถขนส่งสินค้า (Freight Log)** |
+| **10** | `fleetLog` / `transport` | `#/transport`, `#/fleet-log` | ✅ 100% | มีครบทั้งระบบรถรับ-ส่งพนักงาน (`#/transport`) และบัญชีเที่ยวรถขนส่งสินค้า (`#/fleet-log`) |
 | **11** | `InboundHub` (ใหม่) | `#/inbound-hub` | ⏳ On Hold | ทำหน้าจอจำลองไว้แล้ว — พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร |
 | **12** | `SystemBlueprint` (ใหม่)| `#/blueprint` | ✅ 100% | ผังพิมพ์เขียวและสถาปัตยกรรมระบบโรงงาน แสดงผลสมบูรณ์ |
 | **13** | `PE` (ซ่อมบำรุง) | *ไม่มีใน Toolbox* | ❌ 0% | ใบสั่งซ่อม, ฐานข้อมูลเครื่องจักร, อะไหล่, Downtime, IIoT, LOTO, ผังโรงงาน |
@@ -283,7 +283,7 @@ graph LR
 3. [x] **Utility API:** เพิ่ม Action `insert_log` และ `aggregate_summary` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่องและคำนวณสรุปอัตโนมัติ (เสร็จสมบูรณ์ 07/11/2026)
 4. [ ] **Forklift Tracking & IoT Parity:** พอร์ต Live Spatial Map, Heatmap Density, Driver QR Checkout Scan และ ESP32 Telemetry API (`forkliftMapUI.php` -> `#/forklift`)
 5. [x] **Daily Log Full SPA & Mood Insight Report:** พอร์ตหน้าสมุดบันทึกกะเต็มรูปแบบ (Shift Handover / Supervisor Reply Thread) และรายงาน Mood Analytics (`dailyLogUI.php`, `moodReport.php` -> `#/daily-log`, `#/mood-report`) (เสร็จสมบูรณ์ 13/11/2026)
-6. [ ] **Freight Fleet Log:** พอร์ตบัญชีเที่ยวรถและค่าขนส่งสินค้า (`page/fleetLog/fleetLog.php`) เพื่ออุดช่องว่าง Semantic Gap ของหมวด Transport
+6. [x] **Freight Fleet Log:** พอร์ตบัญชีเที่ยวรถและค่าขนส่งสินค้า (`page/fleetLog/fleetLog.php` -> `#/fleet-log`) เพื่ออุดช่องว่าง Semantic Gap ของหมวด Transport (เสร็จสมบูรณ์ 13/11/2026)
 7. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง
 
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)

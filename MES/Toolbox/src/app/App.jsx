@@ -25,6 +25,7 @@ const StoreApp = lazy(() => import('../modules/Store/StoreApp'));
 const UtilityDashboardPage = lazy(() => import('../modules/Utility/pages/UtilityDashboardPage'));
 const ForkliftPage = lazy(() => import('../modules/Forklift/pages/ForkliftPage'));
 const DailyLogPage = lazy(() => import('../modules/DailyLog/pages/DailyLogPage'));
+const FleetLogPage = lazy(() => import('../modules/FleetLog/pages/FleetLogPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -202,6 +203,14 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดรายงาน Mood Insight Report...</div>}>
                     <DailyLogPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="fleet-log" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบัญชีเที่ยวรถและค่าขนส่ง...</div>}>
+                    <FleetLogPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

@@ -209,7 +209,7 @@ export default function HomeDashboard() {
     { title: 'Scrap & Replacement', desc: 'แจ้งของเสีย เบิกทดแทน และวิเคราะห์มูลค่า', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=scrap', badge: 'SPA' },
     { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/loadingReport/loading_report.php' },
     { title: 'Customer Tracking', desc: 'ระบบค้นหาเอกสารสำหรับลูกค้า (Public)', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/loadingReport/customerPortal.php' },
-    { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/fleetLog/fleetLog.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง (Freight FleetLog)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/fleet-log', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
     { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/areaAccess/areaAccess.php' },
     { title: 'CCTV Downloader', desc: 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', icon: Video, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/cctv_downloader/cctv_downloaderUI.php', roles: ['admin', 'creator', 'manager'] },
   ], []);
