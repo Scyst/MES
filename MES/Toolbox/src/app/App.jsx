@@ -24,6 +24,7 @@ const LearningHubApp = lazy(() => import('../modules/LearningHub/LearningHubApp'
 const StoreApp = lazy(() => import('../modules/Store/StoreApp'));
 const UtilityDashboardPage = lazy(() => import('../modules/Utility/pages/UtilityDashboardPage'));
 const ForkliftPage = lazy(() => import('../modules/Forklift/pages/ForkliftPage'));
+const DailyLogPage = lazy(() => import('../modules/DailyLog/pages/DailyLogPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -185,6 +186,22 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบจองและติดตามรถโฟล์คลิฟท์ (Forklift Command)...</div>}>
                     <ForkliftPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="daily-log" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดสมุดบันทึกกะและสุขภาพใจ...</div>}>
+                    <DailyLogPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="mood-report" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดรายงาน Mood Insight Report...</div>}>
+                    <DailyLogPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

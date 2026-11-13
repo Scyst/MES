@@ -17,7 +17,7 @@ export const MENU_DATA = [
       { name: 'TOOLBOX OS (Home)', icon: Home, to: '/' },
       { name: 'My Profile (โปรไฟล์ & 4D)', icon: User, to: '/profile' },
       { name: 'MES Learning Hub (ศูนย์เรียนรู้)', icon: GraduationCap, to: '/learning' },
-      { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/dailyLogUI.php', external: true },
+      { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, to: '/daily-log' },
       { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
       { name: 'Material Request (เบิกพัสดุ)', icon: ShoppingCart, to: '/store?tab=requisition' },
       { name: 'Forklift Booking (จองโฟล์คลิฟท์)', icon: Truck, to: '/forklift' },
@@ -64,7 +64,7 @@ export const MENU_DATA = [
     items: [
       { name: 'Management Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', external: true },
       { name: 'Utility & Energy (พลังงาน)', icon: Zap, to: '/utility' },
-      { name: 'Mood Insight Report', icon: Heart, href: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyLog/moodReport.php', external: true },
+      { name: 'Mood Insight Report', icon: Heart, to: '/mood-report' },
       { name: 'Sales Tracking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', external: true },
       { name: 'Shipping Loading', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/shipping_loading.php', external: true },
     ]

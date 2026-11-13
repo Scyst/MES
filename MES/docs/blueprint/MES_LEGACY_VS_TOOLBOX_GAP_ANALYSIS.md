@@ -10,15 +10,15 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **7** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`** |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **3** | `Forklift`, `Daily Log`, `Transport (พนักงานครบ 100% / ยังขาด Freight FleetLog)` |
+| **✅ Ported 100% (สมบูรณ์)** | **8** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`** |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **2** | `Forklift`, `Transport (พนักงานครบ 100% / ยังขาด Freight FleetLog)` |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
 | **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 7
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 3
+    "Ported สมบูรณ์" : 8
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 2
     "On Hold (รอเอกสารผู้บริหาร)" : 1
     "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
 ```
@@ -96,16 +96,16 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ### 1.5 Daily Log & Mood Insights (บันทึกประจำวันและสุขภาพใจ)
 * **Legacy:** `page/dailyLog/` (9 PHP, 2 JS)
-* **Toolbox:** `Toolbox/src/modules/Home/components/` (DailyPulseWidget, CalendarWidget)
-* **สถานะ:** ⚠️ **ย้ายแล้ว 40% — มีเฉพาะ Widget ย่อบนหน้าแรก ขาดหน้าระบบเต็ม**
+* **Toolbox:** `Toolbox/src/modules/DailyLog/` (`DailyLogPage.jsx`, `MyShiftLogTab.jsx`, `TeamShiftLedgerTab.jsx`, `ShiftGroupLedgerList.jsx`, `MoodAnalyticsTab.jsx`, `DailyLogModals.jsx`) + `Toolbox/src/modules/Home/components/` + `Toolbox/public/api/dailyLog/` (`dailyLogManage.php`, `moodReportApi.php`)
+* **สถานะ:** ✅ **ย้ายแล้ว 100% (สมบูรณ์ — ครบทั้งสมุดบันทึกกะเต็มรูปแบบและรายงานสุขภาพใจ Mood Insight Analytics ใน SPA เมื่อ 13/11/2026)**
 
 | ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
 | :--- | :--- | :--- | :--- |
 | **Daily Pulse Entry (บันทึกกะ)** | Modal ใน PHP | `DailyPulseWidget.jsx`, `LogModal.jsx` | ✅ ย้ายสมบูรณ์ บันทึกความรู้สึก กิจกรรม ปัญหา |
-| **Monthly Calendar Grid** | ปฏิทินใน PHP | `CalendarWidget.jsx` | ✅ ย้ายสมบูรณ์ แสดงจุดสีสถานะการบันทึกแต่ละวัน |
+| **Monthly Calendar Grid** | ปฏิทินใน PHP | `CalendarWidget.jsx`, `MyShiftLogTab.jsx` | ✅ ย้ายสมบูรณ์ แสดงจุดสีสถานะการบันทึกแต่ละวัน และจุดแจ้งเตือนยังไม่อ่านคำตอบ |
 | **Morning Executive Brief** | `morningBriefModal.php` | `MorningBriefModal.jsx` | ✅ ย้ายสมบูรณ์ ดึงข้อมูลสรุปทีมงานยามเช้า |
-| **Full Daily Log Ledger (สมุดบันทึกกะเต็ม)** | `dailyLogUI.php` | *ลิงก์ออกภายนอก* (`/page/dailyLog/dailyLogUI.php`) | ❌ **ยังไม่พอร์ตเป็นหน้า SPA เต็ม**: หน้าอ่านบันทึกย้อนหลังทุกไลน์การผลิต การส่งต่อกะ (Shift Handover) และระบบตอบกลับ (Supervisor Reply Thread) |
-| **Mood Insight Report (รายงานสุขภาพใจ)** | `moodReport.php` | *ลิงก์ออกภายนอก* (`/page/dailyLog/moodReport.php`) | ❌ **ยังไม่พอร์ตเป็นหน้า SPA**: หน้ารายงาน Mental Health Analytics, Mood Trend กราฟแท่งเปรียบเทียบตามไลน์ และ Mood Distribution Pie Chart |
+| **Full Daily Log Ledger (สมุดบันทึกกะเต็ม)** | `dailyLogUI.php` | `DailyLogPage.jsx`, `TeamShiftLedgerTab.jsx`, `ShiftGroupLedgerList.jsx` | ✅ **ย้ายสมบูรณ์ (13/11/2026)**: หน้าสมุดบันทึกกะเต็มรูปแบบ (`#/daily-log`), การส่งต่อกะแยก Day/Night (Shift Handover Ledger), ตัวกรองรายกลุ่ม/พนักงาน และระบบหัวหน้างานตอบกลับพร้อมแจ้งเตือนอ่านแล้ว (`Reply Thread` & `Mark as Read`) |
+| **Mood Insight Report (รายงานสุขภาพใจ)** | `moodReport.php` | `MoodAnalyticsTab.jsx` (`#/mood-report`) | ✅ **ย้ายสมบูรณ์ (13/11/2026)**: รายงานสุขภาพใจพร้อม KPIs, กราฟแท่งเปรียบเทียบรายไลน์/แนวโน้มรายวัน, Mood Distribution Pie Chart, รายชื่อพนักงานที่ยังไม่บันทึก, กล่องแจ้งเตือนคะแนนต่ำ (Score 1-2), **PDPA Privacy Mode ปลดล็อกด้วยรหัสผ่าน**, ประวัติพนักงานรายคน และส่งออก Excel (`.xlsx`) |
 
 ---
 
@@ -239,7 +239,7 @@ graph LR
 | **6** | `storeManagement` | `#/store` | ✅ 100% | มีครบทั้ง 8 แท็บ (Onhand+Export, Requisition, Store KDS & PRD Return, Receiving & Trace Tag, Scrap & Replacement, Visual Cycle Count, Approvals, Ledger) + Audit Certificate |
 | **7** | `forklift` | `#/forklift` | ⚠️ 50% | **ขาด:** Live Map Tracking, Heatmap, ESP32 IoT API, Driver QR Scan |
 | **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
-| **9** | `dailyLog` | `#/` (Home Widgets) | ⚠️ 40% | **ขาด:** หน้าระบบเต็ม Shift Handover, Reply Thread, Mood Insight Report |
+| **9** | `dailyLog` | `#/daily-log`, `#/mood-report` | ✅ 100% | สมุดบันทึกกะเต็มรูปแบบ (Shift Handover, Reply Thread) และรายงาน Mood Insight + PDPA Mode |
 | **10** | `fleetLog` / `transport` | `#/transport` | ⚠️ 50% | รถรับส่งพนักงานมีครบ **แต่ขาดบัญชีเที่ยวรถขนส่งสินค้า (Freight Log)** |
 | **11** | `InboundHub` (ใหม่) | `#/inbound-hub` | ⏳ On Hold | ทำหน้าจอจำลองไว้แล้ว — พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร |
 | **12** | `SystemBlueprint` (ใหม่)| `#/blueprint` | ✅ 100% | ผังพิมพ์เขียวและสถาปัตยกรรมระบบโรงงาน แสดงผลสมบูรณ์ |
@@ -282,7 +282,7 @@ graph LR
 2. [x] **Document Center:** นำไลบรารี Three.js / Online 3D Viewer เข้าสู่ `DocumentPreviewModal.jsx` (`ThreeDViewer.jsx`) เพื่อคืนความสามารถในการดูโมเดล 3D CAD (.step, .stl, .obj) พร้อมคำนวณมิติขนาดและเครื่องมือควบคุมให้วิศวกร (เสร็จสมบูรณ์ 07/11/2026)
 3. [x] **Utility API:** เพิ่ม Action `insert_log` และ `aggregate_summary` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่องและคำนวณสรุปอัตโนมัติ (เสร็จสมบูรณ์ 07/11/2026)
 4. [ ] **Forklift Tracking & IoT Parity:** พอร์ต Live Spatial Map, Heatmap Density, Driver QR Checkout Scan และ ESP32 Telemetry API (`forkliftMapUI.php` -> `#/forklift`)
-5. [ ] **Daily Log Full SPA & Mood Insight Report:** พอร์ตหน้าสมุดบันทึกกะเต็มรูปแบบ (Shift Handover / Supervisor Reply Thread) และรายงาน Mood Analytics (`dailyLogUI.php`, `moodReport.php`)
+5. [x] **Daily Log Full SPA & Mood Insight Report:** พอร์ตหน้าสมุดบันทึกกะเต็มรูปแบบ (Shift Handover / Supervisor Reply Thread) และรายงาน Mood Analytics (`dailyLogUI.php`, `moodReport.php` -> `#/daily-log`, `#/mood-report`) (เสร็จสมบูรณ์ 13/11/2026)
 6. [ ] **Freight Fleet Log:** พอร์ตบัญชีเที่ยวรถและค่าขนส่งสินค้า (`page/fleetLog/fleetLog.php`) เพื่ออุดช่องว่าง Semantic Gap ของหมวด Transport
 7. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง
 
