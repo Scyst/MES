@@ -191,6 +191,14 @@ export default function App() {
                 </ErrorBoundary>
               } />
 
+              <Route path="forklift/scan" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบสแกน QR รถโฟล์คลิฟท์...</div>}>
+                    <ForkliftPage initialTabOverride="scan" />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
               <Route path="daily-log" element={
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดสมุดบันทึกกะและสุขภาพใจ...</div>}>

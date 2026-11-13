@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Truck, Battery, BatteryCharging, BatteryWarning, MapPin, 
-  User, Clock, Play, RotateCcw, Calendar, AlertTriangle, ShieldCheck
+  User, Play, RotateCcw, Calendar, AlertTriangle, QrCode
 } from 'lucide-react';
 
 export default function ForkliftCard({ 
@@ -11,7 +11,8 @@ export default function ForkliftCard({
   onInstantUse, 
   onReserve, 
   onReturn, 
-  onStartJob 
+  onOpenQr,
+  onReportIssue
 }) {
   const status = (forklift.status || 'AVAILABLE').toUpperCase();
   const battery = parseInt(forklift.current_battery != null ? forklift.current_battery : 100, 10);
@@ -178,14 +179,14 @@ export default function ForkliftCard({
           <>
             <button
               onClick={() => onInstantUse(forklift)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-600 text-white rounded-xl font-medium text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-xs"
+              className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-600 text-white rounded-xl font-medium text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-xs"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>เริ่มใช้ทันที</span>
             </button>
             <button
               onClick={() => onReserve(forklift)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-xs hover:bg-slate-100 active:scale-95 transition-all"
+              className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 py-2 px-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium text-xs hover:bg-slate-100 active:scale-95 transition-all"
             >
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
               <span>จองล่วงหน้า</span>
@@ -197,7 +198,7 @@ export default function ForkliftCard({
           <button
             onClick={() => onReturn(forklift)}
             disabled={!isMyBooking && !isAdmin}
-            className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-medium text-xs transition-all ${
+            className={`flex-1 min-h-[40px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-medium text-xs transition-all ${
               isMyBooking || isAdmin
                 ? 'bg-amber-600 text-white hover:bg-amber-700 active:scale-95 shadow-xs'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -211,7 +212,7 @@ export default function ForkliftCard({
         {status === 'CHARGING' && (
           <button
             onClick={() => onInstantUse(forklift)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-medium text-xs hover:bg-blue-100 transition-colors"
+            className="flex-1 min-h-[40px] flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-medium text-xs hover:bg-blue-100 transition-colors"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>ดึงออกจากจุดชาร์จเพื่อใช้งาน</span>
@@ -219,10 +220,28 @@ export default function ForkliftCard({
         )}
 
         {status === 'MAINTENANCE' && (
-          <div className="w-full text-center py-1 text-slate-400 text-xs italic">
+          <div className="flex-1 text-center py-1 text-slate-400 text-xs italic">
             อยู่ระหว่างการซ่อมบำรุง
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => onOpenQr?.(forklift)}
+          title="แสดง QR Code ประจำรถ"
+          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-colors"
+        >
+          <QrCode className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onReportIssue?.(forklift)}
+          title="แจ้งปัญหา / รถเสีย"
+          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 transition-colors"
+        >
+          <AlertTriangle className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

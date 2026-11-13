@@ -10,15 +10,15 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **9** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`** |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `Forklift` |
+| **✅ Ported 100% (สมบูรณ์)** | **10** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`** |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **0** | *— (Phase 1 ครบ 100% แล้ว ยกเว้น Inbound Hub ที่ On Hold)* |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
 | **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 9
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 1
+    "Ported สมบูรณ์" : 10
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 0
     "On Hold (รอเอกสารผู้บริหาร)" : 1
     "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
 ```
@@ -61,21 +61,21 @@ pie title สถานะความพร้อมของโมดูลใ�
 
 ---
 
-### 1.3 Forklift Management (ระบบจัดการและจองรถโฟล์คลิฟท์)
+### 1.3 Forklift Management (ระบบจัดการ จอง และติดตามรถโฟล์คลิฟท์)
 * **Legacy:** `page/forklift/` (10 PHP, 2 JS)
-* **Toolbox:** `Toolbox/src/modules/Forklift/` (7 ไฟล์)
-* **สถานะ:** ⚠️ **ย้ายแล้ว 50% — ขาดระบบ IoT Telemetry และ Live Tracking Map**
+* **Toolbox:** `Toolbox/src/modules/Forklift/` (13 ไฟล์) + `Toolbox/public/api/forklift/` (`forkliftApi.php`, `hardwareTracking.php`)
+* **สถานะ:** ✅ **ย้ายแล้ว 100% (สมบูรณ์ — ครบทั้ง Command Center, Live Map 40×30 Grid, Heatmap, Site Survey, QR Checkout และ ESP32 IoT API เมื่อ 13/11/2026)**
 
-| ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & ข้อบกพร่องที่พบ |
+| ฟีเจอร์ย่อย | Legacy (`page/`) | Toolbox (`Toolbox/`) | สถานะ & รายละเอียดที่พอร์ต |
 | :--- | :--- | :--- | :--- |
 | **Fleet Dashboard & Cards** | `forkliftDashboard.php` | `ForkliftCard.jsx`, `ForkliftPage.jsx` | ✅ ย้ายสมบูรณ์ แสดงสถานะรถ แบตเตอรี่ ผู้ใช้งานปัจจุบัน |
 | **Booking & Instant Walk-in** | `forkliftUI.php` | `BookingModal.jsx` | ✅ ย้ายสมบูรณ์ รองรับการจองล่วงหน้าและ Walk-in ทันที |
 | **Return & Inspection** | `forkliftUI.php` | `ReturnModal.jsx` | ✅ ย้ายสมบูรณ์ บันทึกระดับแบตเตอรี่และตรวจสภาพ |
 | **Fleet Admin CRUD** | `forkliftManage.php` | `ManageFleetModal.jsx` | ✅ ย้ายสมบูรณ์ เพิ่ม/แก้ไข/ลบ/เปลี่ยนสถานะรถ |
-| **Live Spatial Map Tracking** | `forkliftMapUI.php` | *ไม่มีใน Toolbox* | ❌ **ขาดหายใน SPA**: แผนที่ติดตามตำแหน่งรถแบบเรียลไทม์ภายในโรงงาน (Indoor Tracking) |
-| **Heatmap Density Analysis** | `forkliftTracking.js` | *ไม่มีใน Toolbox* | ❌ **ขาดหายใน SPA**: แผนผังความหนาแน่นของการเดินรถโฟล์คลิฟท์ในแต่ละโซนเพื่อความปลอดภัย |
-| **IoT Telemetry Ingestion (ESP32)** | `hardwareTracking.php` | *ไม่มีใน Toolbox API* | ❌ **API ขาดหาย**: Endpoint สำหรับบอร์ด ESP32 บนรถยิงพิกัด WiFi BSSID/RSSI Triangulation และระดับแบตเตอรี่เข้า `dbo.sp_UpdateForkliftLocation_WiFi` |
-| **Driver QR Checkout Scan** | `scan.php` | *ไม่มีใน Toolbox* | ❌ **ขาดหายใน SPA**: หน้าเว็บสแกน QR หน้าตัวรถเพื่อปลดล็อกใช้งานทันทีสำหรับพนักงานขับรถ |
+| **Live Spatial Map Tracking** | `forkliftMapUI.php` | `ForkliftLiveMapTab.jsx`, `ForkliftMapCanvas.jsx`, `ApZoneModal.jsx` | ✅ **ย้ายสมบูรณ์**: แผนผัง Interactive B9/B10 Vector Blueprint + 40×30 Grid (`A1..AN30`), GPS Outdoor + Wi-Fi AP Indoor Triangulation (`WIFI_AP_ZONES`), Follow Mode, Simulator Test และ Route Trail Playback |
+| **Heatmap Density Analysis** | `forkliftTracking.js` | `ForkliftLiveMapTab.jsx` + `get_heatmap` SQL Grid Bucket | ✅ **ย้ายสมบูรณ์**: Heatmap Radial Canvas พร้อม SQL Server Grid Aggregation (`TOP 2,500` cells) เลือกช่วงเวลา (`24h`/`7d`/`30d`/`Historical`) และกรองรายคัน |
+| **IoT Telemetry Ingestion (ESP32)** | `hardwareTracking.php` | `Toolbox/public/api/forklift/hardwareTracking.php` | ✅ **ย้ายสมบูรณ์**: Endpoint Self-Contained รับ JSON จากบอร์ด ESP32 ยิงเข้า `dbo.sp_UpdateForkliftLocation_WiFi` พร้อม Validate Range และ Tab-Trimming Safe Lookup |
+| **Driver QR Checkout Scan** | `scan.php` | `ForkliftScanTab.jsx`, `ForkliftQrModal.jsx`, `ReportIssueModal.jsx` | ✅ **ย้ายสมบูรณ์**: รองรับ `#/forklift?tab=scan&code=...`, กล้องสแกน QR (`html5-qrcode`), สร้าง/พิมพ์ QR สติกเกอร์ (`qrcode.react`), เบิก-คืนด่วน และแจ้งรถเสีย (Maintenance Alert) |
 
 ---
 
@@ -237,7 +237,7 @@ graph LR
 | **4** | `paintChem` | `#/paint-chem` | ✅ 100% | สร้าง UI ใหม่สมบูรณ์ พร้อม Sheet, Slot, History, Analytics |
 | **5** | `documentCenter` | `#/documents` | ✅ 100% | มีครบทั้ง File Explorer, CRUD, PDF/Image Preview, และ **3D CAD WebGL Viewer** |
 | **6** | `storeManagement` | `#/store` | ✅ 100% | มีครบทั้ง 8 แท็บ (Onhand+Export, Requisition, Store KDS & PRD Return, Receiving & Trace Tag, Scrap & Replacement, Visual Cycle Count, Approvals, Ledger) + Audit Certificate |
-| **7** | `forklift` | `#/forklift` | ⚠️ 50% | **ขาด:** Live Map Tracking, Heatmap, ESP32 IoT API, Driver QR Scan |
+| **7** | `forklift` | `#/forklift`, `#/forklift/scan` | ✅ 100% | ครบทั้ง Fleet Command, Live 40×30 Map, Heatmap, AP Zone Site Survey, QR Checkout/Sticker, แจ้งซ่อม และ ESP32 IoT API |
 | **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
 | **9** | `dailyLog` | `#/daily-log`, `#/mood-report` | ✅ 100% | สมุดบันทึกกะเต็มรูปแบบ (Shift Handover, Reply Thread) และรายงาน Mood Insight + PDPA Mode |
 | **10** | `fleetLog` / `transport` | `#/transport`, `#/fleet-log` | ✅ 100% | มีครบทั้งระบบรถรับ-ส่งพนักงาน (`#/transport`) และบัญชีเที่ยวรถขนส่งสินค้า (`#/fleet-log`) |
@@ -269,7 +269,7 @@ graph LR
    * ในระบบเดิม (`page/storeManagement/script/storeOffline.js`) มีระบบบันทึกข้อมูลลง IndexedDB เมื่อเครือข่าย Wi-Fi ในคลังหลุด พร้อมปุ่มกด Manual Sync เมื่อสัญญาณกลับมา
    * ใน `Toolbox` ยังไม่มี Service Worker หรือ IndexedDB Caching สำหรับการสแกนหรือตรวจนับ หากเครือข่ายหลุดขณะเดินตรวจนับในจุดอับสัญญาณ อาจทำให้การยิงบันทึกค้างหรือไม่สำเร็จ
 3. **Data Ingestion Parity:**
-   * สำหรับฮาร์ดแวร์ภายนอก (Node-RED Power Meters, ESP32 Forklift GPS) ปัจจุบันยังคงยิงตรงไปยัง Endpoint ใน `page/` อยู่ หากปิดระบบเดิมโดยไม่ย้าย Ingestion Endpoints เหล่านี้ จะทำให้ข้อมูล IoT ขาดช่วงทันที
+   * โมดูล Utility (`Toolbox/public/api/utility/utilityApi.php`) และ ESP32 Forklift IoT (`Toolbox/public/api/forklift/hardwareTracking.php`) รองรับใน Toolbox SPA แบบ Self-Contained แล้ว (คงเหลืออัปเดต URL ในสคริปต์/เฟิร์มแวร์ที่ส่งข้อมูลเข้า Sandbox เมื่อปิดระบบเดิม)
 
 ---
 
@@ -281,7 +281,7 @@ graph LR
 1. [x] **Store Management:** พอร์ตครบ 100% ทั้ง 8 แท็บปฏิบัติการ (`Material Request`, `Store KDS & PRD Return`, `RM Receiving & Trace Tag`, `Scrap & Replacement`, `ISO/IATF Audit Certificate` และ Export to Excel) เข้าสู่ `StoreApp.jsx` (เสร็จสมบูรณ์ 10/11/2026)
 2. [x] **Document Center:** นำไลบรารี Three.js / Online 3D Viewer เข้าสู่ `DocumentPreviewModal.jsx` (`ThreeDViewer.jsx`) เพื่อคืนความสามารถในการดูโมเดล 3D CAD (.step, .stl, .obj) พร้อมคำนวณมิติขนาดและเครื่องมือควบคุมให้วิศวกร (เสร็จสมบูรณ์ 07/11/2026)
 3. [x] **Utility API:** เพิ่ม Action `insert_log` และ `aggregate_summary` ใน `Toolbox/public/api/utility/utilityApi.php` เพื่อให้ Node-RED ส่งค่าไฟ/แก๊สได้ต่อเนื่องและคำนวณสรุปอัตโนมัติ (เสร็จสมบูรณ์ 07/11/2026)
-4. [ ] **Forklift Tracking & IoT Parity:** พอร์ต Live Spatial Map, Heatmap Density, Driver QR Checkout Scan และ ESP32 Telemetry API (`forkliftMapUI.php` -> `#/forklift`)
+4. [x] **Forklift Tracking & IoT Parity:** พอร์ต Live Spatial Map, Heatmap Density, Driver QR Checkout Scan และ ESP32 Telemetry API (`forkliftMapUI.php`, `scan.php`, `hardwareTracking.php` -> `#/forklift`) (เสร็จสมบูรณ์ 13/11/2026)
 5. [x] **Daily Log Full SPA & Mood Insight Report:** พอร์ตหน้าสมุดบันทึกกะเต็มรูปแบบ (Shift Handover / Supervisor Reply Thread) และรายงาน Mood Analytics (`dailyLogUI.php`, `moodReport.php` -> `#/daily-log`, `#/mood-report`) (เสร็จสมบูรณ์ 13/11/2026)
 6. [x] **Freight Fleet Log:** พอร์ตบัญชีเที่ยวรถและค่าขนส่งสินค้า (`page/fleetLog/fleetLog.php` -> `#/fleet-log`) เพื่ออุดช่องว่าง Semantic Gap ของหมวด Transport (เสร็จสมบูรณ์ 13/11/2026)
 7. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง

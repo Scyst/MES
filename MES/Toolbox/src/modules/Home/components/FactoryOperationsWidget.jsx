@@ -1,5 +1,6 @@
 import React from 'react';
-import { Navigation, Warehouse, ExternalLink, Cpu, ChevronRight, Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Navigation, Warehouse, ExternalLink, ChevronRight, Activity } from 'lucide-react';
 
 export default function FactoryOperationsWidget() {
   return (
@@ -21,9 +22,9 @@ export default function FactoryOperationsWidget() {
 
       {/* Spacious, Elegant Quick-Launch Map Portal */}
       <div className="rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-850 p-4 shadow-2xs space-y-3">
-        {/* Portal 1: Forklift Live Map */}
-        <a
-          href="/iot-toolbox/sandbox-b9/MES/MES/page/forklift/forkliftMapUI.php"
+        {/* Portal 1: Forklift Live Map (Internal SPA Route) */}
+        <Link
+          to="/forklift?tab=map"
           className="group flex items-center justify-between p-3 rounded-xl bg-slate-50/80 hover:bg-blue-50/80 dark:bg-slate-800/80 dark:hover:bg-slate-750 border border-slate-200/60 dark:border-slate-700/60 hover:border-blue-300 dark:hover:border-blue-700 transition-all shadow-2xs hover:shadow-xs"
         >
           <div className="flex items-center gap-3">
@@ -35,17 +36,16 @@ export default function FactoryOperationsWidget() {
                 <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   แผนผังรถโฟล์คลิฟต์ (Forklift Live Map)
                 </h4>
-                <ExternalLink className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                ติดตามตำแหน่งแบบเรียลไทม์ (4 คันประจำการ)
+                ติดตามตำแหน่งแบบเรียลไทม์ Heatmap และสแกน QR ใน Toolbox SPA
               </p>
             </div>
           </div>
           <div className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 shadow-2xs shrink-0">
             <ChevronRight className="w-4 h-4" />
           </div>
-        </a>
+        </Link>
 
         {/* Portal 2: Visual Warehouse & Cycle Count */}
         <a
