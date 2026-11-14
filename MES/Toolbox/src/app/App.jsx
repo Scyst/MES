@@ -28,6 +28,9 @@ const DailyLogPage = lazy(() => import('../modules/DailyLog/pages/DailyLogPage')
 const FleetLogPage = lazy(() => import('../modules/FleetLog/pages/FleetLogPage'));
 const ProductionPage = lazy(() => import('../modules/Production/pages/ProductionPage'));
 const ScanBarcodePage = lazy(() => import('../modules/Production/pages/ScanBarcodePage'));
+const PeEnterprisePage = lazy(() => import('../modules/PE/pages/PeEnterprisePage'));
+const PeRequestPage = lazy(() => import('../modules/PE/pages/PeRequestPage'));
+const PeTechMobilePage = lazy(() => import('../modules/PE/pages/PeTechMobilePage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -237,6 +240,30 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดสถานีสแกนบาร์โค้ด...</div>}>
                     <ScanBarcodePage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="pe" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดศูนย์วิศวกรรมและซ่อมบำรุง (PE)...</div>}>
+                    <PeEnterprisePage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="pe/request" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบแจ้งซ่อมและเครื่องจักรหยุด...</div>}>
+                    <PeRequestPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="pe/tech" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดพอร์ทัลช่างซ่อมบำรุง...</div>}>
+                    <PeTechMobilePage />
                   </Suspense>
                 </ErrorBoundary>
               } />

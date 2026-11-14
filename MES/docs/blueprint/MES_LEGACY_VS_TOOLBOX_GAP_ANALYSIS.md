@@ -1,6 +1,6 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Phase 2.1: Ported Production Execution + Scan Barcode เข้า Toolbox SPA) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Phase 2.2A: Ported PE Work Orders, Machines Master, Spare Parts MRO, Stop Request & PE Tech Mobile เข้า Toolbox SPA) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
@@ -11,16 +11,16 @@
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
 | **✅ Ported 100% (สมบูรณ์)** | **11** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`** |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `AreaAccess / ScanBarcode` *(ส่วน `ScanBarcode` ย้ายเข้า `#/scan-barcode` แล้ว 100% เหลือเฉพาะ `AreaAccess`)* |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **2** | `AreaAccess / ScanBarcode` *(ส่วน `ScanBarcode` ย้ายเข้า `#/scan-barcode` แล้ว 100% เหลือเฉพาะ `AreaAccess`)*, **`PE (ซ่อมบำรุง)`** *(ย้าย Sub-phase A เข้า `#/pe`, `#/pe/request`, `#/pe/tech` แล้ว เหลือ Sub-phase B: Downtime MTBF/MTTR, Safety/LOTO, IIoT & Visual 2D)* |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
-| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **13** | `PE (ซ่อมบำรุง)`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `Planning`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
+| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **12** | `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `Planning`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
     "Ported สมบูรณ์" : 11
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 1
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 2
     "On Hold (รอเอกสารผู้บริหาร)" : 1
-    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 13
+    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 12
 ```
 
 ---
@@ -163,18 +163,19 @@ graph LR
     Sidebar -->|External Link| OTHER
 ```
 
-### 2.1 PE (Production Engineering & Maintenance) — **โมดูลที่ใหญ่และสำคัญที่สุด**
+### 2.1 PE (Production Engineering & Maintenance) — ⚠️ **กำลังย้าย Sub-phase A เสร็จแล้ว (14/11/2026) — เหลือ Sub-phase B**
 * **โครงสร้างเดิม:** 53 PHP files, 17 JS files, 12 Tab components
-* **ฟังก์ชันการทำงานหลักที่ยังคงค้างอยู่ในระบบเดิม:**
-  1. **Work Order Management (`tab_workorders.php`, `workOrderAPI.php`):** สร้าง/มอบหมาย/รับงานใบแจ้งซ่อม (Corrective, Preventive, Emergency, Predictive), SLA นับถอยหลัง, วิเคราะห์รากสาเหตุ 5-Why & Fishbone, การเบิกอะไหล่ประกอบงานซ่อม และการสร้างเอกสาร PDF ใบสั่งซ่อม
-  2. **Machines Master (`tab_machines.php`, `machineAPI.php`):** ฐานข้อมูลเครื่องจักร สเปกทางเทคนิค บันทึกประเภท PLC คอนโทรลเลอร์ การแบ่งระดับความวิกฤต (Criticality Index A/B/C) และเอกสารคู่มือ
-  3. **Spare Parts Inventory (`tab_spareparts.php`, `sparePartsAPI.php`):** คลังอะไหล่ซ่อมบำรุง จุดสั่งซื้อ Min/Max reorder points, รับเข้า/ตัดจ่ายอะไหล่เข้างานซ่อม, ตรวจสอบมูลค่าคงคลังอะไหล่
-  4. **Breakdown Downtime & MTBF/MTTR (`tab_downtime.php`, `downtimeAPI.php`):** การคำนวณสถิติเครื่องจักรขัดข้อง ความถี่และระยะเวลาเฉลี่ยในการกู้คืนเครื่องจักร พร้อมวิเคราะห์ Pareto chart
-  5. **Real-time IIoT & Telemetry (`tab_iiot.php`, `tab_iiot_analytics.php`, `iiotAPI.php`):** แสดงผลข้อมูลเซนเซอร์ IoT กระแสไฟฟ้า การสั่นสะเทือน อุณหภูมิ และตรวจจับสัญญาณความผิดปกติ เชื่อมต่อ Node-RED
-  6. **Safety & LOTO (`tab_safety.php`, `tab_print_safety.php`, `safetyAPI.php`):** ระบบความปลอดภัยโรงงาน ใบอนุญาตตัดแยกระบบพลังงาน Lockout/Tagout (LOTO) และรายงาน Near-Miss
-  7. **Visual Board 2D/3D Layout (`tab_visual_board.php`, `mapBuilderModule.js`):** ผังโรงงานแสดงสถานะเครื่องจักรสด (เขียว/วิ่ง, เหลือง/เตือน, แดง/หยุด, น้ำเงิน/ซ่อม) แบบลากวาง
-  8. **PE Tech Mobile (`peTechMobile.php`):** ระบบเว็บแอปมือถือสำหรับช่างซ่อมบำรุงเดินเครื่องรับงาน ถ่ายรูปแนบ และปิดงานซ่อมหน้างาน
-  9. **Stop Causes Call Button (`peRequest.php`):** ปุ่มกดเรียกช่างด่วนหน้าไลน์การผลิต
+* **โครงสร้างใหม่ (Sub-phase A เสร็จสมบูรณ์):** `Toolbox/src/modules/PE/` (`#/pe`, `#/pe/request`, `#/pe/tech`) + `Toolbox/public/api/pe/` (`_common.php`, `peUploadApi.php`, `workOrderApi.php`, `machineApi.php`, `sparePartsApi.php`, `peRequestApi.php`)
+* **ฟังก์ชันที่ย้ายเข้า Toolbox SPA แล้ว (Sub-phase A):**
+  1. **Work Order Management (`WorkOrdersTab.jsx`, `WoPartsModal.jsx`, `workOrderApi.php`):** ตาราง/การ์ด/Kanban, สร้าง/แก้ไข/มอบหมาย/รับงาน/ปิดงาน, ถังขยะ/กู้คืน, พิมพ์ใบสั่งซ่อม, ส่งออก Excel, เบิก-คืนอะไหล่ผูกใบงาน และแจ้งเตือน PE Alerts
+  2. **Machines Master (`MachinesTab.jsx`, `machineApi.php`):** ทะเบียนเครื่องจักร, แสดงสถานะ LOTO, ขึ้นทะเบียน/แก้ไข/เปลี่ยนสถานะ, ประวัติซ่อมบำรุง/Downtime รายเครื่อง
+  3. **Spare Parts MRO (`SparePartsTab.jsx`, `sparePartsApi.php`):** สต็อกคงเหลือ On-Hand (Min/Max), รับเข้า/เบิกใช้ (`sp_MT_ProcessTransaction`), ย้ายคลัง, ยกเลิกรับเข้า, ปรับยอดสต็อก, ทะเบียน MT Items + Import Excel, ประวัติ Transactions และส่งออก Excel
+  4. **PE Stop Request & Mobile Checklist (`PeRequestPage.jsx`, `peRequestApi.php`):** แจ้งซ่อมหน้าไลน์, บันทึก/จบการหยุดเครื่อง (Downtime Quick-Log), แจ้งจุดเสี่ยง Safety Hazard (สร้าง Critical WO อัตโนมัติ), และแบบตรวจ Pre-Op Checklist
+  5. **PE Tech Mobile (`PeTechMobilePage.jsx`):** จอมือถือสำหรับช่างรับงานซ่อม (Accept / Start / Revert / Finish พร้อมรูปก่อน-หลังซ่อมและเบิกอะไหล่หน้างาน)
+* **ฟังก์ชันการทำงานที่เหลือค้างใน Sub-phase B:**
+  1. **Breakdown Downtime & MTBF/MTTR Analytics (`tab_downtime.php`, `downtimeAPI.php`):** คำนวณ MTBF/MTTR, Top 5 Problematic Machines และ Pareto chart
+  2. **Safety & LOTO Management (`tab_safety.php`, `tab_print_safety.php`, `safetyAPI.php`):** จัดการใบอนุญาตตัดแยกพลังงาน Lockout/Tagout, พิมพ์ป้าย LOTO และ Audit Logs
+  3. **Real-time IIoT Telemetry & Visual 2D Factory Board (`tab_iiot.php`, `tab_iiot_analytics.php`, `tab_visual_board.php`):** ข้อมูลเซนเซอร์ IoT Node-RED และผังโรงงาน 2D แบบลากวาง/ปักหมุดเครื่องจักร
 
 ---
 
@@ -289,7 +290,7 @@ graph LR
 7. ⏳ **Inbound Hub:** พักการพัฒนาไว้ชั่วคราว (On Hold) อยู่ระหว่างรอรับเอกสารตัวอย่างข้อมูลจริงจากผู้บริหาร เพื่อออกแบบตาราง SQL Server และ PHP API ให้ตรงกับรูปแบบจริง
 
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)
-1. **PE Enterprise & Maintenance:** ย้ายระบบจัดการใบสั่งซ่อม (Work Orders) และคลังอะไหล่ (Spare Parts) เป็นหน้าจอแรกใน Toolbox ภายใต้ Route `#/pe/*`
+1. ⚠️ **PE Enterprise & Maintenance (`#/pe/*`):** Sub-phase A (Work Orders, Machines Master, Spare Parts MRO, Stop Request & Pre-Op, PE Tech Mobile) เสร็จสมบูรณ์ 14/11/2026 — เหลือ Sub-phase B (Downtime MTBF/MTTR, Safety/LOTO, IIoT & Visual 2D)
 2. [x] **Production Execution & Scan Barcode:** ย้ายระบบ Production Entry, Live Job Queue (KDS), Tag Printer 4"×2", โอนย้าย QR, รายงานสต็อก และเทอร์มินัล Scan Barcode เข้าสู่ SPA เต็มรูปแบบ (`#/production`, `#/scan-barcode`) (เสร็จสมบูรณ์ 14/11/2026)
 3. **QMS:** ย้ายระบบ NCR และ CAR เข้าสู่ Toolbox เพื่อการควบคุมคุณภาพแบบไร้รอยต่อ
 
