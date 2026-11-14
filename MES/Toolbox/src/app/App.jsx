@@ -26,6 +26,8 @@ const UtilityDashboardPage = lazy(() => import('../modules/Utility/pages/Utility
 const ForkliftPage = lazy(() => import('../modules/Forklift/pages/ForkliftPage'));
 const DailyLogPage = lazy(() => import('../modules/DailyLog/pages/DailyLogPage'));
 const FleetLogPage = lazy(() => import('../modules/FleetLog/pages/FleetLogPage'));
+const ProductionPage = lazy(() => import('../modules/Production/pages/ProductionPage'));
+const ScanBarcodePage = lazy(() => import('../modules/Production/pages/ScanBarcodePage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -219,6 +221,22 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบัญชีเที่ยวรถและค่าขนส่ง...</div>}>
                     <FleetLogPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="production" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบควบคุมการผลิตและคลังสินค้า...</div>}>
+                    <ProductionPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="scan-barcode" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดสถานีสแกนบาร์โค้ด...</div>}>
+                    <ScanBarcodePage />
                   </Suspense>
                 </ErrorBoundary>
               } />

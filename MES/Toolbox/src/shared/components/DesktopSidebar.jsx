@@ -30,10 +30,10 @@ export const MENU_DATA = [
     title: 'PRODUCTION',
     sectionIcon: Factory,
     items: [
-      { name: 'Production & Inventory', icon: Package, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/productionUI.php', external: true },
-      { name: 'Live Job Queue', icon: ListOrdered, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/jobQueueUI.php', external: true },
-      { name: 'Tag Printer (WIP/FG)', icon: Printer, href: '/iot-toolbox/sandbox-b9/MES/MES/page/production/label_printer.php', external: true },
-      { name: 'Scan Barcode', icon: ScanLine, href: '/iot-toolbox/sandbox-b9/MES/MES/page/scanBarcode/scanBarcodeUI.php', external: true },
+      { name: 'Production & Inventory', icon: Package, to: '/production' },
+      { name: 'Live Job Queue', icon: ListOrdered, to: '/production?tab=queue' },
+      { name: 'Tag Printer (WIP/FG)', icon: Printer, to: '/production?tab=printer' },
+      { name: 'Scan Barcode', icon: ScanLine, to: '/scan-barcode' },
       { name: 'บันทึกเคมีสี (Paint Chem)', icon: FlaskConical, to: '/paint-chem' },
     ]
   },

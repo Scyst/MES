@@ -1,6 +1,6 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Batch 1: Store Offline Queue + Utility MDB Exclusion Marker) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Phase 2.1: Ported Production Execution + Scan Barcode เข้า Toolbox SPA) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
@@ -10,17 +10,17 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **10** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`** |
-| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **0** | *— (Phase 1 ครบ 100% แล้ว ยกเว้น Inbound Hub ที่ On Hold)* |
+| **✅ Ported 100% (สมบูรณ์)** | **11** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`** |
+| **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `AreaAccess / ScanBarcode` *(ส่วน `ScanBarcode` ย้ายเข้า `#/scan-barcode` แล้ว 100% เหลือเฉพาะ `AreaAccess`)* |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
-| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **15** | `PE (ซ่อมบำรุง)`, `Production`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess`, `ScanBarcode`, `IQS` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
+| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **13** | `PE (ซ่อมบำรุง)`, `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `Planning`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 10
-    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 0
+    "Ported สมบูรณ์" : 11
+    "Ported บางส่วน (มีฟีเจอร์ขาด)" : 1
     "On Hold (รอเอกสารผู้บริหาร)" : 1
-    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 15
+    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 13
 ```
 
 ---
@@ -178,13 +178,15 @@ graph LR
 
 ---
 
-### 2.2 Production (ระบบการผลิตหน้าไลน์)
-* **โครงสร้างเดิม:** 10 PHP files, 6 JS files
-* **ฟังก์ชันการทำงานหลักที่ยังคงค้างอยู่ในระบบเดิม:**
-  1. **Daily Production Entry (`productionUI.php`):** บันทึกยอดผลิตประจำวัน ยอดของเสีย การเลือกกะและไลน์การผลิต
-  2. **Live Job Queue / KDS (`jobQueueUI.php`):** คิวงานหน้าไลน์แบบเรียลไทม์ (Kitchen Display System for Factory) แสดงงานปัจจุบัน งานถัดไป และคุมจังหวะ Takt Time
-  3. **WIP/FG Thermal Tag Printer (`label_printer.php`):** พิมพ์สติกเกอร์บาร์โค้ดแท็กชิ้นงานระหว่างทำ (WIP) และสินค้าสำเร็จรูป (FG)
-  4. **Lot & Transfer Management (`transferManage.php`):** การโอนย้ายชิ้นงานระหว่างแผนก การรวม/แยก Lot
+### 2.2 Production (ระบบการผลิตหน้าไลน์) — ✅ **ย้ายแล้ว 100% (14/11/2026)**
+* **โครงสร้างเดิม:** `page/production/` (10 PHP, 6 JS) + `page/scanBarcode/`
+* **โครงสร้างใหม่:** `Toolbox/src/modules/Production/` (`#/production`, `#/scan-barcode`) + `Toolbox/public/api/production/` (5 PHP APIs)
+* **ฟังก์ชันที่ย้ายเข้า Toolbox SPA ครบสมบูรณ์:**
+  1. **Daily Production Entry (`#/production`):** บันทึกยอดผลิต FG/Hold/Scrap ตัด BOM ใบขอเบิกทดแทน อัตโนมัติ และสรุปรายชั่วโมง
+  2. **Live Job Queue / KDS (`#/production?tab=queue`):** คิวงานหน้าไลน์เรียลไทม์ เช็ก SAP BOM ล่วงหน้า และจัดลำดับความสำคัญ
+  3. **WIP/FG Thermal Tag Printer & QR Transfer (`#/production?tab=printer`):** พิมพ์แท็ก 4"×2" ZPL USB / HTML และสแกน QR ยืนยันรับ-จ่าย/ตัดขาย
+  4. **WIP/Stock & Variance Reports (`#/production?tab=reports`):** รายงานสต็อกคงเหลือ ราย Lot Plan vs Actual และผลงานรายบุคคล
+  5. **Scan Barcode Terminal (`#/scan-barcode`):** เทอร์มินัลสแกนความเร็วสูงพร้อมกล้องมือถือและการผูกคิวงาน `RUNNING`
 
 ---
 
@@ -245,7 +247,7 @@ graph LR
 | **11** | `InboundHub` (ใหม่) | `#/inbound-hub` | ⏳ On Hold | ทำหน้าจอจำลองไว้แล้ว — พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร |
 | **12** | `SystemBlueprint` (ใหม่)| `#/blueprint` | ✅ 100% | ผังพิมพ์เขียวและสถาปัตยกรรมระบบโรงงาน แสดงผลสมบูรณ์ |
 | **13** | `PE` (ซ่อมบำรุง) | *ไม่มีใน Toolbox* | ❌ 0% | ใบสั่งซ่อม, ฐานข้อมูลเครื่องจักร, อะไหล่, Downtime, IIoT, LOTO, ผังโรงงาน |
-| **14** | `production` | *ไม่มีใน Toolbox* | ❌ 0% | บันทึกยอดผลิต, คิวงาน KDS, พิมพ์ป้ายแท็ก WIP/FG, ตัดยอด |
+| **14** | `production` | `#/production`, `#/scan-barcode` | ✅ 100% | บันทึกยอดผลิต, คิวงาน KDS, พิมพ์แท็ก 4"×2" ZPL/HTML, โอนย้าย QR, รายงานสต็อก/Variance, สแกนบาร์โค้ด |
 | **15** | `QMS` | *ไม่มีใน Toolbox* | ❌ 0% | NCR, CAR 8D, Concession, Claims, QA Schedule |
 | **16** | `manpower` | *ไม่มีใน Toolbox* | ❌ 0% | จัดคนลงไลน์, ประเมินเกรด 4D, Skill Matrix, วันหยุด |
 | **17** | `planning` | *ไม่มีใน Toolbox* | ❌ 0% | ศูนย์สั่งการ Morning Meeting ประจำวัน (คน/เครื่อง/แผน/ของขาด) |
@@ -257,7 +259,7 @@ graph LR
 | **23** | `autoInvoice` | *ไม่มีใน Toolbox* | ❌ 0% | สร้าง Commercial Invoice และ Packing List อัตโนมัติ |
 | **24** | `AccessoriesInspection` | *ไม่มีใน Toolbox* | ❌ 0% | ระบบตรวจชิ้นงานด้วยภาพถ่าย AI และกล้องสตรีม |
 | **25** | `cctv_downloader` | *ไม่มีใน Toolbox* | ❌ 0% | ดาวน์โหลดคลิปกล้องวงจรปิดตามเหตุการณ์โหลดตู้ |
-| **26** | `areaAccess` / `scanBarcode` | *ไม่มีใน Toolbox* | ❌ 0% | บันทึกเข้าออกพื้นที่หวงห้าม และเทอร์มินัลสแกนบาร์โค้ด |
+| **26** | `areaAccess` / `scanBarcode` | `#/scan-barcode` *(ScanBarcode 100%)* | ⚠️ 50% | เทอร์มินัลสแกนบาร์โค้ดย้ายเข้า SPA แล้ว คงเหลือเฉพาะบันทึกเข้าออกพื้นที่หวงห้าม (`areaAccess`) |
 
 ---
 
@@ -288,7 +290,7 @@ graph LR
 
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)
 1. **PE Enterprise & Maintenance:** ย้ายระบบจัดการใบสั่งซ่อม (Work Orders) และคลังอะไหล่ (Spare Parts) เป็นหน้าจอแรกใน Toolbox ภายใต้ Route `#/pe/*`
-2. **Production Execution:** ย้ายระบบ Live Job Queue (KDS) และ Tag Printer เพื่อให้หน้าไลน์ใช้ SPA เต็มรูปแบบ
+2. [x] **Production Execution & Scan Barcode:** ย้ายระบบ Production Entry, Live Job Queue (KDS), Tag Printer 4"×2", โอนย้าย QR, รายงานสต็อก และเทอร์มินัล Scan Barcode เข้าสู่ SPA เต็มรูปแบบ (`#/production`, `#/scan-barcode`) (เสร็จสมบูรณ์ 14/11/2026)
 3. **QMS:** ย้ายระบบ NCR และ CAR เข้าสู่ Toolbox เพื่อการควบคุมคุณภาพแบบไร้รอยต่อ
 
 ### 🟢 Phase 3: ย้ายโมดูลการบริหารและโลจิสติกส์ (Management & Administration Modules)

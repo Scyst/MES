@@ -192,11 +192,11 @@ export default function HomeDashboard() {
 
   const productionServices = useMemo(() => [
     { title: 'PAINT Chemical', desc: 'ระบบบันทึกเคมีสี (Check Sheet)', icon: FlaskConical, colorClass: 'bg-blue-100 text-blue-700', to: '/paint-chem' },
-    { title: 'Production Entry', desc: 'บันทึกผลผลิตประจำวัน', icon: Boxes, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/productionUI.php' },
+    { title: 'Production Entry', desc: 'บันทึกผลผลิตประจำวัน', icon: Boxes, colorClass: 'bg-blue-100 text-blue-600', to: '/production' },
     { title: 'Mobile Entry', desc: 'ลงยอดผ่านมือถือ (New)', icon: Smartphone, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MobileApp/index.html' },
-    { title: 'Live Job Queue', desc: 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', icon: ListOrdered, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/jobQueueUI.php' },
-    { title: 'Scan Barcode', desc: 'ระบบสแกนบาร์โค้ด', icon: Barcode, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/scanBarcode/scanBarcodeUI.php' },
-    { title: 'Tag Printer', desc: 'พิมพ์แท็กส่งงาน (WIP/FG)', icon: Printer, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/production/label_printer.php' },
+    { title: 'Live Job Queue', desc: 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', icon: ListOrdered, colorClass: 'bg-blue-100 text-blue-600', to: '/production?tab=queue' },
+    { title: 'Scan Barcode', desc: 'ระบบสแกนบาร์โค้ด', icon: Barcode, colorClass: 'bg-blue-100 text-blue-600', to: '/scan-barcode' },
+    { title: 'Tag Printer', desc: 'พิมพ์แท็กส่งงาน (WIP/FG)', icon: Printer, colorClass: 'bg-blue-100 text-blue-600', to: '/production?tab=printer' },
     { title: 'Stop Causes', desc: 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', icon: Ban, colorClass: 'bg-blue-100 text-blue-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/PE/peRequest.php' },
   ], []);
 
