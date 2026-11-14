@@ -19,7 +19,7 @@ try {
         $cleanPath = preg_replace('#^(\.\./)+#', '', $rawPath);
         $cleanPath = ltrim($cleanPath, '/');
 
-        if (!preg_match('#^uploads/(pe_images|spare_parts)/[A-Za-z0-9._-]+$#', $cleanPath) &&
+        if (!preg_match('#^uploads/(pe_images|spare_parts|profile_pictures)/[A-Za-z0-9._-]+$#', $cleanPath) &&
             !preg_match('#^uploads/iiot-map-bg\.(jpg|jpeg|png|webp)$#i', $cleanPath)) {
             http_response_code(400);
             exit('Invalid image path');

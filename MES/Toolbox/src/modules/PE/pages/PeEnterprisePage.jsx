@@ -11,13 +11,17 @@ import MachinesTab from '../components/MachinesTab';
 import SparePartsTab from '../components/SparePartsTab';
 import { formatPeDateTime } from '../utils/peFormatters';
 
+const DowntimeAndAnalyticsTab = React.lazy(() => import('../components/DowntimeAndAnalyticsTab'));
+const SafetyAndLotoTab = React.lazy(() => import('../components/SafetyAndLotoTab'));
+const IiotAndMapTab = React.lazy(() => import('../components/IiotAndMapTab'));
+
 const MAIN_TABS = [
   { id: 'work-orders', label: 'ใบแจ้งซ่อม (Work Orders)', icon: Wrench },
   { id: 'machines', label: 'ทะเบียนเครื่องจักร (Machines)', icon: Cpu },
   { id: 'spare-parts', label: 'คลังอะไหล่ (Spare Parts)', icon: Package },
-  { id: 'downtime', label: 'วิเคราะห์ Downtime & MTBF', icon: Ban, nextPhase: true },
-  { id: 'safety', label: 'ความปลอดภัย & LOTO', icon: ShieldAlert, nextPhase: true },
-  { id: 'iiot', label: 'IIoT & ผังโรงงาน 2D', icon: Activity, nextPhase: true },
+  { id: 'downtime', label: 'วิเคราะห์ Downtime & MTBF', icon: Ban },
+  { id: 'safety', label: 'ความปลอดภัย & LOTO', icon: ShieldAlert },
+  { id: 'iiot', label: 'IIoT & ผังโรงงาน 2D', icon: Activity },
 ];
 
 export default function PeEnterprisePage() {
@@ -198,17 +202,17 @@ export default function PeEnterprisePage() {
         <SparePartsTab isOffline={isOffline} />
       )}
       {(activeTab === 'downtime' || activeTab === 'safety' || activeTab === 'iiot') && (
-        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 items-center justify-center">
-            <Activity className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-slate-900 dark:text-white">ส่วนขยายงานวิศวกรรมระยะถัดไป (PE Sub-phase 2B)</h3>
-          <p className="text-sm text-slate-500 max-w-xl mx-auto">
-            หน้าจอวิเคราะห์ Breakdown MTBF/MTTR, จัดการ Safety/LOTO เต็มรูปแบบ และแผนผัง IIoT 2D Visual Board อยู่ระหว่างการพอร์ตในระยะย่อยถัดไป
-            โดยขณะนี้สามารถบันทึกการหยุดเครื่อง แจ้งจุดเสี่ยง และตรวจ Pre-Op ผ่านเมนู{' '}
-            <Link to="/pe/request" className="text-blue-600 font-semibold hover:underline">แจ้งซ่อม / Stop Cause Portal</Link> ได้ทันที
-          </p>
-        </div>
+        <React.Suspense
+          fallback={
+            <div className="p-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-sm text-slate-400">
+              กำลังโหลดโมดูลวิศวกรรม...
+            </div>
+          }
+        >
+          {activeTab === 'downtime' && <DowntimeAndAnalyticsTab isOffline={isOffline} />}
+          {activeTab === 'safety' && <SafetyAndLotoTab isOffline={isOffline} />}
+          {activeTab === 'iiot' && <IiotAndMapTab isOffline={isOffline} />}
+        </React.Suspense>
       )}
     </div>
   );

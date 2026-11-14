@@ -112,4 +112,61 @@ export const peApi = {
   // --- Shared Image Upload ---
   uploadImageBase64: (base64, folder = 'pe_images', prefix = 'PE_') =>
     apiPost(UPLOAD_URL, { action: 'upload_image', image_base64: base64, folder, prefix }),
+
+  // --- Phase 2.2B: Downtime & MTBF/MTTR Reliability Analytics ---
+  getDowntimeLogs: (params = {}) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/downtimeAnalyticsApi.php`, { action: 'get_downtime', ...params }),
+  addDowntimeLog: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/downtimeAnalyticsApi.php`, { action: 'add_downtime', ...payload }),
+  updateDowntimeLog: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/downtimeAnalyticsApi.php`, { action: 'update_downtime', ...payload }),
+  endDowntimeLog: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/downtimeAnalyticsApi.php`, { action: 'end_downtime', ...payload }),
+  deleteDowntimeLog: (downtimeId) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/downtimeAnalyticsApi.php`, { action: 'delete_downtime', downtime_id: downtimeId }),
+  getAnalyticsBundle: (params = {}) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/downtimeAnalyticsApi.php`, { action: 'get_analytics_bundle', ...params }),
+
+  // --- Phase 2.2B: Safety, LOTO, Hazards, Pre-Op & Printable Safety Cards ---
+  getLotoOverview: () =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'get_loto_overview' }),
+  lockMachineLoto: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'loto_lock', ...payload }),
+  unlockMachineLoto: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'loto_unlock', ...payload }),
+  getHazardReports: (params = {}) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'get_hazard_reports', ...params }),
+  updateHazardStatus: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'update_hazard_status', ...payload }),
+  getPreopOverview: (limit = 200) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'get_preop_overview', limit }),
+  getPreopChecklistConfig: (machineCode) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'get_checklist_config', machine_code: machineCode }),
+  savePreopChecklistConfig: (machineCode, items) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'save_checklist_config', machine_code: machineCode, items }),
+  getSafetyPrintData: () =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/safetyLotoApi.php`, { action: 'get_safety_print_data' }),
+
+  // --- Phase 2.2B: IIoT Telemetry, Discovery, Historical OEE & 2D Factory Board ---
+  getIiotLiveDashboard: (params = {}) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/iiotApi.php`, { action: 'get_live_dashboard', ...params }),
+  getIiotHistoricalOee: (params = {}) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/iiotApi.php`, { action: 'get_historical_oee', ...params }),
+  loadIiotMap: (areaId = 1) =>
+    apiGet(`${import.meta.env.BASE_URL}api/pe/iiotApi.php`, { action: 'load_map', area_id: areaId }),
+  saveIiotMap: (areaId, mapData) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/iiotApi.php`, { action: 'save_map', area_id: areaId, map_data: mapData }),
+  saveIiotMachinePin: (payload) =>
+    apiPost(`${import.meta.env.BASE_URL}api/pe/iiotApi.php`, { action: 'save_machine_pin', ...payload }),
 };
+
+/** Normalizes legacy full image URLs or relative paths into authenticated peUploadApi URLs. */
+export function resolvePeMediaUrl(rawPath) {
+  if (!rawPath) return '';
+  const trimmed = String(rawPath).trim();
+  const uploadsIdx = trimmed.indexOf('uploads/');
+  if (uploadsIdx >= 0) {
+    return getPeImageUrl(trimmed.slice(uploadsIdx));
+  }
+  return getPeImageUrl(trimmed);
+}
