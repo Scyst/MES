@@ -3,6 +3,7 @@
 
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../db.php';
+require_once '../../components/php/logger.php';
 
 // *ไม่ต้อง check_auth เพราะลูกค้าไม่มี session*
 
@@ -65,11 +66,22 @@ switch ($action) {
 
             $pdo->commit();
 
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'CUSTOMER_REPLY', 'QMS_CAR', $case_id, null, [
+                    'root_cause_category' => $rc_type,
+                    'return_container_no' => $return_container,
+                    'expected_return_qty' => $expected_qty
+                ], "Customer submitted CAR reply for Case ID: {$case_id}");
+            }
+
             echo json_encode(['success' => true, 'message' => 'Response saved successfully', 'data' => null]);
 
         } catch (Exception $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
+            }
+            if (function_exists('writeErrorLog')) {
+                writeErrorLog('QMS_GUEST_ACTION', $e->getMessage(), ['action' => $action]);
             }
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => $e->getMessage(), 'data' => null]);
@@ -89,10 +101,13 @@ switch ($action) {
             $sqlCheck = "SELECT case_id FROM QMS_CAR WITH (NOLOCK) WHERE access_token = ? AND token_expiry > GETDATE()";
             $stmtCheck = $pdo->prepare($sqlCheck);
             $stmtCheck->execute([$token]);
+            $carRow = $stmtCheck->fetch(PDO::FETCH_ASSOC);
             
-            if (!$stmtCheck->fetch(PDO::FETCH_ASSOC)) {
+            if (!$carRow) {
                 throw new Exception("Invalid or Expired Token");
             }
+
+            $case_id = $carRow['case_id'];
 
             // อัปเดตเฉพาะเลขตู้และยอดที่คืน โดยไม่แตะต้องข้อ 1-5
             $sqlUpdateCAR = "UPDATE QMS_CAR 
@@ -102,9 +117,19 @@ switch ($action) {
             $stmtUpdate = $pdo->prepare($sqlUpdateCAR);
             $stmtUpdate->execute([$return_container, $expected_qty, $token]);
 
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'CUSTOMER_UPDATE_CONTAINER', 'QMS_CAR', $case_id, null, [
+                    'return_container_no' => $return_container,
+                    'expected_return_qty' => $expected_qty
+                ], "Customer updated return container for Case ID: {$case_id}");
+            }
+
             echo json_encode(['success' => true, 'message' => 'Container information updated successfully (อัปเดตข้อมูลการส่งคืนสำเร็จ)', 'data' => null]);
 
         } catch (Exception $e) {
+            if (function_exists('writeErrorLog')) {
+                writeErrorLog('QMS_GUEST_ACTION', $e->getMessage(), ['action' => $action]);
+            }
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => $e->getMessage(), 'data' => null]);
         }

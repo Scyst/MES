@@ -4,6 +4,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once '../../db.php';
 require_once '../../../auth/check_auth.php'; 
+require_once '../../components/php/logger.php';
 requirePermission('view_qms');
 
 // ==========================================
@@ -133,6 +134,16 @@ try {
                 }
             }
 
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'CREATE', 'QMS_NCR', $caseId, null, [
+                    'car_no' => $newCarNo,
+                    'customer_name' => $_POST['customer_name'] ?? '',
+                    'product_name' => $_POST['product_name'] ?? '',
+                    'defect_type' => $_POST['defect_type'] ?? '',
+                    'defect_qty' => $defect_qty
+                ], "Created NCR {$newCarNo} (Case ID: {$caseId})");
+            }
+
             echo json_encode(['success' => true, 'data' => ['car_no' => $newCarNo, 'case_id' => $caseId], 'message' => 'แจ้งปัญหาเรียบร้อยแล้ว']);
             break;
 
@@ -195,9 +206,11 @@ try {
             $pdo->commit();
             
             // Log the change
-            require_once '../../../utils/logger.php';
             $newData = array_merge($_POST, ['defect_qty' => $defect_qty]);
-            writeLog('QMS', 'UPDATE_NCR', "Updated NCR Case ID: $case_id", $oldData, $newData);
+            unset($newData['csrf_token']);
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'UPDATE', 'QMS_NCR', $case_id, $oldData, $newData, "Updated NCR Case ID: {$case_id}");
+            }
             
             // Handle new images if provided
             if (!empty($_FILES['ncr_images']['name'][0])) {
@@ -247,6 +260,10 @@ try {
             $stmt = $pdo->prepare("EXEC sp_QMS_IssueCAR ?, ?, ?, ?");
             $stmt->execute([$case_id, $qa_desc, $token, $expiry]);
 
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'ISSUE_CAR', 'QMS_CAR', $case_id, null, ['qa_issue_description' => $qa_desc, 'expiry' => $expiry], "Issued CAR link for Case ID: {$case_id}");
+            }
+
             echo json_encode(['success' => true, 'data' => ['token' => $token], 'message' => 'สร้าง CAR และลิงก์สำหรับลูกค้าสำเร็จ']);
             break;
 
@@ -288,6 +305,14 @@ try {
                 $v1_date, $v1_res, $v2_date, $v2_res, $v3_date, $v3_res
             ]);
 
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'CLOSE_CLAIM', 'QMS_CLAIM', $case_id, null, [
+                    'disposition' => $disposition,
+                    'actual_received_qty' => $actual_qty,
+                    'cost_estimation' => $cost
+                ], "Closed claim Case ID: {$case_id}");
+            }
+
             echo json_encode(['success' => true, 'data' => ['case_id' => $case_id], 'message' => 'ตรวจสอบและปิดงานเคลมเรียบร้อยแล้ว']);
             break;
 
@@ -309,6 +334,10 @@ try {
             $stmtCar->execute([$case_id]);
             
             $pdo->commit();
+
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'REJECT_CAR', 'QMS_CAR', $case_id, ['current_status' => 'CUSTOMER_REPLIED'], ['current_status' => 'SENT_TO_CUSTOMER'], "Rejected CAR response for Case ID: {$case_id}");
+            }
 
             echo json_encode(['success' => true, 'message' => 'ตีกลับ CAR ไปให้ลูกค้าเรียบร้อยแล้ว']);
             break;
@@ -334,6 +363,10 @@ try {
             ";
             $stmt = $pdo->prepare($sqlExtend);
             $stmt->execute([$extend_days, $extend_days, $case_id]);
+
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'EXTEND_CAR_LINK', 'QMS_CAR', $case_id, null, ['extend_days' => $extend_days], "Extended CAR link by {$extend_days} days for Case ID: {$case_id}");
+            }
 
             echo json_encode(['success' => true, 'message' => "ขยายเวลาสำเร็จ"]);
             break;
@@ -364,7 +397,9 @@ try {
             $stmtUpdate = $pdo->prepare("UPDATE QMS_CASES SET current_status = 'CANCELLED', updated_at = GETDATE() WHERE case_id = ?");
             $stmtUpdate->execute([$case_id]);
 
-            // Note: หากมีระบบ Log ควรเรียก writeLog($pdo, $user_id, "QMS", "CANCEL_CASE", ...) ตรงนี้
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'CANCEL_CASE', 'QMS_CASES', $case_id, ['current_status' => $status], ['current_status' => 'CANCELLED'], "Cancelled QMS Case ID: {$case_id}");
+            }
 
             echo json_encode(['success' => true, 'message' => "ยกเลิกเอกสารสำเร็จ"]);
             break;
@@ -375,6 +410,9 @@ try {
 } catch (Exception $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
+    }
+    if (function_exists('writeErrorLog')) {
+        writeErrorLog('QMS_ACTION', $e->getMessage(), ['action' => $action]);
     }
     http_response_code(500);
     echo json_encode(['success' => false, 'data' => null, 'message' => $e->getMessage()]);

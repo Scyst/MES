@@ -90,7 +90,7 @@ function requireSalesAccess(bool $requireManage = false): void {
     salesJsonError('คุณไม่มีสิทธิ์เข้าดูข้อมูลคำสั่งซื้อและการจัดส่ง', 403);
 }
 
-/** Parses ISO / DD-MM-YYYY / Excel serial dates safely to Y-m-d or null. */
+/** Parses ISO / DD-MM-YYYY / US M/D/Y / Excel serial dates safely to Y-m-d or null. */
 function normalizeSalesDate($val): ?string {
     if ($val === null || $val === '' || $val === 'null' || $val === 'NULL') {
         return null;
@@ -98,42 +98,78 @@ function normalizeSalesDate($val): ?string {
     $clean = trim((string)$val);
     $clean = preg_replace('/[\x00-\x1F\x7F\xC2\xA0]/u', '', $clean);
     $clean = explode(' ', $clean)[0];
-    if ($clean === '' || $clean === '0000-00-00') {
+    if ($clean === '' || $clean === '0000-00-00' || $clean === '-') {
         return null;
     }
 
-    if (is_numeric($clean) && (float)$clean > 40000) {
-        $unix = ((float)$clean - 25569) * 86400;
-        return gmdate('Y-m-d', (int)$unix);
+    if (is_numeric($clean)) {
+        $num = (float)$clean;
+        if ($num > 40000 && $num < 60000) {
+            $unix = (round($num) - 25569) * 86400;
+            return gmdate('Y-m-d', (int)$unix);
+        }
+        return null;
     }
 
-    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $clean, $m)) {
+    if (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $clean, $m)) {
         $year = (int)$m[1];
-        if ($year >= 1900 && $year < 1990) {
+        $month = (int)$m[2];
+        $day = (int)$m[3];
+        if ($year >= 20 && $year <= 35) {
+            $year += 2000;
+        } elseif ($year >= 1920 && $year <= 1935) {
             $year += 100;
+        } elseif (($year === 2004 || $year === 2005) && $day === 26 && $month >= 1 && $month <= 31) {
+            $realDay = $month;
+            $realMonth = $year - 2000;
+            $year = 2026;
+            $month = $realMonth;
+            $day = $realDay;
         }
-        return checkdate((int)$m[2], (int)$m[3], $year) ? sprintf('%04d-%02d-%02d', $year, $m[2], $m[3]) : null;
-    }
-
-    if (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $clean, $m) && (int)$m[1] > 1900) {
-        $year = (int)$m[1];
-        if ($year >= 1900 && $year < 1990) {
-            $year += 100;
+        if ($month > 12 && $day >= 1 && $day <= 12) {
+            $tmp = $month;
+            $month = $day;
+            $day = $tmp;
         }
-        return checkdate((int)$m[2], (int)$m[3], $year) ? sprintf('%04d-%02d-%02d', $year, $m[2], $m[3]) : null;
+        if ($year >= 2020 && $year <= 2035 && checkdate($month, $day, $year)) {
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
+        }
+        return null;
     }
 
     if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/', $clean, $m)) {
+        $p1 = (int)$m[1];
+        $p2 = (int)$m[2];
+        $year = (int)$m[3];
+        if ($year < 100) {
+            $year += ($year < 50) ? 2000 : 1900;
+        } elseif ($year >= 1920 && $year <= 1935) {
+            $year += 100;
+        }
+        if ($p2 > 12 && $p1 >= 1 && $p1 <= 12) {
+            $month = $p1;
+            $day = $p2;
+        } else {
+            $day = $p1;
+            $month = $p2;
+        }
+        if ($year >= 2020 && $year <= 2035 && checkdate($month, $day, $year)) {
+            return sprintf('%04d-%02d-%02d', $year, $month, $day);
+        }
+        return null;
+    }
+
+    if (preg_match('/^(\d{1,2})[\-\/\s]([A-Za-z]{3,9})[\-\/\s](\d{2,4})$/', $clean, $m)) {
         $day = (int)$m[1];
-        $month = (int)$m[2];
+        $monStr = ucfirst(strtolower(substr($m[2], 0, 3)));
         $year = (int)$m[3];
         if ($year < 100) {
             $year += ($year < 50) ? 2000 : 1900;
         }
-        if ($year >= 1900 && $year < 1990) {
-            $year += 100;
+        $dt = DateTime::createFromFormat('!j-M-Y', "{$day}-{$monStr}-{$year}");
+        if ($dt && (int)$dt->format('Y') >= 2020 && (int)$dt->format('Y') <= 2035) {
+            return $dt->format('Y-m-d');
         }
-        return checkdate($month, $day, $year) ? sprintf('%04d-%02d-%02d', $year, $month, $day) : null;
     }
 
     return null;

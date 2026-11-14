@@ -77,9 +77,17 @@ document.addEventListener('DOMContentLoaded', () => {
 function getDateObj(dateStr) {
     if (!dateStr || dateStr === '0000-00-00') return null;
     
-    const parts = dateStr.split('-');
+    const parts = dateStr.split(' ')[0].split('T')[0].split('-');
     if (parts.length === 3) {
-        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        let yr = parseInt(parts[0], 10);
+        const mo = parseInt(parts[1], 10) - 1;
+        const dy = parseInt(parts[2], 10);
+        if (yr > 0 && yr < 100) yr += 2000;
+        if (yr >= 1900 && yr < 1990) yr += 100;
+        const d = new Date(yr, mo, dy);
+        d.setFullYear(yr);
+        d.setHours(0, 0, 0, 0);
+        return d;
     }
 
     const d = new Date(dateStr);
@@ -860,8 +868,43 @@ async function uploadFile(e) {
         const reader = new FileReader();
         reader.onload = async function(event) {
             const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, {type: 'array', dateNF: 'dd/mm/yyyy'});
-            const csvOutput = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]], { raw: false, defval: '' });
+            const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: true });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            if (sheet && sheet['!ref']) {
+                const range = XLSX.utils.decode_range(sheet['!ref']);
+                const dateHeaders = new Set([
+                    'order date', 'date', 'odate',
+                    'prd start date', 'prd completed date', 'production date', 'pdate',
+                    'prd end date', 'production end date',
+                    'load', 'loading date', 'ldate',
+                    'inspection date', 'insp date'
+                ]);
+                const dateCols = new Set();
+                for (let c = range.s.c; c <= range.e.c; c++) {
+                    const hCell = sheet[XLSX.utils.encode_cell({ r: range.s.r, c })];
+                    if (hCell && hCell.v !== undefined) {
+                        const hName = String(hCell.v).trim().toLowerCase();
+                        if (dateHeaders.has(hName) || hName.includes('date')) {
+                            dateCols.add(c);
+                        }
+                    }
+                }
+                for (let r = range.s.r + 1; r <= range.e.r; r++) {
+                    for (const c of dateCols) {
+                        const addr = XLSX.utils.encode_cell({ r, c });
+                        const cell = sheet[addr];
+                        if (cell && cell.t === 'n' && cell.v > 40000 && cell.v < 60000) {
+                            const utcDays = Math.round(cell.v) - 25569;
+                            const utcDate = new Date(utcDays * 86400 * 1000);
+                            const iso = `${utcDate.getUTCFullYear()}-${String(utcDate.getUTCMonth() + 1).padStart(2, '0')}-${String(utcDate.getUTCDate()).padStart(2, '0')}`;
+                            cell.w = iso;
+                            cell.v = iso;
+                            cell.t = 's';
+                        }
+                    }
+                }
+            }
+            const csvOutput = XLSX.utils.sheet_to_csv(sheet, { raw: false, defval: '' });
             const blob = new Blob([csvOutput], { type: 'text/csv' });
             const formData = new FormData();
             formData.append('file', blob, 'converted.csv');

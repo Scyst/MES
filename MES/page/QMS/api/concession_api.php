@@ -103,6 +103,16 @@ try {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+        $newId = (int)$pdo->lastInsertId();
+
+        if (function_exists('writeLog')) {
+            writeLog($pdo, 'CREATE', 'QMS_CONCESSION', $newId ?: $request_no, null, [
+                'request_no' => $request_no,
+                'subject' => $_POST['subject'] ?? '',
+                'part_name' => $_POST['part_name'] ?? '',
+                'qty' => $_POST['qty'] ?? 0
+            ], "Created concession {$request_no}");
+        }
 
         echo json_encode(['success' => true, 'message' => 'Concession Request Created Successfully', 'request_no' => $request_no]);
     }
@@ -245,12 +255,23 @@ try {
             $pdo->prepare("UPDATE QMS_CONCESSION SET status = 'REJECTED' WHERE id = ?")->execute([$id]);
         }
 
+        if (function_exists('writeLog')) {
+            writeLog($pdo, 'APPROVE', 'QMS_CONCESSION', $id, null, [
+                'level' => $approver_level,
+                'approver_name' => $approver_name,
+                'status' => $status
+            ], "Concession ID {$id} approval level {$approver_level}: {$status}");
+        }
+
         echo json_encode(['success' => true, 'message' => 'Approval updated']);
     }
     else {
         throw new Exception("Invalid action.");
     }
 } catch (Exception $e) {
+    if (function_exists('writeErrorLog')) {
+        writeErrorLog('QMS_CONCESSION', $e->getMessage(), ['action' => $action]);
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

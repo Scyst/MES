@@ -139,6 +139,7 @@ function handleImportSalesJson(PDO $pdo, array $input): void {
         AS S(odate, descr, color, sku, po, qty, dc, lweek, sweek, pdate, penddate, pdone, ldate, ldone, ticket, idate, istat, rem, iconf, corder, team)
         ON T.po_number = S.po
         WHEN MATCHED THEN UPDATE SET
+            T.order_date = COALESCE(S.odate, T.order_date),
             T.sku = S.sku,
             T.description = S.descr,
             T.color = S.color,
