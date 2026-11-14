@@ -45,6 +45,8 @@ export default function MoodAnalyticsTab({
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingTable, setLoadingTable] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [statsError, setStatsError] = useState('');
+  const [tableError, setTableError] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -57,13 +59,17 @@ export default function MoodAnalyticsTab({
 
   const loadAnalytics = useCallback(async () => {
     setLoadingStats(true);
+    setStatsError('');
     try {
       const res = await dailyLogApi.getOverviewStats({ startDate, endDate, line });
       if (res?.success && res.data) {
         setOverview(res.data);
+      } else {
+        setStatsError(res?.message || 'ไม่สามารถโหลดข้อมูลสถิติภาพรวมได้');
       }
     } catch (err) {
       console.error('Failed to load mood overview stats:', err);
+      setStatsError(err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาดในการโหลดสถิติภาพรวม');
     } finally {
       setLoadingStats(false);
     }
@@ -71,6 +77,7 @@ export default function MoodAnalyticsTab({
 
   const loadSubTable = useCallback(async () => {
     setLoadingTable(true);
+    setTableError('');
     try {
       if (subTab === 'issues') {
         const res = await dailyLogApi.getIssuesTable({
@@ -85,6 +92,10 @@ export default function MoodAnalyticsTab({
         if (res?.success && res.data) {
           setIssueRows(res.data.rows || []);
           setIssuePag(res.data.pagination || { page: 1, limit, total: 0, totalPages: 1 });
+        } else {
+          setIssueRows([]);
+          setIssuePag({ page: 1, limit, total: 0, totalPages: 1 });
+          setTableError(res?.message || 'ไม่สามารถโหลดรายการบันทึกกะได้');
         }
       } else {
         const res = await dailyLogApi.getMissingTable({
@@ -98,10 +109,15 @@ export default function MoodAnalyticsTab({
         if (res?.success && res.data) {
           setMissingRows(res.data.rows || []);
           setMissingPag(res.data.pagination || { page: 1, limit, total: 0, totalPages: 1 });
+        } else {
+          setMissingRows([]);
+          setMissingPag({ page: 1, limit, total: 0, totalPages: 1 });
+          setTableError(res?.message || 'ไม่สามารถโหลดรายชื่อผู้ที่ยังไม่ส่งข้อมูลได้');
         }
       }
     } catch (err) {
       console.error('Failed to load subtable:', err);
+      setTableError(err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลตาราง');
     } finally {
       setLoadingTable(false);
     }
@@ -235,6 +251,13 @@ export default function MoodAnalyticsTab({
         </div>
       </div>
 
+      {statsError && (
+        <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{statsError}</span>
+        </div>
+      )}
+
       {/* 3 Interactive KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
@@ -310,9 +333,9 @@ export default function MoodAnalyticsTab({
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis yAxisId="left" domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 11 }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-                  <Tooltip />
+                  <Tooltip cursor={{ fill: 'rgba(99, 102, 241, 0.08)' }} />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar yAxisId="right" dataKey="vol" name="จำนวนผู้บันทึก" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="vol" name="จำนวนผู้บันทึก" fill="#cbd5e1" radius={[4, 4, 0, 0]} maxBarSize={44} />
                   <Line yAxisId="left" type="monotone" dataKey="avg" name="คะแนนเฉลี่ย" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3 }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -333,8 +356,8 @@ export default function MoodAnalyticsTab({
                   <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
                   <XAxis dataKey="line" tick={{ fontSize: 10 }} />
                   <YAxis domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="avg" name="คะแนนเฉลี่ย" radius={[6, 6, 0, 0]}>
+                  <Tooltip cursor={{ fill: 'rgba(99, 102, 241, 0.08)' }} />
+                  <Bar dataKey="avg" name="คะแนนเฉลี่ย" radius={[6, 6, 0, 0]} maxBarSize={44}>
                     {lineChartData.map((entry, idx) => (
                       <Cell
                         key={idx}
@@ -424,6 +447,13 @@ export default function MoodAnalyticsTab({
             </div>
           </div>
         </div>
+
+        {tableError && (
+          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{tableError}</span>
+          </div>
+        )}
 
         {subTab === 'issues' ? (
           <ShiftGroupLedgerList

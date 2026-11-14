@@ -33,6 +33,7 @@ export default function TeamShiftLedgerTab({
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Debounce search input (300ms rule)
   useEffect(() => {
@@ -62,8 +63,9 @@ export default function TeamShiftLedgerTab({
 
   const fetchTeamLedger = useCallback(async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
-      const [statsRes, tableRes] = await Promise.all([
+      const [statsSettled, tableSettled] = await Promise.allSettled([
         dailyLogApi.getOverviewStats({ startDate, endDate, line }),
         dailyLogApi.getIssuesTable({
           startDate,
@@ -78,15 +80,34 @@ export default function TeamShiftLedgerTab({
         })
       ]);
 
-      if (statsRes?.success && statsRes.data) {
-        setKpi(statsRes.data.kpi);
+      const errors = [];
+      if (statsSettled.status === 'fulfilled' && statsSettled.value?.success && statsSettled.value.data) {
+        setKpi(statsSettled.value.data.kpi);
+      } else {
+        const msg = statsSettled.status === 'fulfilled'
+          ? statsSettled.value?.message
+          : (statsSettled.reason?.response?.data?.message || statsSettled.reason?.message);
+        errors.push(msg || 'ไม่สามารถโหลดข้อมูลสรุปภาพรวมได้');
       }
-      if (tableRes?.success && tableRes.data) {
-        setRows(tableRes.data.rows || []);
-        setPagination(tableRes.data.pagination || { page: 1, limit, total: 0, totalPages: 1 });
+
+      if (tableSettled.status === 'fulfilled' && tableSettled.value?.success && tableSettled.value.data) {
+        setRows(tableSettled.value.data.rows || []);
+        setPagination(tableSettled.value.data.pagination || { page: 1, limit, total: 0, totalPages: 1 });
+      } else {
+        setRows([]);
+        setPagination({ page: 1, limit, total: 0, totalPages: 1 });
+        const msg = tableSettled.status === 'fulfilled'
+          ? tableSettled.value?.message
+          : (tableSettled.reason?.response?.data?.message || tableSettled.reason?.message);
+        errors.push(msg || 'ไม่สามารถโหลดรายการบันทึกกะได้');
+      }
+
+      if (errors.length > 0) {
+        setErrorMsg(errors.join(' · '));
       }
     } catch (err) {
       console.error('Failed to load team shift ledger:', err);
+      setErrorMsg(err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลบันทึกกะ');
     } finally {
       setLoading(false);
     }
@@ -168,7 +189,9 @@ export default function TeamShiftLedgerTab({
           <div className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1 font-mono">
             {Number(kpi?.total_production_qty || 0).toLocaleString()}
           </div>
-          <div className="text-xs text-slate-400 mt-0.5">ยังไม่ลงทะเบียนวันนี้: {Number(kpi?.missing_count || 0)} คน</div>
+          <div className="text-xs text-slate-400 mt-0.5">
+            {startDate === endDate ? 'ยังไม่ลงทะเบียนวันนี้' : 'ยังไม่ลงทะเบียนในช่วงนี้'}: {Number(kpi?.missing_count || 0)} คน
+          </div>
         </div>
       </div>
 
@@ -289,6 +312,13 @@ export default function TeamShiftLedgerTab({
           แสดงเฉพาะรายการคะแนนเชิงลบ (Score 1 - 2) เพื่อส่งต่อกะ / ติดตามเร่งด่วน
         </label>
       </div>
+
+      {errorMsg && (
+        <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
       {/* Grouped Shift Handover Cards */}
       <ShiftGroupLedgerList

@@ -241,7 +241,7 @@ try {
                             {$whereSQL}
                             GROUP BY l.log_date, l.user_id
                             ORDER BY l.log_date DESC, MAX(l.created_at) DESC
-                            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+                            OFFSET {$offset} ROWS FETCH NEXT {$limit} ROWS ONLY
                         )
                         SELECT l.log_id,
                                CONVERT(VARCHAR(10), l.log_date, 23) as log_date,
@@ -258,9 +258,8 @@ try {
                         LEFT JOIN {$empTable} e WITH (NOLOCK) ON u.emp_id = e.emp_id
                         ORDER BY l.log_date DESC, pk.last_created DESC, l.user_id ASC, l.period_id ASC";
 
-            $queryParams = array_merge($params, [$offset, $limit]);
             $stmtData = $pdo->prepare($sqlData);
-            $stmtData->execute($queryParams);
+            $stmtData->execute($params);
             $rows = $stmtData->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             sendMoodResponse(true, [
@@ -349,9 +348,9 @@ try {
                         LEFT JOIN {$empTable} e WITH (NOLOCK) ON u.emp_id = e.emp_id
                         {$whereClause}
                         ORDER BY u.line ASC, u.emp_id ASC
-                        OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+                        OFFSET {$offset} ROWS FETCH NEXT {$limit} ROWS ONLY";
             $stmtData = $pdo->prepare($sqlData);
-            $stmtData->execute(array_merge($params, [$offset, $limit]));
+            $stmtData->execute($params);
             $rows = $stmtData->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             sendMoodResponse(true, [
