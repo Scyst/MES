@@ -5,6 +5,7 @@ import {
   Camera
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
+import { storeOfflineEngine } from '../utils/storeOfflineEngine';
 import QuickScannerModal from './QuickScannerModal';
 
 // Synthesizer Audio Feedback (Web Audio API)
@@ -69,6 +70,40 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
     }
   };
 
+  const enqueueOfflineScan = async (tag, actualQty) => {
+    await storeOfflineEngine.enqueue({
+      module: 'cycle_count',
+      action: 'cc_scan_tag',
+      payload: {
+        sessionId: session.session_id,
+        tagSerialNo: tag,
+        actualQty,
+        confirmDiff: false
+      },
+      summary: `นับสต็อกแท็ก ${tag} (${session.location_name})`
+    });
+
+    if (soundEnabled) playBeep('success');
+    triggerVibrate(60);
+
+    const offlineItem = {
+      tag_serial_no: tag,
+      part_no: 'OFFLINE QUEUED',
+      part_description: 'บันทึกในคิวออฟไลน์ — รอซิงค์เมื่อมีสัญญาณ',
+      actual_qty: actualQty || 1,
+      system_qty: undefined,
+      is_wrong_location: false,
+      is_offline_pending: true,
+      counted_at: new Date().toLocaleTimeString('th-TH')
+    };
+
+    setCountedItems((prev) => [offlineItem, ...prev.filter((x) => x.tag_serial_no !== tag)]);
+    setSuccessBanner(`โหมดออฟไลน์: บันทึกแท็ก ${tag} ลงคิวชั่วคราวแล้ว (จะซิงค์อัตโนมัติเมื่อต่อเน็ต)`);
+    setTagInput('');
+    setQtyInput('');
+    inputRef.current?.focus();
+  };
+
   const handleScanOrSubmit = async (e) => {
     e?.preventDefault();
     const tag = tagInput.trim();
@@ -78,8 +113,15 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
     setSuccessBanner('');
     setLoading(true);
 
+    const actualQty = qtyInput ? parseFloat(qtyInput) : null;
+
+    if (!storeOfflineEngine.isOnline()) {
+      await enqueueOfflineScan(tag, actualQty);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const actualQty = qtyInput ? parseFloat(qtyInput) : null;
       const res = await storeApi.scanTag({
         sessionId: session.session_id,
         tagSerialNo: tag,
@@ -113,15 +155,31 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
         setErrorBanner(res.message || 'ไม่สามารถบันทึกข้อมูลการสแกนได้');
       }
     } catch (err) {
-      if (soundEnabled) playBeep('error');
-      triggerVibrate([100, 50, 100]);
-      setErrorBanner(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      if (err?.isNetworkError || !storeOfflineEngine.isOnline()) {
+        await enqueueOfflineScan(tag, actualQty);
+      } else {
+        if (soundEnabled) playBeep('error');
+        triggerVibrate([100, 50, 100]);
+        setErrorBanner(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleFinish = async () => {
+    if (!storeOfflineEngine.isOnline()) {
+      alert('ไม่สามารถส่งสรุปผลขณะออฟไลน์ได้ กรุณาเดินไปยังจุดที่มีสัญญาณเพื่อซิงค์รายการที่ค้างก่อนปิดเซสชั่น');
+      return;
+    }
+
+    const queuedScans = await storeOfflineEngine.listAll('cycle_count');
+    const pendingForSession = queuedScans.filter((item) => item.payload?.sessionId === session.session_id);
+    if (pendingForSession.length > 0) {
+      alert(`ยังมีรายการสแกนรอซิงค์อยู่ ${pendingForSession.length} รายการ กรุณากด "ซิงค์ทันที" ด้านบนให้เสร็จสิ้นก่อนปิดเซสชั่นตรวจนับ`);
+      return;
+    }
+
     if (countedItems.length === 0) {
       if (!window.confirm('คุณยังไม่ได้นับรายการใดเลย ต้องการจบเซสชั่นจริงหรือไม่?')) {
         return;
@@ -399,7 +457,11 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
                             </td>
                           )}
                           <td className="py-2.5 px-3 text-center">
-                            {isWrong ? (
+                            {item.is_offline_pending ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                                รอซิงค์ออฟไลน์
+                              </span>
+                            ) : isWrong ? (
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
                                 หลงคลัง
                               </span>
@@ -447,7 +509,11 @@ export default function CountingView({ session, onBack, onSessionFinished }) {
                             {item.tag_serial_no}
                           </span>
                         </div>
-                        {isWrong ? (
+                        {item.is_offline_pending ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                            รอซิงค์ออฟไลน์
+                          </span>
+                        ) : isWrong ? (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
                             หลงคลัง
                           </span>

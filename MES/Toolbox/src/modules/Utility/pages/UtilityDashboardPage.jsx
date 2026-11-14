@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Zap, Calendar, RefreshCw, Download, Settings, 
+import {
+  Zap, Calendar, RefreshCw, Download, Settings,
   Clock, CheckCircle2, AlertTriangle, RotateCcw,
   ShieldCheck
 } from 'lucide-react';
@@ -127,7 +127,8 @@ export default function UtilityDashboardPage() {
       'Power Factor (PF)',
       'Status',
       `Period Usage (${startDate === endDate ? startDate : `${startDate}_to_${endDate}`})`,
-      'Period Cost (THB)'
+      'Period Cost (THB)',
+      'Included in Factory Total'
     ];
 
     const rows = data.meters.map(m => [
@@ -138,7 +139,8 @@ export default function UtilityDashboardPage() {
       m.power_factor != null ? m.power_factor : '',
       `"${m.status}"`,
       m.period_usage != null ? m.period_usage : 0,
-      m.period_cost != null ? m.period_cost : 0
+      m.period_cost != null ? m.period_cost : 0,
+      `"${String(m.meter_name || '').toUpperCase() === 'MDB' ? 'NO (Main Feeder Reference Only)' : 'YES'}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -197,9 +199,8 @@ export default function UtilityDashboardPage() {
           <div className="hidden sm:inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 text-xs font-medium text-slate-600">
             <button
               onClick={() => handlePreset('today')}
-              className={`px-2.5 py-1 rounded-lg transition-colors ${
-                isSingleDay && startDate === getTodayStr() ? 'bg-white text-slate-800 shadow-xs font-semibold' : 'hover:text-slate-900'
-              }`}
+              className={`px-2.5 py-1 rounded-lg transition-colors ${isSingleDay && startDate === getTodayStr() ? 'bg-white text-slate-800 shadow-xs font-semibold' : 'hover:text-slate-900'
+                }`}
             >
               วันนี้
             </button>
@@ -245,11 +246,10 @@ export default function UtilityDashboardPage() {
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             title={autoRefresh ? 'เปิด Auto Refresh (30 วิ)' : 'ปิด Auto Refresh'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
-              autoRefresh
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${autoRefresh
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                 : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-            }`}
+              }`}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-emerald-600' : ''}`} />
             <span className="hidden sm:inline">{autoRefresh ? 'Auto 30s' : 'Manual'}</span>
@@ -324,9 +324,9 @@ export default function UtilityDashboardPage() {
           <HourlyCostChart data={data?.trends} isRange={data?.is_range} />
 
           {/* Real-time Meters Table & List */}
-          <MetersTable 
-            meters={data?.meters} 
-            onRefresh={() => loadDashboardData(true)} 
+          <MetersTable
+            meters={data?.meters}
+            onRefresh={() => loadDashboardData(true)}
           />
         </>
       )}

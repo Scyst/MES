@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, ShieldAlert
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
+import { storeOfflineEngine } from '../utils/storeOfflineEngine';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 export default function ScrapReplacementTab() {
@@ -132,6 +133,16 @@ export default function ScrapReplacementTab() {
     return () => clearTimeout(timer);
   }, [fetchRequests, page]);
 
+  useEffect(() => {
+    const handleSynced = (event) => {
+      if (event.detail?.modules?.includes('store_request')) {
+        fetchRequests(1);
+      }
+    };
+    window.addEventListener('mes-store-offline-synced', handleSynced);
+    return () => window.removeEventListener('mes-store-offline-synced', handleSynced);
+  }, [fetchRequests]);
+
   const pendingRows = requests.filter((r) => r.status === 'PENDING');
   const allPendingSelected = pendingRows.length > 0 && pendingRows.every((r) => selectedIds.includes(r.transfer_id));
 
@@ -235,16 +246,38 @@ export default function ScrapReplacementTab() {
       return;
     }
 
+    const scrapPayload = {
+      itemId: selectedItem.item_id,
+      quantity: qtyNum,
+      wipLocationId: Number(wipLocationId),
+      storeLocationId: Number(storeLocationId),
+      defectSource,
+      reason: reqReason.trim()
+    };
+
+    const queueScrapOffline = async () => {
+      await storeOfflineEngine.enqueue({
+        module: 'store_request',
+        action: 'create_scrap_request',
+        payload: scrapPayload,
+        summary: `เบิกทดแทนของเสีย ${selectedItem.part_no} x ${qtyNum}`
+      });
+      setIsNewModalOpen(false);
+      setSelectedItem(null);
+      setItemQuery('');
+      setReqQty('');
+      setReqReason('');
+      alert('โหมดออฟไลน์: บันทึกคำขอเบิกทดแทนลงคิวชั่วคราวเรียบร้อย จะซิงค์อัตโนมัติเมื่อต่อเน็ต');
+    };
+
+    if (!storeOfflineEngine.isOnline()) {
+      await queueScrapOffline();
+      return;
+    }
+
     setSubmittingNew(true);
     try {
-      const res = await storeApi.createScrapRequest({
-        itemId: selectedItem.item_id,
-        quantity: qtyNum,
-        wipLocationId: Number(wipLocationId),
-        storeLocationId: Number(storeLocationId),
-        defectSource,
-        reason: reqReason.trim()
-      });
+      const res = await storeApi.createScrapRequest(scrapPayload);
       if (res?.success) {
         setIsNewModalOpen(false);
         setSelectedItem(null);
@@ -256,7 +289,11 @@ export default function ScrapReplacementTab() {
         alert(res?.message || 'ไม่สามารถสร้างคำขอเบิกทดแทนได้');
       }
     } catch (err) {
-      alert(err.message || 'เกิดข้อผิดพลาดในการบันทึกคำขอ');
+      if (err?.isNetworkError || !storeOfflineEngine.isOnline()) {
+        await queueScrapOffline();
+      } else {
+        alert(err.message || 'เกิดข้อผิดพลาดในการบันทึกคำขอ');
+      }
     } finally {
       setSubmittingNew(false);
     }

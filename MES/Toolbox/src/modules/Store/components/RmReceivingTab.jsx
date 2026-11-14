@@ -8,6 +8,7 @@ import {
 import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
 import { storeApi } from '../../../shared/services/storeApi';
+import { storeOfflineEngine } from '../utils/storeOfflineEngine';
 
 export default function RmReceivingTab() {
   // Filters & State
@@ -117,6 +118,16 @@ export default function RmReceivingTab() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    const handleSynced = (event) => {
+      if (event.detail?.modules?.includes('rm_receiving')) {
+        fetchTags(page);
+      }
+    };
+    window.addEventListener('mes-store-offline-synced', handleSynced);
+    return () => window.removeEventListener('mes-store-offline-synced', handleSynced);
+  }, [page]);
+
   // Toggle selection
   const handleToggleSelect = (serialNo) => {
     setSelectedSerials(prev => 
@@ -140,11 +151,32 @@ export default function RmReceivingTab() {
     }
     if (selectedSerials.length === 0) return;
 
+    const locationIdNum = parseInt(selectedLocationId, 10);
+    const queueReceiveOffline = async () => {
+      await storeOfflineEngine.enqueue({
+        module: 'rm_receiving',
+        action: 'bulk_receive_tags',
+        payload: {
+          serials: [...selectedSerials],
+          locationId: locationIdNum
+        },
+        summary: `รับเข้า ${selectedSerials.length} แท็ก -> Location #${locationIdNum}`
+      });
+      alert(`โหมดออฟไลน์: บันทึกคิวรับเข้า ${selectedSerials.length} แท็กไว้ในเครื่องเรียบร้อย จะซิงค์อัตโนมัติเมื่อมีสัญญาณ`);
+      setIsReceiveModalOpen(false);
+      setSelectedSerials([]);
+    };
+
+    if (!storeOfflineEngine.isOnline()) {
+      await queueReceiveOffline();
+      return;
+    }
+
     setIsReceiving(true);
     try {
       const res = await storeApi.bulkReceiveTags({
         serials: selectedSerials,
-        locationId: parseInt(selectedLocationId, 10)
+        locationId: locationIdNum
       });
 
       if (res && res.success) {
@@ -156,7 +188,11 @@ export default function RmReceivingTab() {
         alert('เกิดข้อผิดพลาด: ' + (res?.message || 'ไม่สามารถรับเข้าได้'));
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + (err.message || err));
+      if (err?.isNetworkError || !storeOfflineEngine.isOnline()) {
+        await queueReceiveOffline();
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + (err.message || err));
+      }
     } finally {
       setIsReceiving(false);
     }

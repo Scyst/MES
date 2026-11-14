@@ -12,6 +12,7 @@ import PendingApprovalsTab from './components/PendingApprovalsTab';
 import StockLedgerTab from './components/StockLedgerTab';
 import StoreKdsQueueTab from './components/StoreKdsQueueTab';
 import ScrapReplacementTab from './components/ScrapReplacementTab';
+import StoreOfflineBanner from './components/StoreOfflineBanner';
 import { storeApi } from '../../shared/services/storeApi';
 
 export default function StoreApp() {
@@ -167,6 +168,9 @@ export default function StoreApp() {
           </button>
         </div>
       </div>
+
+      {/* Offline Resilience Banner & Queue */}
+      <StoreOfflineBanner />
 
       {/* Main Tab Content */}
       <div className="flex-1 min-h-0 overflow-hidden">

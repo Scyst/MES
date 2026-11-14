@@ -1,6 +1,6 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบล่าสุด: 13 พฤศจิกายน 2026 (อัปเดตสถานะตาม Commit `d05bba34`) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Batch 1: Store Offline Queue + Utility MDB Exclusion Marker) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
@@ -44,6 +44,7 @@ pie title สถานะความพร้อมของโมดูลใ�
 | **Trace Tag History (สืบย้อนแท็ก)** | `tagHistory.php` | `RmReceivingTab.jsx` (`isTraceModalOpen`) | ✅ **ย้ายสมบูรณ์**: ระบบสืบค้นเส้นทางประวัติแท็ก (Tag Genealogy Timeline) แสดงข้อมูลสินค้า จำนวนคงเหลือ จุดจัดเก็บ PO, ไทม์ไลน์ธุรกรรมย้อนหลัง และแนะนำรหัสแท็กเมื่อสแกน/พิมพ์ไม่ครบ (`Prefix Match Suggestion`) |
 | **Scrap & Replacement (เบิกของเสีย/ทดแทน)** | `storeRequest.php` | `ScrapReplacementTab.jsx` | ✅ **ย้ายสมบูรณ์ (10/11/2026)**: แดชบอร์ด KPI, แจ้งของเสียและเบิกทดแทน, อนุมัติด้วยมือแบบเดี่ยว/กลุ่ม (Strict Manual Approve/Reject), Export Excel และ Scrap Analytics Dashboard |
 | **ISO/IATF Audit Certificate** | `print_cycle_count_audit.php` | `CycleCountAuditModal.jsx` | ✅ **ย้ายสมบูรณ์ (10/11/2026)**: ทะเบียนประวัติตรวจนับย้อนหลัง, Export Excel และใบรับรองทางการ `FM-WH-CC-01 REV.02` ขนาด A4 แนวนอนพร้อม IRA % และช่องลงนาม 3 ระดับ |
+| **Offline-First Resilience Queue** | `storeOffline.js` | `storeOfflineEngine.js`, `StoreOfflineBanner.jsx` | ✅ **ย้ายสมบูรณ์ (14/11/2026)**: IndexedDB FIFO Queue (`MES_Store_Offline_v1`) พร้อม Banner แสดงสถานะ/ดูคิว/ซิงค์อัตโนมัติ-แมนนวล สำหรับ Cycle Count, RM Receiving, Material Requisition และ Scrap Replacement |
 
 ---
 
@@ -89,7 +90,7 @@ pie title สถานะความพร้อมของโมดูลใ�
 | **Electricity & LPG KPI Cards** | `utilityDashboard.php` | `UtilityKpiCards.jsx` | ✅ ย้ายสมบูรณ์ แสดงค่าไฟวันนี้, ค่าก๊าซ LPG, kWh, m³ |
 | **Hourly Cost Chart (Stacked/Grouped)** | Chart.js ใน PHP | `HourlyCostChart.jsx` | ✅ ย้ายสมบูรณ์ วิเคราะห์ค่าใช้จ่ายรายชั่วโมงตามเรท TOU |
 | **TOU Rates Setting** | Modal ใน PHP | `TouSettingsModal.jsx` | ✅ ย้ายสมบูรณ์ แก้ไขเรท On-Peak, Off-Peak, ค่าแก๊ส LPG |
-| **Meters Status Table** | ตารางใน PHP | `MetersTable.jsx` | ✅ ย้ายสมบูรณ์ |
+| **Meters Status Table** | ตารางใน PHP | `MetersTable.jsx` | ✅ ย้ายสมบูรณ์ พร้อมแถวไฮไลท์ `MAIN · ไม่บวกรวม KPI` สำหรับมิเตอร์หลัก MDB ป้องกันการนับซ้ำ |
 | **Node-RED IoT Ingestion API** | Action: `insert_log` | `utilityApi.php` (Action: `insert_log` & `aggregate_summary`) | ✅ **ย้ายสมบูรณ์**: รองรับการรับข้อมูล Batch มิเตอร์ไฟฟ้าและก๊าซจาก Node-RED พร้อมระบบคำนวณ Summary และความปลอดภัยผ่าน `X-API-KEY: MESKey2026` |
 
 ---
@@ -236,7 +237,7 @@ graph LR
 | **3** | `profile` | `#/profile` | ✅ 100% | มีครบ ข้อมูลส่วนตัว, เปลี่ยนรหัส, Logs, ประเมิน 4D, สวัสดิการ |
 | **4** | `paintChem` | `#/paint-chem` | ✅ 100% | สร้าง UI ใหม่สมบูรณ์ พร้อม Sheet, Slot, History, Analytics |
 | **5** | `documentCenter` | `#/documents` | ✅ 100% | มีครบทั้ง File Explorer, CRUD, PDF/Image Preview, และ **3D CAD WebGL Viewer** |
-| **6** | `storeManagement` | `#/store` | ✅ 100% | มีครบทั้ง 8 แท็บ (Onhand+Export, Requisition, Store KDS & PRD Return, Receiving & Trace Tag, Scrap & Replacement, Visual Cycle Count, Approvals, Ledger) + Audit Certificate |
+| **6** | `storeManagement` | `#/store` | ✅ 100% | มีครบทั้ง 8 แท็บ (Onhand+Export, Requisition, Store KDS & PRD Return, Receiving & Trace Tag, Scrap & Replacement, Visual Cycle Count, Approvals, Ledger) + Audit Certificate + IndexedDB Offline Queue |
 | **7** | `forklift` | `#/forklift`, `#/forklift/scan` | ✅ 100% | ครบทั้ง Fleet Command, Live 40×30 Map, Heatmap, AP Zone Site Survey, QR Checkout/Sticker, แจ้งซ่อม และ ESP32 IoT API |
 | **8** | `management/utility` | `#/utility` | ✅ 100% | มีครบทั้ง Dashboard, TOU Settings, และ API `insert_log` / `aggregate_summary` รับข้อมูล IoT Node-RED |
 | **9** | `dailyLog` | `#/daily-log`, `#/mood-report` | ✅ 100% | สมุดบันทึกกะเต็มรูปแบบ (Shift Handover, Reply Thread) และรายงาน Mood Insight + PDPA Mode |
@@ -266,8 +267,7 @@ graph LR
    * เมื่อผู้ใช้งานล็อกอินเข้า `Toolbox` มีระบบ `mes_auth_channel` ซิงค์ระหว่างแท็บ และมี Inactivity Logout 60 นาที
    * **ปัญหา:** หากผู้ใช้งานคลิกเมนูที่เป็น External Link ออกไปยัง `/MES/page/...` เซสชั่นของหน้า PHP เก่าจะยังคงอ้างอิงกับ `$_SESSION['user']` ของ PHP แบบเดิม หากเกิดการ Logout ใน Toolbox หน้าที่เปิดค้างไว้ในระบบเดิมอาจยังไม่ถูกตัดเซสชั่นทันทีจนกว่าจะรีเฟรช
 2. **Offline-First Resilience:**
-   * ในระบบเดิม (`page/storeManagement/script/storeOffline.js`) มีระบบบันทึกข้อมูลลง IndexedDB เมื่อเครือข่าย Wi-Fi ในคลังหลุด พร้อมปุ่มกด Manual Sync เมื่อสัญญาณกลับมา
-   * ใน `Toolbox` ยังไม่มี Service Worker หรือ IndexedDB Caching สำหรับการสแกนหรือตรวจนับ หากเครือข่ายหลุดขณะเดินตรวจนับในจุดอับสัญญาณ อาจทำให้การยิงบันทึกค้างหรือไม่สำเร็จ
+   * ✅ **ปิดช่องโหว่แล้ว (14/11/2026):** พอร์ตระบบ `storeOfflineEngine.js` (IndexedDB `MES_Store_Offline_v1`) พร้อม `StoreOfflineBanner.jsx` (Queue Inspector + FIFO Auto/Manual Sync) สำหรับ Cycle Count, RM Receiving, Material Requisition และ Scrap Replacement เข้าสู่โมดูล Store เรียบร้อยแล้ว
 3. **Data Ingestion Parity:**
    * โมดูล Utility (`Toolbox/public/api/utility/utilityApi.php`) และ ESP32 Forklift IoT (`Toolbox/public/api/forklift/hardwareTracking.php`) รองรับใน Toolbox SPA แบบ Self-Contained แล้ว (คงเหลืออัปเดต URL ในสคริปต์/เฟิร์มแวร์ที่ส่งข้อมูลเข้า Sandbox เมื่อปิดระบบเดิม)
 

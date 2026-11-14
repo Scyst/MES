@@ -5,6 +5,7 @@ import {
   X, Layers, MapPin, Briefcase, Eye, Send
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
+import { storeOfflineEngine } from '../utils/storeOfflineEngine';
 
 export default function MaterialRequisitionTab() {
   const [catalog, setCatalog] = useState([]);
@@ -129,6 +130,16 @@ export default function MaterialRequisitionTab() {
     fetchMasterData();
   }, []);
 
+  useEffect(() => {
+    const handleSynced = (event) => {
+      if (event.detail?.modules?.includes('store_request')) {
+        fetchCatalog();
+      }
+    };
+    window.addEventListener('mes-store-offline-synced', handleSynced);
+    return () => window.removeEventListener('mes-store-offline-synced', handleSynced);
+  }, []);
+
   // Cart operations
   const addToCart = (item, qtyToAdd = 1) => {
     const code = item.item_code || item.sap_no || item.part_no;
@@ -176,21 +187,41 @@ export default function MaterialRequisitionTab() {
   // Submit Requisition
   const handleSubmitRequisition = async () => {
     if (cartList.length === 0) return;
+    const payloadCart = cartList.map(c => ({
+      item_code: c.item.item_code || c.item.sap_no || c.item.part_no,
+      qty: c.qty,
+      item_name: c.item.part_description || c.item.description || ''
+    }));
+    const reqPayload = {
+      cart: JSON.stringify(payloadCart),
+      remark,
+      requestType: reqType,
+      internalJobNo,
+      destinationLocationId: destLocationId ? parseInt(destLocationId, 10) : null
+    };
+
+    const queueReqOffline = async () => {
+      await storeOfflineEngine.enqueue({
+        module: 'store_request',
+        action: 'submit_requisition',
+        payload: reqPayload,
+        summary: `เบิกพัสดุ (${reqType}) จำนวน ${cartList.length} รายการ`
+      });
+      setCart({});
+      setRemark('');
+      setInternalJobNo('');
+      setIsCartOpen(false);
+      setSuccessReqNumber('OFFLINE-QUEUED (รอซิงค์)');
+    };
+
+    if (!storeOfflineEngine.isOnline()) {
+      await queueReqOffline();
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const payloadCart = cartList.map(c => ({
-        item_code: c.item.item_code || c.item.sap_no || c.item.part_no,
-        qty: c.qty,
-        item_name: c.item.part_description || c.item.description || ''
-      }));
-
-      const res = await storeApi.submitRequisition({
-        cart: JSON.stringify(payloadCart),
-        remark,
-        requestType: reqType,
-        internalJobNo,
-        destinationLocationId: destLocationId ? parseInt(destLocationId) : null
-      });
+      const res = await storeApi.submitRequisition(reqPayload);
 
       if (res && res.success) {
         setCart({});
@@ -202,7 +233,11 @@ export default function MaterialRequisitionTab() {
         alert(res?.message || 'เกิดข้อผิดพลาดในการส่งคำขอ');
       }
     } catch (err) {
-      alert('ส่งคำขอล้มเหลว: ' + err.message);
+      if (err?.isNetworkError || !storeOfflineEngine.isOnline()) {
+        await queueReqOffline();
+      } else {
+        alert('ส่งคำขอล้มเหลว: ' + err.message);
+      }
     } finally {
       setIsSubmitting(false);
     }

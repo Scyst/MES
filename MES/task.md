@@ -57,6 +57,10 @@
 
 ---
 
-## ⏸️ Next Up / Ready to Resume
-1. **Layer 4: Full Profile Page** (หน้าโปรไฟล์ผู้ใช้ฉบับสมบูรณ์ พร้อมสถิติ 4 มิติ และการตั้งค่าระบบ)
-2. **System Blueprint Visual Extensions** (ต่อยอดฟีเจอร์เพิ่มเติมเมื่อโครงสร้างระบบมีการขยายตัว)
+## ▶️ Active Backlog (`/goal` Phase 1 Finish & Phase 2–3 Porting)
+- [x] Layer 4 Full Profile Page & Interactive System Blueprint (เสร็จสิ้นในรอบก่อนหน้า)
+- [x] Batch 1: Housekeeping (`HomeDashboard` FTP Link Audit, Sync Gap Docs & `task.md`, Store IndexedDB Offline Queue + Utility MDB Exclusion Marker)
+- [ ] Phase 2.1: Production Execution + Scan Barcode (`#/production`, `#/scan-barcode`)
+- [ ] Phase 2.2: PE Enterprise & Maintenance (`#/pe/*` Sub-phase A & B)
+- [ ] Phase 2.3: QMS (`#/qms`)
+- [ ] Phase 3: Manpower & Planning, Sales/Loading/AutoInvoice, Management/OEE/DailyPL, AreaAccess/Accessories/CCTV

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Zap, Flame, Search, Filter, Activity, CheckCircle2,
-  AlertTriangle, ArrowUpDown, ChevronDown
+  Zap, Flame, Search, Activity, AlertTriangle, ArrowUpDown, Ban
 } from 'lucide-react';
 
 export default function MetersTable({ meters = [], isRange = false }) {
@@ -39,6 +38,11 @@ export default function MetersTable({ meters = [], isRange = false }) {
     }
   };
 
+  const hasMdbMeter = useMemo(
+    () => meters.some((m) => String(m.meter_name || '').toUpperCase() === 'MDB'),
+    [meters]
+  );
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
       {/* Header and Toolbar */}
@@ -51,6 +55,14 @@ export default function MetersTable({ meters = [], isRange = false }) {
           <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
             แสดง {filteredMeters.length} จากทั้งหมด {meters.length} มิเตอร์
           </p>
+          {hasMdbMeter && (
+            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[10px] sm:text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+              <span>
+                แถว <strong className="font-mono">MDB</strong> คือมิเตอร์หลัก (Main Feeder) ใช้ดูค่าอ้างอิงเท่านั้น — ไม่นำค่าไปบวกรวมในยอด KPI โรงงาน
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -138,6 +150,7 @@ export default function MetersTable({ meters = [], isRange = false }) {
               filteredMeters.map((m, idx) => {
                 const isOnline = m.status === 'ONLINE';
                 const isElec = m.utility_type === 'ELECTRIC';
+                const isMdb = String(m.meter_name || '').toUpperCase() === 'MDB';
                 const powerKw = parseFloat(m.power_kw ?? 0);
                 const flowRate = parseFloat(m.flow_rate ?? 0);
                 const pf = parseFloat(m.power_factor ?? 0);
@@ -147,19 +160,29 @@ export default function MetersTable({ meters = [], isRange = false }) {
                 return (
                   <tr
                     key={idx}
-                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    className={`transition-colors ${
+                      isMdb
+                        ? 'bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-50/80 dark:hover:bg-rose-950/30 border-l-4 border-l-rose-500'
+                        : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+                    }`}
                   >
                     <td className="py-2.5 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
-                      <div className="flex items-center gap-2">
-                        {isElec ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isMdb ? (
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+                        ) : isElec ? (
                           <Zap className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                         ) : (
                           <Flame className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
                         )}
                         <span>{m.meter_name}</span>
-                        {m.meter_name === 'MDB' && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
-                            MAIN
+                        {isMdb && (
+                          <span
+                            title="มิเตอร์หลัก (Main Distribution Board) — ไม่นำมาบวกรวมกับ Submeters ในยอดรวม KPI"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-sans font-bold bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800"
+                          >
+                            <Ban className="w-2.5 h-2.5" />
+                            MAIN · ไม่บวกรวม KPI
                           </span>
                         )}
                       </div>
@@ -213,8 +236,19 @@ export default function MetersTable({ meters = [], isRange = false }) {
                       <span className="text-[10px] text-slate-400 font-normal">{isElec ? 'kWh' : 'm³'}</span>
                     </td>
 
-                    <td className="py-2.5 px-4 text-right font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
-                      ฿{periodCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className={`py-2.5 px-4 text-right font-mono font-black text-sm ${
+                      isMdb
+                        ? 'text-rose-700 dark:text-rose-300'
+                        : 'text-emerald-600 dark:text-emerald-400'
+                    }`}>
+                      <div>
+                        ฿{periodCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      {isMdb && (
+                        <div className="text-[9px] font-sans font-semibold text-rose-600 dark:text-rose-400">
+                          (อ้างอิง · ไม่รวมใน KPI)
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -234,6 +268,7 @@ export default function MetersTable({ meters = [], isRange = false }) {
           filteredMeters.map((m, idx) => {
             const isOnline = m.status === 'ONLINE';
             const isElec = m.utility_type === 'ELECTRIC';
+            const isMdb = String(m.meter_name || '').toUpperCase() === 'MDB';
             const powerKw = parseFloat(m.power_kw ?? 0);
             const flowRate = parseFloat(m.flow_rate ?? 0);
             const pf = parseFloat(m.power_factor ?? 0);
@@ -243,13 +278,17 @@ export default function MetersTable({ meters = [], isRange = false }) {
             return (
               <div
                 key={idx}
-                className={`rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 shadow-xs border-l-4 ${
-                  isElec ? 'border-l-amber-500' : 'border-l-rose-500'
+                className={`rounded-xl border p-3 shadow-xs border-l-4 ${
+                  isMdb
+                    ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 border-l-rose-500'
+                    : `bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 ${isElec ? 'border-l-amber-500' : 'border-l-rose-500'}`
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {isElec ? (
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    {isMdb ? (
+                      <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                    ) : isElec ? (
                       <Zap className="w-4 h-4 text-amber-500 flex-shrink-0" />
                     ) : (
                       <Flame className="w-4 h-4 text-rose-500 flex-shrink-0" />
@@ -257,9 +296,10 @@ export default function MetersTable({ meters = [], isRange = false }) {
                     <span className="font-mono font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
                       {m.meter_name}
                     </span>
-                    {m.meter_name === 'MDB' && (
-                      <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-700">
-                        MAIN
+                    {isMdb && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800">
+                        <Ban className="w-2.5 h-2.5" />
+                        MAIN · ไม่บวกรวม KPI
                       </span>
                     )}
                   </div>
@@ -292,11 +332,19 @@ export default function MetersTable({ meters = [], isRange = false }) {
 
                   <div className="min-w-0 px-1">
                     <span className="text-[10px] text-slate-400 block truncate">มูลค่ารวม</span>
-                    <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 block truncate">
+                    <span className={`font-mono font-black text-xs block truncate ${
+                      isMdb ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-600 dark:text-emerald-400'
+                    }`}>
                       ฿{periodCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </span>
                   </div>
                 </div>
+
+                {isMdb && (
+                  <div className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 mt-1.5">
+                    * มิเตอร์หลัก (ไม่นำค่ามารวมในยอด KPI โรงงาน)
+                  </div>
+                )}
 
                 {isElec && (m.voltage || m.current_amp || pf > 0) && (
                   <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono mt-1.5 pt-1">
