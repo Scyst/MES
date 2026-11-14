@@ -4,6 +4,54 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-14 — QMS Multi-Round PO Inspection History & Data Recovery (`QMS_PO_INSPECTION_HISTORY`)
+
+**Agent:** Antigravity  
+**Feature:** เพิ่มตาราง `dbo.QMS_PO_INSPECTION_HISTORY` เพื่อเก็บประวัติการนัดตรวจและผลการตรวจ QA ครบทุกรอบ (Round 1, 2, ...) โดยไม่ให้การเปิดตรวจซ้ำหรือการอัปเดตสถานะในตาราง `dbo.SALES_ORDERS` ทับข้อมูลรอบเดิมจนสูญหาย พร้อมกู้คืนข้อมูล PO จำนวน 63 รายการที่ถูก Sales CSV Import ลบ `inspection_date` และเปลี่ยน `inspection_status` เป็น `'Pass'`
+
+### Schema Alterations
+
+#### 1. `dbo.QMS_PO_INSPECTION_HISTORY` (New Table)
+```sql
+CREATE TABLE dbo.QMS_PO_INSPECTION_HISTORY (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    sales_order_id INT NOT NULL,
+    po_number NVARCHAR(50) NOT NULL,
+    round_no INT NOT NULL DEFAULT 1,
+    ticket_number NVARCHAR(50) NULL,
+    scheduled_date DATE NULL,
+    actual_inspection_date DATE NULL,
+    inspection_status NVARCHAR(50) NOT NULL,
+    inspection_result NVARCHAR(50) NULL,
+    inspect_type NVARCHAR(50) NULL,
+    qa_inspector NVARCHAR(100) NULL,
+    inspection_remark NVARCHAR(MAX) NULL,
+    is_latest BIT NOT NULL DEFAULT 1,
+    source_action NVARCHAR(50) NULL,
+    created_by NVARCHAR(100) NULL,
+    created_at DATETIME NOT NULL DEFAULT GETDATE(),
+    updated_at DATETIME NOT NULL DEFAULT GETDATE()
+);
+
+CREATE NONCLUSTERED INDEX IX_QMS_HIST_SO_ROUND
+    ON dbo.QMS_PO_INSPECTION_HISTORY (sales_order_id, round_no DESC, is_latest);
+
+CREATE NONCLUSTERED INDEX IX_QMS_HIST_SCHED_DATE
+    ON dbo.QMS_PO_INSPECTION_HISTORY (scheduled_date, is_latest);
+
+CREATE NONCLUSTERED INDEX IX_QMS_HIST_PO
+    ON dbo.QMS_PO_INSPECTION_HISTORY (po_number);
+```
+
+### Data Recovery & Initial Backfill (`2026-11-14`)
+1. **กู้คืน 63 PO ใน `dbo.SALES_ORDERS`** ที่ `inspection_date IS NULL AND actual_inspection_date IS NOT NULL`:
+   - กู้ `inspection_date` จาก `COALESCE(sibling same-ticket non-null inspection_date, actual_inspection_date)`
+   - ปรับ `inspection_status = 'DONE'` โดยคงค่า `inspection_result` เดิมไว้ครบถ้วน (รวม 8 PO ที่เป็น `'FAIL'` ใน Ticket `INSP-0416235` และ `INSP-0416241` เมื่อ `2026-10-21` และ 3 PO ใน `INSP-0422251` เมื่อ `2026-11-09`)
+   - บันทึก Snapshot ก่อน/หลังลงใน `dbo.SYSTEM_LOGS` (`action = 'RECOVERY'`, `module = 'QMS_SCHEDULE'`, `ref_id = 'BULK_63_ROWS'`)
+2. **Backfill `Round 1` (`is_latest = 1`)** จำนวน 1,324 รายการเข้า `dbo.QMS_PO_INSPECTION_HISTORY` จาก `dbo.SALES_ORDERS`
+
+---
+
 ## 2026-11-07 — Dedicated TV Display Role & Control Room Users
 
 **Agent:** Antigravity  

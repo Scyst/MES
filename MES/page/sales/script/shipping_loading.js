@@ -2,6 +2,9 @@
 "use strict";
 
 const API_URL = 'api/manage_shipping.php';
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
 let allData = [];
 let importModal;
 let currentPage = 1;
@@ -13,6 +16,11 @@ let lastFilterMode = 'ALL';
 let currentFilterMode = 'ALL';
 
 $(document).ready(function() {
+    if (typeof $ !== 'undefined' && $.ajaxSetup) {
+        $.ajaxSetup({
+            headers: { 'X-CSRF-TOKEN': getCsrfToken() }
+        });
+    }
     const modalEl = document.getElementById('importResultModal');
     if (modalEl) {
         importModal = new bootstrap.Modal(modalEl);
@@ -262,8 +270,10 @@ function renderTable() {
     const rowsHtml = paginatedData.map(row => {
         const isLoad = row.is_loading_done == 1;
         const isProd = row.is_production_done == 1;
-        const inspRaw = (row.inspection_status || '').toLowerCase();
-        const isInsp = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes');
+        const inspRaw = (row.inspection_status || '').toString().trim().toLowerCase();
+        const inspResRaw = (row.inspection_result || '').toString().trim().toLowerCase();
+        const isInspFail = (inspResRaw === 'fail');
+        const isInsp = !isInspFail && (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes' || inspResRaw === 'pass');
         
         const btnLoad = isCustomer 
             ? `<div class="btn-icon-minimal ${isLoad ? 'status-done' : 'status-wait'}"><i class="fas ${isLoad ? 'fa-check' : 'fa-truck-loading'}"></i></div>`
@@ -273,9 +283,16 @@ function renderTable() {
             ? `<div class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></div>`
             : `<button class="btn-icon-minimal ${isProd ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'production', ${row.is_production_done})"><i class="fas ${isProd ? 'fa-check' : 'fa-industry'}"></i></button>`;
 
+        const inspStyle = isInspFail
+            ? 'background-color:#f8d7da; color:#dc3545; border-color:#f5c2c7;'
+            : (isInsp ? 'background-color:#d1e7dd; color:#198754;' : '');
+        const inspIcon = isInspFail ? 'fa-times-circle' : (isInsp ? 'fa-check' : 'fa-microscope');
+        const inspClass = isInspFail ? 'status-fail' : (isInsp ? 'status-done' : 'status-wait');
+        const inspTitle = isInspFail ? 'QA FAIL — ห้ามโหลดตู้โดยไม่ผ่านการตรวจรอบใหม่ในระบบ iQMS' : 'QA Inspection Status';
+
         const btnInsp = isCustomer 
-            ? `<div class="btn-icon-minimal ${isInsp ? 'status-done' : 'status-wait'}"><i class="fas ${isInsp ? 'fa-check' : 'fa-microscope'}"></i></div>`
-            : `<button class="btn-icon-minimal ${isInsp ? 'status-done' : 'status-wait'}" onclick="toggleStatus(${row.id}, 'inspection', ${isInsp ? 1 : 0})" style="${isInsp ? 'background-color:#d1e7dd; color:#198754;' : ''}"><i class="fas ${isInsp ? 'fa-check' : 'fa-microscope'}"></i></button>`;
+            ? `<div class="btn-icon-minimal ${inspClass}" title="${inspTitle}" style="${inspStyle}"><i class="fas ${inspIcon}"></i></div>`
+            : `<button class="btn-icon-minimal ${inspClass}" title="${inspTitle}" onclick="toggleStatus(${row.id}, 'inspection', ${isInsp ? 1 : 0})" style="${inspStyle}"><i class="fas ${inspIcon}"></i></button>`;
 
         const inputHTML = (field, val, align = 'center') => {
             if(isCustomer) {
@@ -493,13 +510,31 @@ function upd(id, field, val, inputElement) {
             calculateKPI(allData);  
             applyGlobalFilter();    
         } else {
-            alert('Save failed: ' + res.message);
+            $el.css({'background-color': '#f8d7da', 'border-color': '#dc3545'});
+            alert('Save failed: ' + (res.message || 'Unknown error'));
         }
+    })
+    .fail(xhr => {
+        $el.css({'background-color': '#f8d7da', 'border-color': '#dc3545'});
+        const msg = xhr.responseJSON?.message || 'Connection failed';
+        alert('Save failed: ' + msg);
     });
 }
 
 function toggleStatus(id, type, currentVal) {
     if(isCustomer) return;
+    const rowObj = allData.find(d => d.id == id);
+    const curRes = (rowObj?.inspection_result || '').toString().trim().toUpperCase();
+    if (type === 'inspection' && curRes === 'FAIL') {
+        alert('ไม่สามารถสลับสถานะ PO ที่ผลตรวจ QA เป็น FAIL ได้ กรุณาเปิดตรวจรอบใหม่ในระบบ iQMS');
+        return;
+    }
+    if (type === 'loading' && currentVal != 1 && curRes === 'FAIL') {
+        if (!confirm('คำเตือน: PO นี้มีผลตรวจ QA เป็น FAIL คุณต้องการยืนยันการเปลี่ยนสถานะ Loading หรือไม่?')) {
+            return;
+        }
+    }
+
     showSpinner();
     let field = '';
     if (type === 'loading') field = 'is_loading_done';
@@ -513,7 +548,8 @@ function toggleStatus(id, type, currentVal) {
             const row = allData.find(d => d.id == id);
             if(row) {
                 if (field === 'inspection_status') {
-                    row.inspection_status = newVal ? 'Pass' : '';
+                    row.inspection_status = newVal ? 'DONE' : 'WAITING';
+                    row.inspection_result = newVal ? 'PASS' : null;
                 } else {
                     row[field] = newVal;
                 }
@@ -523,8 +559,13 @@ function toggleStatus(id, type, currentVal) {
             calculateKPI(allData); 
             applyGlobalFilter();   
         } else { 
-            hideSpinner(); alert('Failed: ' + res.message); 
+            hideSpinner(); alert('Failed: ' + (res.message || 'Unknown error')); 
         }
+    })
+    .fail(xhr => {
+        hideSpinner();
+        const msg = xhr.responseJSON?.message || 'Connection failed';
+        alert('Failed: ' + msg);
     });
 }
 
@@ -544,9 +585,11 @@ async function exportToCSV() {
         const excelData = dataToExport.map(row => {
             const isLoad = row.is_loading_done == 1 ? 'Done' : 'Wait';
             const isProd = row.is_production_done == 1 ? 'Done' : 'Wait';
-            const inspRaw = (row.inspection_status || '').toLowerCase();
-            const isInsp = (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes');
-            const isInspStr = isInsp ? 'Pass' : 'Wait';
+            const inspRaw = (row.inspection_status || '').toString().trim().toLowerCase();
+            const inspResRaw = (row.inspection_result || '').toString().trim().toLowerCase();
+            const isInspFail = (inspResRaw === 'fail');
+            const isInsp = !isInspFail && (inspRaw === 'pass' || inspRaw === 'ok' || inspRaw === 'done' || inspRaw === 'yes' || inspResRaw === 'pass');
+            const isInspStr = isInspFail ? 'Fail' : (isInsp ? 'Pass' : 'Wait');
             
             return {
                 'Seq': row.custom_order,
@@ -651,6 +694,7 @@ async function sendFileToBackend(formData) {
     try {
         const res = await fetch(API_URL, {
             method: 'POST',
+            headers: { 'X-CSRF-TOKEN': getCsrfToken() },
             body: formData 
         });
         

@@ -102,8 +102,8 @@ export default function QaPlannerCalendarTab({ isOnline }) {
   const schedulePoToDate = async (poId, ymd) => {
     if (!poId || !ymd || !isOnline) return;
     try {
-      await qmsScheduleApi.schedulePo(poId, ymd);
-      toast.success(`จัดตารางตรวจลงวันที่ ${formatQmsDate(ymd)} เรียบร้อยแล้ว`);
+      const res = await qmsScheduleApi.schedulePo(poId, ymd);
+      toast.success(res.message || `จัดตารางตรวจลงวันที่ ${formatQmsDate(ymd)} เรียบร้อยแล้ว`);
       setQuickAssignJob(null);
       await Promise.all([fetchCalendarData(), fetchPending(pendingSearch)]);
     } catch (err) {
@@ -189,6 +189,10 @@ export default function QaPlannerCalendarTab({ isOnline }) {
                 <div className="hidden sm:flex flex-col gap-1 overflow-y-auto max-h-20">
                   {list.map((po) => {
                     const { isFailed, isDone, isInProgress } = normalizeQaStatus(po);
+                    const roundNo = Number(po.round_no || 1);
+                    const totalRounds = Number(po.total_rounds || roundNo || 1);
+                    const isArchived = Number(po.is_latest ?? 1) === 0 || po.is_latest === false;
+                    const rowKey = po.history_id ? `hist-${po.history_id}` : `po-${po.id}`;
                     const cls = isFailed
                       ? 'bg-rose-100 text-rose-800 border-rose-200'
                       : isDone
@@ -198,14 +202,14 @@ export default function QaPlannerCalendarTab({ isOnline }) {
                           : 'bg-slate-100 text-slate-700 border-slate-200';
                     return (
                       <div
-                        key={po.id}
-                        draggable={isOnline}
+                        key={rowKey}
+                        draggable={isOnline && !isArchived}
                         onDragStart={(e) => e.dataTransfer.setData('text/plain', String(po.id))}
                         onClick={(e) => { e.stopPropagation(); setEditingPo(po); }}
-                        title={`${po.po_number} (${po.sku})`}
-                        className={`px-1.5 py-0.5 rounded border text-[10px] leading-tight truncate font-semibold ${cls}`}
+                        title={`${po.po_number} (${po.sku})${totalRounds > 1 ? ` • รอบที่ ${roundNo}/${totalRounds}` : ''}`}
+                        className={`px-1.5 py-0.5 rounded border text-[10px] leading-tight truncate font-semibold ${cls} ${isArchived ? 'opacity-65 border-dashed' : ''}`}
                       >
-                        {po.po_number}
+                        {totalRounds > 1 ? `[R${roundNo}] ` : ''}{po.po_number}
                       </div>
                     );
                   })}
@@ -216,8 +220,9 @@ export default function QaPlannerCalendarTab({ isOnline }) {
                   <div className="flex sm:hidden flex-wrap gap-1 pt-1">
                     {list.slice(0, 6).map((po) => {
                       const { isFailed, isDone, isInProgress } = normalizeQaStatus(po);
+                      const rowKey = po.history_id ? `hist-${po.history_id}` : `po-${po.id}`;
                       const dot = isFailed ? 'bg-rose-500' : isDone ? 'bg-emerald-500' : isInProgress ? 'bg-amber-500' : 'bg-slate-400';
-                      return <span key={po.id} className={`w-2 h-2 rounded-full ${dot}`} />;
+                      return <span key={rowKey} className={`w-2 h-2 rounded-full ${dot}`} />;
                     })}
                   </div>
                 )}
@@ -329,27 +334,44 @@ export default function QaPlannerCalendarTab({ isOnline }) {
                 <div className="py-8 text-center text-xs text-slate-400">ไม่มี PO ที่กำหนดตรวจในวันนี้</div>
               ) : (
                 dayJobs.map((po) => {
-                  const { isFailed, isDone, isInProgress } = normalizeQaStatus(po);
+                  const { isFailed, isPassed, isDone, isInProgress } = normalizeQaStatus(po);
+                  const roundNo = Number(po.round_no || 1);
+                  const totalRounds = Number(po.total_rounds || roundNo || 1);
+                  const isArchived = Number(po.is_latest ?? 1) === 0 || po.is_latest === false;
+                  const rowKey = po.history_id ? `hist-${po.history_id}` : `po-${po.id}`;
                   const badge = isFailed ? 'bg-rose-100 text-rose-700' : isDone ? 'bg-emerald-100 text-emerald-700' : isInProgress ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700';
                   return (
-                    <div key={po.id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <div key={rowKey} className={`p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 ${isArchived ? 'opacity-75 bg-slate-50/60 dark:bg-slate-900/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}>
                       <div className="flex items-center gap-3 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={daySelectedIds.includes(po.id)}
-                          onChange={() => setDaySelectedIds((prev) => prev.includes(po.id) ? prev.filter((x) => x !== po.id) : [...prev, po.id])}
-                        />
+                        {!isArchived && (
+                          <input
+                            type="checkbox"
+                            checked={daySelectedIds.includes(po.id)}
+                            onChange={() => setDaySelectedIds((prev) => prev.includes(po.id) ? prev.filter((x) => x !== po.id) : [...prev, po.id])}
+                          />
+                        )}
                         <div className="min-w-0 cursor-pointer" onClick={() => setEditingPo(po)}>
-                          <div className="font-mono text-xs font-bold text-blue-600">{po.po_number} <span className="text-slate-400">• {po.sku}</span></div>
+                          <div className="font-mono text-xs font-bold text-blue-600 flex flex-wrap items-center gap-1.5">
+                            <span>{po.po_number}</span>
+                            <span className="text-slate-400">• {po.sku}</span>
+                            {totalRounds > 1 && (
+                              <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px]">R{roundNo}/{totalRounds}</span>
+                            )}
+                            {isArchived && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px]">History</span>
+                            )}
+                          </div>
                           <div className="text-xs text-slate-500 truncate">{po.description} ({formatQmsQty(po.quantity)} pcs)</div>
                           {po.qa_inspector && <div className="text-[11px] text-sky-600 flex items-center gap-1 mt-0.5"><UserCheck className="w-3 h-3" /> {po.qa_inspector}</div>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${badge}`}>
-                          {isFailed ? 'FAIL' : isDone ? 'PASS' : isInProgress ? 'IN PROGRESS' : 'WAITING'}
+                          {isFailed ? 'FAIL' : isPassed ? 'PASS' : isDone ? 'DONE' : isInProgress ? 'IN PROGRESS' : 'WAITING'}
                         </span>
-                        <button type="button" onClick={() => setEditingPo(po)} className="min-h-[36px] px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold">ตรวจ/แก้ไข</button>
+                        <button type="button" onClick={() => setEditingPo(po)} className="min-h-[36px] px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold">
+                          {isArchived ? 'ดูประวัติ' : 'ตรวจ/แก้ไข'}
+                        </button>
                       </div>
                     </div>
                   );

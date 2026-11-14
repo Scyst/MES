@@ -21,6 +21,11 @@
 - **View Day Jobs:** Clicking a day cell opens a Daily Jobs Modal showing all jobs for that day with statuses.
 - **Bulk Update in Day View:** Support selecting multiple jobs in the Day Jobs Modal to assign tickets and inspectors in one go.
 - **Scope & Conflict Fixes:** Removed old tab-switching logic and resolved JS reference errors.
+- **Multi-Round Inspection History & Data Integrity Fixes (2026-11-14):**
+  - Created `dbo.QMS_PO_INSPECTION_HISTORY` (`round_no`, `is_latest`, `scheduled_date`, `actual_inspection_date`, `inspection_status`, `inspection_result`, `source_action`) and backfilled 1,324 Round 1 rows so re-opening/re-scheduling completed POs never erases prior inspection records (archived rounds open as Read-Only with an inline "+ เปิดตรวจรอบใหม่" workflow and per-PO round timeline).
+  - Recovered 63 PO rows in `dbo.SALES_ORDERS` (including 8 `FAIL` POs) whose `inspection_date` had been nulled and `inspection_status` overwritten to `'Pass'` by Sales CSV imports; logged full JSON before/after snapshot in `dbo.SYSTEM_LOGS`.
+  - Fixed `FAIL`-vs-`Pass` evaluation precedence across `qa_schedule_api.php`, `qa_schedule_script.php`, `manage_sales_orders.php`, `manage_shipping.php`, `salesDashboard.js`, `shipping_loading.js`, and Toolbox SPA (`qaScheduleApi.php`, `qmsFormatters.js`, `QaScheduleTab.jsx`, `QaInspectionModals.jsx`, `QaPlannerCalendarTab.jsx`).
+  - Hardened Sales CSV & Shipping CSV imports (`MERGE`) and inline toggles against overwriting QA-owned `inspection_date`, `ticket_number`, `inspection_status`, `inspection_result`, `inspect_type`, added CSRF validation + `writeLog()`/`writeErrorLog()`, and fixed `assignToMe` display name lookup.
 
 **Pending / Next Steps:**
 - Gather feedback from QA/QC team after initial trial usage.

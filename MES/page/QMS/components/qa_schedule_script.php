@@ -5,6 +5,30 @@ let currentQaData = [];
 let qaCalendarInstance = null;
 let currentQaView = 'list';
 
+function getQmsCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function escapeQaHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizeQaStatusClient(po) {
+    const stUpper = (po?.inspection_status || '').toString().trim().toUpperCase();
+    const resUpper = (po?.inspection_result || '').toString().trim().toUpperCase();
+    const isFailed = (resUpper === 'FAIL');
+    const isPassed = !isFailed && (resUpper === 'PASS' || stUpper === 'PASS');
+    const isDone = (isFailed || isPassed || stUpper === 'DONE');
+    const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+    const isWaiting = (!isDone && !isInProgress);
+    return { stUpper, resUpper, isFailed, isPassed, isDone, isInProgress, isWaiting };
+}
+
 function loadQASchedule(filterType = null) {
     if (filterType) currentFilter = filterType;
     
@@ -111,13 +135,7 @@ function renderQaScheduleTable() {
     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     const dataToRender = currentQaData.filter(po => {
-        const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
-        const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
-        const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
-        const isFailed = (resUpper === 'FAIL');
-        const isDone = (isPassed || isFailed || stUpper === 'DONE');
-        const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
-        const isWaiting = (!isDone && !isInProgress);
+        const { isPassed, isFailed, isInProgress, isWaiting } = normalizeQaStatusClient(po);
 
         let matchStatus = true;
         if (qaCurrentStatusFilter !== 'ALL') {
@@ -145,12 +163,7 @@ function renderQaScheduleTable() {
 
     let html = '';
     dataToRender.forEach(po => {
-        const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
-        const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
-        const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
-        const isFailed = (resUpper === 'FAIL');
-        const isDone = (isPassed || isFailed || stUpper === 'DONE');
-        const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+        const { resUpper, isPassed, isFailed, isDone, isInProgress } = normalizeQaStatusClient(po);
 
         let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
         if (isInProgress) statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
@@ -161,8 +174,17 @@ function renderQaScheduleTable() {
         if (po.inspect_type === 'On-site') typeBadge = '<span class="badge bg-primary mt-1 d-block" style="width:fit-content; margin:0 auto;">On-site</span>';
 
         let resultBadge = '';
-        if (isPassed) resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
-        else if (isFailed) resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+        if (isFailed) resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
+        else if (isPassed) resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
+        else if (resUpper) resultBadge = `<span class="badge bg-secondary ms-1">${escapeQaHtml(resUpper)}</span>`;
+
+        const roundNo = Number(po.round_no || 1);
+        const totalRounds = Number(po.total_rounds || roundNo);
+        const isLatest = po.is_latest === undefined || po.is_latest === null || po.is_latest == 1 || po.is_latest === true;
+        const roundBadge = (totalRounds > 1 || roundNo > 1)
+            ? `<span class="badge bg-light text-dark border ms-1">R${roundNo}/${totalRounds}</span>`
+            : '';
+        const archiveBadge = !isLatest ? '<span class="badge bg-warning-subtle text-dark border ms-1">History</span>' : '';
 
         let rowClass = '';
         if (!isDone && po.loading_date) {
@@ -176,126 +198,33 @@ function renderQaScheduleTable() {
         }
 
         let inspectorCell = po.qa_inspector ? 
-            `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-user-check me-1"></i>${po.qa_inspector}</span>` :
-            `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="event.stopPropagation(); assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>`;
+            `<span class="badge bg-info text-dark shadow-sm"><i class="fas fa-user-check me-1"></i>${escapeQaHtml(po.qa_inspector)}</span>` :
+            (isLatest ? `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" onclick="event.stopPropagation(); assignToMe(${po.id})" style="font-size:0.75rem;">Assign to Me</button>` : '<span class="text-muted small">-</span>');
 
         html += `
             <tr class="${rowClass}" style="cursor: pointer;" onclick='openUpdateModal(${JSON.stringify(po).replace(/'/g, "&#39;")})' title="Click to view/update">
                 <td class="text-center" onclick="event.stopPropagation()">
                     <input type="checkbox" class="form-check-input po-checkbox" value="${po.id}" onchange="updateBulkCount()">
                 </td>
-                <td class="text-center text-secondary">${po.ticket_number || '-'}</td>
-                <td class="px-3 fw-bold text-primary text-center">${po.po_number}</td>
+                <td class="text-center text-secondary">${escapeQaHtml(po.ticket_number || '-')}</td>
+                <td class="px-3 fw-bold text-primary text-center">${escapeQaHtml(po.po_number)} ${roundBadge} ${archiveBadge}</td>
                 <td class="text-start">
-                    <div><strong>${po.sku}</strong></div>
-                    <div class="small text-muted">${po.description} (${po.color})</div>
+                    <div><strong>${escapeQaHtml(po.sku)}</strong></div>
+                    <div class="small text-muted">${escapeQaHtml(po.description)} (${escapeQaHtml(po.color)})</div>
                 </td>
                 <td class="fw-bold text-center">${po.quantity ? Number(po.quantity).toLocaleString() : '-'}</td>
                 <td class="text-center text-muted">-</td>
-                <td class="text-center">${po.dc_location || '-'}</td>
+                <td class="text-center">${escapeQaHtml(po.dc_location || '-')}</td>
                 <td class="text-center fw-bold text-dark">${po.inspection_date ? po.inspection_date.substring(0, 10) : '-'}</td>
                 <td class="text-center fw-bold text-success">${po.actual_inspection_date ? po.actual_inspection_date.substring(0, 10) : '-'}</td>
-                <td class="text-center">${po.loading_date ? po.loading_date : '-'}</td>
-                <td class="text-center fw-bold text-secondary">${po.loading_week || '-'}</td>
+                <td class="text-center">${po.loading_date ? escapeQaHtml(po.loading_date) : '-'}</td>
+                <td class="text-center fw-bold text-secondary">${escapeQaHtml(po.loading_week || '-')}</td>
                 <td class="text-center" onclick="event.stopPropagation()">${inspectorCell}</td>
                 <td class="text-center">${statusBadge} ${resultBadge} ${typeBadge}</td>
             </tr>
         `;
     });
     tbody.innerHTML = html;
-}
-
-
-function loadQcUsers() {
-    fetch('./api/qa_schedule_api.php?action=get_qc_users')
-        .then(r => r.json())
-        .then(res => {
-            if(res.success && res.data) {
-                const selects = document.querySelectorAll('.qc-user-select');
-                selects.forEach(select => {
-                    select.innerHTML = '<option value="">- Select -</option>';
-                    res.data.forEach(user => {
-                        const name = user.aka ? `${user.fullname} (${user.aka})` : user.fullname;
-                        select.innerHTML += `<option value="${user.fullname}">${name}</option>`;
-                    });
-                });
-            }
-        });
-}
-
-function toggleSelectAllPo(el) {
-    const isChecked = el.checked;
-    document.querySelectorAll('.po-checkbox').forEach(cb => cb.checked = isChecked);
-    updateBulkCount();
-}
-
-function updateBulkCount() {
-    const count = document.querySelectorAll('.po-checkbox:checked').length;
-    const btn = document.getElementById('btnBulkUpdate');
-    document.getElementById('bulkCount').innerText = count;
-    
-    if (count > 0) {
-        btn.classList.remove('d-none');
-    } else {
-        btn.classList.add('d-none');
-    }
-}
-
-function openBulkUpdateModal() {
-    const count = document.querySelectorAll('.po-checkbox:checked').length;
-    if (count === 0) return;
-    
-    document.getElementById('bulkUpdateCount').innerText = count;
-    document.getElementById('bulk_ticket_number').value = '';
-    document.getElementById('bulk_qa_inspector').value = '';
-    document.querySelectorAll('input[name="bulk_inspect_type"]').forEach(el => el.checked = false);
-    
-    const modal = new bootstrap.Modal(document.getElementById('bulkUpdateModal'));
-    modal.show();
-}
-
-function saveBulkUpdate() {
-    const poIds = Array.from(document.querySelectorAll('.po-checkbox:checked')).map(cb => cb.value);
-    if (poIds.length === 0) return;
-    
-    const ticket = document.getElementById('bulk_ticket_number').value;
-    const inspector = document.getElementById('bulk_qa_inspector').value;
-    const type = document.querySelector('input[name="bulk_inspect_type"]:checked');
-    
-    const btn = document.getElementById('btnSaveBulk');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-    
-    const formData = new FormData();
-    formData.append('po_ids', JSON.stringify(poIds));
-    formData.append('ticket_number', ticket);
-    formData.append('qa_inspector', inspector);
-    if (type) formData.append('inspect_type', type.value);
-    
-    fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
-        method: 'POST',
-        body: formData
-    })
-    .then(r => r.json())
-    .then(res => {
-        if(res.success) {
-            bootstrap.Modal.getInstance(document.getElementById('bulkUpdateModal')).hide();
-            loadQASchedule();
-            const selectAll = document.getElementById('selectAllPo');
-            if(selectAll) selectAll.checked = false;
-            updateBulkCount();
-        } else {
-            alert('Error: ' + res.message);
-        }
-    })
-    .catch(err => {
-        console.error('Network Error in bulk update:', err);
-        Swal.fire('Error', 'Network Error', 'error');
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save me-1"></i> Update Selected';
-    });
 }
 
 function openAddScheduleModal() {
@@ -323,12 +252,16 @@ function searchPO() {
                 
                 let html = '';
                 res.data.forEach(po => {
+                    const { isFailed, isPassed, isDone } = normalizeQaStatusClient(po);
+                    const doneHint = isDone
+                        ? `<br><small class="${isFailed ? 'text-danger' : 'text-info'} fw-bold"><i class="fas fa-history"></i> เคยตรวจแล้ว (${isFailed ? 'FAIL' : (isPassed ? 'PASS' : escapeQaHtml(po.inspection_status))}) เมื่อ ${escapeQaHtml(po.inspection_date || '-')} — เพิ่มเข้าวันนี้จะเปิดตรวจรอบใหม่ให้โดยอัตโนมัติ</small>`
+                        : (po.inspection_date ? `<br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Already scheduled on ${escapeQaHtml(po.inspection_date)}</small>` : '');
                     html += `
                         <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="mb-1 fw-bold text-primary">${po.po_number} <span class="badge bg-info ms-2">${po.sku}</span></h6>
-                                <small class="text-muted">Qty: ${po.quantity} | Loading: ${po.loading_date || '-'}</small>
-                                ${po.inspection_date ? `<br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Already scheduled on ${po.inspection_date}</small>` : ''}
+                                <h6 class="mb-1 fw-bold text-primary">${escapeQaHtml(po.po_number)} <span class="badge bg-info ms-2">${escapeQaHtml(po.sku)}</span></h6>
+                                <small class="text-muted">Qty: ${escapeQaHtml(po.quantity)} | Loading: ${escapeQaHtml(po.loading_date || '-')}</small>
+                                ${doneHint}
                             </div>
                             <button class="btn btn-sm btn-primary" onclick="schedulePO(${po.id})">
                                 <i class="fas fa-calendar-plus me-1"></i> Add
@@ -351,12 +284,13 @@ function schedulePO(id, date = null) {
     
     fetch('./api/qa_schedule_api.php?action=schedule_po', {
         method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
         body: formData
     })
     .then(r => r.json())
     .then(res => {
         if(res.success) {
-            Swal.fire({icon:'success', title:'Scheduled!', timer:1500, showConfirmButton:false});
+            Swal.fire({icon:'success', title: res.new_round ? 'เปิดตรวจรอบใหม่เรียบร้อย' : 'Scheduled!', text: res.new_round ? res.message : '', timer:1800, showConfirmButton:false});
             const modalEl = document.getElementById('addScheduleModal');
             if (modalEl) {
                 const modalInst = bootstrap.Modal.getInstance(modalEl);
@@ -370,12 +304,12 @@ function schedulePO(id, date = null) {
     });
 }
 
-function removeSchedule(id, force = false) {
+function removeSchedule(id, force = false, historyId = null) {
     let title = 'Are you sure?';
     let text = "This will remove the PO from the QA schedule.";
     if (force) {
         title = 'Reset Inspection Data?';
-        text = "This PO has already been inspected or is in progress. Removing it will clear all results. Are you sure?";
+        text = "This PO has already been inspected or is in progress. Removing it will clear the active round. Are you sure?";
     }
 
     Swal.fire({
@@ -389,21 +323,23 @@ function removeSchedule(id, force = false) {
         if (result.isConfirmed) {
             const formData = new FormData();
             formData.append('id', id);
+            if (historyId) formData.append('history_id', historyId);
             if (force) formData.append('force', '1');
 
             fetch('./api/qa_schedule_api.php?action=remove_schedule', {
                 method: 'POST',
+                headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
                 body: formData
             }).then(r => r.json()).then(res => {
                 if(res.success) {
-                    Swal.fire({icon: 'success', title: 'Removed', timer: 1500, showConfirmButton: false});
+                    Swal.fire({icon: 'success', title: 'Removed', text: res.message || '', timer: 1500, showConfirmButton: false});
                     const modalEl = document.getElementById('updateInspectionModal');
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
                     if (modalInst) modalInst.hide();
                     loadQASchedule();
                     loadPendingJobs();
                 } else if (res.require_force) {
-                    removeSchedule(id, true);
+                    removeSchedule(id, true, historyId);
                 } else {
                     Swal.fire('Error', res.message, 'error');
                 }
@@ -453,9 +389,123 @@ function onQaInspectionStatusChange(status) {
     }
 }
 
+function toggleReopenRoundPanel(forceState = null) {
+    const panel = document.getElementById('reopenRoundPanel');
+    if (!panel) return;
+    const shouldShow = (forceState !== null) ? forceState : panel.classList.contains('d-none');
+    panel.classList.toggle('d-none', !shouldShow);
+    if (shouldShow && currentUpdatePo) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('reopen_schedule_date').value = todayStr;
+        document.getElementById('reopen_ticket_number').value = '';
+        document.getElementById('reopen_qa_inspector').value = currentUpdatePo.qa_inspector || '';
+        document.getElementById('reopen_inspect_type').value = currentUpdatePo.inspect_type || '';
+        document.getElementById('reopen_remark').value = '';
+    }
+}
+
+function submitReopenRound() {
+    if (!currentUpdatePo) return;
+    const schedDate = document.getElementById('reopen_schedule_date').value;
+    if (!schedDate) {
+        Swal.fire('กรุณาระบุวันที่', 'กรุณาเลือกวันที่กำหนดตรวจรอบใหม่', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btnConfirmReopenRound');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังบันทึก...';
+    }
+
+    const formData = new FormData();
+    formData.append('id', currentUpdatePo.id);
+    formData.append('schedule_date', schedDate);
+    formData.append('ticket_number', document.getElementById('reopen_ticket_number').value.trim());
+    formData.append('qa_inspector', document.getElementById('reopen_qa_inspector').value.trim());
+    formData.append('inspect_type', document.getElementById('reopen_inspect_type').value);
+    formData.append('remark', document.getElementById('reopen_remark').value.trim());
+
+    fetch('./api/qa_schedule_api.php?action=reopen_inspection', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            Swal.fire({ icon: 'success', title: 'เปิดรอบตรวจใหม่เรียบร้อย', text: res.message || '', timer: 1800, showConfirmButton: false });
+            const modalInst = bootstrap.Modal.getInstance(document.getElementById('updateInspectionModal'));
+            if (modalInst) modalInst.hide();
+            loadQASchedule();
+            loadPendingJobs();
+        } else {
+            Swal.fire('Error', res.message || 'ไม่สามารถเปิดรอบตรวจใหม่ได้', 'error');
+        }
+    })
+    .catch(() => Swal.fire('Error', 'Network Error', 'error'))
+    .finally(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i> ยืนยันเปิดรอบใหม่';
+        }
+    });
+}
+
+function loadPoHistory(poId, activeHistId = null) {
+    const timeline = document.getElementById('poHistoryTimeline');
+    const countBadge = document.getElementById('poHistoryCountBadge');
+    if (!timeline) return;
+    timeline.innerHTML = '<div class="text-muted small py-2"><i class="fas fa-spinner fa-spin me-1"></i> กำลังโหลดประวัติ...</div>';
+
+    fetch(`./api/qa_schedule_api.php?action=get_po_history&id=${encodeURIComponent(poId)}`)
+        .then(r => r.json())
+        .then(res => {
+            if (!res.success || !Array.isArray(res.data) || res.data.length === 0) {
+                if (countBadge) countBadge.textContent = '0';
+                timeline.innerHTML = '<div class="text-muted small py-2">ยังไม่มีประวัติรอบก่อนหน้า</div>';
+                return;
+            }
+            if (countBadge) countBadge.textContent = String(res.data.length);
+            timeline.innerHTML = res.data.map(h => {
+                const { isFailed, isPassed, isInProgress } = normalizeQaStatusClient(h);
+                const resBadge = isFailed
+                    ? '<span class="badge bg-danger">FAIL</span>'
+                    : (isPassed ? '<span class="badge bg-success">PASS</span>' : (isInProgress ? '<span class="badge bg-warning text-dark">IN PROGRESS</span>' : '<span class="badge bg-secondary">WAITING</span>'));
+                const latestBadge = (h.is_latest == 1)
+                    ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Latest</span>'
+                    : '<span class="badge bg-light text-muted border ms-1">Archived</span>';
+                const isViewing = activeHistId && String(activeHistId) === String(h.history_id);
+                const borderCls = isViewing ? 'border-primary bg-white shadow-sm' : 'border bg-white';
+                const schedStr = h.scheduled_date ? h.scheduled_date.substring(0, 10) : '-';
+                const actualStr = h.actual_inspection_date ? h.actual_inspection_date.substring(0, 10) : '-';
+                return `
+                    <div class="p-2 rounded ${borderCls} small">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
+                            <div>
+                                <strong>Round #${h.round_no || 1}</strong> ${latestBadge}
+                                <span class="text-muted ms-2">Ticket: <strong>${escapeQaHtml(h.ticket_number || '-')}</strong></span>
+                            </div>
+                            <div>${resBadge}</div>
+                        </div>
+                        <div class="text-muted mt-1" style="font-size: 0.78rem;">
+                            Plan: ${escapeQaHtml(schedStr)} | Actual: ${escapeQaHtml(actualStr)} | Inspector: ${escapeQaHtml(h.qa_inspector || '-')} | Type: ${escapeQaHtml(h.inspect_type || '-')}
+                            ${h.inspection_remark ? `<div class="text-dark mt-1"><i class="fas fa-comment-alt text-muted me-1"></i>${escapeQaHtml(h.inspection_remark)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(() => {
+            timeline.innerHTML = '<div class="text-danger small py-2">ไม่สามารถโหลดประวัติได้</div>';
+        });
+}
+
 function openUpdateModal(po) {
     currentUpdatePo = po;
     document.getElementById('inspect_po_id').value = po.id;
+    const histEl = document.getElementById('inspect_history_id');
+    if (histEl) histEl.value = po.history_id || '';
     document.getElementById('inspect_po_number').value = po.po_number + ' - ' + (po.sku || '');
     document.getElementById('inspect_ticket_number').value = po.ticket_number || '';
     document.getElementById('inspect_qa_inspector').value = po.qa_inspector || '';
@@ -468,12 +518,29 @@ function openUpdateModal(po) {
         document.querySelectorAll(`input[name="inspect_type"]`).forEach(el => el.checked = false);
     }
     
-    const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
-    const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
-    const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
-    const isFailed = (resUpper === 'FAIL');
-    const isDone = (isPassed || isFailed || stUpper === 'DONE');
-    const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+    const { isPassed, isFailed, isDone, isInProgress } = normalizeQaStatusClient(po);
+    const roundNo = Number(po.round_no || 1);
+    const totalRounds = Number(po.total_rounds || roundNo);
+    const isLatest = po.is_latest === undefined || po.is_latest === null || po.is_latest == 1 || po.is_latest === true;
+
+    const roundBadge = document.getElementById('inspectRoundBadge');
+    if (roundBadge) {
+        roundBadge.textContent = totalRounds > 1 ? `Round ${roundNo} / ${totalRounds}` : `Round ${roundNo}`;
+    }
+
+    const readonlyBanner = document.getElementById('inspectHistoryReadonlyBanner');
+    const bannerRound = document.getElementById('inspectBannerRoundNo');
+    if (readonlyBanner) readonlyBanner.classList.toggle('d-none', isLatest);
+    if (bannerRound) bannerRound.textContent = String(roundNo);
+
+    const reopenBtn = document.getElementById('btnShowReopenSection');
+    if (reopenBtn) reopenBtn.classList.toggle('d-none', !(isDone || !isLatest));
+    toggleReopenRoundPanel(false);
+
+    const saveBtn = document.getElementById('btnSaveInspectionResult');
+    if (saveBtn) saveBtn.disabled = !isLatest;
+    const rmBtn = document.getElementById('btnRemoveScheduleModal');
+    if (rmBtn) rmBtn.disabled = !isLatest;
 
     // Check Status radio
     if (isDone) {
@@ -487,12 +554,12 @@ function openUpdateModal(po) {
         if (el) el.checked = true;
     }
     
-    // Check Result radio
-    if (isPassed) {
-        const el = document.getElementById('res_pass');
-        if (el) el.checked = true;
-    } else if (isFailed) {
+    // Check Result radio (FAIL MUST take precedence over PASS)
+    if (isFailed) {
         const el = document.getElementById('result_fail');
+        if (el) el.checked = true;
+    } else if (isPassed) {
+        const el = document.getElementById('res_pass');
         if (el) el.checked = true;
     } else {
         const el = document.getElementById('res_pending');
@@ -503,8 +570,10 @@ function openUpdateModal(po) {
     document.getElementById('inspect_remark').value = po.inspection_remark || '';
     
     // Bind remove button inside the modal
-    document.getElementById('btnRemoveScheduleModal').onclick = function() { removeSchedule(po.id); };
+    document.getElementById('btnRemoveScheduleModal').onclick = function() { removeSchedule(po.id, false, po.history_id || null); };
     
+    loadPoHistory(po.id, po.history_id || null);
+
     const modalEl = document.getElementById('updateInspectionModal');
     const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
     modal.show();
@@ -520,6 +589,7 @@ function saveInspectionResult() {
     const formData = new FormData(form);
     fetch('./api/qa_schedule_api.php?action=update_result', {
         method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
         body: formData
     })
     .then(r => r.json())
@@ -568,6 +638,7 @@ function savePoDetails() {
     
     fetch('./api/qa_schedule_api.php', {
         method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
         body: formData
     })
     .then(r => r.json())
@@ -583,7 +654,7 @@ function savePoDetails() {
 }
 
 function assignToMe(poId) {
-    const username = '<?php echo $_SESSION['username'] ?? "QA Staff"; ?>'; // Using session username
+    const username = <?php echo json_encode($_SESSION['user']['fullname'] ?? ($_SESSION['user']['username'] ?? 'QA Staff'), JSON_UNESCAPED_UNICODE); ?>;
     
     Swal.fire({
         title: 'Assign to Me?',
@@ -599,6 +670,7 @@ function assignToMe(poId) {
             
             fetch('./api/qa_schedule_api.php?action=assign_inspector', {
                 method: 'POST',
+                headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
                 body: formData
             })
             .then(r => r.json())
@@ -699,24 +771,26 @@ function buildCustomQaCalendar(eventsData) {
         if (dayEvents.length > 0) {
             // Render all on desktop
             dayEvents.forEach(evt => {
-                const stUpper = (evt.extendedProps.status || '').toString().trim().toUpperCase();
-                const resUpper = (evt.extendedProps.result || '').toString().trim().toUpperCase();
-                const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
-                const isFailed = (resUpper === 'FAIL');
-                const isDone = (isPassed || isFailed || stUpper === 'DONE');
-                const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+                const { isFailed, isDone, isInProgress } = normalizeQaStatusClient(evt.extendedProps.poData || {
+                    inspection_status: evt.extendedProps.status,
+                    inspection_result: evt.extendedProps.result
+                });
 
                 let statusClass = 'status-waiting';
                 if (isInProgress) statusClass = 'status-progress';
                 if (isDone) statusClass = 'status-done';
                 if (isFailed) statusClass = 'result-fail';
 
+                const roundNo = Number(evt.extendedProps.poData?.round_no || 1);
+                const totalRounds = Number(evt.extendedProps.poData?.total_rounds || roundNo);
+                const roundTag = (totalRounds > 1 || roundNo > 1) ? ` [R${roundNo}]` : '';
+
                 const pill = document.createElement('div');
                 pill.className = `qa-event-pill ${statusClass}`;
-                pill.title = evt.title;
-                pill.innerHTML = `<b>${evt.title}</b>`;
+                pill.title = evt.title + roundTag;
+                pill.innerHTML = `<b>${escapeQaHtml(evt.title)}${escapeQaHtml(roundTag)}</b>`;
                 if (evt.extendedProps.inspector) {
-                    pill.innerHTML += `<br><i class="fas fa-user-check"></i> ${evt.extendedProps.inspector}`;
+                    pill.innerHTML += `<br><i class="fas fa-user-check"></i> ${escapeQaHtml(evt.extendedProps.inspector)}`;
                 }
                 pill.draggable = true;
                 pill.ondragstart = (e) => {
@@ -951,15 +1025,19 @@ function triggerInlineSearch() {
                 
                 let html = '';
                 res.data.forEach(po => {
+                    const { isFailed, isPassed, isDone } = normalizeQaStatusClient(po);
+                    const schedHint = isDone
+                        ? `<span class="${isFailed ? 'text-danger' : 'text-info'} ms-1 fw-bold"><i class="fas fa-history"></i> เคยตรวจ (${isFailed ? 'FAIL' : (isPassed ? 'PASS' : escapeQaHtml(po.inspection_status))}) ${escapeQaHtml(po.inspection_date || '-')} — เพิ่มเข้าวันนี้จะเปิดรอบใหม่</span>`
+                        : (po.inspection_date ? `<span class="text-warning ms-1"><i class="fas fa-exclamation-triangle"></i> Scheduled: ${escapeQaHtml(po.inspection_date)}</span>` : '');
                     html += `
-                        <button type="button" class="list-group-item list-group-item-action text-start p-2" onclick="inlineAddPo(${po.id}, '${po.po_number}')">
+                        <button type="button" class="list-group-item list-group-item-action text-start p-2" onclick='inlineAddPo(${po.id}, ${JSON.stringify(po.po_number)})'>
                             <div class="d-flex justify-content-between align-items-center">
-                                <strong>${po.po_number}</strong>
-                                <span class="badge bg-light text-dark border">${po.sku}</span>
+                                <strong>${escapeQaHtml(po.po_number)}</strong>
+                                <span class="badge bg-light text-dark border">${escapeQaHtml(po.sku)}</span>
                             </div>
                             <div class="small text-muted mt-1">
-                                Qty: ${po.quantity} | Loading: ${po.loading_date || '-'}
-                                ${po.inspection_date ? `<span class="text-warning ms-1"><i class="fas fa-exclamation-triangle"></i> Scheduled: ${po.inspection_date}</span>` : ''}
+                                Qty: ${escapeQaHtml(po.quantity)} | Loading: ${escapeQaHtml(po.loading_date || '-')}
+                                ${schedHint}
                             </div>
                         </button>
                     `;
@@ -983,6 +1061,7 @@ function inlineAddPo(id, poNumber) {
     
     fetch('./api/qa_schedule_api.php?action=schedule_po', {
         method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
         body: formData
     })
     .then(r => r.json())
@@ -995,9 +1074,9 @@ function inlineAddPo(id, poNumber) {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: `${poNumber} added to schedule`,
+                title: res.new_round ? `${poNumber} เปิดตรวจรอบใหม่เรียบร้อย` : `${poNumber} added to schedule`,
                 showConfirmButton: false,
-                timer: 2000
+                timer: 2200
             });
             
             loadQASchedule();
@@ -1045,9 +1124,16 @@ function loadQcUsers() {
                     datalist.innerHTML = '';
                     res.data.forEach(user => {
                         const name = user.aka ? `${user.fullname} (${user.aka})` : user.fullname;
-                        datalist.innerHTML += `<option value="${user.fullname}">${name}</option>`;
+                        datalist.innerHTML += `<option value="${escapeQaHtml(user.fullname)}">${escapeQaHtml(name)}</option>`;
                     });
                 }
+                document.querySelectorAll('.qc-user-select').forEach(select => {
+                    select.innerHTML = '<option value="">- Select -</option>';
+                    res.data.forEach(user => {
+                        const name = user.aka ? `${user.fullname} (${user.aka})` : user.fullname;
+                        select.innerHTML += `<option value="${escapeQaHtml(user.fullname)}">${escapeQaHtml(name)}</option>`;
+                    });
+                });
             }
         });
 }
@@ -1139,6 +1225,7 @@ function saveBulkUpdate() {
     
     fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
         method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
         body: formData
     })
     .then(r => r.json())
@@ -1299,6 +1386,7 @@ function saveNewTicket() {
     
     fetch('./api/qa_schedule_api.php?action=bulk_update_ticket', {
         method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getQmsCsrfToken() },
         body: formData
     })
     .then(r => r.json())
@@ -1310,9 +1398,9 @@ function saveNewTicket() {
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Ticket Created Successfully',
+                title: res.message || 'Ticket Created Successfully',
                 showConfirmButton: false,
-                timer: 2000
+                timer: 2200
             });
         } else {
             alert('Error: ' + res.message);
@@ -1362,47 +1450,55 @@ function viewDayJobs(dateStr) {
         let html = '';
         dayEvents.forEach(evt => {
             const po = evt.extendedProps.poData;
-            
-            const stUpper = (po.inspection_status || '').toString().trim().toUpperCase();
-            const resUpper = (po.inspection_result || '').toString().trim().toUpperCase();
-            const isPassed = (resUpper === 'PASS' || stUpper === 'PASS');
-            const isFailed = (resUpper === 'FAIL');
-            const isDone = (isPassed || isFailed || stUpper === 'DONE');
-            const isInProgress = (!isDone && stUpper === 'IN_PROGRESS');
+            const st = normalizeQaStatusClient(po);
+            const roundNo = Number(po.round_no || 1);
+            const totalRounds = Number(po.total_rounds || roundNo || 1);
+            const isArchived = (po.is_latest === 0 || po.is_latest === '0' || po.is_latest === false);
+            const roundChip = totalRounds > 1
+                ? `<span class="badge ${isArchived ? 'bg-light text-secondary border' : 'bg-info-subtle text-info-emphasis border border-info-subtle'} ms-1">R${roundNo}/${totalRounds}</span>`
+                : '';
 
             let statusBadge = '<span class="badge bg-secondary">WAITING</span>';
-            if (isInProgress) {
+            if (st.isInProgress) {
                 statusBadge = '<span class="badge bg-warning text-dark">IN PROGRESS</span>';
-            } else if (isDone) {
+            } else if (st.isFailed) {
+                statusBadge = '<span class="badge bg-danger">DONE</span>';
+            } else if (st.isDone) {
                 statusBadge = '<span class="badge bg-success">DONE</span>';
             }
             
             let resultBadge = '';
-            if (isPassed) {
-                resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
-            } else if (isFailed) {
+            if (st.isFailed) {
                 resultBadge = '<span class="badge bg-danger ms-1">FAIL</span>';
-            } else if (resUpper === 'HOLD') {
+            } else if (st.isPassed) {
+                resultBadge = '<span class="badge bg-success ms-1">PASS</span>';
+            } else if (st.resUpper === 'HOLD') {
                 resultBadge = '<span class="badge bg-warning text-dark ms-1">HOLD</span>';
             }
+            if (isArchived) {
+                resultBadge += '<span class="badge bg-light text-muted border ms-1">History</span>';
+            }
+
+            const historyArg = po.history_id ? Number(po.history_id) : 'null';
 
             html += `
                 <div class="col-md-6 mb-3">
-                    <div class="card shadow-sm border-0 h-100 position-relative">
+                    <div class="card shadow-sm border-0 h-100 position-relative ${isArchived ? 'opacity-75 bg-light' : ''}">
+                        ${!isArchived ? `
                         <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
-                            <input class="form-check-input day-po-checkbox" type="checkbox" value="${po.id}" style="transform: scale(1.3); cursor:pointer;" onclick="updateDayBulkCount()">
-                        </div>
-                        <div class="card-body" style="cursor:pointer;" onclick="openUpdateModalFromDayView(${po.id})">
-                            <h6 class="fw-bold text-primary mb-1 pe-4">${po.po_number} <span class="badge bg-info ms-2">${po.sku || ''}</span></h6>
-                            <p class="small text-muted mb-2">${po.description || '-'}</p>
+                            <input class="form-check-input day-po-checkbox" type="checkbox" value="${Number(po.id)}" style="transform: scale(1.3); cursor:pointer;" onclick="updateDayBulkCount()">
+                        </div>` : ''}
+                        <div class="card-body" style="cursor:pointer;" onclick="openUpdateModalFromDayView(${Number(po.id)}, ${historyArg})">
+                            <h6 class="fw-bold text-primary mb-1 pe-4">${escapeQaHtml(po.po_number)} <span class="badge bg-info ms-1">${escapeQaHtml(po.sku || '')}</span>${roundChip}</h6>
+                            <p class="small text-muted mb-2">${escapeQaHtml(po.description || '-')}</p>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="small fw-bold">Qty: ${po.quantity}</span>
-                                <span class="small fw-bold text-secondary"><i class="fas fa-map-marker-alt"></i> ${po.dc_location || '-'}</span>
+                                <span class="small fw-bold">Qty: ${escapeQaHtml(po.quantity)}</span>
+                                <span class="small fw-bold text-secondary"><i class="fas fa-map-marker-alt"></i> ${escapeQaHtml(po.dc_location || '-')}</span>
                             </div>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex flex-wrap gap-1">
                                 ${statusBadge} ${resultBadge}
                             </div>
-                            ${po.qa_inspector ? `<div class="mt-2 small"><i class="fas fa-user-check text-muted"></i> ${po.qa_inspector}</div>` : ''}
+                            ${po.qa_inspector ? `<div class="mt-2 small"><i class="fas fa-user-check text-muted"></i> ${escapeQaHtml(po.qa_inspector)}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -1415,11 +1511,20 @@ function viewDayJobs(dateStr) {
     modal.show();
 }
 
-function openUpdateModalFromDayView(poId) {
+function openUpdateModalFromDayView(poId, historyId = null) {
     const eventsData = window.qaEventsData;
-    const po = eventsData?.find(e => e.extendedProps.poData.id == poId)?.extendedProps.poData;
+    const match = eventsData?.find(e => {
+        const p = e.extendedProps?.poData;
+        if (!p) return false;
+        if (historyId !== null && historyId !== undefined && p.history_id) {
+            return Number(p.history_id) === Number(historyId);
+        }
+        return String(p.id) === String(poId);
+    });
+    const po = match?.extendedProps?.poData;
     if (po) {
-        bootstrap.Modal.getInstance(document.getElementById('viewDayJobsModal')).hide();
+        const inst = bootstrap.Modal.getInstance(document.getElementById('viewDayJobsModal'));
+        if (inst) inst.hide();
         openUpdateModal(po);
     }
 }

@@ -89,16 +89,70 @@
 
 <!-- Modal Update Inspection Result -->
 <div class="modal fade" id="updateInspectionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content shadow border-0">
-            <div class="modal-header bg-white border-bottom">
-                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-primary"></i>Update Inspection Result</h5>
-                <button type="button" class="btn btn-sm btn-outline-warning ms-3 fw-bold" onclick="openEditPoModal()"><i class="fas fa-pencil-alt me-1"></i> Edit PO Data</button>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-white border-bottom flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h5 class="modal-title fw-bold text-dark mb-0"><i class="fas fa-edit me-2 text-primary"></i>Update Inspection Result</h5>
+                    <span id="inspectRoundBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle">Round 1</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <button type="button" id="btnShowReopenSection" class="btn btn-sm btn-outline-warning fw-bold d-none" onclick="toggleReopenRoundPanel()">
+                        <i class="fas fa-redo me-1"></i> เปิดตรวจรอบใหม่
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" onclick="openEditPoModal()"><i class="fas fa-pencil-alt me-1"></i> Edit PO Data</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
             </div>
             <div class="modal-body bg-light">
+                <div id="inspectHistoryReadonlyBanner" class="alert alert-warning py-2 small d-none mb-3">
+                    <i class="fas fa-history me-1"></i> กำลังดูประวัติการตรวจ <strong>รอบที่ <span id="inspectBannerRoundNo">1</span></strong> (Read-Only) หากต้องการตรวจใหม่กรุณากดปุ่ม <strong>"เปิดตรวจรอบใหม่"</strong> ด้านบน
+                </div>
+
+                <div id="reopenRoundPanel" class="card border-warning shadow-sm mb-3 d-none">
+                    <div class="card-header bg-warning-subtle text-dark py-2 fw-bold small d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-redo me-1"></i> เปิดตรวจ PO นี้รอบใหม่ (ประวัติรอบเดิมจะถูกเก็บไว้ครบถ้วน)</span>
+                        <button type="button" class="btn-close btn-sm" onclick="toggleReopenRoundPanel(false)"></button>
+                    </div>
+                    <div class="card-body bg-white p-3">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-bold small text-muted mb-1">วันที่กำหนดตรวจรอบใหม่ <span class="text-danger">*</span></label>
+                                <input type="date" id="reopen_schedule_date" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-bold small text-muted mb-1">Ticket Number ใหม่</label>
+                                <input type="text" id="reopen_ticket_number" class="form-control form-control-sm" placeholder="INSP-...">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-bold small text-muted mb-1">ผู้ตรวจ (Inspector)</label>
+                                <input type="text" id="reopen_qa_inspector" class="form-control form-control-sm" list="qc-users-list" placeholder="- Optional -">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold small text-muted mb-1">รูปแบบการตรวจ</label>
+                                <select id="reopen_inspect_type" class="form-select form-select-sm">
+                                    <option value="">- คงตามเดิม / ไม่ระบุ -</option>
+                                    <option value="Remote">Remote</option>
+                                    <option value="On-site">On-site</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold small text-muted mb-1">หมายเหตุการเปิดรอบใหม่</label>
+                                <input type="text" id="reopen_remark" class="form-control form-control-sm" placeholder="เช่น Re-inspection หลังแก้ไขงาน FAIL">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-sm btn-light border" onclick="toggleReopenRoundPanel(false)">ยกเลิก</button>
+                            <button type="button" id="btnConfirmReopenRound" class="btn btn-sm btn-warning fw-bold px-3" onclick="submitReopenRound()">
+                                <i class="fas fa-check me-1"></i> ยืนยันเปิดรอบใหม่
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <form id="formUpdateInspection">
                     <input type="hidden" id="inspect_po_id" name="id">
+                    <input type="hidden" id="inspect_history_id" name="history_id">
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">PO Number</label>
@@ -197,6 +251,16 @@
                         <textarea class="form-control" name="remark" id="inspect_remark" rows="3" placeholder="Notes..."></textarea>
                     </div>
                 </form>
+
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-bold text-muted text-uppercase"><i class="fas fa-history me-1"></i> Inspection Round History</span>
+                        <span id="poHistoryCountBadge" class="badge bg-white text-dark border">0</span>
+                    </div>
+                    <div id="poHistoryTimeline" class="d-flex flex-column gap-2" style="max-height: 190px; overflow-y: auto;">
+                        <div class="text-muted small py-2">Loading history...</div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer bg-white d-flex justify-content-between border-top">
                 <button type="button" class="btn btn-outline-danger" id="btnRemoveScheduleModal">
@@ -204,7 +268,7 @@
                 </button>
                 <div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary fw-bold px-4" onclick="saveInspectionResult()">
+                    <button type="button" class="btn btn-primary fw-bold px-4" id="btnSaveInspectionResult" onclick="saveInspectionResult()">
                         <i class="fas fa-save me-1"></i> Save Result
                     </button>
                 </div>

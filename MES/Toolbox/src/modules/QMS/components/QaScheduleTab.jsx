@@ -125,8 +125,8 @@ export default function QaScheduleTab({ isOnline }) {
   const handleInlineAddPo = async (po) => {
     if (!isOnline) return;
     try {
-      await qmsScheduleApi.schedulePo(po.id, startDate || formatLocalYmd());
-      toast.success(`เพิ่ม PO ${po.po_number} เข้าตารางตรวจแล้ว`);
+      const res = await qmsScheduleApi.schedulePo(po.id, startDate || formatLocalYmd());
+      toast.success(res.message || `เพิ่ม PO ${po.po_number} เข้าตารางตรวจแล้ว`);
       setInlineSearch('');
       setInlineResults([]);
       loadSchedule();
@@ -167,11 +167,14 @@ export default function QaScheduleTab({ isOnline }) {
 
   const handlePrintSchedule = () => {
     const bodyRows = filteredRows.map((po) => {
-      const { isPassed, isFailed, isInProgress } = normalizeQaStatus(po);
-      const stText = isFailed ? 'FAIL' : isPassed ? 'PASS' : isInProgress ? 'IN PROGRESS' : 'WAITING';
+      const { isPassed, isFailed, isInProgress, isDone } = normalizeQaStatus(po);
+      const stText = isFailed ? 'FAIL' : isPassed ? 'PASS' : isDone ? 'DONE' : isInProgress ? 'IN PROGRESS' : 'WAITING';
+      const roundNo = Number(po.round_no || 1);
+      const totalRounds = Number(po.total_rounds || roundNo || 1);
+      const roundLabel = totalRounds > 1 ? ` (R${roundNo}/${totalRounds})` : '';
       return `<tr>
         <td>${escapeHtml(po.ticket_number || '-')}</td>
-        <td><b>${escapeHtml(po.po_number)}</b></td>
+        <td><b>${escapeHtml(po.po_number)}</b>${escapeHtml(roundLabel)}</td>
         <td>${escapeHtml(po.sku)} - ${escapeHtml(po.description || '')}</td>
         <td style="text-align:right">${escapeHtml(formatQmsQty(po.quantity))}</td>
         <td>${escapeHtml(po.dc_location || '-')}</td>
@@ -324,8 +327,18 @@ export default function QaScheduleTab({ isOnline }) {
                 <th className="px-3 py-3 text-center w-10">
                   <input
                     type="checkbox"
-                    checked={filteredRows.length > 0 && selectedIds.length === filteredRows.length}
-                    onChange={() => setSelectedIds(selectedIds.length === filteredRows.length ? [] : filteredRows.map((r) => r.id))}
+                    checked={
+                      filteredRows.some((r) => Number(r.is_latest ?? 1) === 1 && r.is_latest !== false)
+                      && selectedIds.length === filteredRows.filter((r) => Number(r.is_latest ?? 1) === 1 && r.is_latest !== false).length
+                    }
+                    onChange={() => {
+                      const activeIds = [...new Set(
+                        filteredRows
+                          .filter((r) => Number(r.is_latest ?? 1) === 1 && r.is_latest !== false)
+                          .map((r) => r.id)
+                      )];
+                      setSelectedIds(selectedIds.length === activeIds.length ? [] : activeIds);
+                    }}
                   />
                 </th>
                 <th className="px-3 py-3 font-bold">Ticket No.</th>
@@ -348,9 +361,14 @@ export default function QaScheduleTab({ isOnline }) {
               ) : (
                 filteredRows.map((po) => {
                   const st = normalizeQaStatus(po);
+                  const roundNo = Number(po.round_no || 1);
+                  const totalRounds = Number(po.total_rounds || roundNo || 1);
+                  const isArchived = Number(po.is_latest ?? 1) === 0 || po.is_latest === false;
+                  const rowKey = po.history_id ? `hist-${po.history_id}` : `po-${po.id}`;
                   const urgency = getLoadingUrgency(po);
-                  const rowBg = urgency === 'overdue' ? 'bg-rose-50/70 dark:bg-rose-950/20'
-                    : urgency === 'approaching' ? 'bg-amber-50/70 dark:bg-amber-950/20' : '';
+                  const rowBg = isArchived ? 'bg-slate-50/70 dark:bg-slate-900/40 opacity-80'
+                    : urgency === 'overdue' ? 'bg-rose-50/70 dark:bg-rose-950/20'
+                      : urgency === 'approaching' ? 'bg-amber-50/70 dark:bg-amber-950/20' : '';
                   const stBadge = st.isFailed ? 'bg-rose-100 text-rose-700'
                     : st.isDone ? 'bg-emerald-100 text-emerald-700'
                       : st.isInProgress ? 'bg-amber-100 text-amber-800'
@@ -358,19 +376,33 @@ export default function QaScheduleTab({ isOnline }) {
 
                   return (
                     <tr
-                      key={po.id}
+                      key={rowKey}
                       onClick={() => setInspectPo(po)}
                       className={`hover:bg-blue-50/50 dark:hover:bg-slate-800/50 cursor-pointer ${rowBg}`}
                     >
                       <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(po.id)}
-                          onChange={() => setSelectedIds((p) => p.includes(po.id) ? p.filter((x) => x !== po.id) : [...p, po.id])}
-                        />
+                        {!isArchived && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(po.id)}
+                            onChange={() => setSelectedIds((p) => p.includes(po.id) ? p.filter((x) => x !== po.id) : [...p, po.id])}
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">{po.ticket_number || '-'}</td>
-                      <td className="px-3 py-3 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{po.po_number}</td>
+                      <td className="px-3 py-3 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span>{po.po_number}</span>
+                          {totalRounds > 1 && (
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isArchived ? 'bg-slate-200 text-slate-700' : 'bg-sky-100 text-sky-800'}`}>
+                              R{roundNo}/{totalRounds}
+                            </span>
+                          )}
+                          {isArchived && (
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-600 text-[10px]">History</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-3">
                         <div className="font-bold text-slate-900 dark:text-white">{po.sku}</div>
                         <div className="text-xs text-slate-500 line-clamp-1">{po.description} {po.color ? `(${po.color})` : ''}</div>
@@ -390,10 +422,12 @@ export default function QaScheduleTab({ isOnline }) {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-semibold">
                             <UserCheck className="w-3 h-3" /> {po.qa_inspector}
                           </span>
-                        ) : (
+                        ) : !isArchived ? (
                           <button type="button" disabled={!isOnline} onClick={() => handleAssignToMe(po)} className="px-2 py-1 rounded border border-blue-300 text-blue-600 font-bold hover:bg-blue-50">
                             Assign to Me
                           </button>
+                        ) : (
+                          <span className="text-slate-400">-</span>
                         )}
                       </td>
                       <td className="px-3 py-3 text-center whitespace-nowrap">
@@ -403,9 +437,11 @@ export default function QaScheduleTab({ isOnline }) {
                         {po.inspect_type && <div className="text-[10px] font-bold text-slate-500 mt-0.5">{po.inspect_type}</div>}
                       </td>
                       <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button type="button" onClick={() => setEditPo(po)} className="min-w-[34px] min-h-[34px] inline-flex items-center justify-center rounded-lg hover:bg-amber-100 text-amber-600" title="Edit PO Details">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                        {!isArchived && (
+                          <button type="button" onClick={() => setEditPo(po)} className="min-w-[34px] min-h-[34px] inline-flex items-center justify-center rounded-lg hover:bg-amber-100 text-amber-600" title="Edit PO Details">
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -455,12 +491,20 @@ export default function QaScheduleTab({ isOnline }) {
         ) : (
           filteredRows.map((po) => {
             const st = normalizeQaStatus(po);
+            const roundNo = Number(po.round_no || 1);
+            const totalRounds = Number(po.total_rounds || roundNo || 1);
+            const isArchived = Number(po.is_latest ?? 1) === 0 || po.is_latest === false;
+            const rowKey = po.history_id ? `mob-hist-${po.history_id}` : `mob-po-${po.id}`;
             const stBadge = st.isFailed ? 'bg-rose-100 text-rose-700' : st.isDone ? 'bg-emerald-100 text-emerald-700' : st.isInProgress ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700';
             return (
-              <div key={po.id} onClick={() => setInspectPo(po)} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-blue-600">{po.po_number}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${stBadge}`}>{st.isFailed ? 'FAIL' : st.isDone ? 'PASS' : st.isInProgress ? 'IN PROGRESS' : 'WAITING'}</span>
+              <div key={rowKey} onClick={() => setInspectPo(po)} className={`p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2 ${isArchived ? 'opacity-75' : ''}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono font-bold text-blue-600">{po.po_number}</span>
+                    {totalRounds > 1 && <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold">R{roundNo}/{totalRounds}</span>}
+                    {isArchived && <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px]">History</span>}
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${stBadge}`}>{st.isFailed ? 'FAIL' : st.isPassed ? 'PASS' : st.isDone ? 'DONE' : st.isInProgress ? 'IN PROGRESS' : 'WAITING'}</span>
                 </div>
                 <div className="text-xs font-bold">{po.sku} • {po.description}</div>
                 <div className="flex items-center justify-between text-xs text-slate-500">

@@ -10,8 +10,18 @@ require_once __DIR__ . '/../../components/init.php';
 
 if (!isset($_SESSION['user'])) {
     http_response_code(401); 
-    echo json_encode(['success'=>false, 'message'=>'Unauthorized']); 
+    echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Unauthorized'], JSON_UNESCAPED_UNICODE); 
     exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $clientToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? '';
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    if (empty($sessionToken) || !hash_equals($sessionToken, $clientToken)) {
+        http_response_code(403);
+        echo json_encode(['success'=>false, 'data'=>null, 'message'=>'CSRF token validation failed.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 $table = defined('SALES_ORDERS_TABLE') ? SALES_ORDERS_TABLE : 'SALES_ORDERS';
@@ -329,9 +339,37 @@ try {
                         T.is_production_done = S.pdone,
                         T.loading_date = COALESCE(S.ldate, T.loading_date),
                         T.is_loading_done = S.ldone,
-                        T.ticket_number = S.ticket, 
-                        T.inspection_date = S.idate, 
-                        T.inspection_status = S.istat, 
+                        T.ticket_number = CASE
+                            WHEN NULLIF(LTRIM(RTRIM(ISNULL(T.ticket_number, ''))), '') IS NOT NULL
+                                 AND (
+                                     T.inspection_date IS NOT NULL
+                                     OR UPPER(LTRIM(RTRIM(ISNULL(T.inspection_result, '')))) IN ('PASS', 'FAIL')
+                                     OR UPPER(LTRIM(RTRIM(ISNULL(T.inspection_status, '')))) IN ('DONE', 'IN_PROGRESS', 'WAITING')
+                                 )
+                                THEN T.ticket_number
+                            ELSE COALESCE(NULLIF(LTRIM(RTRIM(ISNULL(S.ticket, ''))), ''), T.ticket_number)
+                        END,
+                        T.inspection_date = COALESCE(T.inspection_date, S.idate),
+                        T.inspection_status = CASE
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(T.inspection_result, '')))) IN ('PASS', 'FAIL')
+                              OR UPPER(LTRIM(RTRIM(ISNULL(T.inspection_status, '')))) IN ('DONE', 'IN_PROGRESS', 'WAITING')
+                              OR T.inspection_date IS NOT NULL
+                              OR NULLIF(LTRIM(RTRIM(ISNULL(T.ticket_number, ''))), '') IS NOT NULL
+                                THEN T.inspection_status
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(S.istat, '')))) = 'PASS'
+                                THEN 'DONE'
+                            ELSE COALESCE(NULLIF(LTRIM(RTRIM(ISNULL(S.istat, ''))), ''), T.inspection_status)
+                        END,
+                        T.inspection_result = CASE
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(T.inspection_result, '')))) IN ('PASS', 'FAIL')
+                              OR UPPER(LTRIM(RTRIM(ISNULL(T.inspection_status, '')))) IN ('DONE', 'IN_PROGRESS', 'WAITING')
+                              OR T.inspection_date IS NOT NULL
+                              OR NULLIF(LTRIM(RTRIM(ISNULL(T.ticket_number, ''))), '') IS NOT NULL
+                                THEN T.inspection_result
+                            WHEN UPPER(LTRIM(RTRIM(ISNULL(S.istat, '')))) = 'PASS'
+                                THEN 'PASS'
+                            ELSE T.inspection_result
+                        END,
                         T.remark = S.rem, 
                         T.is_confirmed = S.iconf,
                         T.custom_order = S.corder, 
@@ -339,13 +377,17 @@ try {
                     WHEN NOT MATCHED THEN INSERT 
                         (order_date, description, color, sku, po_number, quantity, dc_location, 
                         loading_week, shipping_week, production_date, production_end_date, is_production_done, 
-                        loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, remark, is_confirmed, custom_order, team)
-                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.penddate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate, S.istat, S.rem, S.iconf, S.corder, ISNULL(NULLIF(S.team, ''), 'Team1'));";
+                        loading_date, is_loading_done, ticket_number, inspection_date, inspection_status, inspection_result, remark, is_confirmed, custom_order, team)
+                    VALUES (S.odate, S.descr, S.color, S.sku, S.po, S.qty, S.dc, S.lweek, S.sweek, S.pdate, S.penddate, S.pdone, S.ldate, S.ldone, S.ticket, S.idate,
+                        CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(S.istat, '')))) = 'PASS' THEN 'DONE' ELSE NULLIF(LTRIM(RTRIM(ISNULL(S.istat, ''))), '') END,
+                        CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(S.istat, '')))) = 'PASS' THEN 'PASS' ELSE NULL END,
+                        S.rem, S.iconf, S.corder, ISNULL(NULLIF(S.team, ''), 'Team1'));";
 
             $stmt = $pdo->prepare($sql);
             $count = 0;
             $skippedCount = 0;
             $errorLogs = [];
+            $samplePos = [];
             
             foreach ($in['data'] as $row) {
                 try {
@@ -374,6 +416,9 @@ try {
                         $row['team']
                     ]);
                     $count++;
+                    if (count($samplePos) < 10 && !empty($row['po_number'])) {
+                        $samplePos[] = $row['po_number'];
+                    }
                 } catch (Exception $ex) {
                     $skippedCount++;
                     $errorLogs[] = "PO {$row['po_number']}: " . $ex->getMessage();
@@ -381,12 +426,25 @@ try {
             }
             
             $pdo->commit();
+            if (function_exists('writeLog')) {
+                writeLog(
+                    $pdo,
+                    'IMPORT',
+                    'SALES_ORDER',
+                    'BATCH_' . $count,
+                    null,
+                    ['imported_count' => $count, 'skipped_count' => $skippedCount, 'sample_pos' => $samplePos],
+                    "Sales JSON import: {$count} imported, {$skippedCount} skipped (QA fields protected)"
+                );
+            }
             echo json_encode([
                 'success' => true,
+                'data' => ['imported_count' => $count, 'skipped_count' => $skippedCount],
+                'message' => "Imported {$count} rows",
                 'imported_count' => $count,
                 'skipped_count' => $skippedCount,
                 'errors' => array_slice($errorLogs, 0, 10)
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
             break;
 
         // 3. REORDER
@@ -404,84 +462,187 @@ try {
 
         // 4. UPDATE CHECKBOX/BUTTON
         case 'update_check':
-            $in = json_decode(file_get_contents('php://input'), true);
-            $val = $in['checked'] ? 1 : 0;
-            if ($in['field'] == 'insp') {
-                $statusVal = $in['checked'] ? 'DONE' : 'WAITING';
-                $resultVal = $in['checked'] ? 'PASS' : null;
-                $pdo->prepare("UPDATE $table SET inspection_status = ?, inspection_result = ?, updated_at = GETDATE() WHERE id = ?")->execute([$statusVal, $resultVal, $in['id']]);
+            $in = json_decode(file_get_contents('php://input'), true) ?: [];
+            $id = intval($in['id'] ?? 0);
+            $field = $in['field'] ?? '';
+            $val = !empty($in['checked']) ? 1 : 0;
+            if ($id <= 0) {
+                http_response_code(400);
+                echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Invalid order ID'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            $stmtOld = $pdo->prepare("SELECT id, po_number, inspection_date, inspection_status, inspection_result, is_production_done, is_loading_done, is_confirmed, loading_date, production_end_date FROM $table WITH (NOLOCK) WHERE id = ?");
+            $stmtOld->execute([$id]);
+            $oldRow = $stmtOld->fetch(PDO::FETCH_ASSOC);
+            if (!$oldRow) {
+                http_response_code(404);
+                echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Sales order not found'], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+
+            if ($field === 'insp') {
+                $curRes = strtoupper(trim((string)($oldRow['inspection_result'] ?? '')));
+                $stmtHist = $pdo->prepare("SELECT TOP (1) id, inspection_result FROM dbo.QMS_PO_INSPECTION_HISTORY WITH (NOLOCK) WHERE sales_order_id = ? AND is_latest = 1 ORDER BY round_no DESC, id DESC");
+                $stmtHist->execute([$id]);
+                $latestHist = $stmtHist->fetch(PDO::FETCH_ASSOC);
+                $histRes = strtoupper(trim((string)($latestHist['inspection_result'] ?? '')));
+
+                if ($curRes === 'FAIL' || $histRes === 'FAIL') {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success'=>false,
+                        'data'=>null,
+                        'message'=>'ไม่สามารถสลับสถานะ PO ที่ผลตรวจ QA เป็น FAIL ได้ กรุณาเปิดตรวจรอบใหม่ในระบบ iQMS'
+                    ], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
+
+                $statusVal = $val ? 'DONE' : 'WAITING';
+                $resultVal = $val ? 'PASS' : null;
+                $pdo->beginTransaction();
+                $pdo->prepare("UPDATE $table SET inspection_status = ?, inspection_result = ?, updated_at = GETDATE() WHERE id = ?")->execute([$statusVal, $resultVal, $id]);
+                if ($latestHist) {
+                    $pdo->prepare("UPDATE dbo.QMS_PO_INSPECTION_HISTORY SET inspection_status = ?, inspection_result = ?, updated_at = GETDATE() WHERE id = ?")
+                        ->execute([$statusVal, $resultVal, $latestHist['id']]);
+                }
+                $pdo->commit();
+                if (function_exists('writeLog')) {
+                    writeLog($pdo, 'UPDATE', 'SALES_ORDER', $id, ['inspection_status' => $oldRow['inspection_status'], 'inspection_result' => $oldRow['inspection_result']], ['inspection_status' => $statusVal, 'inspection_result' => $resultVal], "Updated inspection check on PO {$oldRow['po_number']}");
+                }
             } else {
-                $col = ($in['field']=='prod')?'is_production_done':(($in['field']=='load')?'is_loading_done':(($in['field']=='confirm')?'is_confirmed':''));
-                if($col) {
+                $col = ($field === 'prod') ? 'is_production_done' : (($field === 'load') ? 'is_loading_done' : (($field === 'confirm') ? 'is_confirmed' : ''));
+                if ($col) {
                     if ($col === 'is_loading_done' && $val == 1) {
-                        $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                        $pdo->prepare("UPDATE $table SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                     } else if ($col === 'is_production_done' && $val == 1) {
-                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$in['id']]);
+                        $pdo->prepare("UPDATE $table SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?")->execute([$id]);
                     } else {
-                        $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
+                        $pdo->prepare("UPDATE $table SET $col = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
+                    }
+                    if (function_exists('writeLog')) {
+                        writeLog($pdo, 'UPDATE', 'SALES_ORDER', $id, [$col => $oldRow[$col] ?? null], [$col => $val], "Updated {$col} on PO {$oldRow['po_number']}");
                     }
                 }
             }
-            echo json_encode(['success'=>true]); 
+            echo json_encode(['success'=>true, 'data'=>['id'=>$id], 'message'=>'Updated'], JSON_UNESCAPED_UNICODE); 
             break;
 
         // 5. UPDATE CELL
         case 'update_cell':
-            $in = json_decode(file_get_contents('php://input'), true);
+            $in = json_decode(file_get_contents('php://input'), true) ?: [];
+            $id = intval($in['id'] ?? 0);
+            $field = $in['field'] ?? '';
             $allowed = ['quantity', 'loading_week', 'shipping_week', 'remark', 'dc_location', 'order_date', 'production_date', 'production_end_date', 'loading_date', 'inspection_date', 'ticket_number', 'team'];
-            if (in_array($in['field'], $allowed)) {
-                $val = $in['value'] ?: null;
-                if ($val && strpos($in['field'], 'date') !== false) $val = $fnDate($val);
+            if ($id > 0 && in_array($field, $allowed, true)) {
+                $stmtOld = $pdo->prepare("SELECT id, po_number, inspection_date, ticket_number, inspection_status, inspection_result, {$field} AS cur_val FROM $table WITH (NOLOCK) WHERE id = ?");
+                $stmtOld->execute([$id]);
+                $oldRow = $stmtOld->fetch(PDO::FETCH_ASSOC);
+                if (!$oldRow) {
+                    http_response_code(404);
+                    echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Sales order not found'], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
 
-                $pdo->prepare("UPDATE $table SET {$in['field']} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $in['id']]);
+                $curRes = strtoupper(trim((string)($oldRow['inspection_result'] ?? '')));
+                $curSt = strtoupper(trim((string)($oldRow['inspection_status'] ?? '')));
+                if (in_array($field, ['inspection_date', 'ticket_number'], true) && ($curRes === 'FAIL' || $curSt === 'DONE')) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success'=>false,
+                        'data'=>null,
+                        'message'=>'PO นี้ตรวจ QA เสร็จสิ้นแล้ว กรุณาแก้ไขวันที่ตรวจหรือเปิดตรวจรอบใหม่ในระบบ iQMS เพื่อไม่ให้ประวัติการตรวจสูญหาย'
+                    ], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
 
-                echo json_encode(['success'=>true]);
+                $val = ($in['value'] ?? '') !== '' ? $in['value'] : null;
+                if ($val !== null && strpos($field, 'date') !== false) {
+                    $val = $fnDate($val);
+                }
+
+                $pdo->beginTransaction();
+                $pdo->prepare("UPDATE $table SET {$field} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$val, $id]);
+                if ($field === 'inspection_date') {
+                    $pdo->prepare("UPDATE dbo.QMS_PO_INSPECTION_HISTORY SET scheduled_date = ?, updated_at = GETDATE() WHERE sales_order_id = ? AND is_latest = 1")->execute([$val, $id]);
+                } elseif ($field === 'ticket_number') {
+                    $pdo->prepare("UPDATE dbo.QMS_PO_INSPECTION_HISTORY SET ticket_number = ?, updated_at = GETDATE() WHERE sales_order_id = ? AND is_latest = 1")->execute([$val, $id]);
+                }
+                $pdo->commit();
+
+                if (function_exists('writeLog')) {
+                    writeLog($pdo, 'UPDATE', 'SALES_ORDER', $id, [$field => $oldRow['cur_val'] ?? null], [$field => $val], "Inline updated {$field} on PO {$oldRow['po_number']}");
+                }
+                echo json_encode(['success'=>true, 'data'=>['id'=>$id], 'message'=>'Updated'], JSON_UNESCAPED_UNICODE);
             } else {
-                echo json_encode(['success'=>false, 'message'=>'Field not allowed']); 
+                http_response_code(400);
+                echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Field not allowed'], JSON_UNESCAPED_UNICODE); 
             }
             break;
 
         // 6. CREATE SINGLE
         case 'create_single':
-            $in = json_decode(file_get_contents('php://input'), true);
+            $in = json_decode(file_get_contents('php://input'), true) ?: [];
             if (empty(trim($in['sku'] ?? ''))) {
-                echo json_encode(['success' => false, 'message' => 'ไม่สามารถบันทึกได้: กรุณาระบุรหัส SKU หรือรหัสสินค้า']);
+                echo json_encode(['success' => false, 'data' => null, 'message' => 'ไม่สามารถบันทึกได้: กรุณาระบุรหัส SKU หรือรหัสสินค้า'], JSON_UNESCAPED_UNICODE);
                 break;
             }
             $maxOrder = $pdo->query("SELECT MAX(custom_order) FROM $table WITH (NOLOCK)")->fetchColumn();
             $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
             $oDate = $fnDate($in['order_date'] ?: null);
             $team = !empty($in['team']) ? $in['team'] : 'Team1'; // [ADDED] Set Default
+            $poNumber = trim((string)($in['po_number'] ?? ''));
 
             $sql = "INSERT INTO $table (po_number, sku, order_date, description, color, quantity, dc_location, loading_week, shipping_week, remark, custom_order, team, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
             $pdo->prepare($sql)->execute([
-                $in['po_number'], $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, 
+                $poNumber, $in['sku'], $oDate, $in['description']??'', $in['color']??'', $in['quantity']??0, 
                 $in['dc_location']??'', $in['loading_week']??'', $in['shipping_week']??'', $in['remark']??'', $nextOrder, $team
             ]);
-            echo json_encode(['success'=>true]); 
+            $newId = $pdo->lastInsertId();
+            if (function_exists('writeLog')) {
+                writeLog($pdo, 'INSERT', 'SALES_ORDER', $newId ?: $poNumber, null, ['po_number' => $poNumber, 'sku' => $in['sku'], 'quantity' => $in['quantity'] ?? 0, 'team' => $team], "Created sales order {$poNumber}");
+            }
+            echo json_encode(['success'=>true, 'data'=>['id'=>$newId], 'message'=>'Created'], JSON_UNESCAPED_UNICODE); 
             break;
 
         // 7. DELETE SINGLE
         case 'delete_single':
-            $in = json_decode(file_get_contents('php://input'), true);
-            $id = $in['id'] ?? 0;
-            if ($id) {
+            $in = json_decode(file_get_contents('php://input'), true) ?: [];
+            $id = intval($in['id'] ?? 0);
+            if ($id > 0) {
+                $stmtOld = $pdo->prepare("SELECT id, po_number, sku, quantity, inspection_status, inspection_result FROM $table WITH (NOLOCK) WHERE id = ?");
+                $stmtOld->execute([$id]);
+                $oldRow = $stmtOld->fetch(PDO::FETCH_ASSOC);
+                if (!$oldRow) {
+                    http_response_code(404);
+                    echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Sales order not found'], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
+                $pdo->beginTransaction();
+                $pdo->prepare("DELETE FROM dbo.QMS_PO_INSPECTION_HISTORY WHERE sales_order_id = ?")->execute([$id]);
                 $stmt = $pdo->prepare("DELETE FROM $table WHERE id = ?");
                 $stmt->execute([$id]);
-                echo json_encode(['success'=>true]);
+                $pdo->commit();
+                if (function_exists('writeLog')) {
+                    writeLog($pdo, 'DELETE', 'SALES_ORDER', $id, $oldRow, null, "Deleted sales order {$oldRow['po_number']}");
+                }
+                echo json_encode(['success'=>true, 'data'=>['id'=>$id], 'message'=>'Deleted'], JSON_UNESCAPED_UNICODE);
             } else {
-                echo json_encode(['success'=>false, 'message'=>'Invalid ID']);
+                echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Invalid ID'], JSON_UNESCAPED_UNICODE);
             }
             break;
 
         default:
-            echo json_encode(['success'=>false, 'message'=>'Invalid Action']);
+            echo json_encode(['success'=>false, 'data'=>null, 'message'=>'Invalid Action'], JSON_UNESCAPED_UNICODE);
             break;
     }
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+    if (isset($pdo) && function_exists('writeErrorLog')) {
+        writeErrorLog($pdo, 'SALES_ORDER', $e->getMessage(), ['action' => $action ?? '']);
+    }
     http_response_code(500); 
-    echo json_encode(['success'=>false, 'message'=>$e->getMessage()]);
+    echo json_encode(['success'=>false, 'data'=>null, 'message'=>$e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
 ?>

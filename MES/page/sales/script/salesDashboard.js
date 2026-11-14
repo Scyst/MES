@@ -2,6 +2,9 @@
 "use strict";
 
 const API_URL = 'api/manage_sales_orders.php';
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
 let allData = [];
 let currentStatusFilter = 'ACTIVE';
 let importModal;
@@ -262,9 +265,10 @@ function renderTable(searchTerm) {
         const isLoad = item.is_loading_done == 1;
         const isConf = item.is_confirmed == 1;
         
-        const inspRaw = (item.inspection_status || '').toLowerCase();
-        const inspResRaw = (item.inspection_result || '').toLowerCase();
-        const isInsp = (inspRaw === 'done' && inspResRaw === 'pass');
+        const inspRaw = (item.inspection_status || '').toString().trim().toLowerCase();
+        const inspResRaw = (item.inspection_result || '').toString().trim().toLowerCase();
+        const isInspFail = (inspResRaw === 'fail');
+        const isInsp = !isInspFail && ((inspRaw === 'done' && (inspResRaw === 'pass' || inspResRaw === '')) || inspResRaw === 'pass' || inspRaw === 'pass');
 
         const loadDateObj = getDateObj(item.loading_date);
         const isDelay = loadDateObj && loadDateObj < todayDate && !isLoad;
@@ -304,8 +308,12 @@ function renderTable(searchTerm) {
         const btnPrdIcon = isPrd ? '<i class="fas fa-check"></i>' : '<i class="fas fa-industry"></i>';
         const btnLoadClass = isLoad ? 'status-done' : 'status-wait';
         const btnLoadIcon = isLoad ? '<i class="fas fa-check"></i>' : '<i class="fas fa-truck-loading"></i>';
-        const btnInspClass = isInsp ? 'status-done' : 'status-wait';
-        const btnInspIcon = isInsp ? '<i class="fas fa-check"></i>' : '<i class="fas fa-microscope"></i>';
+        const btnInspClass = isInspFail ? 'status-fail' : (isInsp ? 'status-done' : 'status-wait');
+        const btnInspIcon = isInspFail ? '<i class="fas fa-times-circle"></i>' : (isInsp ? '<i class="fas fa-check"></i>' : '<i class="fas fa-microscope"></i>');
+        const btnInspStyle = isInspFail
+            ? 'background-color:#f8d7da; color:#dc3545; border-color:#f5c2c7;'
+            : (isInsp ? 'background-color:#d1e7dd; color:#198754;' : '');
+        const btnInspTitle = isInspFail ? 'QA FAIL — กรุณาเปิดตรวจรอบใหม่ในระบบ iQMS' : 'Toggle QA Inspection Status';
         const priceTHB = (parseFloat(item.price || 0) * currentExchangeRate).toFixed(2);
 
         return `<tr data-id="${item.id}">
@@ -332,7 +340,7 @@ function renderTable(searchTerm) {
             <td class="text-center bg-info bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'loading_date', '${item.loading_date}', 'date')">${formatDate(item.loading_date)}</td>
             <td class="text-center bg-info bg-opacity-10"><button class="btn-icon-minimal ${btnLoadClass}" onclick="toggleCheck(${item.id}, 'load', ${!isLoad})">${btnLoadIcon}</button></td>
             <td class="text-center bg-purple bg-opacity-10 editable" ondblclick="makeEditable(this, ${item.id}, 'inspection_date', '${item.inspection_date}', 'date')">${formatDate(item.inspection_date)}</td>
-            <td class="text-center bg-purple bg-opacity-10"><button class="btn-icon-minimal ${btnInspClass}" onclick="toggleCheck(${item.id}, 'insp', ${!isInsp})" style="${isInsp ? 'background-color:#d1e7dd; color:#198754;' : ''}">${btnInspIcon}</button></td>
+            <td class="text-center bg-purple bg-opacity-10"><button class="btn-icon-minimal ${btnInspClass}" title="${btnInspTitle}" onclick="toggleCheck(${item.id}, 'insp', ${!isInsp})" style="${btnInspStyle}">${btnInspIcon}</button></td>
             <td class="font-monospace text-primary text-center editable" ondblclick="makeEditable(this, ${item.id}, 'ticket_number', '${item.ticket_number}')">${showTxt(item.ticket_number)}</td>
             <td class="text-end fw-bold text-success font-monospace">฿${parseFloat(priceTHB).toLocaleString()}</td>
             <td class="text-start text-muted small editable" ondblclick="makeEditable(this, ${item.id}, 'remark', '${item.remark}')">${showTxt(item.remark)}</td>
@@ -400,7 +408,7 @@ function makeEditable(td, id, field, currentVal, type = 'text') {
         if (newValue !== String(currentVal)) {
             try {
                 const res = await fetch(`${API_URL}?action=update_cell`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()},
                     body: JSON.stringify({ id, field, value: newValue })
                 });
                 const json = await res.json();
@@ -437,12 +445,18 @@ function makeEditable(td, id, field, currentVal, type = 'text') {
 // --- Toggle Status (Buttons/Checkboxes) ---
 
 async function toggleCheck(id, field, val) {
+    const targetRow = allData.find(d => d.id == id);
+    if (field === 'insp' && targetRow && (targetRow.inspection_result || '').toString().trim().toUpperCase() === 'FAIL') {
+        alert('ไม่สามารถสลับสถานะ PO ที่ผลตรวจ QA เป็น FAIL จากหน้านี้ได้ กรุณาเปิดตรวจรอบใหม่ในระบบ iQMS');
+        return;
+    }
+
     const dbVal = (val === true || val === 1 || val === '1') ? 1 : 0;
     showSpinner();
 
     try {
         const res = await fetch(`${API_URL}?action=update_check`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()},
             body: JSON.stringify({ id, field, checked: dbVal })
         });
         const json = await res.json();
@@ -481,7 +495,8 @@ async function toggleCheck(id, field, val) {
             // รีเฟรชตารางด้วยข้อมูลที่ถูกอัปเดตใน Memory
             renderTable(document.getElementById('universalSearch').value);
         } else {
-            showToast('Update failed', '#dc3545');
+            showToast(json.message || 'Update failed', '#dc3545');
+            if (json.message) alert(json.message);
         }
     } catch (err) { 
         console.error(err); 
@@ -562,7 +577,7 @@ async function saveNewOrder() {
     try {
         await fetch(`${API_URL}?action=reorder_items`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()},
             body: JSON.stringify({ orderedIds })
         });
     } catch (err) {
@@ -612,7 +627,7 @@ async function submitCreateOrder() {
     showSpinner();
     try {
         const res = await fetch(`${API_URL}?action=create_single`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()}, body: JSON.stringify(payload)
         });
         const json = await res.json();
         if (json.success) {
@@ -816,7 +831,7 @@ async function deleteOrder(id, poNum) {
     try {
         const res = await fetch(`${API_URL}?action=delete_single`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()},
             body: JSON.stringify({ id: id })
         });
         const json = await res.json();
@@ -871,7 +886,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function sendFileToBackend(formData) {
     showSpinner();
     try {
-        const res = await fetch(`${API_URL}?action=preview_import`, { method: 'POST', body: formData });
+        const res = await fetch(`${API_URL}?action=preview_import`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': getCsrfToken() },
+            body: formData
+        });
         const json = await res.json();
         hideSpinner();
         
@@ -1022,7 +1041,7 @@ window.confirmImport = async function() {
     try {
         const res = await fetch(`${API_URL}?action=import_json`, { 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
             body: JSON.stringify({ data: previewImportData }) 
         });
         const json = await res.json();
@@ -1072,8 +1091,11 @@ async function exportData() {
             const isLoad = row.is_loading_done == 1 ? 'Yes' : 'No';
             const isProd = row.is_production_done == 1 ? 'Yes' : 'No';
             const isConf = row.is_confirmed == 1 ? 'Yes' : 'No';
-            const inspRaw = (row.inspection_status || '').toLowerCase();
-            const isInsp = ['pass', 'ok', 'done', 'yes', '1', 'true'].includes(inspRaw) ? 'Yes' : 'No';
+            const inspRaw = (row.inspection_status || '').toString().trim().toLowerCase();
+            const inspResRaw = (row.inspection_result || '').toString().trim().toLowerCase();
+            const isInsp = (inspResRaw === 'fail')
+                ? 'Fail'
+                : (['pass', 'ok', 'done', 'yes', '1', 'true'].includes(inspRaw) || inspResRaw === 'pass' ? 'Yes' : 'No');
             
             const qty = parseInt(row.quantity || 0);
             const priceUSD = parseFloat(row.price || 0);

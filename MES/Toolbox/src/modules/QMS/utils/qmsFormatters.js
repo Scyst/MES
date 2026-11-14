@@ -109,9 +109,10 @@ export function formatQmsCurrency(val) {
 export function normalizeQaStatus(row) {
   const st = String(row?.inspection_status || '').trim().toUpperCase();
   const res = String(row?.inspection_result || '').trim().toUpperCase();
-  const isPassed = res === 'PASS' || st === 'PASS';
+  // Always evaluate explicit FAIL before PASS/DONE so corrupted legacy status ('Pass' + FAIL) never shows as green PASS.
   const isFailed = res === 'FAIL';
-  const isDone = isPassed || isFailed || st === 'DONE';
+  const isPassed = !isFailed && (res === 'PASS' || st === 'PASS');
+  const isDone = isFailed || isPassed || st === 'DONE';
   const isInProgress = !isDone && st === 'IN_PROGRESS';
   const isWaiting = !isDone && !isInProgress;
   return { isPassed, isFailed, isDone, isInProgress, isWaiting };
