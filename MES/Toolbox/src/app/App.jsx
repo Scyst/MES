@@ -32,6 +32,8 @@ const PeEnterprisePage = lazy(() => import('../modules/PE/pages/PeEnterprisePage
 const PeRequestPage = lazy(() => import('../modules/PE/pages/PeRequestPage'));
 const PeTechMobilePage = lazy(() => import('../modules/PE/pages/PeTechMobilePage'));
 const QmsPage = lazy(() => import('../modules/QMS/pages/QmsPage'));
+const ManpowerPage = lazy(() => import('../modules/Manpower/pages/ManpowerPage'));
+const DailyPlanningPage = lazy(() => import('../modules/Planning/pages/DailyPlanningPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -273,6 +275,22 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบริหารจัดการคุณภาพ (iQMS)...</div>}>
                     <QmsPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="manpower" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบริหารจัดการกำลังคน (Manpower)...</div>}>
+                    <ManpowerPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="planning" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Daily Command Center (Planning)...</div>}>
+                    <DailyPlanningPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

@@ -10,10 +10,10 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **13** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`**, **`PE Enterprise & Maintenance (Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op, IIoT & 2D Visual Board)`**, **`iQMS Quality Management (#/qms: NCR, CAR 8D, Concession 4-Stage Approval, Claim Verification & QA/QC Schedule/Planner — ยกเว้น External Customer Token Approval ที่รอผลจากทีม QA)`** |
+| **✅ Ported 100% (สมบูรณ์)** | **15** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`**, **`PE Enterprise & Maintenance (Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op, IIoT & 2D Visual Board)`**, **`iQMS Quality Management (#/qms: NCR, CAR 8D, Concession 4-Stage Approval, Claim Verification & QA/QC Schedule/Planner — ยกเว้น External Customer Token Approval ที่รอผลจากทีม QA)`**, **`Manpower Management (#/manpower: จัดคนลงไลน์ 7 แท็บ, ประเมินเกรด 4D, Trend, Skill Matrix, วันหยุด & Master)`**, **`Daily Command Center / Planning (#/planning: แผนผลิต Plan vs Actual, Morning Brief, Loading 7 วัน & Stock Shortage)`** |
 | **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `AreaAccess / ScanBarcode` *(ส่วน `ScanBarcode` ย้ายเข้า `#/scan-barcode` แล้ว 100% เหลือเฉพาะ `AreaAccess`)* |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
-| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **11** | `AccessoriesInspection`, `Management`, `Manpower`, `Planning`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
+| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **9** | `AccessoriesInspection`, `Management`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
@@ -250,8 +250,8 @@ graph LR
 | **13** | `PE` (ซ่อมบำรุง) | `#/pe`, `#/pe/request`, `#/pe/tech` | ✅ 100% | Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op & QR Cards, IIoT & 2D Visual Factory Board |
 | **14** | `production` | `#/production`, `#/scan-barcode` | ✅ 100% | บันทึกยอดผลิต, คิวงาน KDS, พิมพ์แท็ก 4"×2" ZPL/HTML, โอนย้าย QR, รายงานสต็อก/Variance, สแกนบาร์โค้ด |
 | **15** | `QMS` | `#/qms` | ✅ 100%* | NCR, CAR 8D, Concession 4-Stage, Claims, QA Planner/Schedule (*ข้าม External Customer Token Approval รอทีม QA) |
-| **16** | `manpower` | *ไม่มีใน Toolbox* | ❌ 0% | จัดคนลงไลน์, ประเมินเกรด 4D, Skill Matrix, วันหยุด |
-| **17** | `planning` | *ไม่มีใน Toolbox* | ❌ 0% | ศูนย์สั่งการ Morning Meeting ประจำวัน (คน/เครื่อง/แผน/ของขาด) |
+| **16** | `manpower` | `#/manpower` (`ManpowerPage`) | ✅ 100% | จัดคนลงไลน์ 7 แท็บ, ประเมินเกรด 4D, Trend, Skill Matrix, วันหยุด, Master Data & ซิงค์สแกน |
+| **17** | `planning` | `#/planning` (`DailyPlanningPage`) | ✅ 100% | ศูนย์สั่งการ Morning Meeting ประจำวัน (Plan vs Actual, Action Plan, Schedule โหลดตู้ 7 วัน, Stock Shortage Alert) |
 | **18** | `management` | *ไม่มีใน Toolbox* | ❌ 0% | แดชบอร์ดผู้บริหารภาพรวม, ควบคุมแผนหลัก, DLOT |
 | **19** | `OEE_Dashboard` | *ไม่มีใน Toolbox* | ❌ 0% | OEE หน้าร้านเรียลไทม์, Speed Loss, Scrap Analysis |
 | **20** | `sales` | *ไม่มีใน Toolbox* | ❌ 0% | ติดตามสถานะ PO, กำหนดการโหลดตู้, พยากรณ์วัตถุดิบ |
@@ -295,6 +295,6 @@ graph LR
 3. [x] **QMS:** ย้ายระบบ NCR, CAR 8D, Concession 4-Stage, Claims และ QA Planner/Schedule เข้าสู่ Toolbox (`#/qms`) สมบูรณ์ (เสร็จสมบูรณ์ 14/11/2026 — ข้าม External Customer Token Approval ที่รอทีม QA)
 
 ### 🟢 Phase 3: ย้ายโมดูลการบริหารและโลจิสติกส์ (Management & Administration Modules)
-1. **Manpower & Daily Planning:** รวมระบบจัดกำลังคนและ Daily Command Center เข้าด้วยกัน
+1. [x] **Manpower & Daily Planning:** รวมระบบจัดกำลังคน (`#/manpower` 7 แท็บ) และ Daily Command Center (`#/planning`) เข้า Toolbox SPA สมบูรณ์ (เสร็จสมบูรณ์ 14/11/2026)
 2. **Sales, Loading Report & Auto Invoice:** รวมสายงานส่งออกและตรวจสอบตู้สินค้า C-TPAT เข้าสู่ระบบใหม่
 3. **Executive Dashboard & Daily P&L:** ย้ายแดชบอร์ดงบการเงินและ OEE Dashboard เป็นขั้นตอนสุดท้าย

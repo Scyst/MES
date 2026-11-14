@@ -224,9 +224,9 @@ export default function HomeDashboard() {
 
   const executiveServices = useMemo(() => [
     { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารระดับสูง', icon: LineChart, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', roles: ['admin', 'creator', 'manager'] },
-    { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/planning/daily_meeting.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/manpowerUI.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/manpower/employeeGrading.php', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-emerald-100 text-emerald-600', to: '/planning', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower?tab=grading', badge: 'SPA', roles: ['admin', 'creator', 'manager'] },
     { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-emerald-100 text-emerald-600', to: '/mood-report', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyPL/pl_entry.php', roles: ['admin', 'creator'] },
     { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/autoInvoice/finance_dashboard.php', roles: ['admin', 'creator', 'manager'] },

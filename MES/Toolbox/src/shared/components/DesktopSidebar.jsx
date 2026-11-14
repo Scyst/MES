@@ -66,6 +66,9 @@ export const MENU_DATA = [
     sectionIcon: Briefcase,
     items: [
       { name: 'Management Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', external: true },
+      { name: 'Manpower (จัดการกำลังคน)', icon: Users, to: '/manpower' },
+      { name: 'Employee Grading 4D (ประเมินเกรด)', icon: Activity, to: '/manpower?tab=grading' },
+      { name: 'Daily Command Center (ประชุมแผน)', icon: ListOrdered, to: '/planning' },
       { name: 'Utility & Energy (พลังงาน)', icon: Zap, to: '/utility' },
       { name: 'Mood Insight Report', icon: Heart, to: '/mood-report' },
       { name: 'Sales Tracking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', external: true },
