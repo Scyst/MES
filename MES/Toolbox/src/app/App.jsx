@@ -31,6 +31,7 @@ const ScanBarcodePage = lazy(() => import('../modules/Production/pages/ScanBarco
 const PeEnterprisePage = lazy(() => import('../modules/PE/pages/PeEnterprisePage'));
 const PeRequestPage = lazy(() => import('../modules/PE/pages/PeRequestPage'));
 const PeTechMobilePage = lazy(() => import('../modules/PE/pages/PeTechMobilePage'));
+const QmsPage = lazy(() => import('../modules/QMS/pages/QmsPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -264,6 +265,14 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดพอร์ทัลช่างซ่อมบำรุง...</div>}>
                     <PeTechMobilePage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="qms" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบริหารจัดการคุณภาพ (iQMS)...</div>}>
+                    <QmsPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

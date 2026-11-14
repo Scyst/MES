@@ -292,6 +292,7 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/pe
 /Toolbox/api/production
 /Toolbox/api/profile
+/Toolbox/api/qms
 /Toolbox/api/store
 /Toolbox/api/transport
 /Toolbox/api/transport/auth

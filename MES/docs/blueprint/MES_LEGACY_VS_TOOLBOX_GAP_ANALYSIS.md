@@ -1,6 +1,6 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Phase 2.2B: Ported PE Downtime Tracker, MTBF/MTTR Analytics, Safety/LOTO/Pre-Op & IIoT 2D Visual Factory Board สมบูรณ์ 100%) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Phase 2.3: Ported iQMS Quality Management — NCR, CAR 8D Internal, Concession, Claim Verification, QA/QC Planner & Schedule ครบสมบูรณ์; ข้าม External Customer Token Approval ตามขอบเขต) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
@@ -10,17 +10,17 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **12** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`**, **`PE Enterprise & Maintenance (Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op, IIoT & 2D Visual Board)`** |
+| **✅ Ported 100% (สมบูรณ์)** | **13** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`**, **`PE Enterprise & Maintenance (Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op, IIoT & 2D Visual Board)`**, **`iQMS Quality Management (#/qms: NCR, CAR 8D, Concession 4-Stage Approval, Claim Verification & QA/QC Schedule/Planner — ยกเว้น External Customer Token Approval ที่รอผลจากทีม QA)`** |
 | **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `AreaAccess / ScanBarcode` *(ส่วน `ScanBarcode` ย้ายเข้า `#/scan-barcode` แล้ว 100% เหลือเฉพาะ `AreaAccess`)* |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
-| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **12** | `QMS`, `AccessoriesInspection`, `Management`, `Manpower`, `Planning`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
+| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **11** | `AccessoriesInspection`, `Management`, `Manpower`, `Planning`, `OEE_Dashboard`, `Sales`, `LoadingReport`, `DailyPL`, `AutoInvoice`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 12
+    "Ported สมบูรณ์" : 13
     "Ported บางส่วน (มีฟีเจอร์ขาด)" : 1
     "On Hold (รอเอกสารผู้บริหาร)" : 1
-    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 12
+    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 11
 ```
 
 ---
@@ -190,14 +190,15 @@ graph LR
 
 ---
 
-### 2.3 QMS (Quality Management System)
-* **โครงสร้างเดิม:** 20 PHP files, 1 JS file
-* **ฟังก์ชันการทำงานหลักที่ยังคงค้างอยู่ในระบบเดิม:**
-  1. **NCR Management (`print_ncr.php`, `ncrFormModal.php`):** ออกใบรายงานความไม่สอดคล้องของชิ้นงาน การกักกันและตัดสินโทษชิ้นงาน
-  2. **CAR 8D Problem Solving (`print_car.php`):** เวิร์กโฟลว์การแก้ไขและป้องกันการเกิดซ้ำแบบ 8D รายงานการวิเคราะห์สาเหตุและแผนปฏิบัติการ
-  3. **Concession Workflow (`concession_list.php`, `concession_api.php`):** ระบบขอผ่อนผันการใช้วัตถุดิบหรือชิ้นงานพิเศษ
-  4. **Customer Claims (`print_claim.php`):** ระบบรับเรื่องร้องเรียนจากลูกค้าและติดตามผลการตรวจสอบ
-  5. **QA Inspection Schedule (`qa_calendar.php`, `qa_schedule.php`):** ปฏิทินและตารางนัดหมายการสุ่มตรวจปล่อยสินค้าของทีม QC
+### 2.3 QMS (Quality Management System) — ✅ **ย้ายเข้า Toolbox SPA สมบูรณ์ตามขอบเขต (14/11/2026)**
+* **โครงสร้างเดิม:** `page/QMS/` (20 PHP files, 1 JS file)
+* **โครงสร้างใหม่:** `Toolbox/src/modules/QMS/` (`#/qms`) + `Toolbox/public/api/qms/` (`_common.php`, `qmsUploadApi.php`, `qmsCasesApi.php`, `concessionApi.php`, `qaScheduleApi.php`)
+* **ฟังก์ชันที่ย้ายเข้า Toolbox SPA ครบสมบูรณ์:**
+  1. **NCR Management (`CasesNcrCarClaimTab.jsx`, `qmsCasesApi.php`):** เปิด/แก้ไข/ยกเลิก NCR, แนบรูปหลักฐาน, ตัวกรองขั้นสูง, KPI Dashboard และพิมพ์แบบฟอร์ม A4 (`NCR` / Blank NCR)
+  2. **CAR 8D & Customer Claims (`CasesNcrCarClaimTab.jsx`, `qmsCasesApi.php`):** บันทึกวิเคราะห์สาเหตุ 8D / แผนแก้ไขป้องกัน / แนบไฟล์หลักฐานภายใน, ตรวจสอบ 3 ระยะ (Verify 1–3) ปิดเคลม (`sp_QMS_CloseClaim`) / ตีกลับแก้ไข, แจ้ง Audit History และพิมพ์ A4 (`CAR` / `Claim`)
+  3. **Concession Workflow (`ConcessionTab.jsx`, `concessionApi.php`):** สร้าง/แก้ไขคำขอผ่อนผัน (`CCR-YYMM-XXX`), แนบเอกสารรูป, ระบบอนุมัติ 4 ระดับภายใน (Internal 4-Stage Approval) และพิมพ์เดี่ยว/พิมพ์รวมหลายรายการ (`Print Bulk` / `Blank Form`)
+  4. **QA/QC Planner Calendar & Schedule (`QaPlannerCalendarTab.jsx`, `QaScheduleTab.jsx`, `QaInspectionModals.jsx`, `qaScheduleApi.php`):** ปฏิทินวางแผนรายเดือน + Pending Jobs (Drag & Drop + Mobile คลิก "ลงคิว"), ตารางคิวตรวจรายวัน/สัปดาห์/เดือน, แจ้งเตือน Loading 7 วัน, เปิด Multi-PO Inspection Ticket, มอบหมาย Inspector และบันทึกผลตรวจ
+* **หมายเหตุขอบเขตที่ข้ามไว้:** External Customer Token Approval (`guest_portal` ลิงก์ภายนอกสำหรับลูกค้ากรอก 8D เอง) ถูกเว้นไว้ตามคำสั่งและ `page/QMS/ROADMAP.md` ระหว่างรอผลการตัดสินใจจากทีม QA/QC
 
 ---
 
@@ -248,7 +249,7 @@ graph LR
 | **12** | `SystemBlueprint` (ใหม่)| `#/blueprint` | ✅ 100% | ผังพิมพ์เขียวและสถาปัตยกรรมระบบโรงงาน แสดงผลสมบูรณ์ |
 | **13** | `PE` (ซ่อมบำรุง) | `#/pe`, `#/pe/request`, `#/pe/tech` | ✅ 100% | Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op & QR Cards, IIoT & 2D Visual Factory Board |
 | **14** | `production` | `#/production`, `#/scan-barcode` | ✅ 100% | บันทึกยอดผลิต, คิวงาน KDS, พิมพ์แท็ก 4"×2" ZPL/HTML, โอนย้าย QR, รายงานสต็อก/Variance, สแกนบาร์โค้ด |
-| **15** | `QMS` | *ไม่มีใน Toolbox* | ❌ 0% | NCR, CAR 8D, Concession, Claims, QA Schedule |
+| **15** | `QMS` | `#/qms` | ✅ 100%* | NCR, CAR 8D, Concession 4-Stage, Claims, QA Planner/Schedule (*ข้าม External Customer Token Approval รอทีม QA) |
 | **16** | `manpower` | *ไม่มีใน Toolbox* | ❌ 0% | จัดคนลงไลน์, ประเมินเกรด 4D, Skill Matrix, วันหยุด |
 | **17** | `planning` | *ไม่มีใน Toolbox* | ❌ 0% | ศูนย์สั่งการ Morning Meeting ประจำวัน (คน/เครื่อง/แผน/ของขาด) |
 | **18** | `management` | *ไม่มีใน Toolbox* | ❌ 0% | แดชบอร์ดผู้บริหารภาพรวม, ควบคุมแผนหลัก, DLOT |
@@ -291,7 +292,7 @@ graph LR
 ### 🟡 Phase 2: ย้ายโมดูลวิศวกรรมและการผลิตหลัก (High-Impact Operational Modules)
 1. [x] **PE Enterprise & Maintenance (`#/pe/*`):** พอร์ตครบ 100% ทั้ง Sub-phase A (Work Orders, Machines Master, Spare Parts MRO, Stop Request & Pre-Op, PE Tech Mobile) และ Sub-phase B (Downtime MTBF/MTTR, Safety/LOTO & Cards, IIoT & 2D Visual Board) (เสร็จสมบูรณ์ 14/11/2026)
 2. [x] **Production Execution & Scan Barcode:** ย้ายระบบ Production Entry, Live Job Queue (KDS), Tag Printer 4"×2", โอนย้าย QR, รายงานสต็อก และเทอร์มินัล Scan Barcode เข้าสู่ SPA เต็มรูปแบบ (`#/production`, `#/scan-barcode`) (เสร็จสมบูรณ์ 14/11/2026)
-3. **QMS:** ย้ายระบบ NCR และ CAR เข้าสู่ Toolbox เพื่อการควบคุมคุณภาพแบบไร้รอยต่อ
+3. [x] **QMS:** ย้ายระบบ NCR, CAR 8D, Concession 4-Stage, Claims และ QA Planner/Schedule เข้าสู่ Toolbox (`#/qms`) สมบูรณ์ (เสร็จสมบูรณ์ 14/11/2026 — ข้าม External Customer Token Approval ที่รอทีม QA)
 
 ### 🟢 Phase 3: ย้ายโมดูลการบริหารและโลจิสติกส์ (Management & Administration Modules)
 1. **Manpower & Daily Planning:** รวมระบบจัดกำลังคนและ Daily Command Center เข้าด้วยกัน

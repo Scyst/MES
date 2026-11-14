@@ -215,7 +215,7 @@ export default function HomeDashboard() {
   ], []);
 
   const qualityServices = useMemo(() => [
-    { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa'] },
+    { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/qms', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa', 'qc'], badge: 'SPA' },
     { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php' },
     { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/pe', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
     { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/pe/tech', badge: 'SPA' },

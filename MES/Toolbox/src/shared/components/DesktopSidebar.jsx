@@ -4,7 +4,7 @@ import {
   Home, Activity, ShoppingCart, Truck, Bus, Calendar, FolderOpen,
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
-  Camera, Settings, Users, User, MonitorPlay, Zap, Heart, Search, FlaskConical,
+  Camera, Settings, Users, User, Zap, Heart, Search, FlaskConical,
   Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,7 +54,7 @@ export const MENU_DATA = [
     title: 'QUALITY & MT',
     sectionIcon: ShieldCheck,
     items: [
-      { name: 'iQMS (Quality)', icon: MonitorPlay, href: '/iot-toolbox/sandbox-b9/MES/MES/page/QMS/qmsDashboard.php', external: true },
+      { name: 'iQMS (Quality)', icon: ShieldCheck, to: '/qms' },
       { name: 'Accessories Inspection', icon: Camera, href: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
       { name: 'PE Enterprise (ซ่อมบำรุง)', icon: Wrench, to: '/pe' },
       { name: 'PE Stop Request (แจ้งซ่อม)', icon: Activity, to: '/pe/request' },
