@@ -1,16 +1,16 @@
 import React from 'react';
-import { 
-  Truck, Battery, BatteryCharging, BatteryWarning, MapPin, 
+import {
+  Truck, Battery, BatteryCharging, BatteryWarning, MapPin,
   User, Play, RotateCcw, Calendar, AlertTriangle, QrCode
 } from 'lucide-react';
 
-export default function ForkliftCard({ 
-  forklift, 
-  currentUserId, 
-  isAdmin, 
-  onInstantUse, 
-  onReserve, 
-  onReturn, 
+export default function ForkliftCard({
+  forklift,
+  currentUserId,
+  isAdmin,
+  onInstantUse,
+  onReserve,
+  onReturn,
   onOpenQr,
   onReportIssue
 }) {
@@ -73,24 +73,22 @@ export default function ForkliftCard({
   };
 
   return (
-    <div className={`bg-white rounded-2xl border transition-all duration-200 shadow-xs hover:shadow-md flex flex-col justify-between overflow-hidden ${
-      status === 'IN_USE' 
-        ? 'border-amber-200 ring-1 ring-amber-100' 
+    <div className={`bg-white rounded-2xl border transition-all duration-200 shadow-xs hover:shadow-md flex flex-col justify-between overflow-hidden ${status === 'IN_USE'
+        ? 'border-amber-200 ring-1 ring-amber-100'
         : status === 'CHARGING'
-        ? 'border-blue-200'
-        : 'border-slate-200/90 hover:border-slate-300'
-    }`}>
+          ? 'border-blue-200'
+          : 'border-slate-200/90 hover:border-slate-300'
+      }`}>
       {/* Card Header */}
       <div className="p-4 sm:p-5 border-b border-slate-100">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-              status === 'IN_USE'
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${status === 'IN_USE'
                 ? 'bg-amber-100 text-amber-700'
                 : status === 'CHARGING'
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-slate-100 text-slate-700'
-            }`}>
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-100 text-slate-700'
+              }`}>
               <Truck className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -123,7 +121,7 @@ export default function ForkliftCard({
             </span>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-            <div 
+            <div
               className={`h-full transition-all duration-500 rounded-full ${getBatteryColor()}`}
               style={{ width: `${Math.min(100, Math.max(5, battery))}%` }}
             />
@@ -198,11 +196,10 @@ export default function ForkliftCard({
           <button
             onClick={() => onReturn(forklift)}
             disabled={!isMyBooking && !isAdmin}
-            className={`flex-1 min-h-[40px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-medium text-xs transition-all ${
-              isMyBooking || isAdmin
+            className={`flex-1 min-h-[40px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-medium text-xs transition-all ${isMyBooking || isAdmin
                 ? 'bg-amber-600 text-white hover:bg-amber-700 active:scale-95 shadow-xs'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
+              }`}
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{isMyBooking || isAdmin ? 'บันทึกคืนรถ (Return)' : `ใช้งานโดย ${forklift.current_driver}`}</span>
