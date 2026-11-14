@@ -207,8 +207,8 @@ export default function HomeDashboard() {
     { title: 'Store KDS & PRD Return', desc: 'คิวจ่ายพัสดุสโตร์ เปิด K2 และรับคืนวัตถุดิบ', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=kds', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'], badge: 'SPA' },
     { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลังและพิมพ์แท็ก QR', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=receiving', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'], badge: 'SPA' },
     { title: 'Scrap & Replacement', desc: 'แจ้งของเสีย เบิกทดแทน และวิเคราะห์มูลค่า', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=scrap', badge: 'SPA' },
-    { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/loadingReport/loading_report.php' },
-    { title: 'Customer Tracking', desc: 'ระบบค้นหาเอกสารสำหรับลูกค้า (Public)', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/loadingReport/customerPortal.php' },
+    { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report', badge: 'SPA' },
+    { title: 'C-TPAT Doc Tracking', desc: 'ค้นหาเอกสาร C-TPAT เสร็จสมบูรณ์', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report?tab=tracking', badge: 'SPA' },
     { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง (Freight FleetLog)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/fleet-log', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
     { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/areaAccess/areaAccess.php' },
     { title: 'CCTV Downloader', desc: 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', icon: Video, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/cctv_downloader/cctv_downloaderUI.php', roles: ['admin', 'creator', 'manager'] },
@@ -229,9 +229,9 @@ export default function HomeDashboard() {
     { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower?tab=grading', badge: 'SPA', roles: ['admin', 'creator', 'manager'] },
     { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-emerald-100 text-emerald-600', to: '/mood-report', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyPL/pl_entry.php', roles: ['admin', 'creator'] },
-    { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/autoInvoice/finance_dashboard.php', roles: ['admin', 'creator', 'manager'] },
-    { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', roles: ['admin', 'creator', 'manager'] },
-    { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/shipping_loading.php', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/auto-invoice', roles: ['admin', 'creator', 'manager', 'planner'], badge: 'SPA' },
+    { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales', roles: ['admin', 'creator', 'manager', 'planner', 'customer'], badge: 'SPA' },
+    { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales?tab=shipping', roles: ['admin', 'creator', 'manager', 'planner', 'customer'], badge: 'SPA' },
     { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ TOU & LPG', icon: Zap, colorClass: 'bg-emerald-100 text-emerald-600', to: '/utility', roles: ['admin', 'creator', 'manager', 'engineer', 'supervisor'] },
   ], []);
 

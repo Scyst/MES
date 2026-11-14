@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -48,6 +48,8 @@ export const MENU_DATA = [
       { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving' },
       { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap' },
       { name: 'Freight FleetLog (บัญชีเที่ยวรถ)', icon: Truck, to: '/fleet-log' },
+      { name: 'Loading Report (C-TPAT)', icon: Truck, to: '/loading-report' },
+      { name: 'C-TPAT Doc Tracking', icon: MapPin, to: '/loading-report?tab=tracking' },
     ]
   },
   {
@@ -71,8 +73,9 @@ export const MENU_DATA = [
       { name: 'Daily Command Center (ประชุมแผน)', icon: ListOrdered, to: '/planning' },
       { name: 'Utility & Energy (พลังงาน)', icon: Zap, to: '/utility' },
       { name: 'Mood Insight Report', icon: Heart, to: '/mood-report' },
-      { name: 'Sales Tracking', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/salesDashboard.php', external: true },
-      { name: 'Shipping Loading', icon: Truck, href: '/iot-toolbox/sandbox-b9/MES/MES/page/sales/shipping_loading.php', external: true },
+      { name: 'Sales Tracking', icon: Truck, to: '/sales' },
+      { name: 'Shipping Loading', icon: Truck, to: '/sales?tab=shipping' },
+      { name: 'Auto Invoice & Packing List', icon: FileText, to: '/auto-invoice' },
     ]
   },
   {

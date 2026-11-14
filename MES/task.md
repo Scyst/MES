@@ -64,4 +64,5 @@
 - [x] Phase 2.2: PE Enterprise & Maintenance (`#/pe/*` — Sub-phase A + B: Work Orders, Machines, Spare Parts, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO & Pre-Op, IIoT & 2D Visual Board) — Complete (14/11/2026)
 - [x] Phase 2.3: QMS (`#/qms` — NCR, CAR 8D, Concession 4-Stage, Claims, QA/QC Planner & Schedule; skipped External Customer Token Approval pending QA team decision) — Complete (14/11/2026)
 - [x] Phase 3.1: Manpower (`#/manpower`) & Daily Command Center / Planning (`#/planning`) — Complete (14/11/2026)
-- [ ] Phase 3.2–3.4: Sales/Loading/AutoInvoice, Management/OEE/DailyPL, AreaAccess/Accessories/CCTV
+- [x] Phase 3.2: Sales & Shipping Schedule (`#/sales`), Loading Report C-TPAT (`#/loading-report`), Auto Invoice & Packing List (`#/auto-invoice`) — Complete (14/11/2026)
+- [ ] Phase 3.3–3.4: Management/OEE/DailyPL, AreaAccess/Accessories/CCTV

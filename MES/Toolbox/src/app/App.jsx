@@ -34,6 +34,9 @@ const PeTechMobilePage = lazy(() => import('../modules/PE/pages/PeTechMobilePage
 const QmsPage = lazy(() => import('../modules/QMS/pages/QmsPage'));
 const ManpowerPage = lazy(() => import('../modules/Manpower/pages/ManpowerPage'));
 const DailyPlanningPage = lazy(() => import('../modules/Planning/pages/DailyPlanningPage'));
+const SalesPage = lazy(() => import('../modules/Sales/pages/SalesPage'));
+const LoadingReportPage = lazy(() => import('../modules/LoadingReport/pages/LoadingReportPage'));
+const AutoInvoicePage = lazy(() => import('../modules/AutoInvoice/pages/AutoInvoicePage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -291,6 +294,32 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Daily Command Center (Planning)...</div>}>
                     <DailyPlanningPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="sales" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Sales &amp; Shipping Schedule...</div>}>
+                    <SalesPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="shipping" element={<Navigate to="/sales?tab=shipping" replace />} />
+
+              <Route path="loading-report" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบตรวจสอบตู้สินค้า C-TPAT...</div>}>
+                    <LoadingReportPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="auto-invoice" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบออกเอกสาร Auto Invoice...</div>}>
+                    <AutoInvoicePage />
                   </Suspense>
                 </ErrorBoundary>
               } />

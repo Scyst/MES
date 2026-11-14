@@ -280,10 +280,12 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox
 /Toolbox/api
 /Toolbox/api/auth
+/Toolbox/api/autoInvoice
 /Toolbox/api/dailyLog
 /Toolbox/api/documentCenter
 /Toolbox/api/fleetLog
 /Toolbox/api/forklift
+/Toolbox/api/loading
 /Toolbox/api/manpower
 /Toolbox/api/paintChem
 /Toolbox/api/planner
@@ -294,6 +296,7 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/production
 /Toolbox/api/profile
 /Toolbox/api/qms
+/Toolbox/api/sales
 /Toolbox/api/store
 /Toolbox/api/transport
 /Toolbox/api/transport/auth
