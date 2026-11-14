@@ -76,3 +76,38 @@
 - `MES/.agents/WORKSTATION_SYNC_REQUEST.md` (คำสั่งซิงค์ MCP/Skills และบันทึกการลบ/รวมศูนย์ API)
 - `MES/.agents/ftp_structure.md` (โครงสร้างพาร์ทบน FTP Server)
 - `MES/page/storeManagement/api/api_store.php` (Single Source of Truth API ของระบบคลังสินค้า)
+
+---
+
+# Handoff Section: Toolbox SPA Autonomous Migration Pause (2026-11-14)
+
+## Context / Goal
+- ดำเนินแผน `/goal` พอร์ตระบบ Legacy PHP (`page/*`) เข้าสู่ Toolbox SPA (`Toolbox/src/modules/` + `Toolbox/public/api/`) แบบ Self-Contained 100% และDeploy ขึ้น FTP Production (`/Toolbox/*`)
+- หยุดพักตามคำขอของผู้ใช้ (ใกล้หมด Token/Quota) ณ จุดที่ปลอดภัยหลังจบ Phase 3.2
+
+## Completed Work (เสร็จสิ้นและ Push/Deploy แล้ว 100%)
+- **Batch 1 (Cleanups & Store Offline Queue)**, **Phase 2.1 (`#/production`, `#/scan-barcode`)**, **Phase 2.2 (`#/pe/*`)**, **Phase 2.3 (`#/qms`)**
+- **Phase 3.1 (`cfad60d4`)**: Manpower 7-Tab (`#/manpower`) + Daily Command Center / Planning (`#/planning`) — Verified + FTP Deployed + Pushed
+- **Phase 3.2 (`9345858d`)**: Sales & Shipping Schedule (`#/sales`), Loading Report C-TPAT (`#/loading-report`), Auto Invoice & Packing List (`#/auto-invoice`) — Verified (8/8 CDP views) + FTP Deployed + HTTP Checked + Pushed
+- **สถานะภาพรวม (`docs/blueprint/MES_LEGACY_VS_TOOLBOX_GAP_ANALYSIS.md`)**: Ported 100% = **18** | Partial = **1** (`InboundHub`) | On Hold = **1** (`MES Analytics`) | Unported = **6** (`Management`, `OEE_Dashboard`, `DailyPL`, `AreaAccess`, `AccessoriesInspection`, `CCTV_Downloader`)
+- **Pre-work สำหรับ Phase 3.3 (ยังไม่ได้แก้ไขโค้ด Working Tree สะอาด)**:
+  - ตรวจสอบ `describe_table` ครบแล้วสำหรับ: `MES_MANUAL_DAILY_COSTS`, `PL_STRUCTURE`, `DAILY_PL_ENTRIES`, `MONTHLY_PL_TARGETS`, `DAILY_PL_STATUS`, `STOCK_TRANSACTIONS`, `ITEMS`, `LOCATIONS`, `MANUFACTURING_ROUTES`, `MAINTENANCE_REQUESTS`, `PRODUCTION_PLANS`, `PE_MACHINES`, `MANPOWER_CALENDAR`
+  - ยืนยันว่า `Toolbox/public/sap_db.php` และ `Toolbox/public/config.php` มี Stored Procedures & Config พร้อมใช้แล้ว (`SP_CALC_OEE_PIE`, `SP_CALC_OEE_HOURLY`, `SP_CALC_OEE_LINE`, `SP_GET_DAILY_PROD`, `SP_CALC_STD_COST`, `SP_CALC_ACTUAL_COST`, `SP_GET_PL_ENTRY`, `SP_SAVE_MONTHLY_TARGET`, `SP_GET_DASHBOARD_STATS`, `SP_GET_PL_REPORT_RANGE`, `SP_UPDATE_CARRYOVER`, `SP_AUTO_GENERATE_PLAN`)
+
+## Actionable Next Steps (ทำต่อทันทีเมื่อเปิดเซสชันใหม่)
+1. [ ] **Phase 3.3 — Management (`#/management`), OEE Dashboard (`#/oee`), Daily P&L (`#/daily-pl`)**:
+   - สร้าง Backend API ภายใต้ `Toolbox/public/api/management/`, `Toolbox/public/api/oee/`, `Toolbox/public/api/dailyPl/` (เพิ่ม `oeeApi.php` + Shopfloor View โดยคง auth/permission check และรองรับ SAP scrap lookup ผ่าน `sap_db.php`)
+   - สร้าง Frontend SPA ใน `Toolbox/src/modules/Management/` (`managementDashboard` + `executiveDashboard`), `Toolbox/src/modules/OEE/` (`OEE_Dashboard` + `OEE_Shopfloor` toggle), `Toolbox/src/modules/DailyPL/` (`pl_entry` Entry/Report/Statement/Executive + `pl_setting` Tree/Formula/Import/Export/Reorder)
+   - เชื่อม Routes ใน `Toolbox/src/app/App.jsx` และสลับลิงก์ Legacy PHP ใน `Toolbox/src/shared/components/DesktopSidebar.jsx` และ `Toolbox/src/modules/Home/pages/HomeDashboard.jsx` (บรรทัด 187 `OEE_Shopfloor.php`, 226 `managementDashboard.php`, 231 `pl_entry.php`)
+   - รัน `php -l`, ทดสอบ SQL/SP via MCP, `npx oxlint`, `npx vite build`, Headless Chrome CDP (Desktop `1280×900` & Mobile `375×812`), อัปโหลด FTP, เช็ก `http_request`, อัปเดตเอกสาร และ `git commit` + `git push`
+2. [ ] **Phase 3.4 — Area Access (`#/area-access`), Accessories Inspection (`#/accessories-inspection`), CCTV Downloader (`#/cctv-downloader`)**:
+   - ตรวจสอบ `page/areaAccess/`, `page/AccessoriesInspection/`, `page/cctv_downloader/` + `describe_table` สำหรับ `AREA_ACCESS_LOGS`, `ACCESSORIES_INSPECTION_LOG` และข้อจำกัดด้าน Hardware/RTSP/FFmpeg (หากมี)
+3. *(ข้าม `Inbound Hub` ตามคำสั่งเดิมจนกว่าจะมีเอกสารตัวอย่างจากผู้บริหาร และอย่าลืมรายการ #4 เกี่ยวกับมาร์คบรรทัด MDB ใหม่ใน Utility หากยังไม่ได้ทำ/ต้องยืนยันเพิ่มเติม)*
+
+## Exact Files to Modify / Reference Next
+- `Toolbox/src/app/App.jsx`
+- `Toolbox/src/shared/components/DesktopSidebar.jsx`
+- `Toolbox/src/modules/Home/pages/HomeDashboard.jsx`
+- `page/management/*`, `page/OEE_Dashboard/*`, `page/dailyPL/*`
+- `page/areaAccess/*`, `page/AccessoriesInspection/*`, `page/cctv_downloader/*`
+- `docs/blueprint/MES_LEGACY_VS_TOOLBOX_GAP_ANALYSIS.md`, `task.md`, `.agents/ftp_structure.md`, `.agents/sync_board/`
