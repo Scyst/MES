@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Flame, Activity, Gauge, ArrowUpRight, TrendingUp, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Zap, Flame, Activity, Gauge } from 'lucide-react';
 
 export default function UtilityKpiCards({ summary = {}, isRange = false }) {
   const elecCost = summary.period_elec_cost || 0;
@@ -21,7 +21,7 @@ export default function UtilityKpiCards({ summary = {}, isRange = false }) {
   return (
     <div className="flex md:grid md:grid-cols-4 gap-2 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap snap-x snap-mandatory pb-1 flex-nowrap flex-shrink-0 touch-pan-x">
       {/* Card 1: Electricity Cost */}
-      <div className="w-[170px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start border-l-4 border-l-amber-500 flex flex-col justify-between">
+      <div className="w-[215px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start border-l-4 border-l-amber-500 flex flex-col justify-between whitespace-normal">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
             {isRange ? 'ค่าไฟฟ้ารวม (ช่วงเวลา)' : 'ค่าไฟฟ้ารอบวัน (Today)'}
@@ -32,22 +32,22 @@ export default function UtilityKpiCards({ summary = {}, isRange = false }) {
         </div>
 
         <div>
-          <div className="text-base sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 tracking-tight truncate">
-            ฿{Number(elecCost).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div className="text-base sm:text-xl xl:text-2xl font-black font-mono text-amber-600 dark:text-amber-400 tracking-tight truncate">
+            ฿{Number(elecCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="truncate">ใช้ไป {Number(elecKwh).toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh</span>
+            <span className="truncate">ใช้ไป {Number(elecKwh).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-sans mt-0.5">
-            <span className="text-amber-600 font-bold">Peak: ฿{Number(peakCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-slate-400 font-sans mt-0.5">
+            <span className="text-amber-600 font-bold">Peak: ฿{Number(peakCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             <span>•</span>
-            <span className="text-blue-500 font-bold">Off: ฿{Number(offpeakCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <span className="text-blue-500 font-bold">Off: ฿{Number(offpeakCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
       </div>
 
       {/* Card 2: LPG Gas Cost */}
-      <div className="w-[170px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start border-l-4 border-l-rose-500 flex flex-col justify-between">
+      <div className="w-[205px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start border-l-4 border-l-rose-500 flex flex-col justify-between whitespace-normal">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
             {isRange ? 'ค่าก๊าซ LPG (ช่วงเวลา)' : 'ค่าก๊าซ LPG (Today)'}
@@ -58,20 +58,20 @@ export default function UtilityKpiCards({ summary = {}, isRange = false }) {
         </div>
 
         <div>
-          <div className="text-base sm:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tracking-tight truncate">
-            ฿{Number(lpgCost).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div className="text-base sm:text-xl xl:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tracking-tight truncate">
+            ฿{Number(lpgCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span className="truncate">ปริมาณ {Number(lpgUsage).toLocaleString(undefined, { maximumFractionDigits: 1 })} m³</span>
+            <span className="truncate">ปริมาณ {Number(lpgUsage).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} m³</span>
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-            Flow ขณะนี้: <strong className="font-mono text-rose-500">{Number(lpgFlow).toFixed(1)}</strong> m³/h
+            Flow ขณะนี้: <strong className="font-mono text-rose-500">{Number(lpgFlow).toFixed(2)}</strong> m³/h
           </div>
         </div>
       </div>
 
       {/* Card 3: Realtime Power (kW) */}
-      <div className="w-[160px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start border-l-4 border-l-blue-600 flex flex-col justify-between">
+      <div className="w-[185px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start border-l-4 border-l-blue-600 flex flex-col justify-between whitespace-normal">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
             กำลังไฟฟ้าขณะนี้ (Live)
@@ -82,8 +82,8 @@ export default function UtilityKpiCards({ summary = {}, isRange = false }) {
         </div>
 
         <div>
-          <div className="text-base sm:text-2xl font-black font-mono text-slate-900 dark:text-slate-100 tracking-tight truncate">
-            {Number(totalKw).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs sm:text-sm font-bold text-slate-400 font-sans">kW</span>
+          <div className="text-base sm:text-xl xl:text-2xl font-black font-mono text-slate-900 dark:text-slate-100 tracking-tight truncate">
+            {Number(totalKw).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs sm:text-sm font-bold text-slate-400 font-sans">kW</span>
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 pt-1 border-t border-slate-100 dark:border-slate-800">
             <span className="flex items-center gap-1 truncate">
@@ -98,7 +98,7 @@ export default function UtilityKpiCards({ summary = {}, isRange = false }) {
       </div>
 
       {/* Card 4: Average Power Factor */}
-      <div className={`w-[160px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start flex flex-col justify-between border-l-4 ${
+      <div className={`w-[185px] shrink-0 md:w-auto md:shrink md:flex-1 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm snap-start flex flex-col justify-between whitespace-normal border-l-4 ${
         pfStatus === 'good'
           ? 'border-l-emerald-500'
           : pfStatus === 'warning'
@@ -119,8 +119,8 @@ export default function UtilityKpiCards({ summary = {}, isRange = false }) {
         </div>
 
         <div>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-base sm:text-2xl font-black font-mono tracking-tight ${
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className={`text-base sm:text-xl xl:text-2xl font-black font-mono tracking-tight ${
               pfStatus === 'good' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600'
             }`}>
               {avgPf > 0 ? avgPf.toFixed(2) : '-'}

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Zap, Calendar, RefreshCw, Download, Settings, Flame, 
-  Activity, Clock, CheckCircle2, AlertTriangle, RotateCcw,
-  Sparkles, ShieldCheck
+  Zap, Calendar, RefreshCw, Download, Settings, 
+  Clock, CheckCircle2, AlertTriangle, RotateCcw,
+  ShieldCheck
 } from 'lucide-react';
 import { utilityApi } from '../../../shared/services/utilityApi';
 import UtilityKpiCards from '../components/UtilityKpiCards';
@@ -318,10 +318,10 @@ export default function UtilityDashboardPage() {
       ) : (
         <>
           {/* KPI Summary Cards */}
-          <UtilityKpiCards summary={data?.summary} />
+          <UtilityKpiCards summary={data?.summary} isRange={data?.is_range} />
 
           {/* Hourly / Daily Trend Chart */}
-          <HourlyCostChart trends={data?.trends} isRange={data?.is_range} />
+          <HourlyCostChart data={data?.trends} isRange={data?.is_range} />
 
           {/* Real-time Meters Table & List */}
           <MetersTable 

@@ -1,15 +1,57 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend
 } from 'recharts';
 import { Layers, BarChart2, DollarSign, Activity } from 'lucide-react';
 
-export default function HourlyCostChart({ data = [], isRange = false }) {
+export default function HourlyCostChart({ data, trends, isRange = false }) {
   const [chartMode, setChartMode] = useState('stacked'); // 'stacked' | 'grouped'
   const [metricType, setMetricType] = useState('cost'); // 'cost' | 'usage'
 
-  if (!data || data.length === 0) {
+  const chartData = useMemo(() => {
+    const raw = Array.isArray(data) ? data : (Array.isArray(trends) ? trends : []);
+    if (!raw || raw.length === 0) return [];
+    if (isRange) return raw;
+
+    // Order single-day hourly data along the 08:00 -> 07:00 production shift day
+    const byHour = new Map();
+    raw.forEach((row) => {
+      const hourMatch = String(row.label ?? row.key ?? '').match(/^(\d{1,2})/);
+      if (hourMatch) {
+        const hr = parseInt(hourMatch[1], 10);
+        if (!Number.isNaN(hr) && hr >= 0 && hr <= 23) {
+          byHour.set(hr, row);
+        }
+      }
+    });
+
+    if (byHour.size === 0) return raw;
+
+    const shiftRows = [];
+    for (let i = 8; i < 32; i++) {
+      const hr = i % 24;
+      const existing = byHour.get(hr);
+      shiftRows.push(
+        existing || {
+          label: `${String(hr).padStart(2, '0')}:00`,
+          key: hr,
+          elec_usage: 0,
+          elec_cost: 0,
+          peak_kwh: 0,
+          offpeak_kwh: 0,
+          peak_cost: 0,
+          offpeak_cost: 0,
+          lpg_usage: 0,
+          lpg_cost: 0,
+          total_cost: 0
+        }
+      );
+    }
+    return shiftRows;
+  }, [data, trends, isRange]);
+
+  if (chartData.length === 0) {
     return (
       <div className="p-8 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
         <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -153,8 +195,8 @@ export default function HourlyCostChart({ data = [], isRange = false }) {
       <div className="w-full h-64 sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
-            margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+            data={chartData}
+            margin={{ top: 10, right: 10, left: -5, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
             <XAxis
@@ -168,7 +210,7 @@ export default function HourlyCostChart({ data = [], isRange = false }) {
               axisLine={false}
               tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(val) => {
-                if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
+                if (val >= 1000) return `${Number((val / 1000).toFixed(1))}k`;
                 return val;
               }}
             />

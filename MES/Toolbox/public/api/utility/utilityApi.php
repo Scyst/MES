@@ -188,8 +188,28 @@ try {
                 }
             }
 
-            ksort($trendMap);
-            $combinedTrend = array_values($trendMap);
+            if ($isSingleDay && !empty($trendMap)) {
+                // Arrange hourly slots along 08:00 -> 07:00 production shift day
+                for ($i = 8; $i < 32; $i++) {
+                    $hr = $i % 24;
+                    $combinedTrend[] = $trendMap[$hr] ?? [
+                        'label' => sprintf('%02d:00', $hr),
+                        'key' => $hr,
+                        'elec_usage' => 0,
+                        'elec_cost' => 0,
+                        'peak_kwh' => 0,
+                        'offpeak_kwh' => 0,
+                        'peak_cost' => 0,
+                        'offpeak_cost' => 0,
+                        'lpg_usage' => 0,
+                        'lpg_cost' => 0,
+                        'total_cost' => 0
+                    ];
+                }
+            } else {
+                ksort($trendMap);
+                $combinedTrend = array_values($trendMap);
+            }
 
             // 5. Aggregate KPI Summary
             $summary = [
@@ -205,13 +225,20 @@ try {
                 'avg_pf' => 0,
                 'pf_count' => 0,
                 'online_meters' => 0,
-                'total_meters' => count($realtimeData),
+                'total_meters' => 0,
                 'last_update' => date('Y-m-d H:i:s')
             ];
 
             $meters = [];
+            $seenMeters = [];
             foreach ($realtimeData as $row) {
                 $mName = $row['meter_name'];
+                // Deduplicate in case sp_GetUtilityRealtimeStatus returns tied MAX(log_timestamp) rows
+                if (isset($seenMeters[$mName])) {
+                    continue;
+                }
+                $seenMeters[$mName] = true;
+
                 $row['period_usage'] = floatval($meterSums[$mName]['period_usage'] ?? 0);
                 $row['period_cost']  = floatval($meterSums[$mName]['period_cost'] ?? 0);
                 $meters[] = $row;
@@ -236,6 +263,7 @@ try {
                     $summary['period_lpg_cost'] += floatval($row['period_cost']);
                 }
             }
+            $summary['total_meters'] = count($meters);
 
             if ($summary['pf_count'] > 0) {
                 $summary['avg_pf'] = round($summary['avg_pf'] / $summary['pf_count'], 2);
