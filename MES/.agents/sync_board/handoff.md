@@ -94,20 +94,12 @@
   - ตรวจสอบ `describe_table` ครบแล้วสำหรับ: `MES_MANUAL_DAILY_COSTS`, `PL_STRUCTURE`, `DAILY_PL_ENTRIES`, `MONTHLY_PL_TARGETS`, `DAILY_PL_STATUS`, `STOCK_TRANSACTIONS`, `ITEMS`, `LOCATIONS`, `MANUFACTURING_ROUTES`, `MAINTENANCE_REQUESTS`, `PRODUCTION_PLANS`, `PE_MACHINES`, `MANPOWER_CALENDAR`
   - ยืนยันว่า `Toolbox/public/sap_db.php` และ `Toolbox/public/config.php` มี Stored Procedures & Config พร้อมใช้แล้ว (`SP_CALC_OEE_PIE`, `SP_CALC_OEE_HOURLY`, `SP_CALC_OEE_LINE`, `SP_GET_DAILY_PROD`, `SP_CALC_STD_COST`, `SP_CALC_ACTUAL_COST`, `SP_GET_PL_ENTRY`, `SP_SAVE_MONTHLY_TARGET`, `SP_GET_DASHBOARD_STATS`, `SP_GET_PL_REPORT_RANGE`, `SP_UPDATE_CARRYOVER`, `SP_AUTO_GENERATE_PLAN`)
 
-## Actionable Next Steps (ทำต่อทันทีเมื่อเปิดเซสชันใหม่)
-1. [ ] **Phase 3.3 — Management (`#/management`), OEE Dashboard (`#/oee`), Daily P&L (`#/daily-pl`)**:
-   - สร้าง Backend API ภายใต้ `Toolbox/public/api/management/`, `Toolbox/public/api/oee/`, `Toolbox/public/api/dailyPl/` (เพิ่ม `oeeApi.php` + Shopfloor View โดยคง auth/permission check และรองรับ SAP scrap lookup ผ่าน `sap_db.php`)
-   - สร้าง Frontend SPA ใน `Toolbox/src/modules/Management/` (`managementDashboard` + `executiveDashboard`), `Toolbox/src/modules/OEE/` (`OEE_Dashboard` + `OEE_Shopfloor` toggle), `Toolbox/src/modules/DailyPL/` (`pl_entry` Entry/Report/Statement/Executive + `pl_setting` Tree/Formula/Import/Export/Reorder)
-   - เชื่อม Routes ใน `Toolbox/src/app/App.jsx` และสลับลิงก์ Legacy PHP ใน `Toolbox/src/shared/components/DesktopSidebar.jsx` และ `Toolbox/src/modules/Home/pages/HomeDashboard.jsx` (บรรทัด 187 `OEE_Shopfloor.php`, 226 `managementDashboard.php`, 231 `pl_entry.php`)
-   - รัน `php -l`, ทดสอบ SQL/SP via MCP, `npx oxlint`, `npx vite build`, Headless Chrome CDP (Desktop `1280×900` & Mobile `375×812`), อัปโหลด FTP, เช็ก `http_request`, อัปเดตเอกสาร และ `git commit` + `git push`
-2. [ ] **Phase 3.4 — Area Access (`#/area-access`), Accessories Inspection (`#/accessories-inspection`), CCTV Downloader (`#/cctv-downloader`)**:
-   - ตรวจสอบ `page/areaAccess/`, `page/AccessoriesInspection/`, `page/cctv_downloader/` + `describe_table` สำหรับ `AREA_ACCESS_LOGS`, `ACCESSORIES_INSPECTION_LOG` และข้อจำกัดด้าน Hardware/RTSP/FFmpeg (หากมี)
-3. *(ข้าม `Inbound Hub` ตามคำสั่งเดิมจนกว่าจะมีเอกสารตัวอย่างจากผู้บริหาร และอย่าลืมรายการ #4 เกี่ยวกับมาร์คบรรทัด MDB ใหม่ใน Utility หากยังไม่ได้ทำ/ต้องยืนยันเพิ่มเติม)*
+## Actionable Next Steps (สถานะล่าสุด ณ 16/11/2026)
+1. [x] **Phase 3.3 — Management (`#/management`), OEE Dashboard (`#/oee`), Daily P&L (`#/daily-pl`)** & **Utility MDB Exclusion Marker (`#/utility`)** — เสร็จสมบูรณ์ 100% (16/11/2026)
+2. [x] **Phase 3.4 — Area Access (`#/area-access`), Accessories Inspection (`#/accessories-inspection`), CCTV Downloader (`#/cctv-downloader`)** — เสร็จสมบูรณ์ 100% (16/11/2026)
+   - **หมายเหตุตั้งค่าสภาพแวดล้อมบน Production Server**: กรณีใช้งานควบคุมกล้อง AI Vision สด หรือดึงวิดีโอจากกล้อง CCTV NVR ผ่าน Toolbox ใหม่ ต้องตั้งค่าตัวแปร `ACCESSORIES_CAM_UPSTREAM`, `ACCESSORIES_CAM_API_KEY`, `CCTV_CAM_USER`, `CCTV_CAM_PASS` ใน `/Toolbox/.env` (ดูแม่แบบได้ใน `Toolbox/public/.env.example`) และตรวจสอบ FFmpeg/เส้นทาง LAN บนเครื่องโฮสต์
+3. [ ] **`Inbound Hub` (`#/inbound-hub`)**: ยังพักไว้ชั่วคราวตามคำสั่ง (On Hold — รอเอกสารตัวอย่างจริงจากผู้บริหาร) และฟีเจอร์ External Customer Token Approval ใน QMS (รอผลตัดสินใจจากทีม QA)
 
 ## Exact Files to Modify / Reference Next
-- `Toolbox/src/app/App.jsx`
-- `Toolbox/src/shared/components/DesktopSidebar.jsx`
-- `Toolbox/src/modules/Home/pages/HomeDashboard.jsx`
-- `page/management/*`, `page/OEE_Dashboard/*`, `page/dailyPL/*`
-- `page/areaAccess/*`, `page/AccessoriesInspection/*`, `page/cctv_downloader/*`
-- `docs/blueprint/MES_LEGACY_VS_TOOLBOX_GAP_ANALYSIS.md`, `task.md`, `.agents/ftp_structure.md`, `.agents/sync_board/`
+- `Toolbox/public/.env.example` (ตัวแปรตั้งค่าสำหรับ AI Camera Proxy & CCTV ISAPI)
+- `docs/MES_LEGACY_VS_TOOLBOX_GAP_ANALYSIS.md`, `docs/blueprint/MES_LEGACY_VS_TOOLBOX_GAP_ANALYSIS.md`, `task.md`, `.agents/sync_board/2026-11-16.md`

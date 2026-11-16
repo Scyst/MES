@@ -210,13 +210,13 @@ export default function HomeDashboard() {
     { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report', badge: 'SPA' },
     { title: 'C-TPAT Doc Tracking', desc: 'ค้นหาเอกสาร C-TPAT เสร็จสมบูรณ์', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report?tab=tracking', badge: 'SPA' },
     { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง (Freight FleetLog)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/fleet-log', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
-    { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/areaAccess/areaAccess.php' },
-    { title: 'CCTV Downloader', desc: 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', icon: Video, colorClass: 'bg-orange-100 text-orange-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/cctv_downloader/cctv_downloaderUI.php', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/area-access', badge: 'SPA' },
+    { title: 'CCTV Downloader', desc: 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', icon: Video, colorClass: 'bg-orange-100 text-orange-600', to: '/cctv-downloader', roles: ['admin', 'creator', 'manager'], badge: 'SPA' },
   ], []);
 
   const qualityServices = useMemo(() => [
     { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/qms', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa', 'qc'], badge: 'SPA' },
-    { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php' },
+    { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/accessories-inspection', badge: 'SPA' },
     { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/pe', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
     { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/pe/tech', badge: 'SPA' },
     { title: 'Digital Twin', desc: 'ระบบ 3D Monitoring ของโรงงาน', icon: Cuboid, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/digitalTwin/digitalTwin.html' },

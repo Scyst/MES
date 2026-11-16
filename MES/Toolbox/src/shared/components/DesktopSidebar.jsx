@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText, BarChart3
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText, BarChart3, Video
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -50,6 +50,8 @@ export const MENU_DATA = [
       { name: 'Freight FleetLog (บัญชีเที่ยวรถ)', icon: Truck, to: '/fleet-log' },
       { name: 'Loading Report (C-TPAT)', icon: Truck, to: '/loading-report' },
       { name: 'C-TPAT Doc Tracking', icon: MapPin, to: '/loading-report?tab=tracking' },
+      { name: 'Area Access Log (เข้า-ออกพื้นที่)', icon: ShieldCheck, to: '/area-access' },
+      { name: 'CCTV Downloader', icon: Video, to: '/cctv-downloader' },
     ]
   },
   {
@@ -57,7 +59,7 @@ export const MENU_DATA = [
     sectionIcon: ShieldCheck,
     items: [
       { name: 'iQMS (Quality)', icon: ShieldCheck, to: '/qms' },
-      { name: 'Accessories Inspection', icon: Camera, href: '/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/accessoriesInspectionUI.php', external: true },
+      { name: 'Accessories Inspection', icon: Camera, to: '/accessories-inspection' },
       { name: 'PE Enterprise (ซ่อมบำรุง)', icon: Wrench, to: '/pe' },
       { name: 'PE Stop Request (แจ้งซ่อม)', icon: Activity, to: '/pe/request' },
       { name: 'PE Tech Mobile (สำหรับช่าง)', icon: ScanLine, to: '/pe/tech' },

@@ -279,8 +279,11 @@ Here is the complete list of all directories on the FTP server.
 /RobotTCP/server_package
 /Toolbox
 /Toolbox/api
+/Toolbox/api/accessories
+/Toolbox/api/areaAccess
 /Toolbox/api/auth
 /Toolbox/api/autoInvoice
+/Toolbox/api/cctv
 /Toolbox/api/dailyLog
 /Toolbox/api/dailyPl
 /Toolbox/api/documentCenter

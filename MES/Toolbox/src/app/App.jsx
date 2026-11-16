@@ -40,6 +40,9 @@ const AutoInvoicePage = lazy(() => import('../modules/AutoInvoice/pages/AutoInvo
 const ManagementPage = lazy(() => import('../modules/Management/pages/ManagementPage'));
 const OeeDashboardPage = lazy(() => import('../modules/OEE/pages/OeeDashboardPage'));
 const DailyPlPage = lazy(() => import('../modules/DailyPL/pages/DailyPlPage'));
+const AreaAccessPage = lazy(() => import('../modules/AreaAccess/pages/AreaAccessPage'));
+const AccessoriesInspectionPage = lazy(() => import('../modules/AccessoriesInspection/pages/AccessoriesInspectionPage'));
+const CctvDownloaderPage = lazy(() => import('../modules/CctvDownloader/pages/CctvDownloaderPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -347,6 +350,30 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Daily P&amp;L &amp; Financial Statements...</div>}>
                     <DailyPlPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="area-access" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Area Access Log...</div>}>
+                    <AreaAccessPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="accessories-inspection" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Accessories Inspection...</div>}>
+                    <AccessoriesInspectionPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="cctv-downloader" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ CCTV Downloader...</div>}>
+                    <CctvDownloaderPage />
                   </Suspense>
                 </ErrorBoundary>
               } />
