@@ -26,7 +26,8 @@ export const manpowerOpsApi = {
   fetchRawCentralScans: (params = {}) => apiGet(OPS_ENDPOINT, { action: 'fetch_raw_central_scans', ...params }),
   exportHistory: (params = {}) => apiGet(OPS_ENDPOINT, { action: 'export_history', ...params }),
   updateLog: (payload) => apiPost(OPS_ENDPOINT, { action: 'update_log', ...payload }),
-  updateLogStatus: (logId, status) => apiPost(OPS_ENDPOINT, { action: 'update_log_status', log_id: logId, status }),
+  updateLogStatus: (logId, status, extra = {}) =>
+    apiPost(OPS_ENDPOINT, { action: 'update_log_status', log_id: logId, status, ...extra }),
   deleteLog: (logId) => apiPost(OPS_ENDPOINT, { action: 'delete_log', log_id: logId }),
   clearDay: (date, hardReset = false) => apiPost(OPS_ENDPOINT, { action: 'clear_day', date, hard_reset: hardReset }),
   confirmAnomaly: (logId) => apiPost(OPS_ENDPOINT, { action: 'confirm_anomaly', log_id: logId }),

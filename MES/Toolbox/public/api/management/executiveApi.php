@@ -31,11 +31,16 @@ try {
     switch ($action) {
         case 'get_dashboard': {
             $today = date('Y-m-d');
-            $defaultStart = date('Y-m-d', strtotime('-30 days'));
+            $defaultStart = $today;
             $startDate = normalizeMgmtDate($input['startDate'] ?? $defaultStart, $defaultStart);
             $endDate = normalizeMgmtDate($input['endDate'] ?? $today, $today);
             if ($startDate > $endDate) {
                 mgmtJsonError('วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด', 400);
+            }
+
+            $hcGroup = trim((string)($input['hcGroup'] ?? 'TEAM 1'));
+            if ($hcGroup === '' || $hcGroup === 'undefined' || $hcGroup === 'null') {
+                $hcGroup = 'TEAM 1';
             }
 
             $exchangeRate = isset($input['exchangeRate']) ? (float)$input['exchangeRate'] : 32.0;
@@ -45,6 +50,21 @@ try {
 
             $queryStart = $startDate . ' 08:00:00';
             $queryEnd = date('Y-m-d', strtotime($endDate . ' +1 day')) . ' 08:00:00';
+
+            $allowedGroupLines = null;
+            if (strtoupper($hcGroup) !== 'ALL') {
+                $stmtTeamLines = $pdo->prepare("
+                    SELECT DISTINCT UPPER(LTRIM(RTRIM(e.line)))
+                    FROM " . MANPOWER_EMPLOYEES_TABLE . " e WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS ts WITH (NOLOCK) ON e.department_api = ts.department_api
+                    WHERE e.is_active = 1
+                      AND e.line IS NOT NULL
+                      AND LTRIM(RTRIM(e.line)) <> ''
+                      AND ISNULL(ts.hc_group, 'UNASSIGNED') = ?
+                ");
+                $stmtTeamLines->execute([$hcGroup]);
+                $allowedGroupLines = array_flip($stmtTeamLines->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            }
 
             $sqlProd = "
                 SELECT
@@ -110,19 +130,27 @@ try {
             $stmtScrap->execute($paramsScrap);
             $rawScrapData = $stmtScrap->fetchAll(PDO::FETCH_ASSOC);
 
+            $hcFilterSql = '';
+            $paramsPeople = [':start' => $startDate, ':end' => $endDate];
+            if (strtoupper($hcGroup) !== 'ALL') {
+                $hcFilterSql = " AND COALESCE(l.actual_hc_group, ts.hc_group, 'UNASSIGNED') = :hcGroup";
+                $paramsPeople[':hcGroup'] = $hcGroup;
+            }
+
             $sqlPeople = "
                 SELECT line, AVG(CAST(daily_count AS FLOAT)) AS avg_headcount
                 FROM (
                     SELECT e.line, l.log_date, COUNT(DISTINCT l.emp_id) AS daily_count
                     FROM " . MANPOWER_DAILY_LOGS_TABLE . " l WITH (NOLOCK)
                     JOIN " . MANPOWER_EMPLOYEES_TABLE . " e WITH (NOLOCK) ON l.emp_id = e.emp_id
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS ts WITH (NOLOCK) ON e.department_api = ts.department_api
                     WHERE l.log_date BETWEEN :start AND :end
                       AND l.status IN ('PRESENT', 'LATE')
+                      {$hcFilterSql}
                     GROUP BY e.line, l.log_date
                 ) AS DailySummary
                 WHERE line IS NOT NULL
             ";
-            $paramsPeople = [':start' => $startDate, ':end' => $endDate];
             if ($userLine !== null) {
                 $sqlPeople .= " AND line = :line";
                 $paramsPeople[':line'] = $userLine;
@@ -168,7 +196,15 @@ try {
                 array_keys($peopleMap),
                 array_keys($laborMap)
             ));
-            $allLines = array_filter($allLines, static fn($v) => $v !== '' && $v !== 'ALL' && $v !== 'UNKNOWN');
+            $allLines = array_filter($allLines, static function ($v) use ($allowedGroupLines, $prodMap) {
+                if ($v === '' || $v === 'ALL' || $v === 'UNKNOWN') {
+                    return false;
+                }
+                if ($allowedGroupLines === null) {
+                    return true;
+                }
+                return isset($allowedGroupLines[$v]) || isset($prodMap[$v]);
+            });
             sort($allLines);
 
             $summary = [
@@ -289,19 +325,24 @@ try {
                 }
             }
 
+            $allowedLinesMap = array_flip($allLines);
             $sqlDailyLabor = "
-                SELECT CONVERT(VARCHAR(10), entry_date, 23) AS entry_date, SUM(cost_value) AS labor_val
+                SELECT UPPER(LTRIM(RTRIM(line))) AS line_key, CONVERT(VARCHAR(10), entry_date, 23) AS entry_date, SUM(cost_value) AS labor_val
                 FROM " . MANUAL_COSTS_TABLE . " WITH (NOLOCK)
                 WHERE entry_date BETWEEN :start AND :end
                   AND cost_type IN ('DIRECT_LABOR', 'OVERTIME')
                   AND line IS NOT NULL AND line NOT IN ('UNKNOWN', 'ALL')
                   AND line NOT LIKE '%Team2%'
                   " . ($userLine !== null ? "AND line = :line" : "") . "
-                GROUP BY entry_date
+                GROUP BY entry_date, UPPER(LTRIM(RTRIM(line)))
             ";
             $stmtDl = $pdo->prepare($sqlDailyLabor);
             $stmtDl->execute($paramsLabor);
             while ($row = $stmtDl->fetch(PDO::FETCH_ASSOC)) {
+                $lk = (string)($row['line_key'] ?? '');
+                if ($allowedGroupLines !== null && !isset($allowedLinesMap[$lk])) {
+                    continue;
+                }
                 $d = $row['entry_date'];
                 if (isset($trendData[$d])) {
                     $trendData[$d]['cost'] += (float)($row['labor_val'] ?? 0);

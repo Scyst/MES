@@ -19,7 +19,7 @@ try {
         $cleanPath = preg_replace('#^(\.\./)+#', '', $rawPath);
         $cleanPath = ltrim($cleanPath, '/');
 
-        if (!preg_match('#^uploads/(pe_images|spare_parts|profile_pictures)/[A-Za-z0-9._-]+$#', $cleanPath) &&
+        if (!preg_match('#^uploads/(pe_images|spare_parts|profile_pictures|maintenance)/[A-Za-z0-9._-]+$#', $cleanPath) &&
             !preg_match('#^uploads/iiot-map-bg\.(jpg|jpeg|png|webp)$#i', $cleanPath)) {
             http_response_code(400);
             exit('Invalid image path');
@@ -28,9 +28,14 @@ try {
         $relUnderUploads = substr($cleanPath, strlen('uploads/'));
         $foundFile = null;
         foreach (resolvePeUploadSearchDirs() as $baseDir) {
-            $candidate = realpath($baseDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relUnderUploads));
-            if ($candidate !== false && strpos($candidate, $baseDir) === 0 && is_file($candidate)) {
+            $joined = $baseDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relUnderUploads);
+            $candidate = @realpath($joined);
+            if ($candidate !== false && strpos($candidate, $baseDir) === 0 && @is_file($candidate)) {
                 $foundFile = $candidate;
+                break;
+            }
+            if (@is_file($joined)) {
+                $foundFile = $joined;
                 break;
             }
         }
@@ -40,8 +45,22 @@ try {
             exit('Image not found');
         }
 
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($foundFile) ?: 'application/octet-stream';
+        $ext = strtolower(pathinfo($foundFile, PATHINFO_EXTENSION));
+        $extMimeMap = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+        ];
+        $mime = $extMimeMap[$ext] ?? 'application/octet-stream';
+        if (class_exists('finfo')) {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $detected = $finfo->file($foundFile);
+            if (is_string($detected) && strpos($detected, 'image/') === 0) {
+                $mime = $detected;
+            }
+        }
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
             http_response_code(403);
             exit('Unsupported media type');
@@ -68,8 +87,18 @@ try {
             if ((int)$file['size'] > 5 * 1024 * 1024) {
                 peJsonError('ขนาดรูปภาพต้องไม่เกิน 5 MB', 400);
             }
-            $finfo = new finfo(FILEINFO_MIME_TYPE);
-            $mime = $finfo->file($file['tmp_name']);
+            $ext = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+            $extMimeMap = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+            ];
+            $mime = $extMimeMap[$ext] ?? '';
+            if (class_exists('finfo')) {
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = (string)($finfo->file($file['tmp_name']) ?: $mime);
+            }
             $extMap = [
                 'image/jpeg' => 'jpg',
                 'image/png' => 'png',

@@ -67,3 +67,4 @@
 - [x] Phase 3.2: Sales & Shipping Schedule (`#/sales`), Loading Report C-TPAT (`#/loading-report`), Auto Invoice & Packing List (`#/auto-invoice`) — Complete (14/11/2026)
 - [x] Phase 3.3: Executive Management & Planning (`#/management`), OEE Executive & Shopfloor (`#/oee`), Daily P&L (`#/daily-pl`) — Complete (16/11/2026)
 - [x] Phase 3.4: Area Access (`#/area-access`), Accessories Inspection (`#/accessories-inspection`), CCTV Downloader (`#/cctv-downloader`) — Complete (16/11/2026)
+- [x] UAT Round 1 (11 Items): แก้ไข UI/Performance, RBAC Store & Production, Media URLs (`mediaUrl.js` + PHP MIME fallback), C-TPAT 2-Tab Merge, QMS Planner Scroll, Accessories `.env`, PE Parts UX, Management & Manpower `TEAM 1` / Auto-Upsert / Mobile Cards และลบป้าย `SPA`/`SPA Ported` ครบทั้งหมด — Complete (16/11/2026)

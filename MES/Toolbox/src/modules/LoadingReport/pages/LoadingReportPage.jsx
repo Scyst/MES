@@ -242,7 +242,7 @@ export default function LoadingReportPage() {
   };
 
   return (
-    <div className="w-full space-y-5 p-3 sm:p-5">
+    <div className="w-full space-y-4">
       {isOffline && (
         <div className="flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
           <WifiOff className="h-4 w-4 shrink-0" />
@@ -487,17 +487,16 @@ export default function LoadingReportPage() {
 
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { key: 'header', label: '1. ข้อมูลตู้ & คนขับ (Header)' },
-                    { key: 'photos', label: '2. ภาพถ่าย 16 จุด (Photos)' },
-                    { key: 'checklist', label: '3. แบบตรวจ 10 หมวด (C-TPAT)' },
+                    { key: 'header', label: '1. ข้อมูลตู้, คนขับ & ภาพถ่าย 16 จุด' },
+                    { key: 'checklist', label: '2. แบบตรวจ 10 หมวด (C-TPAT)' },
                   ].map((t) => (
                     <button
                       key={t.key}
                       type="button"
                       onClick={() => setWorkTab(t.key)}
-                      className={`min-h-[44px] rounded-xl px-4 text-xs font-semibold transition ${
-                        workTab === t.key
-                          ? 'bg-orange-600 text-white'
+                      className={`min-h-[40px] rounded-xl px-4 text-xs font-semibold transition cursor-pointer ${
+                        (workTab === 'photos' ? 'header' : workTab) === t.key
+                          ? 'bg-orange-600 text-white shadow-2xs'
                           : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200'
                       }`}
                     >
@@ -506,77 +505,79 @@ export default function LoadingReportPage() {
                   ))}
                 </div>
 
-                {workTab === 'header' && (
-                  <form onSubmit={handleSaveHeader} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs">
-                    {[
-                      { key: 'container_no', label: 'Container No. (เบอร์ตู้)' },
-                      { key: 'container_type', label: 'Container Type (เช่น 20GP, 40HQ)' },
-                      { key: 'seal_no', label: 'Seal No. (เลขซีล)' },
-                      { key: 'cable_seal', label: 'Cable Seal (ซีลสลิง)' },
-                      { key: 'car_license', label: 'Car License (ทะเบียนรถ)' },
-                      { key: 'driver_name', label: 'Driver Name (ชื่อคนขับ)' },
-                      { key: 'loading_location', label: 'Loading Location (จุดโหลด)' },
-                      { key: 'inspector_name', label: 'Inspector Name (ผู้ตรวจ)' },
-                      { key: 'supervisor_name', label: 'Supervisor Name (ผู้รับรอง)' },
-                    ].map((f) => (
-                      <div key={f.key}>
-                        <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
+                {(workTab === 'header' || workTab === 'photos') && (
+                  <div className="space-y-6">
+                    <form onSubmit={handleSaveHeader} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs">
+                      {[
+                        { key: 'container_no', label: 'Container No. (เบอร์ตู้)' },
+                        { key: 'container_type', label: 'Container Type (เช่น 20GP, 40HQ)' },
+                        { key: 'seal_no', label: 'Seal No. (เลขซีล)' },
+                        { key: 'cable_seal', label: 'Cable Seal (ซีลสลิง)' },
+                        { key: 'car_license', label: 'Car License (ทะเบียนรถ)' },
+                        { key: 'driver_name', label: 'Driver Name (ชื่อคนขับ)' },
+                        { key: 'loading_location', label: 'Loading Location (จุดโหลด)' },
+                        { key: 'inspector_name', label: 'Inspector Name (ผู้ตรวจ)' },
+                        { key: 'supervisor_name', label: 'Supervisor Name (ผู้รับรอง)' },
+                      ].map((f) => (
+                        <div key={f.key}>
+                          <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
+                          <input
+                            type="text"
+                            disabled={formLocked}
+                            value={headerForm[f.key] || ''}
+                            onChange={(e) => setHeaderForm({ ...headerForm, [f.key]: e.target.value })}
+                            className="min-h-[42px] w-full rounded-xl border border-slate-300 px-3 dark:border-slate-700 dark:bg-slate-800"
+                          />
+                        </div>
+                      ))}
+
+                      <div>
+                        <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Loading Start Time</label>
                         <input
-                          type="text"
+                          type="datetime-local"
                           disabled={formLocked}
-                          value={headerForm[f.key] || ''}
-                          onChange={(e) => setHeaderForm({ ...headerForm, [f.key]: e.target.value })}
-                          className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 dark:border-slate-700 dark:bg-slate-800"
+                          value={headerForm.loading_start_time}
+                          onChange={(e) => setHeaderForm({ ...headerForm, loading_start_time: e.target.value })}
+                          className="min-h-[42px] w-full rounded-xl border border-slate-300 px-3 dark:border-slate-700 dark:bg-slate-800"
                         />
                       </div>
-                    ))}
 
-                    <div>
-                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Loading Start Time</label>
-                      <input
-                        type="datetime-local"
-                        disabled={formLocked}
-                        value={headerForm.loading_start_time}
-                        onChange={(e) => setHeaderForm({ ...headerForm, loading_start_time: e.target.value })}
-                        className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 dark:border-slate-700 dark:bg-slate-800"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Loading End Time</label>
-                      <input
-                        type="datetime-local"
-                        disabled={formLocked}
-                        value={headerForm.loading_end_time}
-                        onChange={(e) => setHeaderForm({ ...headerForm, loading_end_time: e.target.value })}
-                        className="min-h-[44px] w-full rounded-xl border border-slate-300 px-3 dark:border-slate-700 dark:bg-slate-800"
-                      />
-                    </div>
-
-                    {!formLocked && (
-                      <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-2">
-                        <button
-                          type="submit"
-                          disabled={savingHeader}
-                          className="flex min-h-[44px] items-center gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-blue-600"
-                        >
-                          <Save className="h-4 w-4" />
-                          <span>{savingHeader ? 'กำลังบันทึก...' : 'บันทึกข้อมูลส่วนหัว'}</span>
-                        </button>
+                      <div>
+                        <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Loading End Time</label>
+                        <input
+                          type="datetime-local"
+                          disabled={formLocked}
+                          value={headerForm.loading_end_time}
+                          onChange={(e) => setHeaderForm({ ...headerForm, loading_end_time: e.target.value })}
+                          className="min-h-[42px] w-full rounded-xl border border-slate-300 px-3 dark:border-slate-700 dark:bg-slate-800"
+                        />
                       </div>
-                    )}
-                  </form>
-                )}
 
-                {workTab === 'photos' && (
-                  <CtpatPhotoGrid
-                    reportId={reportId}
-                    photos={bundle?.photos}
-                    isCompleted={isCompleted}
-                    isOffline={isOffline}
-                    isReadOnly={isReadOnly}
-                    onPhotoChanged={() => loadReportDetail(selectedSoId)}
-                  />
+                      {!formLocked && (
+                        <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-1">
+                          <button
+                            type="submit"
+                            disabled={savingHeader}
+                            className="flex min-h-[42px] items-center gap-2 rounded-xl bg-slate-900 px-5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-blue-600 cursor-pointer"
+                          >
+                            <Save className="h-4 w-4" />
+                            <span>{savingHeader ? 'กำลังบันทึก...' : 'บันทึกข้อมูลส่วนหัว'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </form>
+
+                    <div className="border-t border-slate-200 pt-5 dark:border-slate-800">
+                      <CtpatPhotoGrid
+                        reportId={reportId}
+                        photos={bundle?.photos}
+                        isCompleted={isCompleted}
+                        isOffline={isOffline}
+                        isReadOnly={isReadOnly}
+                        onPhotoChanged={() => loadReportDetail(selectedSoId)}
+                      />
+                    </div>
+                  </div>
                 )}
 
                 {workTab === 'checklist' && (

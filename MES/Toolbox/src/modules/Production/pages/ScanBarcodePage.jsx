@@ -326,7 +326,7 @@ export default function ScanBarcodePage() {
   }, [logs]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-10">
+    <div className="w-full text-slate-900 dark:text-slate-100">
       {isOffline && (
         <div
           role="alert"

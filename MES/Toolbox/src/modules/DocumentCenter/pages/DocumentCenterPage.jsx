@@ -201,9 +201,6 @@ export default function DocumentCenterPage() {
         <div>
           <h1 className="mes-page-title">
             <FolderOpen className="text-blue-600 w-6 h-6" /> Document Center
-            <span className="mes-badge bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              ⚡ SPA Ported
-            </span>
           </h1>
           <p className="mes-page-subtitle">
             ศูนย์กลางจัดเก็บและจัดการเอกสารโรงงาน (WI, SOP, Drawing, 3D CAD Models) พร้อมระบบลายน้ำความปลอดภัย DLP

@@ -6,6 +6,33 @@ import {
 } from 'lucide-react';
 import { storeApi } from '../../../shared/services/storeApi';
 import { storeOfflineEngine } from '../utils/storeOfflineEngine';
+import { getStoreItemImageCandidates } from '../../../shared/utils/mediaUrl';
+
+/** Renders Store catalog item image with multi-candidate fallback across API and legacy uploads. */
+function StoreItemThumbnail({ imagePath, alt }) {
+  const candidates = useMemo(() => getStoreItemImageCandidates(imagePath), [imagePath]);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [imagePath]);
+
+  const currentSrc = idx < candidates.length ? candidates[idx] : '';
+
+  if (!currentSrc) {
+    return <Package className="w-8 h-8 text-slate-400 opacity-40" />;
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      loading="lazy"
+      className="w-full h-full object-cover"
+      onError={() => setIdx((prev) => prev + 1)}
+    />
+  );
+}
 
 export default function MaterialRequisitionTab() {
   const [catalog, setCatalog] = useState([]);
@@ -356,16 +383,7 @@ export default function MaterialRequisitionTab() {
                 >
                   {/* Item Image / Placeholder */}
                   <div className="relative aspect-4/3 w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-b border-slate-100 dark:border-slate-800">
-                    {item.image_path ? (
-                      <img
-                        src={item.image_path}
-                        alt={desc}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <Package className="w-8 h-8 text-slate-400 opacity-40" />
-                    )}
+                    <StoreItemThumbnail imagePath={item.image_path} alt={desc} />
 
                     {/* Stock Badge */}
                     <span className={`absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-xs ${

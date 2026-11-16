@@ -1,22 +1,20 @@
 import { apiGet, apiPost } from './apiClient';
+import { getPeImageCandidates } from '../utils/mediaUrl';
 
-const WO_URL = 'api/pe/workOrderApi.php';
-const MACHINE_URL = 'api/pe/machineApi.php';
-const PARTS_URL = 'api/pe/sparePartsApi.php';
-const REQ_URL = 'api/pe/peRequestApi.php';
-const UPLOAD_URL = 'api/pe/peUploadApi.php';
+const BASE = import.meta.env.BASE_URL || '/iot-toolbox/sandbox-b9/Toolbox/';
+const WO_URL = `${BASE}api/pe/workOrderApi.php`;
+const MACHINE_URL = `${BASE}api/pe/machineApi.php`;
+const PARTS_URL = `${BASE}api/pe/sparePartsApi.php`;
+const REQ_URL = `${BASE}api/pe/peRequestApi.php`;
+const UPLOAD_URL = `${BASE}api/pe/peUploadApi.php`;
 
 /**
  * Builds an authenticated Toolbox URL for PE work-order / machine / spare-part images
  * stored in the shared MES uploads folder.
  */
 export function getPeImageUrl(rawPath) {
-  if (!rawPath || typeof rawPath !== 'string') return '';
-  const cleaned = rawPath.replace(/\\/g, '/').replace(/^(\.\.\/)+/, '').replace(/^\/+/, '').trim();
-  if (!cleaned) return '';
-  if (cleaned.startsWith('api/pe/peUploadApi.php')) return cleaned;
-  if (/^data:image\//i.test(cleaned)) return cleaned;
-  return `${UPLOAD_URL}?action=view_image&path=${encodeURIComponent(cleaned)}`;
+  const candidates = getPeImageCandidates(rawPath);
+  return candidates[0] || '';
 }
 
 /**

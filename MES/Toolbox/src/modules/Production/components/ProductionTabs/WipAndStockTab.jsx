@@ -39,6 +39,7 @@ export default function WipAndStockTab({ metadata, isOffline }) {
 
   const locations = metadata?.locations || [];
   const canManage = Boolean(metadata?.current_user?.can_manage);
+  const canViewCost = Boolean(metadata?.current_user?.can_view_cost ?? canManage);
 
   const loadReport = useCallback(async () => {
     setLoading(true);
@@ -277,13 +278,13 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                   <th className="px-3 py-3">Part No</th>
                   <th className="px-3 py-3">รายละเอียด</th>
                   <th className="px-3 py-3 text-right">ยอดคงเหลือ</th>
-                  <th className="px-3 py-3 text-right">มูลค่ารวม (฿)</th>
+                  {canViewCost && <th className="px-3 py-3 text-right">มูลค่ารวม (฿)</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-slate-500">
+                    <td colSpan={canViewCost ? 6 : 5} className="py-10 text-center text-slate-500">
                       {loading ? 'กำลังโหลด...' : 'ไม่พบข้อมูล WIP On-Hand'}
                     </td>
                   </tr>
@@ -297,9 +298,11 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                       <td className="px-3 py-2.5 text-right font-mono font-extrabold text-blue-700 dark:text-blue-300">
                         {Number(r.onhand_qty || 0).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono">
-                        {Number(r.total_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
+                      {canViewCost && (
+                        <td className="px-3 py-2.5 text-right font-mono">
+                          {Number(r.total_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -407,14 +410,14 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                   <th className="px-3 py-3">Part No / รายละเอียด</th>
                   <th className="px-3 py-3">ประเภท</th>
                   <th className="px-3 py-3 text-right">คงเหลือรวม</th>
-                  <th className="px-3 py-3 text-right">มูลค่ารวม (฿)</th>
+                  {canViewCost && <th className="px-3 py-3 text-right">มูลค่ารวม (฿)</th>}
                   <th className="px-3 py-3 text-center">แยกตามคลัง</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-slate-500">ไม่พบข้อมูลสินค้าคงคลัง</td>
+                    <td colSpan={canViewCost ? 6 : 5} className="py-10 text-center text-slate-500">ไม่พบข้อมูลสินค้าคงคลัง</td>
                   </tr>
                 ) : (
                   rows.map((r) => (
@@ -428,9 +431,11 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                       <td className="px-3 py-2.5 text-right font-mono font-extrabold text-blue-700 dark:text-blue-300">
                         {Number(r.total_onhand || 0).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono">
-                        {Number(r.total_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
+                      {canViewCost && (
+                        <td className="px-3 py-2.5 text-right font-mono">
+                          {Number(r.total_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      )}
                       <td className="px-3 py-2.5 text-center">
                         <button
                           type="button"

@@ -205,7 +205,14 @@ function generateNextJobNumber(PDO $pdo): string {
     return $prefix . str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
 }
 
+function requireJobManagePermission(): void {
+    if (!hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor', 'planner', 'manager'])) {
+        prodJsonError('คุณไม่มีสิทธิ์สร้าง แก้ไข ยกเลิก หรือจัดเรียงคิวงานผลิต', 403);
+    }
+}
+
 function handleCreateJob(PDO $pdo, array $input, array $currentUser): void {
+    requireJobManagePermission();
     $locationId = parsePositiveInt($input['location_id'] ?? 0, 'ไลน์ผลิต / สถานี');
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'สินค้า');
     $targetQty = parsePositiveQty($input['target_qty'] ?? 0, 'เป้าหมายผลิต');
@@ -530,6 +537,7 @@ function handleCloseJob(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleEditJob(PDO $pdo, array $input, array $currentUser): void {
+    requireJobManagePermission();
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
     $targetQty = parsePositiveQty($input['target_qty'] ?? 0, 'เป้าหมายผลิต');
     $lotNo = trim((string)($input['lot_no'] ?? ''));
@@ -558,6 +566,7 @@ function handleEditJob(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleDeleteJob(PDO $pdo, array $input, array $currentUser): void {
+    requireJobManagePermission();
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
     $stmt = $pdo->prepare("SELECT job_id, job_no, status, actual_qty, hold_qty, scrap_qty FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
     $stmt->execute([$jobId]);
@@ -616,6 +625,7 @@ function handleReopenJob(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleReorderQueue(PDO $pdo, array $input, array $currentUser): void {
+    requireJobManagePermission();
     $jobIds = $input['job_ids'] ?? [];
     if (!is_array($jobIds) || empty($jobIds)) {
         throw new InvalidArgumentException('ไม่พบลำดับใบงานสำหรับจัดเรียง');

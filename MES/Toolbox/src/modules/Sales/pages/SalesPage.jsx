@@ -29,7 +29,7 @@ export default function SalesPage() {
   const isReadOnly = String(user?.role || '').toLowerCase() === 'customer';
 
   return (
-    <div className="w-full space-y-5 p-3 sm:p-5">
+    <div className="w-full space-y-4">
       {isOffline && (
         <div className="flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
           <WifiOff className="h-4 w-4 shrink-0" />

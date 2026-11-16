@@ -5,7 +5,7 @@ import {
   Store, Warehouse, Package, MapPin, ShieldCheck,
   ShieldAlert, Wrench, HeartPulse, ChevronRight,
   Settings, Users, DollarSign, FileText, Zap, Sun, Calendar, Rocket,
-  Video, Cuboid, Star, FlaskConical, GraduationCap, Search, X, Sparkles, Filter, Network
+  Video, Cuboid, Star, FlaskConical, GraduationCap, Search, X, Filter, Network
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dailyLogApi } from '../../../shared/services/dailyLogApi';
@@ -18,7 +18,6 @@ import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
   const isLegacy = to.includes('.php') || to.includes('.html') || to.startsWith('http') || to.startsWith('/iot-toolbox');
-  const isPorted = to.startsWith('/') && !isLegacy;
 
   const className = "group bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xs hover:shadow-md hover:border-transparent hover:ring-2 hover:ring-blue-500/40 hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-3 px-3 py-2.5 xl:px-3.5 xl:py-3 min-h-[58px] xl:min-h-[64px] relative overflow-hidden";
 
@@ -35,11 +34,6 @@ const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
           <p className="font-bold text-slate-800 dark:text-slate-100 text-xs xl:text-sm leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
             {title}
           </p>
-          {isPorted && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0 shadow-2xs">
-              ⚡ SPA
-            </span>
-          )}
         </div>
         <p className="text-[11px] xl:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight truncate">
           {desc}
@@ -184,8 +178,8 @@ export default function HomeDashboard() {
     { title: 'Team Planner', desc: 'กระดานแผนงานและปฏิทินทีม', icon: Calendar, colorClass: 'bg-purple-100 text-purple-700', to: '/planner' },
     { title: 'Shuttle Bus', desc: 'ระบบจองรถรับ-ส่งพนักงาน', icon: Bus, colorClass: 'bg-emerald-100 text-emerald-700', to: '/transport' },
     { title: 'MES Learning Hub', desc: 'ศูนย์การเรียนรู้ & สอบวัดผล (Academy)', icon: GraduationCap, colorClass: 'bg-indigo-100 text-indigo-700', to: '/learning' },
-    { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/oee', badge: 'SPA' },
-    { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-indigo-100 text-indigo-700', to: '/store?tab=requisition', badge: 'SPA' },
+    { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/oee' },
+    { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-indigo-100 text-indigo-700', to: '/store?tab=requisition' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟล์คลิฟท์', icon: Truck, colorClass: 'bg-blue-100 text-blue-700', to: '/forklift' },
     { title: 'Document Center', desc: 'คู่มือและเอกสารการทำงาน (WI/SOP/CAD)', icon: FolderOpen, colorClass: 'bg-indigo-100 text-indigo-700', to: '/documents' },
   ], []);
@@ -197,41 +191,41 @@ export default function HomeDashboard() {
     { title: 'Live Job Queue', desc: 'ระบบจัดการคิวงานหน้าไลน์ (KDS)', icon: ListOrdered, colorClass: 'bg-blue-100 text-blue-600', to: '/production?tab=queue' },
     { title: 'Scan Barcode', desc: 'ระบบสแกนบาร์โค้ด', icon: Barcode, colorClass: 'bg-blue-100 text-blue-600', to: '/scan-barcode' },
     { title: 'Tag Printer', desc: 'พิมพ์แท็กส่งงาน (WIP/FG)', icon: Printer, colorClass: 'bg-blue-100 text-blue-600', to: '/production?tab=printer' },
-    { title: 'Stop Causes', desc: 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', icon: Ban, colorClass: 'bg-blue-100 text-blue-600', to: '/pe/request', badge: 'SPA' },
+    { title: 'Stop Causes', desc: 'แจ้งซ่อม/บันทึกเครื่องจักรหยุด', icon: Ban, colorClass: 'bg-blue-100 text-blue-600', to: '/pe/request' },
   ], []);
 
   const warehouseServices = useMemo(() => [
     { title: 'Inbound Hub (SCM-Store)', desc: 'ศูนย์กลางเชื่อมเอกสาร ลูกค้า–SCM–สโตร์', icon: Package, colorClass: 'bg-orange-100 text-orange-700', to: '/inbound-hub' },
-    { title: 'Store & Inventory Hub', desc: 'ศูนย์กลางสต็อกคงคลังและอนุมัติตัดยอด', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/store', badge: 'SPA' },
-    { title: 'Visual Cycle Count', desc: 'ตรวจนับสินค้าคลังแบบ Visual Map & Blind Count', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=cycle-count', badge: 'SPA' },
-    { title: 'Store KDS & PRD Return', desc: 'คิวจ่ายพัสดุสโตร์ เปิด K2 และรับคืนวัตถุดิบ', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=kds', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'], badge: 'SPA' },
-    { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลังและพิมพ์แท็ก QR', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=receiving', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'], badge: 'SPA' },
-    { title: 'Scrap & Replacement', desc: 'แจ้งของเสีย เบิกทดแทน และวิเคราะห์มูลค่า', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=scrap', badge: 'SPA' },
-    { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report', badge: 'SPA' },
-    { title: 'C-TPAT Doc Tracking', desc: 'ค้นหาเอกสาร C-TPAT เสร็จสมบูรณ์', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report?tab=tracking', badge: 'SPA' },
-    { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง (Freight FleetLog)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/fleet-log', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
-    { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/area-access', badge: 'SPA' },
-    { title: 'CCTV Downloader', desc: 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', icon: Video, colorClass: 'bg-orange-100 text-orange-600', to: '/cctv-downloader', roles: ['admin', 'creator', 'manager'], badge: 'SPA' },
+    { title: 'Store & Inventory Hub', desc: 'ศูนย์กลางสต็อกคงคลังและอนุมัติตัดยอด', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/store', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
+    { title: 'Visual Cycle Count', desc: 'ตรวจนับสินค้าคลังแบบ Visual Map & Blind Count', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=cycle-count', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
+    { title: 'Store KDS & PRD Return', desc: 'คิวจ่ายพัสดุสโตร์ เปิด K2 และรับคืนวัตถุดิบ', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=kds', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
+    { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลังและพิมพ์แท็ก QR', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=receiving', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
+    { title: 'Scrap & Replacement', desc: 'แจ้งของเสีย เบิกทดแทน และวิเคราะห์มูลค่า', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=scrap', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
+    { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report' },
+    { title: 'C-TPAT Doc Tracking', desc: 'ค้นหาเอกสาร C-TPAT เสร็จสมบูรณ์', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report?tab=tracking' },
+    { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง (Freight FleetLog)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/fleet-log', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Area Access', desc: 'บันทึกเข้า-ออกพื้นที่หวงห้าม', icon: ShieldCheck, colorClass: 'bg-orange-100 text-orange-600', to: '/area-access' },
+    { title: 'CCTV Downloader', desc: 'ดาวน์โหลดข้อมูลกล้องวงจรปิด', icon: Video, colorClass: 'bg-orange-100 text-orange-600', to: '/cctv-downloader', roles: ['admin', 'creator', 'manager'] },
   ], []);
 
   const qualityServices = useMemo(() => [
-    { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/qms', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa', 'qc'], badge: 'SPA' },
-    { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/accessories-inspection', badge: 'SPA' },
-    { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/pe', roles: ['admin', 'creator', 'manager', 'supervisor'], badge: 'SPA' },
-    { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/pe/tech', badge: 'SPA' },
+    { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/qms', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa', 'qc'] },
+    { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/accessories-inspection' },
+    { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/pe', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/pe/tech' },
     { title: 'Digital Twin', desc: 'ระบบ 3D Monitoring ของโรงงาน', icon: Cuboid, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/digitalTwin/digitalTwin.html' },
   ], []);
 
   const executiveServices = useMemo(() => [
-    { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารและวางแผนผลิต', icon: LineChart, colorClass: 'bg-emerald-100 text-emerald-600', to: '/management', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'planner', 'supervisor'] },
-    { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-emerald-100 text-emerald-600', to: '/planning', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower?tab=grading', badge: 'SPA', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารและวางแผนผลิต', icon: LineChart, colorClass: 'bg-emerald-100 text-emerald-600', to: '/management', roles: ['admin', 'creator', 'manager', 'planner', 'supervisor'] },
+    { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-emerald-100 text-emerald-600', to: '/planning', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower?tab=grading', roles: ['admin', 'creator', 'manager'] },
     { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-emerald-100 text-emerald-600', to: '/mood-report', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/daily-pl', badge: 'SPA', roles: ['admin', 'creator', 'manager'] },
-    { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/auto-invoice', roles: ['admin', 'creator', 'manager', 'planner'], badge: 'SPA' },
-    { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales', roles: ['admin', 'creator', 'manager', 'planner', 'customer'], badge: 'SPA' },
-    { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales?tab=shipping', roles: ['admin', 'creator', 'manager', 'planner', 'customer'], badge: 'SPA' },
+    { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/daily-pl', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/auto-invoice', roles: ['admin', 'creator', 'manager', 'planner'] },
+    { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales', roles: ['admin', 'creator', 'manager', 'planner', 'customer'] },
+    { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales?tab=shipping', roles: ['admin', 'creator', 'manager', 'planner', 'customer'] },
     { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ TOU & LPG', icon: Zap, colorClass: 'bg-emerald-100 text-emerald-600', to: '/utility', roles: ['admin', 'creator', 'manager', 'engineer', 'supervisor'] },
   ], []);
 
@@ -278,15 +272,9 @@ export default function HomeDashboard() {
     accessibleQuality, accessibleExecutive, accessibleAdmin, accessibleSandbox
   ]);
 
-  // Ported SPA modules list
-  const portedSpaServices = useMemo(() => {
-    return allAccessibleServices.filter(s => s.to.startsWith('/') && !s.to.includes('.php') && !s.to.includes('.html') && !s.to.startsWith('http') && !s.to.startsWith('/iot-toolbox'));
-  }, [allAccessibleServices]);
-
   // Category counts
   const categoryCounts = useMemo(() => ({
     all: allAccessibleServices.length,
-    spa: portedSpaServices.length,
     common: accessibleCommon.length,
     production: accessibleProduction.length,
     warehouse: accessibleWarehouse.length,
@@ -294,7 +282,7 @@ export default function HomeDashboard() {
     executive: accessibleExecutive.length,
     admin: accessibleAdmin.length,
   }), [
-    allAccessibleServices.length, portedSpaServices.length, accessibleCommon.length,
+    allAccessibleServices.length, accessibleCommon.length,
     accessibleProduction.length, accessibleWarehouse.length, accessibleQuality.length,
     accessibleExecutive.length, accessibleAdmin.length
   ]);
@@ -462,10 +450,6 @@ export default function HomeDashboard() {
             {/* Quick Status / Total Indicator */}
             <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap pl-1">
               <span className="font-semibold text-slate-700 dark:text-slate-300">{allAccessibleServices.length}</span> บริการที่ใช้งานได้
-              <span className="text-slate-300 dark:text-slate-600">|</span>
-              <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold">
-                ⚡ {portedSpaServices.length} SPA
-              </span>
             </div>
           </div>
 
@@ -487,22 +471,6 @@ export default function HomeDashboard() {
                     : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
                 }`}>
                   {categoryCounts.all}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setSelectedCategory('spa')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-                  selectedCategory === 'spa'
-                    ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/30'
-                    : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800'
-                }`}
-              >
-                <span>⚡ Toolbox SPA (พอร์ตแล้ว)</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  selectedCategory === 'spa' ? 'bg-white/25 text-white' : 'bg-blue-200/60 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                }`}>
-                  {categoryCounts.spa}
                 </span>
               </button>
 
@@ -613,34 +581,8 @@ export default function HomeDashboard() {
           </section>
         )}
 
-        {/* View Mode 2: Filtered by "⚡ Toolbox SPA (พอร์ตแล้ว)" */}
-        {!isSearching && selectedCategory === 'spa' && (
-          <section className="space-y-3">
-            <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-200 dark:border-blue-800/60 p-4 rounded-xl flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                  <Sparkles size={16} /> โมดูลที่พอร์ตเข้าสู่ Toolbox SPA เรียบร้อยแล้ว ({portedSpaServices.length} ระบบ)
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  ระบบเหล่านี้ทำงานในรูปแบบ Single Page Application ทำงานเร็ว ลื่นไหล ปลอดภัยด้วย PBAC และเชื่อมโยงฐานข้อมูลโรงงานแบบเรียลไทม์
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline shrink-0 pl-3 cursor-pointer"
-              >
-                แสดงทั้งหมด &rarr;
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-              {portedSpaServices.map(svc => <ServiceCard key={svc.title} {...svc} />)}
-            </div>
-          </section>
-        )}
-
-        {/* View Mode 3: Specific Category Tab Selected */}
-        {!isSearching && selectedCategory !== 'all' && selectedCategory !== 'spa' && (
+        {/* View Mode 2: Specific Category Tab Selected */}
+        {!isSearching && selectedCategory !== 'all' && (
           <section className="space-y-3">
             <SectionLabel
               label={

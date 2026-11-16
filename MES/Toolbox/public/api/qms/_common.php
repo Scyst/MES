@@ -247,7 +247,13 @@ function saveQmsUploadedFiles(array $fileField, string $subFolder, string $prefi
         throw new RuntimeException('ไม่สามารถสร้างโฟลเดอร์จัดเก็บรูปภาพได้');
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $finfo = class_exists('finfo') ? new finfo(FILEINFO_MIME_TYPE) : null;
+    $extMimeMap = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+    ];
     $saved = [];
 
     foreach ($names as $idx => $origName) {
@@ -264,7 +270,8 @@ function saveQmsUploadedFiles(array $fileField, string $subFolder, string $prefi
         if ((int)($sizes[$idx] ?? 0) > 5 * 1024 * 1024) {
             throw new InvalidArgumentException('ขนาดรูปภาพแต่ละไฟล์ต้องไม่เกิน 5 MB');
         }
-        $mime = $finfo->file($tmpPath);
+        $ext = strtolower(pathinfo((string)$origName, PATHINFO_EXTENSION));
+        $mime = $finfo ? ($finfo->file($tmpPath) ?: ($extMimeMap[$ext] ?? '')) : ($extMimeMap[$ext] ?? '');
         if (!isset($extMap[$mime])) {
             throw new InvalidArgumentException('รองรับเฉพาะไฟล์รูปภาพ JPG, PNG หรือ WebP เท่านั้น');
         }

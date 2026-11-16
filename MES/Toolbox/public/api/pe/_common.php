@@ -222,8 +222,10 @@ function savePeBase64Image(string $base64Input, string $subFolder = 'pe_images',
 
     if (preg_match('/^data:image\/([a-zA-Z0-9]+);base64,(.*)$/s', $trimmed, $matches)) {
         $rawData = base64_decode($matches[2], true);
+        $fallbackExt = strtolower($matches[1]);
     } else {
         $rawData = base64_decode($trimmed, true);
+        $fallbackExt = 'jpg';
     }
 
     if ($rawData === false || strlen($rawData) === 0) {
@@ -233,8 +235,17 @@ function savePeBase64Image(string $base64Input, string $subFolder = 'pe_images',
         throw new InvalidArgumentException('ขนาดรูปภาพต้องไม่เกิน 5 MB');
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->buffer($rawData);
+    $extMimeMap = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+    ];
+    $mime = $extMimeMap[$fallbackExt] ?? 'image/jpeg';
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string)($finfo->buffer($rawData) ?: $mime);
+    }
     $extMap = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',

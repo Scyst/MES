@@ -428,14 +428,16 @@ export default function JobQueueTab({ metadata, isOffline }) {
             <History className="h-4 w-4" /> ประวัติใบงานทั้งหมด
           </button>
 
-          <button
-            type="button"
-            disabled={isOffline}
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> สร้างคิวงานใหม่
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              disabled={isOffline}
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" /> สร้างคิวงานใหม่
+            </button>
+          )}
 
           <button
             type="button"
@@ -504,27 +506,29 @@ export default function JobQueueTab({ metadata, isOffline }) {
                           <div className="text-xs text-slate-500 dark:text-slate-400">{job.part_description}</div>
                         </div>
 
-                        {/* Reorder controls */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={idx === 0 || isOffline}
-                            onClick={() => handleMoveOrder(group, idx, -1)}
-                            aria-label="เลื่อนคิวขึ้น"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === group.jobs.length - 1 || isOffline}
-                            onClick={() => handleMoveOrder(group, idx, 1)}
-                            aria-label="เลื่อนคิวลง"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </button>
-                        </div>
+                        {/* Reorder controls (Managers/Supervisors only) */}
+                        {canManage && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={idx === 0 || isOffline}
+                              onClick={() => handleMoveOrder(group, idx, -1)}
+                              aria-label="เลื่อนคิวขึ้น"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === group.jobs.length - 1 || isOffline}
+                              onClick={() => handleMoveOrder(group, idx, 1)}
+                              aria-label="เลื่อนคิวลง"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Progress Bar */}
@@ -547,35 +551,37 @@ export default function JobQueueTab({ metadata, isOffline }) {
                         </div>
                       </div>
 
-                      {/* Job Actions */}
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {job.status !== 'RUNNING' && (
+                      {/* Job Actions — Clean semantic hierarchy: 1 solid primary CTA + muted state controls + utility icons */}
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-1.5">
+                        {job.status !== 'RUNNING' ? (
                           <button
                             type="button"
                             disabled={isOffline}
                             onClick={() => handleStartJob(job, false)}
-                            className="inline-flex min-h-[40px] items-center gap-1 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:opacity-50 cursor-pointer transition-colors"
                           >
-                            <Play className="h-3.5 w-3.5" /> {job.status === 'PAUSED' ? 'ผลิตต่อ (Resume)' : 'เริ่มงาน (Start)'}
+                            <Play className="h-3.5 w-3.5" />
+                            <span>{job.status === 'PAUSED' ? 'ผลิตต่อ' : 'เริ่มผลิต'}</span>
                           </button>
-                        )}
-                        {job.status === 'RUNNING' && (
+                        ) : (
                           <>
                             <button
                               type="button"
                               disabled={isOffline}
                               onClick={() => setRecordModalJob(job)}
-                              className="inline-flex min-h-[40px] items-center gap-1 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700 disabled:opacity-50 cursor-pointer transition-colors"
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5" /> ลงยอดผลิต
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>ลงยอดผลิต</span>
                             </button>
                             <button
                               type="button"
                               disabled={isOffline}
                               onClick={() => handlePauseJob(job)}
-                              className="inline-flex min-h-[40px] items-center gap-1 rounded-xl bg-amber-500 px-3 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-50"
+                              className="inline-flex min-h-[38px] items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 cursor-pointer transition-colors"
                             >
-                              <Pause className="h-3.5 w-3.5" /> พักงาน
+                              <Pause className="h-3.5 w-3.5" />
+                              <span>พักงาน</span>
                             </button>
                           </>
                         )}
@@ -584,39 +590,50 @@ export default function JobQueueTab({ metadata, isOffline }) {
                             type="button"
                             disabled={isOffline}
                             onClick={() => handleCloseJob(job)}
-                            className="inline-flex min-h-[40px] items-center gap-1 rounded-xl bg-slate-800 px-3 text-xs font-bold text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700"
+                            className="inline-flex min-h-[38px] items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 px-3 text-xs font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                           >
-                            <Square className="h-3.5 w-3.5" /> ปิดงาน
+                            <Square className="h-3 w-3" />
+                            <span>ปิดงาน</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => openJobLogs(job)}
-                          className="inline-flex min-h-[40px] items-center gap-1 rounded-xl border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-                        >
-                          <History className="h-3.5 w-3.5" /> Log
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isOffline}
-                          onClick={() => {
-                            setEditJobForm({ target_qty: String(job.target_qty), lot_no: job.lot_no || '' });
-                            setEditJobModal(job);
-                          }}
-                          aria-label="แก้ไขเป้าหมาย"
-                          className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-300 bg-white px-2.5 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isOffline}
-                          onClick={() => handleDeleteJob(job)}
-                          aria-label="ยกเลิกคิวงาน"
-                          className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-rose-200 bg-white px-2.5 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:bg-slate-800"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="ml-auto flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openJobLogs(job)}
+                            title="ประวัติยอดผลิตของใบงาน"
+                            className="inline-flex min-h-[36px] items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                          >
+                            <History className="h-3.5 w-3.5" />
+                            <span>Log</span>
+                          </button>
+                          {canManage && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={isOffline}
+                                onClick={() => {
+                                  setEditJobForm({ target_qty: String(job.target_qty), lot_no: job.lot_no || '' });
+                                  setEditJobModal(job);
+                                }}
+                                aria-label="แก้ไขเป้าหมาย"
+                                title="แก้ไขเป้าหมาย/Lot"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer transition-colors"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isOffline}
+                                onClick={() => handleDeleteJob(job)}
+                                aria-label="ยกเลิกคิวงาน"
+                                title="ยกเลิก/ลบคิวงาน"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 cursor-pointer transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -978,24 +995,36 @@ export default function JobQueueTab({ metadata, isOffline }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {jobLogs.map((log) => (
-                  <tr key={log.transaction_id}>
-                    <td className="px-3 py-2 font-mono">{String(log.transaction_timestamp || '').replace('T', ' ').slice(0, 16)}</td>
-                    <td className="px-3 py-2 font-semibold">{log.transaction_type}</td>
-                    <td className="px-3 py-2 text-right font-mono font-bold">{Number(log.quantity).toLocaleString()}</td>
-                    <td className="px-3 py-2">{log.team_member_names || log.created_by_name}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        type="button"
-                        disabled={isOffline}
-                        onClick={() => handleDeleteJobTxn(log)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {jobLogs.map((log) => {
+                  const canDeleteLog =
+                    canManage || Number(log.created_by_user_id) === Number(metadata?.current_user?.id);
+                  const teamNames = String(log.team_member_names || '').split(',').map((s) => s.trim()).filter(Boolean);
+                  const lead = log.created_by_name || teamNames[0] || '-';
+                  return (
+                    <tr key={log.transaction_id}>
+                      <td className="px-3 py-2 font-mono">{String(log.transaction_timestamp || '').replace('T', ' ').slice(0, 16)}</td>
+                      <td className="px-3 py-2 font-semibold">{log.transaction_type}</td>
+                      <td className="px-3 py-2 text-right font-mono font-bold">{Number(log.quantity).toLocaleString()}</td>
+                      <td className="px-3 py-2 max-w-[160px] truncate" title={teamNames.join(', ') || lead}>
+                        {lead}{teamNames.length > 1 ? ` (+${teamNames.length - 1})` : ''}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {canDeleteLog ? (
+                          <button
+                            type="button"
+                            disabled={isOffline}
+                            onClick={() => handleDeleteJobTxn(log)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        ) : (
+                          <span className="text-slate-300">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {jobLogs.length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-6 text-center text-slate-400">ยังไม่มีรายการบันทึกผลผลิตสำหรับใบงานนี้</td>

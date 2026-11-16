@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Award,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { profileApi } from '../../../shared/services/profileApi';
+import { getProfileAvatarCandidates } from '../../../shared/utils/mediaUrl';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import Profile4DGradingTab from '../components/Profile4DGradingTab';
 import ProfileWelfareTab from '../components/ProfileWelfareTab';
@@ -93,9 +94,13 @@ export default function ProfilePage() {
     setSearchParams({ tab: tabId });
   };
 
+  const [avatarIdx, setAvatarIdx] = useState(0);
   const tenure = calculateTenure(profile?.start_date);
   const initial = (profile?.fullname || profile?.username || user?.username || 'U').charAt(0).toUpperCase();
-  const avatarUrl = profile?.profile_picture || user?.profile_picture;
+  const rawAvatar = profile?.profile_picture || user?.profile_picture;
+  const avatarCandidates = useMemo(() => getProfileAvatarCandidates(rawAvatar), [rawAvatar]);
+  useEffect(() => { setAvatarIdx(0); }, [rawAvatar]);
+  const avatarUrl = avatarIdx < avatarCandidates.length ? avatarCandidates[avatarIdx] : null;
 
   return (
     <div className="w-full space-y-4">
@@ -122,6 +127,7 @@ export default function ProfilePage() {
                     <img
                       src={avatarUrl}
                       alt={profile?.fullname || 'Profile'}
+                      onError={() => setAvatarIdx((i) => i + 1)}
                       className="w-full h-full object-cover"
                     />
                   ) : (

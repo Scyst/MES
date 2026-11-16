@@ -1,17 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ImageOff, X } from 'lucide-react';
-import { getPeImageUrl } from '../../../shared/services/peApi';
+import { getPeImageCandidates } from '../../../shared/utils/mediaUrl';
 
 /**
  * Displays authenticated PE Maintenance images (work orders, machines, spare parts)
- * with graceful fallback UI and optional full-screen lightbox preview.
+ * with multi-candidate fallback across API and legacy upload paths plus lightbox preview.
  */
 export default function PeImage({ path, alt = 'PE Image', className = 'w-12 h-12 rounded-lg object-cover', clickable = true }) {
-  const [hasError, setHasError] = useState(false);
+  const candidates = useMemo(() => getPeImageCandidates(path), [path]);
+  const [candidateIdx, setCandidateIdx] = useState(0);
   const [openLightbox, setOpenLightbox] = useState(false);
-  const src = getPeImageUrl(path);
 
-  if (!src || hasError) {
+  useEffect(() => {
+    setCandidateIdx(0);
+  }, [path]);
+
+  const src = candidateIdx < candidates.length ? candidates[candidateIdx] : '';
+
+  if (!src) {
     return (
       <div className={`inline-flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0 ${className}`}>
         <ImageOff className="w-4 h-4" />
@@ -25,7 +31,7 @@ export default function PeImage({ path, alt = 'PE Image', className = 'w-12 h-12
         src={src}
         alt={alt}
         loading="lazy"
-        onError={() => setHasError(true)}
+        onError={() => setCandidateIdx((prev) => prev + 1)}
         onClick={clickable ? () => setOpenLightbox(true) : undefined}
         className={`${className} ${clickable ? 'cursor-zoom-in hover:opacity-90 transition-opacity' : ''}`}
       />

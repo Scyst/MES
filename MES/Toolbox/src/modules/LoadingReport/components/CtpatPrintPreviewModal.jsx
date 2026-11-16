@@ -1,7 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Printer, X } from 'lucide-react';
-import { getLoadingPhotoUrl, loadingReportApi } from '../../../shared/services/loadingApi';
+import { loadingReportApi } from '../../../shared/services/loadingApi';
+import { getLoadingPhotoCandidates } from '../../../shared/utils/mediaUrl';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
+
+function PrintPhotoImg({ fileOrPath, alt }) {
+  const candidates = getLoadingPhotoCandidates(fileOrPath);
+  const [idx, setIdx] = useState(0);
+  const src = idx < candidates.length ? candidates[idx] : '';
+  if (!src) return <span className="text-[10px] text-slate-400">No Photo</span>;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full object-cover"
+      onError={() => setIdx((prev) => prev + 1)}
+    />
+  );
+}
 import {
   CTPAT_CHECKLIST_SECTIONS,
   CTPAT_PHOTO_POINTS,
@@ -164,7 +180,7 @@ export default function CtpatPrintPreviewModal({ reportId, soId, initialBundle =
                       </div>
                       <div className="aspect-[4/3] bg-slate-50 flex items-center justify-center">
                         {fn ? (
-                          <img src={getLoadingPhotoUrl(fn)} alt={pt.label} className="h-full w-full object-cover" />
+                          <PrintPhotoImg fileOrPath={fn} alt={pt.label} />
                         ) : (
                           <span className="text-[10px] text-slate-400">No Photo</span>
                         )}

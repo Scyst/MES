@@ -37,9 +37,14 @@ function handleViewLoadingPhoto(array $input): void {
 
     $foundPath = null;
     foreach (resolveLoadingUploadSearchDirs() as $dir) {
-        $candidate = realpath($dir . DIRECTORY_SEPARATOR . $file);
-        if ($candidate !== false && strpos($candidate, $dir) === 0 && is_file($candidate)) {
-            $foundPath = $candidate;
+        $realCandidate = @realpath($dir . DIRECTORY_SEPARATOR . $file);
+        if ($realCandidate !== false && strpos($realCandidate, $dir) === 0 && @is_file($realCandidate)) {
+            $foundPath = $realCandidate;
+            break;
+        }
+        $directCandidate = $dir . DIRECTORY_SEPARATOR . $file;
+        if (@is_file($directCandidate)) {
+            $foundPath = $directCandidate;
             break;
         }
     }
@@ -49,8 +54,22 @@ function handleViewLoadingPhoto(array $input): void {
         exit('Photo not found');
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->file($foundPath) ?: 'application/octet-stream';
+    $ext = strtolower(pathinfo($foundPath, PATHINFO_EXTENSION));
+    $extMimeMap = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+    ];
+    $mime = $extMimeMap[$ext] ?? 'application/octet-stream';
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detected = $finfo->file($foundPath);
+        if (is_string($detected) && strpos($detected, 'image/') === 0) {
+            $mime = $detected;
+        }
+    }
     if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
         http_response_code(403);
         exit('Unsupported media type');

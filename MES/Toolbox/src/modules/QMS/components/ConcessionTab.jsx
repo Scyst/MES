@@ -4,7 +4,19 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
-import { qmsConcessionApi, resolveQmsMediaUrl } from '../../../shared/services/qmsApi';
+import { qmsConcessionApi } from '../../../shared/services/qmsApi';
+import { getQmsMediaCandidates } from '../../../shared/utils/mediaUrl';
+
+function ConcessionEvidenceImg({ path, alt, className }) {
+  const candidates = useMemo(() => getQmsMediaCandidates(path), [path]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [path]);
+  const src = idx < candidates.length ? candidates[idx] : '';
+  if (!src) return null;
+  return <img src={src} alt={alt} loading="lazy" className={className} onError={() => setIdx((p) => p + 1)} />;
+}
 import {
   CONCESSION_STATUS_META, CONCESSION_APPROVER_STAGES,
   formatQmsDate, formatQmsDateInput, formatQmsQty,
@@ -512,14 +524,11 @@ export default function ConcessionTab({ isOnline }) {
                   {/* Images */}
                   {[detail.attached_image_1, detail.attached_image_2, detail.attached_image_3].filter(Boolean).length > 0 && (
                     <div className="flex flex-wrap gap-3">
-                      {[detail.attached_image_1, detail.attached_image_2, detail.attached_image_3].filter(Boolean).map((p) => {
-                        const url = resolveQmsMediaUrl(p);
-                        return (
-                          <button key={p} type="button" onClick={() => setPreviewImg(url)} className="w-28 h-28 rounded-xl overflow-hidden border border-slate-200">
-                            <img src={url} alt="Attachment" className="w-full h-full object-cover" />
-                          </button>
-                        );
-                      })}
+                      {[detail.attached_image_1, detail.attached_image_2, detail.attached_image_3].filter(Boolean).map((p) => (
+                        <button key={p} type="button" onClick={() => setPreviewImg(p)} className="w-28 h-28 rounded-xl overflow-hidden border border-slate-200 cursor-pointer">
+                          <ConcessionEvidenceImg path={p} alt="Attachment" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
                     </div>
                   )}
 
@@ -598,7 +607,7 @@ export default function ConcessionTab({ isOnline }) {
 
       {previewImg && (
         <div onClick={() => setPreviewImg('')} className="fixed inset-0 z-[60] bg-slate-950/85 flex items-center justify-center p-4">
-          <img src={previewImg} alt="Concession" className="max-w-full max-h-[88vh] rounded-xl shadow-2xl object-contain" />
+          <ConcessionEvidenceImg path={previewImg} alt="Concession" className="max-w-full max-h-[88vh] rounded-xl shadow-2xl object-contain" />
         </div>
       )}
     </div>

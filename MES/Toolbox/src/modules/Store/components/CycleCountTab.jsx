@@ -447,7 +447,7 @@ export default function CycleCountTab({ onNavigateTab }) {
               return (
                 <div
                   key={zoneName}
-                  className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col justify-between transition-all hover:border-slate-300 dark:hover:border-slate-700"
+                  className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col justify-start transition-all hover:border-slate-300 dark:hover:border-slate-700"
                 >
                   {/* Zone Header Bar */}
                   <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">

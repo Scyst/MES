@@ -1,8 +1,43 @@
-import React, { useRef, useState } from 'react';
-import { Camera, Eye, Loader2, Trash2, X } from 'lucide-react';
-import { getLoadingPhotoUrl, loadingReportApi } from '../../../shared/services/loadingApi';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, Eye, ImageOff, Loader2, Trash2, X } from 'lucide-react';
+import { loadingReportApi } from '../../../shared/services/loadingApi';
+import { getLoadingPhotoCandidates } from '../../../shared/utils/mediaUrl';
 import { useConfirm, useToast } from '../../../shared/contexts/FeedbackContext';
 import { CTPAT_PHOTO_POINTS, compressInspectionImage } from '../utils/ctpatConfig';
+
+/** Renders C-TPAT evidence image with dual-stage API + static legacy upload fallback. */
+function CtpatEvidenceImg({ fileOrPath, alt, className, onClick, onResolvedUrl }) {
+  const candidates = useMemo(() => getLoadingPhotoCandidates(fileOrPath), [fileOrPath]);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [fileOrPath]);
+
+  const currentSrc = idx < candidates.length ? candidates[idx] : '';
+  if (!currentSrc) {
+    return (
+      <div className="flex flex-col items-center gap-1 text-slate-400">
+        <ImageOff className="h-6 w-6 opacity-60" />
+        <span className="text-[11px]">ไม่พบไฟล์ภาพ</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      loading="lazy"
+      className={className}
+      onClick={() => {
+        onResolvedUrl?.(currentSrc);
+        onClick?.(currentSrc);
+      }}
+      onError={() => setIdx((prev) => prev + 1)}
+    />
+  );
+}
 
 /**
  * 16-point C-TPAT loading photo evidence grid with client-side image compression,
@@ -88,7 +123,7 @@ export default function CtpatPhotoGrid({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {CTPAT_PHOTO_POINTS.map((point) => {
           const filename = photos?.[point.key];
-          const url = filename ? getLoadingPhotoUrl(filename) : '';
+          const primaryUrl = filename ? (getLoadingPhotoCandidates(filename)[0] || '') : '';
           const isBusy = uploadingKey === point.key;
 
           return (
@@ -106,12 +141,12 @@ export default function CtpatPhotoGrid({
               </div>
 
               <div className="relative flex aspect-[4/3] items-center justify-center bg-slate-100 dark:bg-slate-900">
-                {url ? (
-                  <img
-                    src={url}
+                {filename ? (
+                  <CtpatEvidenceImg
+                    fileOrPath={filename}
                     alt={point.label}
                     className="h-full w-full object-cover cursor-pointer"
-                    onClick={() => setPreviewPhoto({ url, label: point.label })}
+                    onClick={(resolved) => setPreviewPhoto({ fileOrPath: filename, url: resolved, label: point.label })}
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-1 text-slate-400">
@@ -147,20 +182,20 @@ export default function CtpatPhotoGrid({
                     className="flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-lg bg-slate-900 px-2.5 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-blue-600 dark:hover:bg-blue-700"
                   >
                     <Camera className="h-3.5 w-3.5" />
-                    <span>{url ? 'ถ่ายใหม่' : 'ถ่าย / เลือกภาพ'}</span>
+                    <span>{filename ? 'ถ่ายใหม่' : 'ถ่าย / เลือกภาพ'}</span>
                   </button>
                 )}
-                {url && (
+                {filename && (
                   <button
                     type="button"
-                    onClick={() => setPreviewPhoto({ url, label: point.label })}
+                    onClick={() => setPreviewPhoto({ fileOrPath: filename, url: primaryUrl, label: point.label })}
                     className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300"
                     aria-label={`ดูภาพ ${point.label}`}
                   >
                     <Eye className="h-4 w-4" />
                   </button>
                 )}
-                {url && !locked && (
+                {filename && !locked && (
                   <button
                     type="button"
                     onClick={() => handleDelete(point)}
@@ -190,7 +225,11 @@ export default function CtpatPhotoGrid({
             >
               <X className="h-5 w-5" />
             </button>
-            <img src={previewPhoto.url} alt={previewPhoto.label} className="max-h-[82vh] rounded-xl object-contain" />
+            <CtpatEvidenceImg
+              fileOrPath={previewPhoto.fileOrPath || previewPhoto.url}
+              alt={previewPhoto.label}
+              className="max-h-[82vh] rounded-xl object-contain"
+            />
             <p className="mt-2 text-center text-sm font-semibold text-white">{previewPhoto.label}</p>
           </div>
         </div>

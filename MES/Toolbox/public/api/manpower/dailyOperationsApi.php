@@ -61,28 +61,41 @@ try {
             requireMpAccess(false);
             $date = parseMpDate($input['date'] ?? null, date('Y-m-d'), 'วันที่');
             $line = trim((string)($input['line'] ?? 'ALL'));
-            $hcGroup = trim((string)($input['hcGroup'] ?? 'ALL'));
+            $hcGroup = trim((string)($input['hcGroup'] ?? 'TEAM 1'));
             $shift = trim((string)($input['shift'] ?? 'ALL'));
             $type = trim((string)($input['type'] ?? 'ALL'));
             $status = strtoupper(trim((string)($input['status'] ?? 'ALL')));
 
-            $where = ['L.log_date = ?'];
-            $params = [$date];
+            $where = [
+                '(E.is_active = 1 OR L.log_id IS NOT NULL)',
+                '(L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= ?))',
+            ];
+            $params = [$date, $date, $date];
 
             if ($line !== 'ALL' && $line !== '') {
                 $where[] = 'ISNULL(L.actual_line, E.line) = ?';
                 $params[] = $line;
             }
             if ($hcGroup !== 'ALL' && $hcGroup !== '' && $hcGroup !== 'undefined' && $hcGroup !== 'null') {
-                $where[] = "ISNULL(L.actual_hc_group, ISNULL(TS.hc_group, 'MAIN')) = ?";
+                $where[] = "COALESCE(L.actual_hc_group, TS.hc_group, 'UNASSIGNED') = ?";
                 $params[] = $hcGroup;
             }
             if ($shift !== 'ALL' && $shift !== '') {
-                $where[] = "ISNULL(S.shift_name, '') = ?";
+                $where[] = "ISNULL(S.shift_name, ISNULL(S_Master.shift_name, '')) = ?";
                 $params[] = $shift;
             }
+            $computedStatusExpr = "
+                CASE
+                    WHEN L.status IS NOT NULL THEN L.status
+                    WHEN Cal.day_type = 'HOLIDAY' OR DATENAME(dw, ISNULL(L.log_date, ?)) = 'Sunday' THEN 'HOLIDAY'
+                    WHEN ISNULL(L.log_date, ?) < CAST(GETDATE() AS DATE) THEN 'ABSENT'
+                    ELSE 'WAITING'
+                END
+            ";
             if ($status !== 'ALL' && $status !== '') {
-                $where[] = 'L.status = ?';
+                $where[] = "({$computedStatusExpr}) = ?";
+                $params[] = $date;
+                $params[] = $date;
                 $params[] = $status;
             }
             if ($type !== 'ALL' && $type !== '') {
@@ -93,41 +106,46 @@ try {
             $whereSql = implode(' AND ', $where);
             $sql = "
                 SELECT TOP (1000)
-                    L.log_id,
-                    CONVERT(VARCHAR(10), L.log_date, 120) AS log_date,
-                    L.emp_id,
+                    ISNULL(L.log_id, 0) AS log_id,
+                    ISNULL(CONVERT(VARCHAR(10), L.log_date, 120), ?) AS log_date,
+                    E.emp_id,
                     E.name_th,
                     E.position,
                     ISNULL(L.actual_line, E.line) AS line,
                     ISNULL(L.actual_team, E.team_group) AS team_group,
-                    ISNULL(L.actual_hc_group, ISNULL(TS.hc_group, 'MAIN')) AS hc_group,
+                    ISNULL(L.actual_hc_group, ISNULL(TS.hc_group, 'UNASSIGNED')) AS hc_group,
                     COALESCE(L.actual_emp_type, CM.category_name, E.position, 'Other') AS emp_type,
                     ISNULL(CM.rate_type, 'DAILY') AS rate_type,
                     ISNULL(L.shift_id, E.default_shift_id) AS shift_id,
-                    ISNULL(S.shift_name, 'Day') AS shift_name,
-                    CONVERT(VARCHAR(5), S.start_time, 108) AS shift_start,
+                    ISNULL(S.shift_name, ISNULL(S_Master.shift_name, 'Day')) AS shift_name,
+                    CONVERT(VARCHAR(5), COALESCE(S.start_time, S_Master.start_time), 108) AS shift_start,
                     CONVERT(VARCHAR(8), L.scan_in_time, 108) AS scan_in_time,
                     CONVERT(VARCHAR(8), L.scan_out_time, 108) AS scan_out_time,
                     L.scan_in_time AS scan_in_raw,
                     L.scan_out_time AS scan_out_raw,
-                    L.status,
+                    {$computedStatusExpr} AS status,
                     L.remark,
                     ISNULL(L.is_verified, 0) AS is_verified,
                     L.verified_by,
                     L.verified_at,
                     L.updated_by,
                     L.updated_at,
-                    ISNULL(L.is_forgot_out, 0) AS is_forgot_out,
                     CASE
-                        WHEN L.scan_out_time IS NOT NULL AND S.start_time IS NOT NULL AND L.status IN ('PRESENT', 'LATE')
-                             AND DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), S.start_time, 108)) AS DATETIME), L.scan_out_time) > 570
-                        THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), S.start_time, 108)) AS DATETIME), L.scan_out_time) - 570) / 30.0) * 0.5
+                        WHEN L.scan_in_time IS NOT NULL AND L.scan_out_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 1
+                        ELSE ISNULL(L.is_forgot_out, 0)
+                    END AS is_forgot_out,
+                    CASE
+                        WHEN L.scan_out_time IS NOT NULL AND COALESCE(S.start_time, S_Master.start_time) IS NOT NULL AND L.status IN ('PRESENT', 'LATE')
+                             AND DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), COALESCE(S.start_time, S_Master.start_time), 108)) AS DATETIME), L.scan_out_time) > 570
+                        THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), COALESCE(S.start_time, S_Master.start_time), 108)) AS DATETIME), L.scan_out_time) - 570) / 30.0) * 0.5
                         ELSE 0
                     END AS ot_hours
-                FROM dbo.MANPOWER_DAILY_LOGS L WITH (NOLOCK)
-                JOIN dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK) ON L.emp_id = E.emp_id
+                FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
                 LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                LEFT JOIN dbo.MANPOWER_SHIFTS S_Master WITH (NOLOCK) ON E.default_shift_id = S_Master.shift_id
+                LEFT JOIN dbo.MANPOWER_DAILY_LOGS L WITH (NOLOCK) ON E.emp_id = L.emp_id AND L.log_date = ?
                 LEFT JOIN dbo.MANPOWER_SHIFTS S WITH (NOLOCK) ON ISNULL(L.shift_id, E.default_shift_id) = S.shift_id
+                LEFT JOIN dbo.MANPOWER_CALENDAR Cal WITH (NOLOCK) ON Cal.calendar_date = ?
                 OUTER APPLY (
                     SELECT TOP 1 category_name, rate_type, hourly_rate
                     FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK)
@@ -135,10 +153,11 @@ try {
                     ORDER BY LEN(keyword) DESC
                 ) CM
                 WHERE {$whereSql}
-                ORDER BY ISNULL(L.actual_line, E.line) ASC, S.shift_id ASC, L.emp_id ASC
+                ORDER BY ISNULL(L.actual_line, E.line) ASC, ISNULL(S.shift_id, E.default_shift_id) ASC, E.emp_id ASC
             ";
+            $execParams = array_merge([$date, $date, $date, $date, $date], $params);
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute($execParams);
             mpJsonSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         case 'read_summary':
@@ -447,14 +466,40 @@ try {
         case 'update_log':
             requireMpAccess(true);
             $logId = (int)($input['log_id'] ?? 0);
-            if ($logId <= 0) {
-                throw new InvalidArgumentException('ไม่พบรหัส Log (log_id)');
+            $empIdInput = trim((string)($input['emp_id'] ?? ''));
+            $dateInput = trim((string)($input['log_date'] ?? ''));
+            $oldRow = null;
+            if ($logId > 0) {
+                $oldStmt = $pdo->prepare("SELECT log_id, CONVERT(VARCHAR(10), log_date, 120) AS log_date, emp_id, shift_id, status, scan_in_time, scan_out_time, remark, actual_line, actual_team, is_verified FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
+                $oldStmt->execute([$logId]);
+                $oldRow = $oldStmt->fetch(PDO::FETCH_ASSOC);
+            } elseif ($empIdInput !== '' && $dateInput !== '') {
+                $empStmt = $pdo->prepare("
+                    SELECT E.emp_id, E.default_shift_id AS shift_id, E.line AS actual_line, E.team_group AS actual_team, ISNULL(TS.hc_group, 'UNASSIGNED') AS hc_group
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                    WHERE E.emp_id = ?
+                ");
+                $empStmt->execute([$empIdInput]);
+                $empMaster = $empStmt->fetch(PDO::FETCH_ASSOC);
+                if ($empMaster) {
+                    $chkExisting = $pdo->prepare("SELECT log_id, CONVERT(VARCHAR(10), log_date, 120) AS log_date, emp_id, shift_id, status, scan_in_time, scan_out_time, remark, actual_line, actual_team, is_verified FROM dbo.MANPOWER_DAILY_LOGS WHERE emp_id = ? AND log_date = ?");
+                    $chkExisting->execute([$empIdInput, $dateInput]);
+                    $oldRow = $chkExisting->fetch(PDO::FETCH_ASSOC);
+                    if (!$oldRow) {
+                        $pdo->prepare("
+                            INSERT INTO dbo.MANPOWER_DAILY_LOGS (log_date, emp_id, shift_id, status, actual_line, actual_team, actual_hc_group, updated_by, updated_at)
+                            VALUES (?, ?, ?, 'WAITING', ?, ?, ?, ?, GETDATE())
+                        ")->execute([$dateInput, $empIdInput, (int)($empMaster['shift_id'] ?: 1), $empMaster['actual_line'], $empMaster['actual_team'], $empMaster['hc_group'], $updatedBy]);
+                        $logId = (int)$pdo->lastInsertId();
+                        $chkExisting->execute([$empIdInput, $dateInput]);
+                        $oldRow = $chkExisting->fetch(PDO::FETCH_ASSOC);
+                    } else {
+                        $logId = (int)$oldRow['log_id'];
+                    }
+                }
             }
-
-            $oldStmt = $pdo->prepare("SELECT log_id, CONVERT(VARCHAR(10), log_date, 120) AS log_date, emp_id, shift_id, status, scan_in_time, scan_out_time, remark, actual_line, actual_team, is_verified FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
-            $oldStmt->execute([$logId]);
-            $oldRow = $oldStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$oldRow) {
+            if (!$oldRow || $logId <= 0) {
                 throw new InvalidArgumentException('ไม่พบข้อมูลการลงเวลาที่ต้องการแก้ไข');
             }
 
@@ -524,14 +569,43 @@ try {
             requireMpAccess(true);
             $logId = (int)($input['log_id'] ?? 0);
             $status = strtoupper(trim((string)($input['status'] ?? '')));
-            if ($logId <= 0 || $status === '') {
-                throw new InvalidArgumentException('ข้อมูล log_id หรือ status ไม่ถูกต้อง');
+            $empIdInput = trim((string)($input['emp_id'] ?? ''));
+            $dateInput = trim((string)($input['log_date'] ?? ''));
+            if ($status === '') {
+                throw new InvalidArgumentException('ข้อมูล status ไม่ถูกต้อง');
             }
 
-            $oldStmt = $pdo->prepare("SELECT log_id, emp_id, status, CONVERT(VARCHAR(10), log_date, 120) AS log_date FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
-            $oldStmt->execute([$logId]);
-            $oldRow = $oldStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$oldRow) {
+            $oldRow = null;
+            if ($logId > 0) {
+                $oldStmt = $pdo->prepare("SELECT log_id, emp_id, status, CONVERT(VARCHAR(10), log_date, 120) AS log_date FROM dbo.MANPOWER_DAILY_LOGS WHERE log_id = ?");
+                $oldStmt->execute([$logId]);
+                $oldRow = $oldStmt->fetch(PDO::FETCH_ASSOC);
+            } elseif ($empIdInput !== '' && $dateInput !== '') {
+                $empStmt = $pdo->prepare("
+                    SELECT E.emp_id, E.default_shift_id AS shift_id, E.line AS actual_line, E.team_group AS actual_team, ISNULL(TS.hc_group, 'UNASSIGNED') AS hc_group
+                    FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                    WHERE E.emp_id = ?
+                ");
+                $empStmt->execute([$empIdInput]);
+                $empMaster = $empStmt->fetch(PDO::FETCH_ASSOC);
+                if ($empMaster) {
+                    $oldStmt = $pdo->prepare("SELECT log_id, emp_id, status, CONVERT(VARCHAR(10), log_date, 120) AS log_date FROM dbo.MANPOWER_DAILY_LOGS WHERE emp_id = ? AND log_date = ?");
+                    $oldStmt->execute([$empIdInput, $dateInput]);
+                    $oldRow = $oldStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$oldRow) {
+                        $pdo->prepare("
+                            INSERT INTO dbo.MANPOWER_DAILY_LOGS (log_date, emp_id, shift_id, status, actual_line, actual_team, actual_hc_group, updated_by, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
+                        ")->execute([$dateInput, $empIdInput, (int)($empMaster['shift_id'] ?: 1), $status, $empMaster['actual_line'], $empMaster['actual_team'], $empMaster['hc_group'], $updatedBy]);
+                        $logId = (int)$pdo->lastInsertId();
+                        $oldRow = ['log_id' => $logId, 'emp_id' => $empIdInput, 'status' => 'WAITING', 'log_date' => $dateInput];
+                    } else {
+                        $logId = (int)$oldRow['log_id'];
+                    }
+                }
+            }
+            if (!$oldRow || $logId <= 0) {
                 throw new InvalidArgumentException('ไม่พบข้อมูล Log');
             }
 

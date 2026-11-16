@@ -16,21 +16,51 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import DesktopSidebar from './DesktopSidebar';
 import AccountSettingsModal from './AccountSettingsModal';
+import { getProfileAvatarCandidates } from '../utils/mediaUrl';
 
-function resolveProfilePictureUrl(profilePicture) {
-  if (!profilePicture) return null;
-  if (
-    profilePicture.startsWith('http://') ||
-    profilePicture.startsWith('https://') ||
-    profilePicture.startsWith('/')
-  ) {
-    return profilePicture;
-  }
-  if (profilePicture.startsWith('uploads/')) {
-    return `${import.meta.env.BASE_URL}${profilePicture}`;
-  }
-  return `${import.meta.env.BASE_URL}uploads/profile_pictures/${profilePicture}`;
-}
+/**
+ * Isolated real-time header clock so ticking every second does not re-render AppLayout or child routes.
+ */
+const LiveHeaderClock = React.memo(function LiveHeaderClock() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = now.toLocaleTimeString('th-TH', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const formattedThaiDate = now.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  return (
+    <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2 md:pr-3 mr-1">
+      <div
+        className="flex items-center gap-2 px-2.5 md:px-3.5 py-1 md:py-1.5 bg-gray-50 dark:bg-gray-700/80 rounded-full text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200/70 dark:border-gray-600"
+        title="เวลาและวันที่ปัจจุบันของระบบ"
+      >
+        <Clock className="text-blue-600 dark:text-blue-400 w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
+        <span className="font-bold tabular-nums tracking-tight">{formattedTime}</span>
+        <span className="hidden sm:inline text-gray-300 dark:text-gray-500">|</span>
+        <span className="hidden sm:inline-flex items-center gap-1 text-gray-500 dark:text-gray-300 whitespace-nowrap">
+          <CalendarIcon className="w-3.5 h-3.5 opacity-75" />
+          {formattedThaiDate}
+        </span>
+      </div>
+    </div>
+  );
+});
 
 function getGradeBadgeStyle(grade) {
   switch ((grade || '').toUpperCase()) {
@@ -51,8 +81,7 @@ export default function AppLayout() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
-  const [now, setNow] = useState(() => new Date());
+  const [avatarIdx, setAvatarIdx] = useState(0);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [performance, setPerformance] = useState(() => {
     try {
@@ -73,16 +102,8 @@ export default function AppLayout() {
 
   // Reset avatar fallback when user changes
   useEffect(() => {
-    setAvatarError(false);
+    setAvatarIdx(0);
   }, [user?.profile_picture]);
-
-  // Real-time clock (updates every 1s)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Fetch live employee performance & grading summary from self-contained Toolbox2 API
   useEffect(() => {
@@ -153,20 +174,8 @@ export default function AppLayout() {
     navigate('/login');
   };
 
-  const formattedTime = now.toLocaleTimeString('th-TH', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  const formattedThaiDate = now.toLocaleDateString('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-
-  const avatarUrl = !avatarError ? resolveProfilePictureUrl(user?.profile_picture) : null;
+  const avatarCandidates = getProfileAvatarCandidates(user?.profile_picture);
+  const avatarUrl = avatarIdx < avatarCandidates.length ? avatarCandidates[avatarIdx] : null;
   const userInitial = (user?.fullname || user?.username || 'U').charAt(0).toUpperCase();
 
   const finalGrade = performance?.has_data ? performance.grade || '-' : '-';
@@ -236,21 +245,7 @@ export default function AppLayout() {
 
         {/* Right: Live Clock/Date & Profile */}
         <div className="flex items-center gap-2">
-          {/* Date & Real-Time Clock Block */}
-          <div className="flex items-center gap-1 border-r border-gray-200 dark:border-gray-700 pr-2 md:pr-3 mr-1">
-            <div
-              className="flex items-center gap-2 px-2.5 md:px-3.5 py-1 md:py-1.5 bg-gray-50 dark:bg-gray-700/80 rounded-full text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200/70 dark:border-gray-600"
-              title="เวลาและวันที่ปัจจุบันของระบบ"
-            >
-              <Clock className="text-blue-600 dark:text-blue-400 w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-              <span className="font-bold tabular-nums tracking-tight">{formattedTime}</span>
-              <span className="hidden sm:inline text-gray-300 dark:text-gray-500">|</span>
-              <span className="hidden sm:inline-flex items-center gap-1 text-gray-500 dark:text-gray-300 whitespace-nowrap">
-                <CalendarIcon className="w-3.5 h-3.5 opacity-75" />
-                {formattedThaiDate}
-              </span>
-            </div>
-          </div>
+          <LiveHeaderClock />
 
           {/* Profile Dropdown */}
           <div className="relative">
@@ -266,7 +261,7 @@ export default function AppLayout() {
                 <img
                   src={avatarUrl}
                   alt={user?.fullname || user?.username || 'User'}
-                  onError={() => setAvatarError(true)}
+                  onError={() => setAvatarIdx((i) => i + 1)}
                   className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-600 shrink-0"
                 />
               ) : (
@@ -310,7 +305,7 @@ export default function AppLayout() {
                       <img
                         src={avatarUrl}
                         alt={user?.fullname || user?.username || 'User'}
-                        onError={() => setAvatarError(true)}
+                        onError={() => setAvatarIdx((i) => i + 1)}
                         className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-xs mb-2"
                       />
                     ) : (
@@ -431,7 +426,7 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <main className="flex-1 h-full overflow-auto relative z-0">
-          <div className="p-4 lg:p-6 h-full">
+          <div className="p-2.5 sm:p-3.5 lg:p-4 h-full">
             <Outlet />
           </div>
         </main>

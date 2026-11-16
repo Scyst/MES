@@ -66,7 +66,6 @@ export default function QmsPage() {
                 <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
                   iQMS Quality Management Center
                 </h1>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">SPA Ported</span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 ศูนย์บริหารคุณภาพ NCR, CAR 8D, Concession, Claim Verification และตารางตรวจสอบคุณภาพ QA/QC

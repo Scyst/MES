@@ -149,69 +149,123 @@ export default function WoPartsModal({ wo, onClose, onCostUpdated, isOffline = f
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-          {/* Issue New Part Form */}
-          <form onSubmit={handleIssue} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">เบิกอะไหล่เพิ่มจากคลังซ่อมบำรุง</span>
-              <span className="text-xs text-slate-500">พร้อมเบิก {filteredStock.length} รายการ</span>
+          {/* Issue New Part Form — Searchable Visual Spare-Part Picker */}
+          <form onSubmit={handleIssue} className="p-3.5 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/40 dark:bg-slate-800/50 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                เลือกอะไหล่เพื่อเบิกจ่ายเข้าใบงานนี้
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                พบ {filteredStock.length} รายการพร้อมเบิก
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-              <div className="sm:col-span-5 relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={partSearch}
+                onChange={(e) => setPartSearch(e.target.value)}
+                placeholder="พิมพ์ค้นหารหัสอะไหล่, ชื่ออะไหล่, หรือชื่อคลัง..."
+                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm"
+              />
+            </div>
+
+            {/* Visual Clickable Stock List */}
+            <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredStock.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400">
+                  ไม่พบรายการอะไหล่ที่พร้อมเบิกตรงกับคำค้นหา
+                </div>
+              ) : (
+                filteredStock.slice(0, 60).map((p) => {
+                  const key = `${p.item_id}:${p.location_id}`;
+                  const isSelected = selectedKey === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedKey(key)}
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-50 dark:bg-amber-950/50 ring-1 ring-inset ring-amber-400'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <PeImage path={p.image_path} alt={p.item_name} clickable={false} className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            <span className="font-mono text-blue-600 dark:text-blue-400 mr-1.5">{p.item_code}</span>
+                            {p.item_name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate">
+                            คลัง: {p.location_name || '-'}
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-mono font-bold ${
+                        Number(p.onhand_qty || 0) > 0
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : 'bg-rose-50 text-rose-600'
+                      }`}>
+                        เหลือ {p.onhand_qty} {p.uom}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Selected Part Checkout Strip */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+              <div className="flex-1 min-w-0">
+                {selectedStock ? (
+                  <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 text-xs">
+                    <span className="font-bold text-amber-800 dark:text-amber-300">เลือกแล้ว:</span>{' '}
+                    <span className="font-mono font-bold">[{selectedStock.item_code}]</span> {selectedStock.item_name}{' '}
+                    <span className="text-slate-500">(เหลือ {selectedStock.onhand_qty} {selectedStock.uom})</span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={issueNote}
+                    onChange={(e) => setIssueNote(e.target.value)}
+                    placeholder="หมายเหตุการเบิก (คลิกเลือกอะไหล่ด้านบนก่อน)"
+                    className="w-full min-h-[42px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                  />
+                )}
+              </div>
+              {selectedStock && (
                 <input
                   type="text"
-                  value={partSearch}
-                  onChange={(e) => setPartSearch(e.target.value)}
-                  placeholder="กรองรหัส / ชื่ออะไหล่ / คลัง..."
-                  className="w-full min-h-[44px] pl-9 pr-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
+                  value={issueNote}
+                  onChange={(e) => setIssueNote(e.target.value)}
+                  placeholder="หมายเหตุ (ไม่บังคับ)"
+                  className="sm:w-44 min-h-[42px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                 />
-              </div>
-              <div className="sm:col-span-5">
-                <select
-                  value={selectedKey}
-                  onChange={(e) => setSelectedKey(e.target.value)}
-                  className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
-                  required
-                >
-                  <option value="">-- เลือกอะไหล่ในคลัง --</option>
-                  {filteredStock.map((p) => (
-                    <option key={`${p.item_id}:${p.location_id}`} value={`${p.item_id}:${p.location_id}`}>
-                      [{p.item_code}] {p.item_name} — {p.location_name} (คงเหลือ {p.onhand_qty} {p.uom})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:col-span-2">
+              )}
+              <div className="flex items-center gap-2 shrink-0">
                 <input
                   type="number"
                   min="0.001"
+                  max={selectedStock ? Number(selectedStock.onhand_qty || 0) : undefined}
                   step="any"
                   value={issueQty}
                   onChange={(e) => setIssueQty(e.target.value)}
                   placeholder="จำนวน"
-                  className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-right"
+                  className="w-24 min-h-[42px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono font-bold text-right"
                   required
                 />
+                <button
+                  type="submit"
+                  disabled={submitting || isOffline || !selectedStock}
+                  className="min-h-[42px] px-4 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  {submitting ? 'กำลังบันทึก...' : 'ยืนยันเบิกอะไหล่'}
+                </button>
               </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <input
-                type="text"
-                value={issueNote}
-                onChange={(e) => setIssueNote(e.target.value)}
-                placeholder="หมายเหตุการเบิก (ไม่บังคับ)"
-                className="flex-1 min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={submitting || isOffline}
-                className="min-h-[44px] px-5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold text-sm inline-flex items-center justify-center gap-2 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                {submitting ? 'กำลังบันทึก...' : 'ยืนยันเบิกอะไหล่'}
-              </button>
             </div>
           </form>
 

@@ -97,8 +97,9 @@
 ## Actionable Next Steps (สถานะล่าสุด ณ 16/11/2026)
 1. [x] **Phase 3.3 — Management (`#/management`), OEE Dashboard (`#/oee`), Daily P&L (`#/daily-pl`)** & **Utility MDB Exclusion Marker (`#/utility`)** — เสร็จสมบูรณ์ 100% (16/11/2026)
 2. [x] **Phase 3.4 — Area Access (`#/area-access`), Accessories Inspection (`#/accessories-inspection`), CCTV Downloader (`#/cctv-downloader`)** — เสร็จสมบูรณ์ 100% (16/11/2026)
-   - **หมายเหตุตั้งค่าสภาพแวดล้อมบน Production Server**: กรณีใช้งานควบคุมกล้อง AI Vision สด หรือดึงวิดีโอจากกล้อง CCTV NVR ผ่าน Toolbox ใหม่ ต้องตั้งค่าตัวแปร `ACCESSORIES_CAM_UPSTREAM`, `ACCESSORIES_CAM_API_KEY`, `CCTV_CAM_USER`, `CCTV_CAM_PASS` ใน `/Toolbox/.env` (ดูแม่แบบได้ใน `Toolbox/public/.env.example`) และตรวจสอบ FFmpeg/เส้นทาง LAN บนเครื่องโฮสต์
-3. [ ] **`Inbound Hub` (`#/inbound-hub`)**: ยังพักไว้ชั่วคราวตามคำสั่ง (On Hold — รอเอกสารตัวอย่างจริงจากผู้บริหาร) และฟีเจอร์ External Customer Token Approval ใน QMS (รอผลตัดสินใจจากทีม QA)
+   - ตั้งค่า `ACCESSORIES_CAM_UPSTREAM` & `ACCESSORIES_CAM_API_KEY` บน FTP `/Toolbox/.env` เรียบร้อยแล้ว (`16/11/2026`), ส่วน `CCTV_CAM_USER`/`CCTV_CAM_PASS` ให้ตรวจสอบตามกล้องหน้างานจริงเพิ่มเติมหากใช้งาน NVR
+3. [x] **UAT Round 1 (11-Module Polish, RBAC Hardening, Media Fallback & TEAM 1 Defaults)** — เสร็จสมบูรณ์ Verify + FTP Deploy + HTTP Verified (`16/11/2026`)
+4. [ ] **`Inbound Hub` (`#/inbound-hub`)**: ยังพักไว้ชั่วคราวตามคำสั่ง (On Hold — รอเอกสารตัวอย่างจริงจากผู้บริหาร) และฟีเจอร์ External Customer Token Approval ใน QMS (รอผลตัดสินใจจากทีม QA)
 
 ## Exact Files to Modify / Reference Next
 - `Toolbox/public/.env.example` (ตัวแปรตั้งค่าสำหรับ AI Camera Proxy & CCTV ISAPI)

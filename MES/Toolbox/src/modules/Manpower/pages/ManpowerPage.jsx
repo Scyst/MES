@@ -43,8 +43,8 @@ export default function ManpowerPage() {
 
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [selectedDate, setSelectedDate] = useState(getTodayIso);
-  const [hcGroup, setHcGroup] = useState('MAIN');
-  const [structure, setStructure] = useState({ lines: [], teams: [], shifts: [], hc_groups: ['MAIN', 'TEAM 1', 'EXCLUDE'] });
+  const [hcGroup, setHcGroup] = useState('TEAM 1');
+  const [structure, setStructure] = useState({ lines: [], teams: [], shifts: [], hc_groups: ['TEAM 1', 'EXCLUDE'] });
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [attendanceDrillLine, setAttendanceDrillLine] = useState('ALL');
 
@@ -107,11 +107,11 @@ export default function ManpowerPage() {
     }
   };
 
-  const hcOptions = ['ALL', ...(Array.isArray(structure?.hc_groups) && structure.hc_groups.length ? structure.hc_groups : ['MAIN', 'TEAM 1', 'EXCLUDE'])];
+  const hcOptions = ['TEAM 1', 'ALL', ...(Array.isArray(structure?.hc_groups) && structure.hc_groups.length ? structure.hc_groups : ['EXCLUDE'])];
   const uniqueHcOptions = Array.from(new Set(hcOptions));
 
   return (
-    <div className="w-full space-y-5 p-3 sm:p-5">
+    <div className="w-full space-y-4">
       {/* Offline Warning Banner */}
       {!isOnline && (
         <div className="flex items-center gap-2.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
@@ -131,9 +131,6 @@ export default function ManpowerPage() {
               <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-xl">
                 Manpower &amp; Workforce Analytics Center
               </h1>
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                SPA Ported
-              </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               จัดการกำลังคนประจำวัน ต้นทุนค่าแรง (V1/V2) สลับกะ 4D Grading และ Skill Matrix ครบวงจร

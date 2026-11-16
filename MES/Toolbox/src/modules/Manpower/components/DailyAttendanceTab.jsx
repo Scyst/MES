@@ -154,6 +154,8 @@ export default function DailyAttendanceTab({
     try {
       await manpowerOpsApi.updateLog({
         log_id: editRow.log_id,
+        emp_id: editRow.emp_id,
+        log_date: editRow.log_date || date,
         ...editForm,
       });
       showToast('อัปเดตบันทึกเวลาเรียบร้อยแล้ว', 'success');
@@ -167,10 +169,13 @@ export default function DailyAttendanceTab({
     }
   };
 
-  const handleQuickStatus = async (logId, newStatus) => {
+  const handleQuickStatus = async (row, newStatus) => {
     if (!canEdit || !isOnline) return;
     try {
-      await manpowerOpsApi.updateLogStatus(logId, newStatus);
+      await manpowerOpsApi.updateLogStatus(row.log_id, newStatus, {
+        emp_id: row.emp_id,
+        log_date: row.log_date || date,
+      });
       showToast('อัปเดตสถานะเรียบร้อยแล้ว', 'success');
       fetchLogs();
       onMutated?.();
@@ -590,7 +595,76 @@ export default function DailyAttendanceTab({
           {loading && <RefreshCw className="h-4 w-4 animate-spin text-indigo-500" />}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Responsive Cards View */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-700/70">
+          {filteredLogs.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-slate-400">
+              ไม่พบรายการลงเวลาตามเงื่อนไขที่เลือก
+            </div>
+          ) : (
+            filteredLogs.map((row) => {
+              const badge = STATUS_BADGES[row.status] || STATUS_BADGES.WAITING;
+              return (
+                <div key={`${row.emp_id}-${row.log_id || 0}`} className="p-3.5 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 font-bold text-sm text-slate-800 dark:text-white truncate">
+                        <span className="truncate">{row.name_th}</span>
+                        {Number(row.is_verified) === 1 && (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {row.emp_id} • {row.line || '-'} ({row.team_group || '-'}) • กะ {row.shift_name || 'Day'}
+                      </div>
+                    </div>
+                    {canEdit && isOnline ? (
+                      <select
+                        value={row.status || 'WAITING'}
+                        onChange={(e) => handleQuickStatus(row, e.target.value)}
+                        className={`shrink-0 rounded-md border px-2 py-1 text-[11px] font-bold ${badge.cls}`}
+                      >
+                        {Object.entries(STATUS_BADGES).map(([code, meta]) => (
+                          <option key={code} value={code}>{meta.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`shrink-0 inline-block rounded-md border px-2 py-0.5 text-[11px] font-bold ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-900/60">
+                    <div className="flex items-center gap-3 font-mono">
+                      <span>เข้า: <strong>{row.scan_in_time ? String(row.scan_in_time).slice(0, 5) : '--:--'}</strong></span>
+                      <span>ออก: <strong>{row.scan_out_time ? String(row.scan_out_time).slice(0, 5) : '--:--'}</strong></span>
+                      {Number(row.ot_hours || 0) > 0 && (
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                          OT {Number(row.ot_hours).toFixed(1)}h
+                        </span>
+                      )}
+                    </div>
+                    {canEdit && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={!isOnline}
+                          onClick={() => openEdit(row)}
+                          className="min-h-[34px] px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                          แก้ไข
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-xs">
             <thead className="bg-slate-50 text-[11px] font-bold uppercase text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
               <tr>
@@ -617,7 +691,7 @@ export default function DailyAttendanceTab({
                 filteredLogs.map((row) => {
                   const badge = STATUS_BADGES[row.status] || STATUS_BADGES.WAITING;
                   return (
-                    <tr key={row.log_id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/40">
+                    <tr key={`${row.emp_id}-${row.log_id || 0}`} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/40">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-white">
                           <span>{row.name_th}</span>
@@ -631,7 +705,7 @@ export default function DailyAttendanceTab({
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="font-semibold text-slate-700 dark:text-slate-200">{row.line || '-'}</div>
-                        <div className="text-[11px] text-slate-400">{row.team_group || '-'} ({row.hc_group || 'MAIN'})</div>
+                        <div className="text-[11px] text-slate-400">{row.team_group || '-'} ({row.hc_group || 'TEAM 1'})</div>
                       </td>
                       <td className="px-3 py-2.5">
                         <div>{row.emp_type || '-'}</div>
@@ -653,7 +727,7 @@ export default function DailyAttendanceTab({
                         {canEdit && isOnline ? (
                           <select
                             value={row.status || 'WAITING'}
-                            onChange={(e) => handleQuickStatus(row.log_id, e.target.value)}
+                            onChange={(e) => handleQuickStatus(row, e.target.value)}
                             className={`rounded-md border px-2 py-1 text-[11px] font-bold ${badge.cls}`}
                           >
                             {Object.entries(STATUS_BADGES).map(([code, meta]) => (
@@ -676,20 +750,22 @@ export default function DailyAttendanceTab({
                               type="button"
                               disabled={!isOnline}
                               onClick={() => openEdit(row)}
-                              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
                               title="แก้ไขรายละเอียด"
                             >
                               <Edit3 className="h-4 w-4" />
                             </button>
-                            <button
-                              type="button"
-                              disabled={!isOnline}
-                              onClick={() => handleDeleteLog(row)}
-                              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                              title="ลบรายการ"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {Number(row.log_id) > 0 && (
+                              <button
+                                type="button"
+                                disabled={!isOnline}
+                                onClick={() => handleDeleteLog(row)}
+                                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40 cursor-pointer"
+                                title="ลบรายการ"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}

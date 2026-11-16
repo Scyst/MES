@@ -114,7 +114,7 @@ export default function DailyLogPage() {
   };
 
   return (
-    <div className="w-full min-h-full p-3 sm:p-6 space-y-5 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="w-full min-h-full space-y-4 text-slate-900 dark:text-slate-100">
       {/* Header Bar */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
         <div>

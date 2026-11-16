@@ -38,7 +38,7 @@ export default function FactoryOperationsWidget() {
                 </h4>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                ติดตามตำแหน่งแบบเรียลไทม์ Heatmap และสแกน QR ใน Toolbox SPA
+                ติดตามตำแหน่งแบบเรียลไทม์ Heatmap และสแกน QR ใน Toolbox OS
               </p>
             </div>
           </div>

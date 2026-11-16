@@ -218,7 +218,7 @@ export default function DailyPlanningPage() {
   const progressPct = planTotals.plan > 0 ? ((planTotals.actual / planTotals.plan) * 100).toFixed(1) : '0.0';
 
   return (
-    <div className="w-full space-y-5 p-3 sm:p-5">
+    <div className="w-full space-y-4">
       {!isOnline && (
         <div className="flex items-center gap-2.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
           <WifiOff className="h-5 w-5 shrink-0" />
@@ -237,9 +237,6 @@ export default function DailyPlanningPage() {
               <h1 className="text-lg font-extrabold text-slate-900 dark:text-white sm:text-xl">
                 Daily Command Center (Morning Meeting &amp; Production Plan)
               </h1>
-              <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-                SPA Ported
-              </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               ติดตามกำลังคน แผนผลิต vs ผลิตจริง โหลดตู้สินค้า 7 วัน และบันทึก Action Plan ประจำวัน

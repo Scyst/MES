@@ -56,6 +56,8 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
   const [summary, setSummary] = useState({});
   const [hourlyCounts, setHourlyCounts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showHourlyStrip, setShowHourlyStrip] = useState(true);
+  const [expandedTeamId, setExpandedTeamId] = useState(null);
 
   // Modals
   const [prodModalOpen, setProdModalOpen] = useState(false);
@@ -340,43 +342,71 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
     XLSX.writeFile(wb, `Production_Logs_${startDate}_${endDate}.xlsx`);
   };
 
+  const maxHourlyFg = useMemo(() => {
+    let maxVal = 1;
+    hourlyCounts.forEach((slot) => {
+      const fg = Number(slot.fg_qty || 0);
+      if (fg > maxVal) maxVal = fg;
+    });
+    return maxVal;
+  }, [hourlyCounts]);
+
+  const peakHourlySlot = useMemo(() => {
+    if (!hourlyCounts.length) return null;
+    return hourlyCounts.reduce(
+      (best, cur) => (Number(cur.fg_qty || 0) > Number(best?.fg_qty || -1) ? cur : best),
+      null
+    );
+  }, [hourlyCounts]);
+
+  const modeOptions = useMemo(() => {
+    const base = [
+      { id: 'production', label: 'บันทึกผลผลิต' },
+      { id: 'receipt', label: 'รับเข้า / โอนย้าย' },
+    ];
+    if (canManage) {
+      base.push({ id: 'all', label: 'ทั้งหมด' });
+    }
+    return base;
+  }, [canManage]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
           <div className="flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             <span>ยอดงานดี (FG)</span>
             <CheckCircle2 className="h-4 w-4" />
           </div>
-          <div className="mt-1.5 text-2xl font-black text-emerald-900 dark:text-emerald-100">
+          <div className="mt-1 text-2xl font-black font-mono text-emerald-900 dark:text-emerald-100">
             {Number(summary.total_fg || 0).toLocaleString()}
           </div>
         </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 dark:border-amber-900/50 dark:bg-amber-950/30">
           <div className="flex items-center justify-between text-xs font-semibold text-amber-700 dark:text-amber-300">
             <span>ยอดรอตรวจสอบ (Hold)</span>
             <PauseCircle className="h-4 w-4" />
           </div>
-          <div className="mt-1.5 text-2xl font-black text-amber-900 dark:text-amber-100">
+          <div className="mt-1 text-2xl font-black font-mono text-amber-900 dark:text-amber-100">
             {Number(summary.total_hold || 0).toLocaleString()}
           </div>
         </div>
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900/50 dark:bg-rose-950/30">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-3.5 dark:border-rose-900/50 dark:bg-rose-950/30">
           <div className="flex items-center justify-between text-xs font-semibold text-rose-700 dark:text-rose-300">
             <span>ยอดของเสีย (Scrap)</span>
             <XCircle className="h-4 w-4" />
           </div>
-          <div className="mt-1.5 text-2xl font-black text-rose-900 dark:text-rose-100">
+          <div className="mt-1 text-2xl font-black font-mono text-rose-900 dark:text-rose-100">
             {Number(summary.total_scrap || 0).toLocaleString()}
           </div>
         </div>
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3.5 dark:border-blue-900/50 dark:bg-blue-950/30">
           <div className="flex items-center justify-between text-xs font-semibold text-blue-700 dark:text-blue-300">
             <span>{mode === 'receipt' ? 'รับเข้า / โอนย้าย (รวม)' : 'จำนวนรายการทั้งหมด'}</span>
             <Clock className="h-4 w-4" />
           </div>
-          <div className="mt-1.5 text-2xl font-black text-blue-900 dark:text-blue-100">
+          <div className="mt-1 text-2xl font-black font-mono text-blue-900 dark:text-blue-100">
             {mode === 'receipt'
               ? (Number(summary.total_receipt || 0) + Number(summary.total_transfer || 0)).toLocaleString()
               : Number(summary.total_transactions || 0).toLocaleString()}
@@ -384,45 +414,70 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
         </div>
       </div>
 
-      {/* Hourly Chips Bar for Production Mode */}
+      {/* Compact Collapsible Hourly Output Strip */}
       {mode === 'production' && hourlyCounts.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-2 text-xs font-bold text-slate-600 dark:text-slate-300">
-            สรุปยอดผลิตรายชั่วโมง (Hourly Output Breakdown)
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {hourlyCounts.map((slot) => (
-              <div
-                key={slot.prod_hour}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800"
-              >
-                <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
-                  {String(slot.prod_hour).padStart(2, '0')}:00
+        <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-900 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+              <Clock className="h-3.5 w-3.5 text-emerald-600" />
+              <span>ยอดผลิตรายชั่วโมง ({hourlyCounts.length} ช่วง)</span>
+              {peakHourlySlot && (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  Peak {String(peakHourlySlot.prod_hour).padStart(2, '0')}:00 → {Number(peakHourlySlot.fg_qty || 0).toLocaleString()}
                 </span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  FG {Number(slot.fg_qty || 0).toLocaleString()}
-                </span>
-                {Number(slot.hold_qty) > 0 && (
-                  <span className="text-amber-600 dark:text-amber-400">H:{Number(slot.hold_qty)}</span>
-                )}
-                {Number(slot.scrap_qty) > 0 && (
-                  <span className="text-rose-600 dark:text-rose-400">S:{Number(slot.scrap_qty)}</span>
-                )}
-              </div>
-            ))}
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHourlyStrip((prev) => !prev)}
+              className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400 cursor-pointer"
+            >
+              {showHourlyStrip ? 'ซ่อนแถบรายชั่วโมง' : 'แสดงแถบรายชั่วโมง'}
+            </button>
           </div>
+          {showHourlyStrip && (
+            <div className="mt-2 flex items-stretch gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {hourlyCounts.map((slot) => {
+                const fg = Number(slot.fg_qty || 0);
+                const hold = Number(slot.hold_qty || 0);
+                const scrap = Number(slot.scrap_qty || 0);
+                const pct = Math.max(8, Math.round((fg / maxHourlyFg) * 100));
+                return (
+                  <div
+                    key={slot.prod_hour}
+                    title={`เวลา ${String(slot.prod_hour).padStart(2, '0')}:00 | FG: ${fg.toLocaleString()} | Hold: ${hold} | Scrap: ${scrap}`}
+                    className="min-w-[82px] shrink-0 rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-1.5 dark:border-slate-700/80 dark:bg-slate-800/70"
+                  >
+                    <div className="flex items-center justify-between gap-1 text-[10px]">
+                      <span className="font-mono font-bold text-slate-500 dark:text-slate-400">
+                        {String(slot.prod_hour).padStart(2, '0')}:00
+                      </span>
+                      {(hold > 0 || scrap > 0) && (
+                        <span className="flex items-center gap-0.5">
+                          {hold > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title={`Hold ${hold}`} />}
+                          {scrap > 0 && <span className="h-1.5 w-1.5 rounded-full bg-rose-500" title={`Scrap ${scrap}`} />}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 font-mono text-xs font-extrabold text-emerald-700 dark:text-emerald-400">
+                      {fg.toLocaleString()}
+                    </div>
+                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* Action & Filter Toolbar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: 'production', label: 'ประวัติบันทึกผลผลิต' },
-              { id: 'receipt', label: 'รับเข้า / โอนย้าย' },
-              { id: 'all', label: 'ประวัติทั้งหมด' },
-            ].map((sub) => (
+      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900 space-y-2.5">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 dark:bg-slate-800 dark:border-slate-700 self-start overflow-x-auto max-w-full no-scrollbar">
+            {modeOptions.map((sub) => (
               <button
                 key={sub.id}
                 type="button"
@@ -430,10 +485,10 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                   setMode(sub.id);
                   setPage(1);
                 }}
-                className={`min-h-[44px] rounded-xl px-4 text-xs font-bold transition-colors ${
+                className={`min-h-[34px] rounded-lg px-3 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
                   mode === sub.id
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                    ? 'bg-white text-blue-600 shadow-2xs dark:bg-slate-900 dark:text-blue-400'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
                 }`}
               >
                 {sub.label}
@@ -446,34 +501,36 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
               type="button"
               disabled={isOffline}
               onClick={() => setProdModalOpen(true)}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 text-xs font-bold text-white shadow-2xs transition-colors hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
             >
-              <Plus className="h-4 w-4" />
-              บันทึกผลผลิต (OUT)
+              <Plus className="h-3.5 w-3.5" />
+              <span>บันทึกผลผลิต (OUT)</span>
             </button>
-            <button
-              type="button"
-              disabled={isOffline}
-              onClick={() => setReceiptModalOpen(true)}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
-            >
-              <PackagePlus className="h-4 w-4" />
-              รับเข้า / โอนย้าย (IN)
-            </button>
+            {canManage && (
+              <button
+                type="button"
+                disabled={isOffline}
+                onClick={() => setReceiptModalOpen(true)}
+                className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 cursor-pointer"
+              >
+                <PackagePlus className="h-3.5 w-3.5" />
+                <span>รับเข้า / โอนย้าย (IN)</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleExportExcel}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
             >
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-              Excel
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Excel</span>
             </button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="flex items-center gap-1.5 lg:col-span-2">
+        {/* Organized Filter Bar */}
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap border-t border-slate-100 pt-2.5 dark:border-slate-800">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             <input
               type="date"
               value={startDate}
@@ -482,9 +539,9 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                 setPage(1);
               }}
               aria-label="วันที่เริ่มต้น"
-              className="min-h-[44px] w-full rounded-xl border border-slate-300 bg-white px-3 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="min-h-[36px] rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
-            <span className="text-xs text-slate-400">ถึง</span>
+            <span className="text-xs text-slate-400">-</span>
             <input
               type="date"
               value={endDate}
@@ -493,8 +550,24 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                 setPage(1);
               }}
               aria-label="วันที่สิ้นสุด"
-              className="min-h-[44px] w-full rounded-xl border border-slate-300 bg-white px-3 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="min-h-[36px] rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
+            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
+              <button
+                type="button"
+                onClick={() => handleQuickPreset(0)}
+                className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                วันนี้
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickPreset(6)}
+                className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                7 วัน
+              </button>
+            </div>
           </div>
 
           <select
@@ -504,7 +577,7 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
               setPage(1);
             }}
             aria-label="กรองตามสถานที่"
-            className="min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="min-h-[36px] min-w-[170px] rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="ALL">ทุกสถานที่ / ทุกไลน์ผลิต</option>
             {locations.map((loc) => (
@@ -514,8 +587,8 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
             ))}
           </select>
 
-          <div className="relative lg:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+          <div className="relative flex-1 min-w-[190px]">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={searchText}
@@ -524,49 +597,34 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                 setPage(1);
               }}
               placeholder="ค้นหา SAP, Part No, Lot No, หมายเหตุ..."
-              className="min-h-[44px] w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="min-h-[36px] w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleQuickPreset(0)}
-              className="min-h-[44px] flex-1 rounded-xl border border-slate-300 bg-slate-50 px-2 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              วันนี้
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickPreset(6)}
-              className="min-h-[44px] flex-1 rounded-xl border border-slate-300 bg-slate-50 px-2 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              7 วัน
-            </button>
-            <button
-              type="button"
-              onClick={loadData}
-              aria-label="รีเฟรชข้อมูล"
-              className="flex min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={loadData}
+            aria-label="รีเฟรชข้อมูล"
+            title="รีเฟรชข้อมูล"
+            className="inline-flex min-h-[36px] w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 cursor-pointer"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
+          </button>
         </div>
 
         {/* Data Table */}
-        <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-[11px] font-bold uppercase text-slate-600 dark:bg-slate-800/80 dark:text-slate-300">
               <tr>
-                <th className="px-3 py-3">วัน-เวลา</th>
-                <th className="px-3 py-3">ประเภท</th>
-                <th className="px-3 py-3">SAP / Part No</th>
-                <th className="px-3 py-3 text-right">จำนวน</th>
-                <th className="px-3 py-3">ไลน์ / คลัง</th>
-                <th className="px-3 py-3">Lot / Job</th>
-                <th className="px-3 py-3">ผู้บันทึก / ทีม</th>
-                <th className="px-3 py-3 text-center">จัดการ</th>
+                <th className="px-3 py-2.5">วัน-เวลา</th>
+                <th className="px-3 py-2.5">ประเภท</th>
+                <th className="px-3 py-2.5">SAP / Part No</th>
+                <th className="px-3 py-2.5 text-right">จำนวน</th>
+                <th className="px-3 py-2.5">ไลน์ / คลัง</th>
+                <th className="px-3 py-2.5">Lot / Job</th>
+                <th className="px-3 py-2.5 w-44 max-w-[180px]">ผู้บันทึก / ทีม</th>
+                <th className="px-3 py-2.5 text-center">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -586,6 +644,14 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                 rows.map((row) => {
                   const canModify =
                     canManage || Number(row.created_by_user_id) === Number(metadata?.current_user?.id);
+                  const teamList = String(row.team_member_names || '')
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  const leadName = row.created_by_name || teamList[0] || '-';
+                  const extraMembers = teamList.filter((m) => m !== leadName);
+                  const isTeamExpanded = expandedTeamId === row.transaction_id;
+
                   return (
                     <tr
                       key={row.transaction_id}
@@ -634,30 +700,53 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                           </div>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[11px] text-slate-600 dark:text-slate-300">
-                        {row.team_member_names || row.created_by_name || '-'}
+                      <td className="px-3 py-2.5 max-w-[180px] text-[11px] text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="truncate font-medium" title={teamList.join(', ') || leadName}>
+                            {leadName}
+                          </span>
+                          {extraMembers.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedTeamId(isTeamExpanded ? null : row.transaction_id)}
+                              title={teamList.join(', ')}
+                              className="shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 cursor-pointer"
+                            >
+                              +{extraMembers.length}
+                            </button>
+                          )}
+                        </div>
+                        {isTeamExpanded && teamList.length > 0 && (
+                          <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-[10px] leading-relaxed text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            {teamList.join(', ')}
+                          </div>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-center">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={!canModify || isOffline}
-                            onClick={() => openEditModal(row)}
-                            aria-label="แก้ไขรายการ"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!canModify || isOffline}
-                            onClick={() => handleDeleteRow(row)}
-                            aria-label="ลบรายการ"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                        {canModify ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={isOffline}
+                              onClick={() => openEditModal(row)}
+                              aria-label="แก้ไขรายการ"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isOffline}
+                              onClick={() => handleDeleteRow(row)}
+                              aria-label="ลบรายการ"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800 cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-300 dark:text-slate-600">-</span>
+                        )}
                       </td>
                     </tr>
                   );

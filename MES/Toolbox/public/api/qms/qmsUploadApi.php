@@ -26,9 +26,14 @@ try {
         $relUnderUploads = substr($cleanPath, strlen('uploads/'));
         $foundFile = null;
         foreach (resolveQmsUploadSearchDirs() as $baseDir) {
-            $candidate = realpath($baseDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relUnderUploads));
-            if ($candidate !== false && strpos($candidate, $baseDir) === 0 && is_file($candidate)) {
+            $joined = $baseDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relUnderUploads);
+            $candidate = @realpath($joined);
+            if ($candidate !== false && strpos($candidate, $baseDir) === 0 && @is_file($candidate)) {
                 $foundFile = $candidate;
+                break;
+            }
+            if (@is_file($joined)) {
+                $foundFile = $joined;
                 break;
             }
         }
@@ -38,8 +43,22 @@ try {
             exit('Image not found');
         }
 
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($foundFile) ?: 'application/octet-stream';
+        $ext = strtolower(pathinfo($foundFile, PATHINFO_EXTENSION));
+        $extMimeMap = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+        ];
+        $mime = $extMimeMap[$ext] ?? 'application/octet-stream';
+        if (class_exists('finfo')) {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $detected = $finfo->file($foundFile);
+            if (is_string($detected) && strpos($detected, 'image/') === 0) {
+                $mime = $detected;
+            }
+        }
         if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
             http_response_code(403);
             exit('Unsupported media type');

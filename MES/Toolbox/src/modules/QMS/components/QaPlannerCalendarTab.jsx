@@ -186,7 +186,7 @@ export default function QaPlannerCalendarTab({ isOnline }) {
                 </div>
 
                 {/* Desktop Pills */}
-                <div className="hidden sm:flex flex-col gap-1 overflow-y-auto max-h-20">
+                <div className="hidden sm:flex flex-col gap-1 overflow-y-auto max-h-28 pr-0.5 custom-scrollbar">
                   {list.map((po) => {
                     const { isFailed, isDone, isInProgress } = normalizeQaStatus(po);
                     const roundNo = Number(po.round_no || 1);
@@ -207,7 +207,7 @@ export default function QaPlannerCalendarTab({ isOnline }) {
                         onDragStart={(e) => e.dataTransfer.setData('text/plain', String(po.id))}
                         onClick={(e) => { e.stopPropagation(); setEditingPo(po); }}
                         title={`${po.po_number} (${po.sku})${totalRounds > 1 ? ` • รอบที่ ${roundNo}/${totalRounds}` : ''}`}
-                        className={`px-1.5 py-0.5 rounded border text-[10px] leading-tight truncate font-semibold ${cls} ${isArchived ? 'opacity-65 border-dashed' : ''}`}
+                        className={`shrink-0 px-1.5 py-0.5 rounded border text-[10px] leading-snug truncate font-semibold cursor-pointer ${cls} ${isArchived ? 'opacity-65 border-dashed' : ''}`}
                       >
                         {totalRounds > 1 ? `[R${roundNo}] ` : ''}{po.po_number}
                       </div>

@@ -215,7 +215,7 @@ export default function AccessoriesInspectionPage() {
   };
 
   return (
-    <div className="w-full p-3 sm:p-5 space-y-5">
+    <div className="w-full space-y-4">
       {!isOnline && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 px-4 py-2.5 flex items-center gap-2 text-sm text-amber-800 font-medium">
           <WifiOff size={18} />

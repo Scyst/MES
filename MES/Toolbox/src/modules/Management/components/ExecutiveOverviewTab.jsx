@@ -49,8 +49,9 @@ export default function ExecutiveOverviewTab({ isOffline }) {
     return d.toISOString().split('T')[0];
   }, []);
 
-  const [startDate, setStartDate] = useState(past30Str);
+  const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
+  const [hcGroup, setHcGroup] = useState('TEAM 1');
   const [exchangeRate, setExchangeRate] = useState(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('lastExchangeRate') : null;
     return saved || '32.0';
@@ -74,6 +75,7 @@ export default function ExecutiveOverviewTab({ isOffline }) {
         startDate,
         endDate,
         exchangeRate: rateNum,
+        hcGroup,
       });
       if (res?.success && res.data) {
         setDashboard(res.data);
@@ -81,7 +83,15 @@ export default function ExecutiveOverviewTab({ isOffline }) {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [startDate, endDate, exchangeRate]);
+  }, [startDate, endDate, exchangeRate, hcGroup]);
+
+  const applyDatePreset = useCallback((daysBack) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - daysBack);
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -210,10 +220,21 @@ export default function ExecutiveOverviewTab({ isOffline }) {
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm lg:flex-row lg:items-center lg:justify-between dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-200">
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
-          <span>EXECUTIVE FINANCIAL OVERVIEW (LIVE)</span>
+      <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-200">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
+            <span>EXECUTIVE FINANCIAL OVERVIEW (LIVE)</span>
+          </div>
+          <select
+            value={hcGroup}
+            onChange={(e) => setHcGroup(e.target.value)}
+            aria-label="กลุ่มกำลังคน"
+            className="min-h-[34px] rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-emerald-700 dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-400 cursor-pointer"
+          >
+            <option value="TEAM 1">กำลังคน: TEAM 1 (หลัก)</option>
+            <option value="ALL">กำลังคน: ทั้งหมด (ALL)</option>
+          </select>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -224,24 +245,55 @@ export default function ExecutiveOverviewTab({ isOffline }) {
               step="0.1"
               value={exchangeRate}
               onChange={(e) => setExchangeRate(e.target.value)}
-              className="min-h-[44px] w-20 bg-transparent px-2 text-right font-mono text-xs font-bold text-blue-600 focus:outline-none dark:text-blue-400"
+              className="min-h-[38px] w-16 bg-transparent px-2 text-right font-mono text-xs font-bold text-blue-600 focus:outline-none dark:text-blue-400"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-0.5 dark:border-slate-700 dark:bg-slate-800">
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="min-h-[38px] bg-transparent text-xs font-bold focus:outline-none"
+              className="min-h-[34px] bg-transparent text-xs font-bold focus:outline-none"
             />
             <span className="text-xs text-slate-400">-</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="min-h-[38px] bg-transparent text-xs font-bold focus:outline-none"
+              className="min-h-[34px] bg-transparent text-xs font-bold focus:outline-none"
             />
+            <div className="inline-flex items-center gap-0.5 border-l border-slate-200 pl-1.5 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => applyDatePreset(0)}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer ${
+                  startDate === todayStr && endDate === todayStr
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:bg-white dark:text-slate-300'
+                }`}
+              >
+                วันนี้
+              </button>
+              <button
+                type="button"
+                onClick={() => applyDatePreset(6)}
+                className="rounded-lg px-2 py-1 text-[11px] font-bold text-slate-600 hover:bg-white dark:text-slate-300 cursor-pointer"
+              >
+                7 วัน
+              </button>
+              <button
+                type="button"
+                onClick={() => applyDatePreset(30)}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer ${
+                  startDate === past30Str && endDate === todayStr
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:bg-white dark:text-slate-300'
+                }`}
+              >
+                30 วัน
+              </button>
+            </div>
           </div>
 
           <button
@@ -249,9 +301,9 @@ export default function ExecutiveOverviewTab({ isOffline }) {
             disabled={isOffline}
             onClick={handleSyncRange}
             title="ซิงค์ค่าแรงจริงตามช่วงวันที่"
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-amber-400 px-3 text-xs font-bold text-slate-900 hover:bg-amber-500 disabled:opacity-50"
+            className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-amber-400 px-3 text-xs font-bold text-slate-900 hover:bg-amber-500 disabled:opacity-50 cursor-pointer"
           >
-            <Users className="h-4 w-4" />
+            <Users className="h-3.5 w-3.5" />
             <span>Sync Labor</span>
           </button>
 
@@ -260,9 +312,9 @@ export default function ExecutiveOverviewTab({ isOffline }) {
             disabled={isOffline}
             onClick={handleQuickSync}
             title="Quick Sync เมื่อวาน & วันนี้"
-            className="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+            className="inline-flex min-h-[38px] items-center gap-1 rounded-xl border border-amber-300 bg-amber-50 px-2.5 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-50 cursor-pointer"
           >
-            <Zap className="h-4 w-4 text-amber-500" />
+            <Zap className="h-3.5 w-3.5 text-amber-500" />
             <span>Quick</span>
           </button>
 
@@ -273,20 +325,20 @@ export default function ExecutiveOverviewTab({ isOffline }) {
               setAiForecast(next);
               toast.info(next ? 'เปิดโหมดพยากรณ์ AI 7 วันแล้ว' : 'ปิดโหมดพยากรณ์ AI');
             }}
-            className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition ${
+            className={`inline-flex min-h-[38px] items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition cursor-pointer ${
               aiForecast
                 ? 'border-cyan-600 bg-cyan-600 text-white'
                 : 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
             }`}
           >
-            <Bot className="h-4 w-4" />
+            <Bot className="h-3.5 w-3.5" />
             <span>AI Forecast</span>
           </button>
 
           <button
             type="button"
             onClick={() => loadData(false)}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
+            className="inline-flex min-h-[38px] items-center justify-center rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700 cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -294,7 +346,7 @@ export default function ExecutiveOverviewTab({ isOffline }) {
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 px-3 text-slate-500 hover:bg-slate-100 dark:border-slate-700"
+            className="inline-flex min-h-[38px] items-center justify-center rounded-xl border border-slate-200 px-2.5 text-slate-500 hover:bg-slate-100 dark:border-slate-700 cursor-pointer"
           >
             <HelpCircle className="h-4 w-4" />
           </button>

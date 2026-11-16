@@ -41,12 +41,12 @@ export const MENU_DATA = [
     title: 'WAREHOUSE & LOGISTICS',
     sectionIcon: Warehouse,
     items: [
-      { name: 'Store Management (คลังสินค้า)', icon: Store, to: '/store' },
-      { name: 'Visual Cycle Count (ตรวจนับ)', icon: MapPin, to: '/store?tab=cycle-count' },
-      { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub' },
-      { name: 'Store KDS & Issue (จ่ายพัสดุ)', icon: Warehouse, to: '/store?tab=kds' },
-      { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving' },
-      { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap' },
+      { name: 'Store Management (คลังสินค้า)', icon: Store, to: '/store', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
+      { name: 'Visual Cycle Count (ตรวจนับ)', icon: MapPin, to: '/store?tab=cycle-count', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
+      { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
+      { name: 'Store KDS & Issue (จ่ายพัสดุ)', icon: Warehouse, to: '/store?tab=kds', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
+      { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
+      { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner', 'qa', 'qa_qc', 'qc'], permission: 'manage_warehouse' },
       { name: 'Freight FleetLog (บัญชีเที่ยวรถ)', icon: Truck, to: '/fleet-log' },
       { name: 'Loading Report (C-TPAT)', icon: Truck, to: '/loading-report' },
       { name: 'C-TPAT Doc Tracking', icon: MapPin, to: '/loading-report?tab=tracking' },
@@ -110,9 +110,17 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
       if (isTrainee && section.title !== 'GENERAL') return null;
       if (section.title === 'SYSTEM ADMIN' && !isSystemAdmin) return null;
 
+      const userRole = String(user?.role || '').toLowerCase();
+      const userPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
+
       const filteredItems = section.items.filter((item) => {
         if (isTrainee && !['TOOLBOX OS (Home)', 'My Profile (โปรไฟล์ & 4D)', 'MES Learning Hub (ศูนย์เรียนรู้)'].includes(item.name)) {
           return false;
+        }
+        if (item.roles || item.permission) {
+          const allowedByRole = item.roles ? item.roles.includes(userRole) : false;
+          const allowedByPerm = item.permission ? userPermissions.includes(item.permission) : false;
+          if (!allowedByRole && !allowedByPerm) return false;
         }
         return item.name.toLowerCase().includes(search.toLowerCase());
       });

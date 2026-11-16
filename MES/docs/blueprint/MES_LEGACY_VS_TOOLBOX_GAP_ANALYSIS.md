@@ -1,6 +1,6 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบล่าสุด: 16 พฤศจิกายน 2026 (อัปเดต Phase 3.4: Ported Area Access `#/area-access`, Accessories Inspection `#/accessories-inspection` และ CCTV Downloader `#/cctv-downloader` ปิดงานพอร์ตโมดูลปฏิบัติการครบสมบูรณ์) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 16 พฤศจิกายน 2026 (อัปเดต UAT Polish & Security Hardening: แก้ไข 11 รายการ across OEE, Store RBAC, Production RBAC/KDS, C-TPAT Merged Tabs, QMS Planner Scroll, Accessories `.env`, PE Parts UX, Management `TEAM 1`, Manpower Upsert/Responsive และ Unified Media Fallback) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
@@ -299,3 +299,8 @@ graph LR
 2. [x] **Sales, Loading Report & Auto Invoice:** รวมสายงานส่งออก ตรวจสอบตู้สินค้า C-TPAT และออก Commercial Invoice / Packing List เข้าสู่ระบบใหม่ (`#/sales`, `#/loading-report`, `#/auto-invoice`) (เสร็จสมบูรณ์ 14/11/2026)
 3. [x] **Executive Dashboard & Daily P&L:** ย้าย `Management` (`#/management`), `OEE Dashboard & Shopfloor` (`#/oee`) และ `Daily P&L` (`#/daily-pl`) เข้า Toolbox SPA สมบูรณ์ (เสร็จสมบูรณ์ 16/11/2026)
 4. [x] **Area Access, Accessories Inspection & CCTV Downloader:** ย้ายระบบควบคุมเข้า-ออกพื้นที่ (`#/area-access`), ระบบกล้อง AI ตรวจชิ้นส่วน (`#/accessories-inspection`) และระบบดึงวิดีโอ CCTV (`#/cctv-downloader`) เข้า Toolbox SPA สมบูรณ์ (เสร็จสมบูรณ์ 16/11/2026)
+
+### 🛠️ UAT Bugfix, RBAC Hardening & UX Polish (16/11/2026)
+- [x] **RBAC & Data Masking**: ล็อกแท็บกลางใน `StoreApp.jsx`, Sidebar (`DesktopSidebar.jsx`) และ Backend `storeApi.php` / `productionApi.php` / `jobApi.php` ป้องกัน `operator` เข้าถึงสต็อกกลาง, จัดการ Job Queue และข้อมูลต้นทุน (`Cost_Total`/`total_value`/`มูลค่ารวม (฿)`)
+- [x] **Unified Media Fallback & Safe MIME**: สร้าง `Toolbox/src/shared/utils/mediaUrl.js` พร้อม safe `class_exists('finfo')` fallback + `@is_file` ใน `storeApi.php`, `loadingApi.php`, `peUploadApi.php`, `qmsUploadApi.php` สำหรับรูปภาพ Store, Profile, C-TPAT 16 จุด, PE Spare Parts/WO และ QMS
+- [x] **UX & Performance Polish**: แก้ OEE clock isolation / trend loading / stagger, ลบป้าย `SPA`/`SPA Ported` และ padding ส่วนเกิน, ปรับ C-TPAT รวม Header + 16 Photos เป็นแท็บแรก, เพิ่ม scroll cell ใน QMS Planner, เปลี่ยน `WoPartsModal.jsx` เป็นการ์ดอะไหล่พร้อมเบิก, ปรับ Management & Manpower default เป็น `TEAM 1` + auto-upsert สำหรับแถว `WAITING` และอัปโหลด `ACCESSORIES_CAM_UPSTREAM` ขึ้น `/Toolbox/.env`

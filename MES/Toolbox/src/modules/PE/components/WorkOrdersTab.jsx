@@ -528,10 +528,11 @@ export default function WorkOrdersTab({ isOffline = false, onOpenCountChange }) 
                             <button
                               type="button"
                               onClick={() => setPartsModalWo(wo)}
-                              className="min-w-[36px] min-h-[36px] p-1.5 rounded-lg text-amber-600 hover:bg-amber-50"
-                              title="เบิก/ดูอะไหล่"
+                              className="min-h-[34px] px-2 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                              title="เบิก/ดูอะไหล่ซ่อม"
                             >
-                              <Package className="w-4 h-4" />
+                              <Package className="w-3.5 h-3.5" />
+                              <span className="hidden xl:inline">เบิกอะไหล่</span>
                             </button>
                             <button
                               type="button"
@@ -634,9 +635,9 @@ export default function WorkOrdersTab({ isOffline = false, onOpenCountChange }) 
                       <button
                         type="button"
                         onClick={() => setPartsModalWo(wo)}
-                        className="min-h-[44px] px-3 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold inline-flex items-center justify-center gap-1"
+                        className="min-h-[44px] px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 text-xs font-semibold inline-flex items-center justify-center gap-1 cursor-pointer"
                       >
-                        <Package className="w-3.5 h-3.5" /> อะไหล่
+                        <Package className="w-3.5 h-3.5" /> เบิกอะไหล่
                       </button>
                       <button
                         type="button"

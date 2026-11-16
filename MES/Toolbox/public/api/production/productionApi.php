@@ -100,7 +100,16 @@ try {
     handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }
 
+function canViewProductionCosts(): bool {
+    return hasPermission('view_executive')
+        || hasPermission('manage_production')
+        || hasRole(['admin', 'creator', 'manager', 'executive', 'supervisor', 'planner']);
+}
+
 function handleGetInitialData(PDO $pdo, array $currentUser): void {
+    $canViewCost = canViewProductionCosts();
+    $canManage = hasPermission('manage_production') || hasRole(['admin', 'creator', 'supervisor']);
+
     $locStmt = $pdo->query("
         SELECT location_id, location_name, location_description, location_type, production_line, zone_name
         FROM " . LOCATIONS_TABLE . " WITH (NOLOCK)
@@ -109,8 +118,9 @@ function handleGetInitialData(PDO $pdo, array $currentUser): void {
     ");
     $locations = $locStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $costSelect = $canViewCost ? ', Cost_Total' : '';
     $itemStmt = $pdo->query("
-        SELECT TOP 3000 item_id, sap_no, part_no, part_description, material_type, material_sub_type, sku, CTN, barcode, Cost_Total, planned_output
+        SELECT TOP 3000 item_id, sap_no, part_no, part_description, material_type, material_sub_type, sku, CTN, barcode{$costSelect}, planned_output
         FROM " . ITEMS_TABLE . " WITH (NOLOCK)
         WHERE is_active = 1
         ORDER BY sap_no ASC
@@ -145,7 +155,8 @@ function handleGetInitialData(PDO $pdo, array $currentUser): void {
             'role' => $currentUser['role'] ?? '',
             'line' => $currentUser['line'] ?? '',
             'team_group' => $currentUser['team_group'] ?? '',
-            'can_manage' => hasPermission('manage_production') || hasRole(['admin', 'creator', 'supervisor']),
+            'can_manage' => $canManage,
+            'can_view_cost' => $canViewCost,
         ],
     ], 'Loaded production metadata');
 }
@@ -252,6 +263,14 @@ function handleExecuteProduction(PDO $pdo, array $input, array $currentUser): vo
 }
 
 function handleExecuteReceipt(PDO $pdo, array $input, array $currentUser): void {
+    if (
+        !hasPermission('manage_production')
+        && !hasPermission('manage_warehouse')
+        && !hasRole(['admin', 'creator', 'supervisor', 'planner', 'store'])
+    ) {
+        prodJsonError('คุณไม่มีสิทธิ์บันทึกรับเข้า/โอนย้ายสต็อก (ต้องมีสิทธิ์ manage_production)', 403);
+    }
+
     $txnType = strtoupper(trim((string)($input['transaction_type'] ?? 'RECEIPT')));
     if (!in_array($txnType, ['RECEIPT', 'TRANSFER'], true)) {
         throw new InvalidArgumentException('ประเภท Transaction ต้องเป็น RECEIPT หรือ TRANSFER');
@@ -704,11 +723,13 @@ function handleGetWipOnhandReport(PDO $pdo, array $input): void {
     }
 
     $whereSql = 'WHERE ' . implode(' AND ', $conditions);
+    $costCols = canViewProductionCosts()
+        ? ', i.Cost_Total, (oh.quantity * ISNULL(i.Cost_Total, 0)) AS total_value'
+        : '';
     $sql = "
         SELECT TOP 500
             oh.onhand_id, oh.parameter_id AS item_id, oh.location_id, oh.quantity AS onhand_qty, oh.last_updated,
-            i.sap_no, i.part_no, i.part_description, i.material_type, i.Cost_Total,
-            (oh.quantity * ISNULL(i.Cost_Total, 0)) AS total_value,
+            i.sap_no, i.part_no, i.part_description, i.material_type{$costCols},
             l.location_name, l.location_type, l.production_line
         FROM " . ONHAND_TABLE . " oh WITH (NOLOCK)
         JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON oh.parameter_id = i.item_id
@@ -873,15 +894,20 @@ function handleGetStockInventoryReport(PDO $pdo, array $input): void {
     $countStmt->execute($params);
     $total = (int)$countStmt->fetchColumn();
 
+    $canViewCost = canViewProductionCosts();
+    $costCols = $canViewCost
+        ? ', i.Cost_Total, (ISNULL(SUM(oh.quantity), 0) * ISNULL(i.Cost_Total, 0)) AS total_value'
+        : '';
+    $costGroupBy = $canViewCost ? ', i.Cost_Total' : '';
+
     $dataSql = "
         SELECT
-            i.item_id, i.sap_no, i.part_no, i.part_description, i.material_type, i.min_stock, i.max_stock, i.Cost_Total,
-            ISNULL(SUM(oh.quantity), 0) AS total_onhand,
-            (ISNULL(SUM(oh.quantity), 0) * ISNULL(i.Cost_Total, 0)) AS total_value
+            i.item_id, i.sap_no, i.part_no, i.part_description, i.material_type, i.min_stock, i.max_stock{$costCols},
+            ISNULL(SUM(oh.quantity), 0) AS total_onhand
         FROM " . ITEMS_TABLE . " i WITH (NOLOCK)
         LEFT JOIN " . ONHAND_TABLE . " oh WITH (NOLOCK) ON i.item_id = oh.parameter_id
         {$whereSql}
-        GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description, i.material_type, i.min_stock, i.max_stock, i.Cost_Total
+        GROUP BY i.item_id, i.sap_no, i.part_no, i.part_description, i.material_type, i.min_stock, i.max_stock{$costGroupBy}
         ORDER BY i.sap_no ASC
         OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
     ";

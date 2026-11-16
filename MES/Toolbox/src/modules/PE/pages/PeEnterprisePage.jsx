@@ -68,7 +68,7 @@ export default function PeEnterprisePage() {
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-3">
       {isOffline && (
         <div className="p-3 rounded-xl bg-red-600 text-white text-sm font-semibold flex items-center gap-2 shadow-sm">
           <WifiOff className="w-4 h-4 shrink-0" />
@@ -77,19 +77,16 @@ export default function PeEnterprisePage() {
       )}
 
       {/* Enterprise Header */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex items-start sm:items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shrink-0">
-            <Wrench className="w-6 h-6" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-sm shrink-0">
+            <Wrench className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                PE Enterprise & Maintenance Hub
-              </h1>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">SPA Self-Contained</span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            <h1 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              PE Enterprise &amp; Maintenance Hub
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
               ศูนย์กลางบริหารงานวิศวกรรมซ่อมบำรุง ใบแจ้งซ่อม ทะเบียนเครื่องจักร และคลังอะไหล่อุตสาหกรรม
             </p>
           </div>
@@ -163,32 +160,34 @@ export default function PeEnterprisePage() {
         </div>
       </div>
 
-      {/* Main Module Navigation Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {MAIN_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => handleTabChange(tab.id)}
-              className={`min-h-[44px] px-4 rounded-xl text-sm font-semibold inline-flex items-center gap-2 border transition-all ${
-                isActive
-                  ? 'bg-slate-900 dark:bg-blue-600 text-white border-slate-900 dark:border-blue-600 shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span>{tab.label}</span>
-              {tab.id === 'work-orders' && openWoCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[11px] font-bold">
-                  {openWoCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Main Module Navigation Tabs — Sleek single-row underline bar */}
+      <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 pt-1 shadow-2xs">
+        <div className="mes-tab-nav mb-0 border-b-0 gap-1 sm:gap-2">
+          {MAIN_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`min-h-[42px] px-3 py-2 border-b-2 text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer ${
+                  isActive
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-lg'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-t-lg'
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{tab.label}</span>
+                {tab.id === 'work-orders' && openWoCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none">
+                    {openWoCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Active Tab Content */}

@@ -146,7 +146,7 @@ export default function DataTable({
         <div
           className={
             stickyToolbar
-              ? 'sticky top-0 z-20 flex flex-col gap-2.5 md:flex-row md:items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-all'
+              ? 'sticky top-0 z-20 flex flex-col gap-2.5 md:flex-row md:items-center bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs'
               : 'flex flex-col gap-2.5 md:flex-row md:items-center'
           }
         >
@@ -199,7 +199,7 @@ export default function DataTable({
           />
         )}
         <table className="w-full min-w-[640px] text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-slate-50/95 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900/95 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 backdrop-blur-xs">
+          <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
             <tr>
               {columns.map((column) => {
                 const isSorted = sort.key === column.key;

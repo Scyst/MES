@@ -55,6 +55,7 @@ export default function SparePartsTab({ isOffline = false }) {
   const [txModalMode, setTxModalMode] = useState(null); // 'RECEIVE' | 'ISSUE' | null
   const [txCart, setTxCart] = useState([]);
   const [txDraft, setTxDraft] = useState({ item_id: '', location_id: '', quantity: '1' });
+  const [txItemFilter, setTxItemFilter] = useState('');
   const [txNotes, setTxNotes] = useState('');
   const [txWoId, setTxWoId] = useState('');
   const [openWorkOrders, setOpenWorkOrders] = useState([]);
@@ -174,6 +175,7 @@ export default function SparePartsTab({ isOffline = false }) {
   const openTxModal = async (mode, prefillItem = null) => {
     setTxModalMode(mode);
     setTxCart([]);
+    setTxItemFilter('');
     setTxNotes('');
     setTxWoId('');
     setTxDraft({
@@ -604,10 +606,19 @@ export default function SparePartsTab({ isOffline = false }) {
                             type="button"
                             disabled={isOffline}
                             onClick={() => openTxModal('RECEIVE', row)}
-                            className="min-h-[34px] px-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold"
-                            title="รับเข้า"
+                            className="min-h-[34px] px-2.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold cursor-pointer"
+                            title="รับอะไหล่เข้าคลัง"
                           >
                             +รับ
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isOffline || qty <= 0}
+                            onClick={() => openTxModal('ISSUE', row)}
+                            className="min-h-[34px] px-2.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                            title="เบิกอะไหล่ไปใช้งาน / ซ่อม"
+                          >
+                            -เบิก
                           </button>
                           <button
                             type="button"
@@ -621,7 +632,7 @@ export default function SparePartsTab({ isOffline = false }) {
                                 reason: '',
                               });
                             }}
-                            className="min-h-[34px] px-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-40"
+                            className="min-h-[34px] px-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
                             title="ปรับสต๊อก"
                           >
                             <SlidersHorizontal className="w-3.5 h-3.5" /> ปรับ
@@ -653,6 +664,24 @@ export default function SparePartsTab({ isOffline = false }) {
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                     <span>คงเหลือ: <strong className={isLow ? 'text-red-600' : 'text-emerald-600'}>{qty} {row.uom}</strong> (Min {min})</span>
                     <span className="font-semibold">{formatBaht(qty * Number(row.unit_price || 0))}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      disabled={isOffline}
+                      onClick={() => openTxModal('RECEIVE', row)}
+                      className="flex-1 min-h-[38px] rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold cursor-pointer"
+                    >
+                      + รับเข้า
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isOffline || qty <= 0}
+                      onClick={() => openTxModal('ISSUE', row)}
+                      className="flex-1 min-h-[38px] rounded-xl bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 text-xs font-bold disabled:opacity-40 cursor-pointer"
+                    >
+                      - เบิกใช้ซ่อม
+                    </button>
                   </div>
                 </div>
               );
@@ -825,6 +854,16 @@ export default function SparePartsTab({ isOffline = false }) {
               <button type="button" onClick={() => setTxModalMode(null)} className="min-w-[44px] min-h-[44px] flex items-center justify-center"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={submitBatchTx} className="p-5 space-y-4">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  value={txItemFilter}
+                  onChange={(e) => setTxItemFilter(e.target.value)}
+                  placeholder="พิมพ์กรองรหัสอะไหล่ หรือชื่ออะไหล่..."
+                  className="w-full min-h-[40px] pl-9 pr-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
                 <div className="sm:col-span-5">
                   <label className="block text-xs font-semibold text-slate-600 mb-1">รายการอะไหล่</label>
@@ -834,9 +873,19 @@ export default function SparePartsTab({ isOffline = false }) {
                     className="w-full min-h-[44px] px-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
                   >
                     <option value="">-- เลือกอะไหล่ --</option>
-                    {masterItems.filter((i) => Number(i.is_active) === 1).map((i) => (
-                      <option key={i.item_id} value={i.item_id}>[{i.item_code}] {i.item_name} ({i.uom})</option>
-                    ))}
+                    {masterItems
+                      .filter((i) => Number(i.is_active) === 1)
+                      .filter((i) => {
+                        const q = txItemFilter.trim().toLowerCase();
+                        if (!q) return true;
+                        return (
+                          (i.item_code || '').toLowerCase().includes(q) ||
+                          (i.item_name || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((i) => (
+                        <option key={i.item_id} value={i.item_id}>[{i.item_code}] {i.item_name} ({i.uom})</option>
+                      ))}
                   </select>
                 </div>
                 <div className="sm:col-span-4">

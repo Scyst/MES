@@ -126,7 +126,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
     @apply w-full;
   }
   .mes-page-header {
-    @apply flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4;
+    @apply flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2.5 sm:mb-3;
   }
   .mes-page-title {
     @apply text-xl md:text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2 tracking-tight;
@@ -137,7 +137,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
 
   /* Navigation Tabs (Underline Industrial Style) */
   .mes-tab-nav {
-    @apply flex border-b border-slate-200 dark:border-slate-700 gap-6 overflow-x-auto mb-4;
+    @apply flex border-b border-slate-200 dark:border-slate-700 gap-6 overflow-x-auto mb-2.5 sm:mb-3;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }

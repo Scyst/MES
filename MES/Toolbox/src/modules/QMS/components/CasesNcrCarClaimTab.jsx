@@ -5,7 +5,19 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
-import { qmsCasesApi, resolveQmsMediaUrl } from '../../../shared/services/qmsApi';
+import { qmsCasesApi } from '../../../shared/services/qmsApi';
+import { getQmsMediaCandidates } from '../../../shared/utils/mediaUrl';
+
+function QmsEvidenceImg({ path, alt, className }) {
+  const candidates = useMemo(() => getQmsMediaCandidates(path), [path]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [path]);
+  const src = idx < candidates.length ? candidates[idx] : '';
+  if (!src) return null;
+  return <img src={src} alt={alt} loading="lazy" className={className} onError={() => setIdx((p) => p + 1)} />;
+}
 import {
   CASE_STATUS_META, DEFECT_TYPES, PRELIM_DISPOSITIONS, FOUND_BY_TYPES,
   ROOT_CAUSE_CATEGORIES, CLAIM_DISPOSITIONS,
@@ -921,20 +933,17 @@ export default function CasesNcrCarClaimTab({ isOnline }) {
                       <div className="text-xs text-slate-400 italic">ไม่มีรูปภาพแนบ</div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {caseFiles.map((f) => {
-                          const url = resolveQmsMediaUrl(f.file_path);
-                          return (
-                            <button
-                              key={f.att_id}
-                              type="button"
-                              onClick={() => setPreviewImage(url)}
-                              className="group relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 aspect-square bg-slate-100"
-                            >
-                              <img src={url} alt={f.file_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                              <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-slate-900/70 text-[10px] text-white font-bold">{f.doc_stage}</span>
-                            </button>
-                          );
-                        })}
+                        {caseFiles.map((f) => (
+                          <button
+                            key={f.att_id}
+                            type="button"
+                            onClick={() => setPreviewImage(f.file_path)}
+                            className="group relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 aspect-square bg-slate-100 cursor-pointer"
+                          >
+                            <QmsEvidenceImg path={f.file_path} alt={f.file_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-slate-900/70 text-[10px] text-white font-bold">{f.doc_stage}</span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1266,7 +1275,9 @@ export default function CasesNcrCarClaimTab({ isOnline }) {
           <button type="button" onClick={() => setPreviewImage('')} className="absolute top-4 right-4 min-w-[44px] min-h-[44px] rounded-full bg-white/10 text-white flex items-center justify-center">
             <X className="w-6 h-6" />
           </button>
-          <img src={previewImage} alt="Evidence Preview" className="max-w-full max-h-[88vh] rounded-xl shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
+          <div onClick={(e) => e.stopPropagation()}>
+            <QmsEvidenceImg path={previewImage} alt="Evidence Preview" className="max-w-full max-h-[88vh] rounded-xl shadow-2xl object-contain" />
+          </div>
         </div>
       )}
     </div>

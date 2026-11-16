@@ -183,9 +183,6 @@ export default function UtilityDashboardPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Live IIoT Meters
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
-                ⚡ SPA Ported
-              </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               ศูนย์รวมข้อมูลการใช้ไฟฟ้า TOU (Peak/Off-Peak) และก๊าซ LPG ตลอด 24 ชม. พร้อมสรุปต้นทุนพลังงานโรงงาน

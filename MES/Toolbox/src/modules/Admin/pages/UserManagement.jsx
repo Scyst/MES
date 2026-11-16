@@ -15,6 +15,7 @@ import {
 import { userManageApi } from '../../../shared/services/userManageApi';
 import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
 import DataTable from '../../../shared/components/DataTable';
+import { getProfileAvatarCandidates } from '../../../shared/utils/mediaUrl';
 import UserFormModal from '../components/UserFormModal';
 import RolesPermissionsTab from '../components/RolesPermissionsTab';
 import AuditLogsTab from '../components/AuditLogsTab';
@@ -57,15 +58,17 @@ const formatDate = (dateStr) => {
 };
 
 function UserAvatar({ user }) {
-  const [imgError, setImgError] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
+  const candidates = useMemo(() => getProfileAvatarCandidates(user.profile_picture), [user.profile_picture]);
   const initial = (user.fullname || user.username || '?').charAt(0).toUpperCase();
+  const src = imgIdx < candidates.length ? candidates[imgIdx] : null;
 
-  if (user.profile_picture && !imgError) {
+  if (src) {
     return (
       <img
-        src={user.profile_picture}
+        src={src}
         alt={user.username}
-        onError={() => setImgError(true)}
+        onError={() => setImgIdx((i) => i + 1)}
         className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
       />
     );

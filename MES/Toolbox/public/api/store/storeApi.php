@@ -6,6 +6,58 @@
  * Standard: Industrial Audit Trail Protocol (SYSTEM_LOGS) & Strict Security
  */
 
+if (($_REQUEST['action'] ?? '') === 'view_image') {
+    require_once __DIR__ . '/../../db.php';
+    require_once __DIR__ . '/../../utils/check_auth.php';
+    $rawFile = (string)($_REQUEST['file'] ?? '');
+    $basename = basename(str_replace('\\', '/', $rawFile));
+    if ($basename === '' || !preg_match('/^[A-Za-z0-9._-]+$/', $basename)) {
+        http_response_code(400);
+        exit('Invalid image filename');
+    }
+    $candidateDirs = [
+        __DIR__ . '/../../../uploads/items/',
+        __DIR__ . '/../../../../MES/MES/uploads/items/',
+        __DIR__ . '/../../../../MES/uploads/items/',
+    ];
+    $resolvedPath = null;
+    foreach ($candidateDirs as $dir) {
+        $try = $dir . $basename;
+        if (@is_file($try)) {
+            $resolvedPath = $try;
+            break;
+        }
+    }
+    if (!$resolvedPath) {
+        http_response_code(404);
+        exit('Image not found');
+    }
+    $ext = strtolower(pathinfo($resolvedPath, PATHINFO_EXTENSION));
+    $mimeMap = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+    ];
+    $mime = $mimeMap[$ext] ?? 'application/octet-stream';
+    if (function_exists('finfo_open')) {
+        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $detected = @finfo_file($finfo, $resolvedPath);
+            @finfo_close($finfo);
+            if (is_string($detected) && strpos($detected, 'image/') === 0) {
+                $mime = $detected;
+            }
+        }
+    }
+    header('Content-Type: ' . $mime);
+    header('Cache-Control: public, max-age=86400');
+    header('Content-Length: ' . filesize($resolvedPath));
+    readfile($resolvedPath);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 error_reporting(0);
@@ -37,6 +89,35 @@ try {
     $currentUser = $_SESSION['user'];
     $action = $_REQUEST['action'] ?? $_POST['action'] ?? $jsonPayload['action'] ?? '';
     $storeLocationId = 1008;
+
+    $requisitionSelfServiceActions = [
+        'view_image',
+        'get_catalog',
+        'get_item_info',
+        'get_master_data',
+        'get_active_jobs_for_fulfillment',
+        'submit_requisition',
+        'get_my_orders',
+        'get_my_order_details',
+        'cancel_my_order',
+        'get_material_categories',
+    ];
+    $scrapQaActions = ['get_scrap_requests', 'get_scrap_dashboard', 'create_request'];
+    $hasCentralStoreAccess =
+        hasRole(['admin', 'creator', 'manager', 'supervisor', 'store', 'planner']) ||
+        hasPermission('manage_warehouse');
+    $isQaOrProdLead = hasRole(['admin', 'creator', 'manager', 'supervisor', 'store', 'planner', 'qa', 'qa_qc', 'qc']);
+    if (!in_array($action, $requisitionSelfServiceActions, true)) {
+        if (in_array($action, $scrapQaActions, true)) {
+            if (!$hasCentralStoreAccess && !$isQaOrProdLead) {
+                http_response_code(403);
+                throw new Exception('Forbidden: คุณไม่มีสิทธิ์เข้าถึงข้อมูลของเสียและทดแทน');
+            }
+        } elseif (!$hasCentralStoreAccess) {
+            http_response_code(403);
+            throw new Exception('Forbidden: เฉพาะเจ้าหน้าที่คลังสินค้าหรือผู้มีสิทธิ์เท่านั้นที่เข้าถึงระบบส่วนกลางได้');
+        }
+    }
     $writeActions = [
         'issue_rm', 'issue_selected_tags', 'import_excel', 'group_master_pallet', 
         'receive_scanned_tag', 'delete_tag', 'delete_bulk_tags', 'edit_tag', 

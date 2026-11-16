@@ -246,7 +246,7 @@ export default function CctvDownloaderPage() {
   const missingHardwareDeps = !capabilities.cam_credentials_configured || !capabilities.ffmpeg_available;
 
   return (
-    <div className="w-full p-3 sm:p-5 space-y-5">
+    <div className="w-full space-y-4">
       {!isOnline && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 flex items-center gap-2 text-sm text-amber-800 font-medium">
           <WifiOff size={18} />
