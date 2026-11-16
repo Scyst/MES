@@ -65,4 +65,5 @@
 - [x] Phase 2.3: QMS (`#/qms` — NCR, CAR 8D, Concession 4-Stage, Claims, QA/QC Planner & Schedule; skipped External Customer Token Approval pending QA team decision) — Complete (14/11/2026)
 - [x] Phase 3.1: Manpower (`#/manpower`) & Daily Command Center / Planning (`#/planning`) — Complete (14/11/2026)
 - [x] Phase 3.2: Sales & Shipping Schedule (`#/sales`), Loading Report C-TPAT (`#/loading-report`), Auto Invoice & Packing List (`#/auto-invoice`) — Complete (14/11/2026)
-- [ ] Phase 3.3–3.4: Management/OEE/DailyPL, AreaAccess/Accessories/CCTV
+- [x] Phase 3.3: Executive Management & Planning (`#/management`), OEE Executive & Shopfloor (`#/oee`), Daily P&L (`#/daily-pl`) — Complete (16/11/2026)
+- [ ] Phase 3.4: Area Access (`#/area-access`), Accessories Inspection (`#/accessories-inspection`), CCTV Downloader (`#/cctv-downloader`)

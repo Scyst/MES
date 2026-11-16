@@ -282,11 +282,14 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/auth
 /Toolbox/api/autoInvoice
 /Toolbox/api/dailyLog
+/Toolbox/api/dailyPl
 /Toolbox/api/documentCenter
 /Toolbox/api/fleetLog
 /Toolbox/api/forklift
 /Toolbox/api/loading
+/Toolbox/api/management
 /Toolbox/api/manpower
+/Toolbox/api/oee
 /Toolbox/api/paintChem
 /Toolbox/api/planner
 /Toolbox/api/planner/uploads

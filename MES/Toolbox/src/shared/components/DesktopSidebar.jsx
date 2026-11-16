@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -18,7 +18,7 @@ export const MENU_DATA = [
       { name: 'My Profile (โปรไฟล์ & 4D)', icon: User, to: '/profile' },
       { name: 'MES Learning Hub (ศูนย์เรียนรู้)', icon: GraduationCap, to: '/learning' },
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, to: '/daily-log' },
-      { name: 'OEE Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php', external: true },
+      { name: 'OEE Dashboard', icon: Activity, to: '/oee' },
       { name: 'Material Request (เบิกพัสดุ)', icon: ShoppingCart, to: '/store?tab=requisition' },
       { name: 'Forklift Command & Map (โฟล์คลิฟท์)', icon: Truck, to: '/forklift' },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
@@ -67,7 +67,8 @@ export const MENU_DATA = [
     title: 'MANAGEMENT',
     sectionIcon: Briefcase,
     items: [
-      { name: 'Management Dashboard', icon: Activity, href: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', external: true },
+      { name: 'Management Dashboard', icon: Activity, to: '/management' },
+      { name: 'Daily P&L (งบกำไรขาดทุน)', icon: BarChart3, to: '/daily-pl' },
       { name: 'Manpower (จัดการกำลังคน)', icon: Users, to: '/manpower' },
       { name: 'Employee Grading 4D (ประเมินเกรด)', icon: Activity, to: '/manpower?tab=grading' },
       { name: 'Daily Command Center (ประชุมแผน)', icon: ListOrdered, to: '/planning' },

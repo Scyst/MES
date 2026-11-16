@@ -184,7 +184,7 @@ export default function HomeDashboard() {
     { title: 'Team Planner', desc: 'กระดานแผนงานและปฏิทินทีม', icon: Calendar, colorClass: 'bg-purple-100 text-purple-700', to: '/planner' },
     { title: 'Shuttle Bus', desc: 'ระบบจองรถรับ-ส่งพนักงาน', icon: Bus, colorClass: 'bg-emerald-100 text-emerald-700', to: '/transport' },
     { title: 'MES Learning Hub', desc: 'ศูนย์การเรียนรู้ & สอบวัดผล (Academy)', icon: GraduationCap, colorClass: 'bg-indigo-100 text-indigo-700', to: '/learning' },
-    { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/iot-toolbox/sandbox-b9/MES/MES/page/OEE_Dashboard/OEE_Shopfloor.php' },
+    { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/oee', badge: 'SPA' },
     { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-indigo-100 text-indigo-700', to: '/store?tab=requisition', badge: 'SPA' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟล์คลิฟท์', icon: Truck, colorClass: 'bg-blue-100 text-blue-700', to: '/forklift' },
     { title: 'Document Center', desc: 'คู่มือและเอกสารการทำงาน (WI/SOP/CAD)', icon: FolderOpen, colorClass: 'bg-indigo-100 text-indigo-700', to: '/documents' },
@@ -223,12 +223,12 @@ export default function HomeDashboard() {
   ], []);
 
   const executiveServices = useMemo(() => [
-    { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารระดับสูง', icon: LineChart, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/management/managementDashboard.php', roles: ['admin', 'creator', 'manager'] },
+    { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารและวางแผนผลิต', icon: LineChart, colorClass: 'bg-emerald-100 text-emerald-600', to: '/management', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'planner', 'supervisor'] },
     { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-emerald-100 text-emerald-600', to: '/planning', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Manpower', desc: 'จัดการกำลังคนประจำวัน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower', badge: 'SPA', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Employee Grading', desc: 'ประเมินเกรดและรายได้พิเศษ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower?tab=grading', badge: 'SPA', roles: ['admin', 'creator', 'manager'] },
     { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-emerald-100 text-emerald-600', to: '/mood-report', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/dailyPL/pl_entry.php', roles: ['admin', 'creator'] },
+    { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/daily-pl', badge: 'SPA', roles: ['admin', 'creator', 'manager'] },
     { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/auto-invoice', roles: ['admin', 'creator', 'manager', 'planner'], badge: 'SPA' },
     { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales', roles: ['admin', 'creator', 'manager', 'planner', 'customer'], badge: 'SPA' },
     { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales?tab=shipping', roles: ['admin', 'creator', 'manager', 'planner', 'customer'], badge: 'SPA' },

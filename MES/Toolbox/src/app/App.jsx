@@ -37,6 +37,9 @@ const DailyPlanningPage = lazy(() => import('../modules/Planning/pages/DailyPlan
 const SalesPage = lazy(() => import('../modules/Sales/pages/SalesPage'));
 const LoadingReportPage = lazy(() => import('../modules/LoadingReport/pages/LoadingReportPage'));
 const AutoInvoicePage = lazy(() => import('../modules/AutoInvoice/pages/AutoInvoicePage'));
+const ManagementPage = lazy(() => import('../modules/Management/pages/ManagementPage'));
+const OeeDashboardPage = lazy(() => import('../modules/OEE/pages/OeeDashboardPage'));
+const DailyPlPage = lazy(() => import('../modules/DailyPL/pages/DailyPlPage'));
 
 // Component สำหรับป้องกัน Route ที่ต้อง Login
 const ProtectedRoute = ({ children }) => {
@@ -320,6 +323,30 @@ export default function App() {
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบออกเอกสาร Auto Invoice...</div>}>
                     <AutoInvoicePage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="management" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลด Management Dashboard &amp; Production Planning...</div>}>
+                    <ManagementPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="oee" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลด OEE &amp; Cost Monitoring Dashboard...</div>}>
+                    <OeeDashboardPage />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="daily-pl" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบ Daily P&amp;L &amp; Financial Statements...</div>}>
+                    <DailyPlPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

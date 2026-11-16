@@ -1,6 +1,6 @@
 # 📋 รายงานผลการตรวจสอบข้อบกพร่องและฟีเจอร์ที่ขาดหาย (MES Legacy vs Toolbox Audit)
 **ระบบเดิม (`page/`) VS ระบบใหม่ (`Toolbox/`)**  
-*วันที่ตรวจสอบล่าสุด: 14 พฤศจิกายน 2026 (อัปเดต Phase 2.3: Ported iQMS Quality Management — NCR, CAR 8D Internal, Concession, Claim Verification, QA/QC Planner & Schedule ครบสมบูรณ์; ข้าม External Customer Token Approval ตามขอบเขต) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
+*วันที่ตรวจสอบล่าสุด: 16 พฤศจิกายน 2026 (อัปเดต Phase 3.3: Ported Management Overview & APS Planning `#/management`, OEE Executive & Shopfloor `#/oee`, Daily P&L & Structure Setup `#/daily-pl` ครบสมบูรณ์) | บทบาท: MES Quality Assurance & Senior Systems Auditor*
 
 ---
 
@@ -10,17 +10,17 @@
 
 | สถานะโมดูล | จำนวน | รายละเอียด |
 | :--- | :---: | :--- |
-| **✅ Ported 100% (สมบูรณ์)** | **18** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`**, **`PE Enterprise & Maintenance (Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op, IIoT & 2D Visual Board)`**, **`iQMS Quality Management (#/qms: NCR, CAR 8D, Concession 4-Stage Approval, Claim Verification & QA/QC Schedule/Planner — ยกเว้น External Customer Token Approval ที่รอผลจากทีม QA)`**, **`Manpower Management (#/manpower: จัดคนลงไลน์ 7 แท็บ, ประเมินเกรด 4D, Trend, Skill Matrix, วันหยุด & Master)`**, **`Daily Command Center / Planning (#/planning: แผนผลิต Plan vs Actual, Morning Brief, Loading 7 วัน & Stock Shortage)`**, **`Sales & Shipping Schedule (#/sales: PO Tracking, Shipping Loading, RM Shortage Forecast จาก PRODUCT_BOM)`**, **`Loading Report C-TPAT (#/loading-report: ตรวจตู้ 10 หมวด, ภาพถ่าย 16 จุด, พิมพ์ A4, ซิงค์ FleetLog, Doc Tracking)`**, **`Auto Invoice & Packing List (#/auto-invoice: Version Control, Excel 30 คอลัมน์, ทศนิยม 0–6 หลัก, พิมพ์ CI/PL)`** |
+| **✅ Ported 100% (สมบูรณ์)** | **21** | `Admin (User Management)`, `System Settings`, `Profile`, `PaintChem`, `Utility (รวม IoT Ingestion & MDB Marker)`, `Document Center (รวม 3D CAD WebGL Viewer)`, **`Store Management (ครบ 8 แท็บ + Audit Certificate + IndexedDB Offline)`**, **`Daily Log & Mood Insights (สมุดบันทึกกะ + รายงานสุขภาพใจ)`**, **`Transport & Freight FleetLog (รถรับส่ง + บัญชีเที่ยวรถ)`**, **`Forklift Command & Tracking (Live Map + Heatmap + ESP32 IoT + QR Scan)`**, **`Production Execution & Scan Barcode (บันทึกผลิต + คิวงาน KDS + พิมพ์แท็ก 4"×2" + สแกนบาร์โค้ด)`**, **`PE Enterprise & Maintenance (Work Orders, Machines, Spare Parts MRO, Stop Request, PE Tech Mobile, Downtime MTBF/MTTR, Safety/LOTO/Pre-Op, IIoT & 2D Visual Board)`**, **`iQMS Quality Management (#/qms: NCR, CAR 8D, Concession 4-Stage Approval, Claim Verification & QA/QC Schedule/Planner — ยกเว้น External Customer Token Approval ที่รอผลจากทีม QA)`**, **`Manpower Management (#/manpower: จัดคนลงไลน์ 7 แท็บ, ประเมินเกรด 4D, Trend, Skill Matrix, วันหยุด & Master)`**, **`Daily Command Center / Planning (#/planning: แผนผลิต Plan vs Actual, Morning Brief, Loading 7 วัน & Stock Shortage)`**, **`Sales & Shipping Schedule (#/sales: PO Tracking, Shipping Loading, RM Shortage Forecast จาก PRODUCT_BOM)`**, **`Loading Report C-TPAT (#/loading-report: ตรวจตู้ 10 หมวด, ภาพถ่าย 16 จุด, พิมพ์ A4, ซิงค์ FleetLog, Doc Tracking)`**, **`Auto Invoice & Packing List (#/auto-invoice: Version Control, Excel 30 คอลัมน์, ทศนิยม 0–6 หลัก, พิมพ์ CI/PL)`**, **`Management Dashboard & APS Planning (#/management)`**, **`OEE Executive & Shopfloor Monitor (#/oee)`**, **`Daily P&L & Financial Statements (#/daily-pl)`** |
 | **⚠️ Partially Ported (ย้ายบางส่วน / มีฟีเจอร์ขาดหาย)** | **1** | `AreaAccess / ScanBarcode` *(ส่วน `ScanBarcode` ย้ายเข้า `#/scan-barcode` แล้ว 100% เหลือเฉพาะ `AreaAccess`)* |
 | **⏳ On Hold (รอเอกสารผู้บริหาร)** | **1** | `Inbound Hub` (พักไว้ชั่วคราว อยู่ระหว่างรอเอกสารตัวอย่างจริงจากผู้บริหาร) |
-| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **6** | `AccessoriesInspection`, `Management`, `OEE_Dashboard`, `DailyPL`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
+| **❌ Unported (ยังไม่ได้พอร์ต / ลิงก์ไปยัง PHP เดิม)** | **3** | `AccessoriesInspection`, `CCTV_Downloader`, `AreaAccess` *(หมายเหตุ: หน้าจอ Control Room ทั้ง 5 จอ รองรับ Zero-Touch Auto-Boot 24/7 บนระบบเดิมแล้วเมื่อ 09/11/2026)* |
 
 ```mermaid
 pie title สถานะความพร้อมของโมดูลใน Toolbox (รวม 26 โมดูล)
-    "Ported สมบูรณ์" : 18
+    "Ported สมบูรณ์" : 21
     "Ported บางส่วน (มีฟีเจอร์ขาด)" : 1
     "On Hold (รอเอกสารผู้บริหาร)" : 1
-    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 6
+    "ยังไม่ได้ย้าย (คงเป็น PHP เดิม)" : 3
 ```
 
 ---
@@ -252,11 +252,11 @@ graph LR
 | **15** | `QMS` | `#/qms` | ✅ 100%* | NCR, CAR 8D, Concession 4-Stage, Claims, QA Planner/Schedule (*ข้าม External Customer Token Approval รอทีม QA) |
 | **16** | `manpower` | `#/manpower` (`ManpowerPage`) | ✅ 100% | จัดคนลงไลน์ 7 แท็บ, ประเมินเกรด 4D, Trend, Skill Matrix, วันหยุด, Master Data & ซิงค์สแกน |
 | **17** | `planning` | `#/planning` (`DailyPlanningPage`) | ✅ 100% | ศูนย์สั่งการ Morning Meeting ประจำวัน (Plan vs Actual, Action Plan, Schedule โหลดตู้ 7 วัน, Stock Shortage Alert) |
-| **18** | `management` | *ไม่มีใน Toolbox* | ❌ 0% | แดชบอร์ดผู้บริหารภาพรวม, ควบคุมแผนหลัก, DLOT |
-| **19** | `OEE_Dashboard` | *ไม่มีใน Toolbox* | ❌ 0% | OEE หน้าร้านเรียลไทม์, Speed Loss, Scrap Analysis |
+| **18** | `management` | `#/management` (`ManagementPage`) | ✅ 100% | แดชบอร์ดผู้บริหาร (`Executive Overview` + Hybrid AI 7-Day Forecast + Line Drilldown + Labor Sync) และวางแผนผลิต / APS Wizard (`Production Planning` + Bulk Import + Carry Over + Financial Assessment) |
+| **19** | `OEE_Dashboard` | `#/oee` (`OeeDashboardPage`) | ✅ 100% | สลับโหมด Executive View / Shop Floor TV Monitor, 4 OEE Gauges + SAP Scrap Cost, OEE Trend Daily/Hourly, Downtime Breakdown, Dual-View Financial Summary (`Actual DL` vs `BOM Std`) & Part Output Data-Bars |
 | **20** | `sales` | `#/sales` (`SalesPage`) | ✅ 100% | PO Tracking, Inline Edit, Reorder, Excel Preview, RM Shortage Forecast (`PRODUCT_BOM`) & Shipping Schedule |
 | **21** | `loadingReport` | `#/loading-report` (`LoadingReportPage`) | ✅ 100% | C-TPAT 10 หมวด (54 ข้อ), ถ่ายภาพ 16 จุด, พิมพ์ A4, ซิงค์ `LOGISTICS_FLEET_LOGS`, Completed Tracking (*External `customerPortal.php` ยังคงอยู่สำหรับลูกค้าภายนอก*) |
-| **22** | `dailyPL` | *ไม่มีใน Toolbox* | ❌ 0% | บันทึกงบกำไรขาดทุนประจำวัน, ต้นทุนวัตถุดิบ/แรงงาน |
+| **22** | `dailyPL` | `#/daily-pl` (`DailyPlPage`) | ✅ 100% | Daily P&L Entry + Formula Engine (`[CODE]`, `SUM_CHILDREN`, `USE_TARGET`), Period Report, Statement Yearly/Daily, Executive P&L Summary (`EBIT/EAT/EBITDA`), Budget/Rate/Holiday Calendar & Chart of Accounts Setup |
 | **23** | `autoInvoice` | `#/auto-invoice` (`AutoInvoicePage`) | ✅ 100% | Commercial Invoice / Packing List, Version Control (`sp_Finance_ImportInvoice`), Excel 30 คอลัมน์, ทศนิยม 0–6 หลัก |
 | **24** | `AccessoriesInspection` | *ไม่มีใน Toolbox* | ❌ 0% | ระบบตรวจชิ้นงานด้วยภาพถ่าย AI และกล้องสตรีม |
 | **25** | `cctv_downloader` | *ไม่มีใน Toolbox* | ❌ 0% | ดาวน์โหลดคลิปกล้องวงจรปิดตามเหตุการณ์โหลดตู้ |
@@ -297,4 +297,4 @@ graph LR
 ### 🟢 Phase 3: ย้ายโมดูลการบริหารและโลจิสติกส์ (Management & Administration Modules)
 1. [x] **Manpower & Daily Planning:** รวมระบบจัดกำลังคน (`#/manpower` 7 แท็บ) และ Daily Command Center (`#/planning`) เข้า Toolbox SPA สมบูรณ์ (เสร็จสมบูรณ์ 14/11/2026)
 2. [x] **Sales, Loading Report & Auto Invoice:** รวมสายงานส่งออก ตรวจสอบตู้สินค้า C-TPAT และออก Commercial Invoice / Packing List เข้าสู่ระบบใหม่ (`#/sales`, `#/loading-report`, `#/auto-invoice`) (เสร็จสมบูรณ์ 14/11/2026)
-3. **Executive Dashboard & Daily P&L:** ย้ายแดชบอร์ดงบการเงินและ OEE Dashboard เป็นขั้นตอนสุดท้าย
+3. [x] **Executive Dashboard & Daily P&L:** ย้าย `Management` (`#/management`), `OEE Dashboard & Shopfloor` (`#/oee`) และ `Daily P&L` (`#/daily-pl`) เข้า Toolbox SPA สมบูรณ์ (เสร็จสมบูรณ์ 16/11/2026)
