@@ -15,17 +15,13 @@ import ScrapReplacementTab from './components/ScrapReplacementTab';
 import StoreOfflineBanner from './components/StoreOfflineBanner';
 import { storeApi } from '../../shared/services/storeApi';
 import { useAuth } from '../../shared/contexts/AuthContext';
+import { hasCentralWarehouseAccess } from '../../shared/utils/storeAccess';
 
-const CENTRAL_STORE_ROLES = ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'];
-
-export default function StoreApp() {
+export default function StoreApp({ forceRequisitionOnly = false }) {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const role = String(user?.role || '').toLowerCase();
-  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const hasWarehouseAccess =
-    CENTRAL_STORE_ROLES.includes(role) || permissions.includes('manage_warehouse');
+  const hasWarehouseAccess = !forceRequisitionOnly && hasCentralWarehouseAccess(user);
 
   const requestedTab = searchParams.get('tab') || (hasWarehouseAccess ? 'onhand' : 'requisition');
   const currentTab = hasWarehouseAccess ? requestedTab : 'requisition';
@@ -35,6 +31,15 @@ export default function StoreApp() {
     if (!hasWarehouseAccess && tabKey !== 'requisition') return;
     setSearchParams({ tab: tabKey });
   };
+
+  useEffect(() => {
+    if (!hasWarehouseAccess && !forceRequisitionOnly) {
+      const tabParam = searchParams.get('tab');
+      if (tabParam && tabParam !== 'requisition') {
+        setSearchParams({ tab: 'requisition' }, { replace: true });
+      }
+    }
+  }, [hasWarehouseAccess, forceRequisitionOnly, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!hasWarehouseAccess) {

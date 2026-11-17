@@ -192,6 +192,14 @@ export default function App() {
                 </ErrorBoundary>
               } />
 
+              <Route path="requisition" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบขอเบิกพัสดุออนไลน์ (Material Requisition)...</div>}>
+                    <StoreApp forceRequisitionOnly />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
               <Route path="utility" element={
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบติดตามการใช้พลังงาน (Utility & Energy)...</div>}>

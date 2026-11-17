@@ -15,6 +15,7 @@ import MorningBriefModal from '../components/MorningBriefModal';
 import NotificationMenu from '../components/NotificationMenu';
 import LogModal from '../components/LogModal';
 import { useAuth } from '../../../shared/contexts/AuthContext';
+import { hasCentralWarehouseAccess } from '../../../shared/utils/storeAccess';
 
 const ServiceCard = ({ title, desc, icon: Icon, colorClass, to }) => {
   const isLegacy = to.includes('.php') || to.includes('.html') || to.startsWith('http') || to.startsWith('/iot-toolbox');
@@ -179,7 +180,7 @@ export default function HomeDashboard() {
     { title: 'Shuttle Bus', desc: 'ระบบจองรถรับ-ส่งพนักงาน', icon: Bus, colorClass: 'bg-emerald-100 text-emerald-700', to: '/transport' },
     { title: 'MES Learning Hub', desc: 'ศูนย์การเรียนรู้ & สอบวัดผล (Academy)', icon: GraduationCap, colorClass: 'bg-indigo-100 text-indigo-700', to: '/learning' },
     { title: 'OEE Dashboard', desc: 'ดูประสิทธิภาพ (ภาพรวม)', icon: LineChart, colorClass: 'bg-slate-100 text-slate-700', to: '/oee' },
-    { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-indigo-100 text-indigo-700', to: '/store?tab=requisition' },
+    { title: 'Material Request', desc: 'ระบบขอเบิกพัสดุ/อุปกรณ์', icon: ShoppingCart, colorClass: 'bg-indigo-100 text-indigo-700', to: '/requisition' },
     { title: 'Forklift Booking', desc: 'จองรถและติดตามสถานะโฟล์คลิฟท์', icon: Truck, colorClass: 'bg-blue-100 text-blue-700', to: '/forklift' },
     { title: 'Document Center', desc: 'คู่มือและเอกสารการทำงาน (WI/SOP/CAD)', icon: FolderOpen, colorClass: 'bg-indigo-100 text-indigo-700', to: '/documents' },
   ], []);
@@ -195,12 +196,12 @@ export default function HomeDashboard() {
   ], []);
 
   const warehouseServices = useMemo(() => [
-    { title: 'Inbound Hub (SCM-Store)', desc: 'ศูนย์กลางเชื่อมเอกสาร ลูกค้า–SCM–สโตร์', icon: Package, colorClass: 'bg-orange-100 text-orange-700', to: '/inbound-hub' },
-    { title: 'Store & Inventory Hub', desc: 'ศูนย์กลางสต็อกคงคลังและอนุมัติตัดยอด', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/store', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
-    { title: 'Visual Cycle Count', desc: 'ตรวจนับสินค้าคลังแบบ Visual Map & Blind Count', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=cycle-count', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
-    { title: 'Store KDS & PRD Return', desc: 'คิวจ่ายพัสดุสโตร์ เปิด K2 และรับคืนวัตถุดิบ', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=kds', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
-    { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลังและพิมพ์แท็ก QR', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=receiving', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
-    { title: 'Scrap & Replacement', desc: 'แจ้งของเสีย เบิกทดแทน และวิเคราะห์มูลค่า', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=scrap', roles: ['admin', 'creator', 'manager', 'supervisor', 'store'] },
+    { title: 'Inbound Hub (SCM-Store)', desc: 'ศูนย์กลางเชื่อมเอกสาร ลูกค้า–SCM–สโตร์', icon: Package, colorClass: 'bg-orange-100 text-orange-700', to: '/inbound-hub', checkAccess: hasCentralWarehouseAccess },
+    { title: 'Store & Inventory Hub', desc: 'ศูนย์กลางสต็อกคงคลังและอนุมัติตัดยอด', icon: Store, colorClass: 'bg-orange-100 text-orange-600', to: '/store', checkAccess: hasCentralWarehouseAccess },
+    { title: 'Visual Cycle Count', desc: 'ตรวจนับสินค้าคลังแบบ Visual Map & Blind Count', icon: Boxes, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=cycle-count', checkAccess: hasCentralWarehouseAccess },
+    { title: 'Store KDS & PRD Return', desc: 'คิวจ่ายพัสดุสโตร์ เปิด K2 และรับคืนวัตถุดิบ', icon: Warehouse, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=kds', checkAccess: hasCentralWarehouseAccess },
+    { title: 'RM Receiving', desc: 'รับวัตถุดิบเข้าคลังและพิมพ์แท็ก QR', icon: Package, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=receiving', checkAccess: hasCentralWarehouseAccess },
+    { title: 'Scrap & Replacement', desc: 'แจ้งของเสีย เบิกทดแทน และวิเคราะห์มูลค่า', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/store?tab=scrap', checkAccess: hasCentralWarehouseAccess },
     { title: 'Loading Report', desc: 'ตรวจสอบตู้สินค้า (C-TPAT)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report' },
     { title: 'C-TPAT Doc Tracking', desc: 'ค้นหาเอกสาร C-TPAT เสร็จสมบูรณ์', icon: MapPin, colorClass: 'bg-orange-100 text-orange-600', to: '/loading-report?tab=tracking' },
     { title: 'Transport & Logistics', desc: 'บัญชีเที่ยวรถและค่าขนส่ง (Freight FleetLog)', icon: Truck, colorClass: 'bg-orange-100 text-orange-600', to: '/fleet-log', roles: ['admin', 'creator', 'manager', 'supervisor'] },
@@ -240,7 +241,10 @@ export default function HomeDashboard() {
   ], []);
 
   const filterByRole = (services) => {
-    return services.filter(svc => !svc.roles || svc.roles.includes(role));
+    return services.filter(svc => {
+      if (typeof svc.checkAccess === 'function') return svc.checkAccess(user);
+      return !svc.roles || svc.roles.includes(role);
+    });
   };
 
   // Trainee Filtered List
@@ -249,10 +253,10 @@ export default function HomeDashboard() {
       ? commonServices.filter(s => ['My Profile & 4D', 'MES Learning Hub'].includes(s.title))
       : commonServices
     );
-  }, [role, commonServices]);
+  }, [role, user, commonServices]);
 
-  const accessibleProduction = useMemo(() => role === 'trainee' ? [] : filterByRole(productionServices), [role, productionServices]);
-  const accessibleWarehouse = useMemo(() => role === 'trainee' ? [] : filterByRole(warehouseServices), [role, warehouseServices]);
+  const accessibleProduction = useMemo(() => role === 'trainee' ? [] : filterByRole(productionServices), [role, user, productionServices]);
+  const accessibleWarehouse = useMemo(() => role === 'trainee' ? [] : filterByRole(warehouseServices), [role, user, warehouseServices]);
   const accessibleQuality = useMemo(() => role === 'trainee' ? [] : filterByRole(qualityServices), [role, qualityServices]);
   const accessibleExecutive = useMemo(() => role === 'trainee' ? [] : filterByRole(executiveServices), [role, executiveServices]);
   const accessibleAdmin = useMemo(() => role === 'trainee' ? [] : filterByRole(systemAdminServices), [role, systemAdminServices]);

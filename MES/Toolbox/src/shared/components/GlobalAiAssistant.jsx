@@ -73,7 +73,7 @@ function getModuleName(pathname) {
   if (pathname.startsWith('/settings') || pathname.startsWith('/system-settings')) return 'ตั้งค่าระบบ (System Settings)';
   if (pathname.startsWith('/paint-chem')) return 'ห้องเคมีและสี (PaintChem)';
   if (pathname.startsWith('/profile')) return 'โปรไฟล์ผู้ใช้ (User Profile)';
-  if (pathname.startsWith('/store')) return 'คลังสินค้าและตรวจนับสต็อก (Store & Warehouse)';
+  if (pathname.startsWith('/store') || pathname.startsWith('/requisition')) return 'คลังสินค้าและตรวจนับสต็อก (Store & Warehouse)';
   if (pathname.startsWith('/learning')) return 'ศูนย์เรียนรู้องค์กร (MES Learning Hub)';
   return 'ระบบ MES Toolbox';
 }

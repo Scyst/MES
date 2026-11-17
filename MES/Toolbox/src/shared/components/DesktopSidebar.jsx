@@ -8,6 +8,7 @@ import {
   Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText, BarChart3, Video
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { hasCentralWarehouseAccess } from '../utils/storeAccess';
 
 export const MENU_DATA = [
   {
@@ -19,7 +20,7 @@ export const MENU_DATA = [
       { name: 'MES Learning Hub (ศูนย์เรียนรู้)', icon: GraduationCap, to: '/learning' },
       { name: 'Daily Log (สมุดบันทึกกะ)', icon: FolderOpen, to: '/daily-log' },
       { name: 'OEE Dashboard', icon: Activity, to: '/oee' },
-      { name: 'Material Request (เบิกพัสดุ)', icon: ShoppingCart, to: '/store?tab=requisition' },
+      { name: 'Material Request (เบิกพัสดุ)', icon: ShoppingCart, to: '/requisition' },
       { name: 'Forklift Command & Map (โฟล์คลิฟท์)', icon: Truck, to: '/forklift' },
       { name: 'Shuttle Bus (รถรับ-ส่ง)', icon: Bus, to: '/transport' },
       { name: 'Team Planner (แผนงานทีม)', icon: Calendar, to: '/planner' },
@@ -41,12 +42,12 @@ export const MENU_DATA = [
     title: 'WAREHOUSE & LOGISTICS',
     sectionIcon: Warehouse,
     items: [
-      { name: 'Store Management (คลังสินค้า)', icon: Store, to: '/store', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
-      { name: 'Visual Cycle Count (ตรวจนับ)', icon: MapPin, to: '/store?tab=cycle-count', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
-      { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
-      { name: 'Store KDS & Issue (จ่ายพัสดุ)', icon: Warehouse, to: '/store?tab=kds', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
-      { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner'], permission: 'manage_warehouse' },
-      { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap', roles: ['admin', 'creator', 'manager', 'supervisor', 'store', 'planner', 'qa', 'qa_qc', 'qc'], permission: 'manage_warehouse' },
+      { name: 'Store Management (คลังสินค้า)', icon: Store, to: '/store', checkAccess: hasCentralWarehouseAccess },
+      { name: 'Visual Cycle Count (ตรวจนับ)', icon: MapPin, to: '/store?tab=cycle-count', checkAccess: hasCentralWarehouseAccess },
+      { name: 'Inbound Hub (SCM-Store)', icon: Inbox, to: '/inbound-hub', checkAccess: hasCentralWarehouseAccess },
+      { name: 'Store KDS & Issue (จ่ายพัสดุ)', icon: Warehouse, to: '/store?tab=kds', checkAccess: hasCentralWarehouseAccess },
+      { name: 'RM Receiving & Tag (รับเข้า)', icon: Inbox, to: '/store?tab=receiving', checkAccess: hasCentralWarehouseAccess },
+      { name: 'Scrap & Replacement (เบิกของเสีย)', icon: Box, to: '/store?tab=scrap', checkAccess: hasCentralWarehouseAccess },
       { name: 'Freight FleetLog (บัญชีเที่ยวรถ)', icon: Truck, to: '/fleet-log' },
       { name: 'Loading Report (C-TPAT)', icon: Truck, to: '/loading-report' },
       { name: 'C-TPAT Doc Tracking', icon: MapPin, to: '/loading-report?tab=tracking' },
@@ -117,7 +118,9 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
         if (isTrainee && !['TOOLBOX OS (Home)', 'My Profile (โปรไฟล์ & 4D)', 'MES Learning Hub (ศูนย์เรียนรู้)'].includes(item.name)) {
           return false;
         }
-        if (item.roles || item.permission) {
+        if (typeof item.checkAccess === 'function') {
+          if (!item.checkAccess(user)) return false;
+        } else if (item.roles || item.permission) {
           const allowedByRole = item.roles ? item.roles.includes(userRole) : false;
           const allowedByPerm = item.permission ? userPermissions.includes(item.permission) : false;
           if (!allowedByRole && !allowedByPerm) return false;

@@ -111,10 +111,25 @@ try {
         'get_material_categories',
     ];
     $scrapQaActions = ['get_scrap_requests', 'get_scrap_dashboard', 'create_request'];
+    $currentRoleLower = strtolower(trim((string)($currentUser['role'] ?? '')));
+    $currentLineUpper = strtoupper(trim((string)($currentUser['line'] ?? '')));
+    if ($currentRoleLower === 'supervisor' && $currentLineUpper === '' && !empty($currentUser['id']) && isset($pdo)) {
+        $lineStmt = $pdo->prepare("SELECT line FROM dbo.USERS WITH (NOLOCK) WHERE id = ?");
+        $lineStmt->execute([(int)$currentUser['id']]);
+        $currentLineUpper = strtoupper(trim((string)$lineStmt->fetchColumn()));
+    }
+    $warehouseLines = ['ST/WH', 'STORE', 'WH', 'WAREHOUSE'];
     $hasCentralStoreAccess =
-        hasRole(['admin', 'creator', 'manager', 'supervisor', 'store', 'planner']) ||
-        hasPermission('manage_warehouse');
-    $isQaOrProdLead = hasRole(['admin', 'creator', 'manager', 'supervisor', 'store', 'planner', 'qa', 'qa_qc', 'qc']);
+        in_array($currentRoleLower, ['admin', 'creator', 'manager', 'store'], true) ||
+        ($currentRoleLower === 'supervisor' && in_array($currentLineUpper, $warehouseLines, true));
+    if (!$hasCentralStoreAccess && !empty($currentUser['id']) && isset($pdo)) {
+        $uPermStmt = $pdo->prepare("SELECT 1 FROM dbo.SYS_USER_PERMISSIONS WITH (NOLOCK) WHERE user_id = ? AND perm_code = 'manage_warehouse'");
+        $uPermStmt->execute([(int)$currentUser['id']]);
+        if ($uPermStmt->fetchColumn()) {
+            $hasCentralStoreAccess = true;
+        }
+    }
+    $isQaOrProdLead = $hasCentralStoreAccess || hasRole(['qa', 'qa_qc', 'qc']);
     if (!in_array($action, $requisitionSelfServiceActions, true)) {
         if (in_array($action, $scrapQaActions, true)) {
             if (!$hasCentralStoreAccess && !$isQaOrProdLead) {
