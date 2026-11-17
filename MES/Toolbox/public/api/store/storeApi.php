@@ -11,18 +11,25 @@ if (($_REQUEST['action'] ?? '') === 'view_image') {
     require_once __DIR__ . '/../../utils/check_auth.php';
     $rawFile = (string)($_REQUEST['file'] ?? '');
     $basename = basename(str_replace('\\', '/', $rawFile));
-    if ($basename === '' || !preg_match('/^[A-Za-z0-9._-]+$/', $basename)) {
+    if ($basename === '' || strpos($basename, '..') !== false || !preg_match('/^[A-Za-z0-9._-]+$/', $basename)) {
         http_response_code(400);
         exit('Invalid image filename');
     }
     $candidateDirs = [
+        __DIR__ . '/../../../MES/MES/uploads/items/',
+        __DIR__ . '/../../uploads/items/',
         __DIR__ . '/../../../uploads/items/',
+        __DIR__ . '/../../../MES/uploads/items/',
         __DIR__ . '/../../../../MES/MES/uploads/items/',
-        __DIR__ . '/../../../../MES/uploads/items/',
     ];
     $resolvedPath = null;
     foreach ($candidateDirs as $dir) {
         $try = $dir . $basename;
+        $real = @realpath($try);
+        if ($real !== false && @is_file($real)) {
+            $resolvedPath = $real;
+            break;
+        }
         if (@is_file($try)) {
             $resolvedPath = $try;
             break;
@@ -52,8 +59,9 @@ if (($_REQUEST['action'] ?? '') === 'view_image') {
         }
     }
     header('Content-Type: ' . $mime);
-    header('Cache-Control: public, max-age=86400');
-    header('Content-Length: ' . filesize($resolvedPath));
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, max-age=3600');
+    header('Content-Length: ' . (string)filesize($resolvedPath));
     readfile($resolvedPath);
     exit;
 }
@@ -829,8 +837,12 @@ try {
             if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) { throw new Exception("รองรับเฉพาะ JPG, PNG, WEBP"); }
             if ($file['size'] > 5 * 1024 * 1024) { throw new Exception("ไฟล์ต้องไม่เกิน 5MB"); }
 
-            $uploadDir = __DIR__ . '/../../../uploads/items/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            $sharedItemsDir = __DIR__ . '/../../../MES/MES/uploads/items/';
+            $toolboxItemsDir = __DIR__ . '/../../uploads/items/';
+            $uploadDir = (is_dir(__DIR__ . '/../../../MES/MES/uploads') && (is_dir($sharedItemsDir) || is_writable(__DIR__ . '/../../../MES/MES/uploads')))
+                ? $sharedItemsDir
+                : $toolboxItemsDir;
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
             $newFileName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sap_no) . '_' . time() . '.' . $ext;
             
@@ -838,8 +850,14 @@ try {
                 $stmtCheck = $pdo->prepare("SELECT image_path FROM dbo.ITEMS WHERE sap_no = ?");
                 $stmtCheck->execute([$sap_no]);
                 $oldImage = $stmtCheck->fetchColumn();
-                
-                if ($oldImage && file_exists($uploadDir . $oldImage)) unlink($uploadDir . $oldImage);
+                $oldSafe = $oldImage ? basename(str_replace('\\', '/', (string)$oldImage)) : '';
+                if ($oldSafe !== '') {
+                    foreach ([$uploadDir, $sharedItemsDir, $toolboxItemsDir] as $cleanupDir) {
+                        if (is_file($cleanupDir . $oldSafe)) {
+                            @unlink($cleanupDir . $oldSafe);
+                        }
+                    }
+                }
 
                 $pdo->prepare("UPDATE dbo.ITEMS SET image_path = ? WHERE sap_no = ?")->execute([$newFileName, $sap_no]);
                 $response = ['success' => true, 'image_path' => $newFileName];
