@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Strategic Briefing: The Shift to Agentic AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b1120;
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Screen Presentation Mode */
+        .slide-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 5rem 1rem;
+        }
+
+        .slide-item {
+            display: none;
+            width: 100%;
+            min-height: 580px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 1rem;
+            padding: 2.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .slide-item.active {
+            display: block;
+        }
+
+        /* Standard Cards */
+        .card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        /* Print & PDF Export (A4 Landscape Clean Output) */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 1cm;
+            }
+            body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                font-size: 10pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .slide-container {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .slide-item {
+                display: block !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                min-height: auto !important;
+                background: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                padding: 1.5rem !important;
+                margin-bottom: 2rem !important;
+                color: #0f172a !important;
+                border-radius: 0.5rem !important;
+            }
+            .card {
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                color: #0f172a !important;
+            }
+            .text-white { color: #0f172a !important; }
+            .text-slate-300, .text-slate-400 { color: #334155 !important; }
+            .text-cyan-400 { color: #0284c7 !important; }
+            .text-purple-400 { color: #7c3aed !important; }
+            .text-emerald-400 { color: #059669 !important; }
+            .bg-slate-900, .bg-slate-800 { background: #f1f5f9 !important; }
+            .border-slate-700, .border-slate-800 { border-color: #cbd5e1 !important; }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Top Fixed Bar (No Print) -->
+    <header class="no-print bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center font-bold text-white text-sm">AI</div>
+            <div>
+                <h1 class="text-sm font-bold text-white">Executive Presentation & PDF Report</h1>
+                <p class="text-xs text-slate-400">สถาปัตยกรรม AI ธรรมดา vs AI Agent vs Agentic AI (10 สไลด์มาตรฐาน)</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <span id="slideIndicator" class="text-xs font-mono font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-cyan-400 border border-slate-700">Slide 1 / 10</span>
+            
+            <button onclick="window.print()" class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow">
+                🖨️ บันทึกเป็น PDF (Print)
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Presentation Deck Container -->
+    <main class="slide-container flex-1">
+
+        <!-- ================= SLIDE 1 ================= -->
+        <section class="slide-item active">
+            <div class="text-center py-6">
+                <span class="text-xs mono font-semibold text-cyan-400 bg-cyan-950 px-3 py-1 rounded-full border border-cyan-800">
+                    EXECUTIVE STRATEGY BRIEFING 2026
+                </span>
+                <h2 class="text-3xl md:text-5xl font-black text-white mt-4 mb-4">
+                    การเปลี่ยนผ่านสู่ <span class="text-cyan-400">Agentic AI & Digital Workforce</span>
+                </h2>
+                <p class="text-slate-300 text-base max-w-2xl mx-auto mb-8">
+                    รายงานเปรียบเทียบเชิงโครงสร้าง: จากโมเดลภาษาถาม-ตอบ (Chatbot) สู่พนักงานดิจิทัลและระบบปฏิบัติการอัตโนมัติหลายตัวแทนในภาคอุตสาหกรรม
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mt-6">
+                    <div class="card border-l-4 border-l-slate-500">
+                        <div class="text-xs mono text-slate-400 font-bold">1. AI ธรรมดา (GenAI)</div>
+                        <h4 class="font-bold text-white text-sm mt-1 mb-1">ที่ปรึกษาในห้องประชุม</h4>
+                        <p class="text-xs text-slate-300">ถาม-ตอบเก่ง ให้ข้อมูลเชิงข้อความ แต่มนุษย์ต้องก๊อปปี้ไปเปิดระบบทำงานต่อเอง</p>
+                    </div>
+                    <div class="card border-l-4 border-l-cyan-400">
+                        <div class="text-xs mono text-cyan-400 font-bold">2. AI Agent</div>
+                        <h4 class="font-bold text-white text-sm mt-1 mb-1">พนักงานดิจิทัลเดี่ยว</h4>
+                        <p class="text-xs text-slate-300">มีมือและเท้า (Tools & APIs) รับเป้าหมายแล้วไปรันคำสั่ง ดึงฐานข้อมูลจนจบงาน</p>
+                    </div>
+                    <div class="card border-l-4 border-l-purple-400">
+                        <div class="text-xs mono text-purple-400 font-bold">3. Agentic AI</div>
+                        <h4 class="font-bold text-white text-sm mt-1 mb-1">ทีมงานอัตโนมัติ (Swarm)</h4>
+                        <p class="text-xs text-slate-300">ทำงานร่วมกันเป็นทีม วางแผนเอง มีช่างลงมือทำ และมี QA ตรวจสอบแก้งานเอง</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 2 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-cyan-400 font-bold">WAVE 1 TO WAVE 4</span>
+                <h3 class="text-2xl font-bold text-white">วิวัฒนาการ 4 ยุคของปัญญาประดิษฐ์ในภาคธุรกิจ</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="card">
+                    <span class="text-xs mono text-slate-400">ยุค 1 (2012-2021)</span>
+                    <h4 class="font-bold text-white text-base mt-1 mb-2">Predictive AI</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">โมเดล Machine Learning เฉพาะทาง จำแนกภาพของเสีย (Defect Detection) และพยากรณ์ยอดขาย</p>
+                    <div class="mt-4 pt-2 border-t border-slate-700 text-[11px] text-slate-400">บทบาท: ตรวจจับรูปแบบ</div>
+                </div>
+                <div class="card">
+                    <span class="text-xs mono text-blue-400">ยุค 2 (2022-2023)</span>
+                    <h4 class="font-bold text-white text-base mt-1 mb-2">Generative AI</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">ChatGPT/LLMs สรุปเอกสาร เขียนเนื้อหา แต่เป็นระบบปิด ไม่มีแขนขาเชื่อมต่อโลกภายนอก</p>
+                    <div class="mt-4 pt-2 border-t border-slate-700 text-[11px] text-blue-400">บทบาท: ผู้ช่วยสร้างเนื้อหา</div>
+                </div>
+                <div class="card border-cyan-500/50">
+                    <span class="text-xs mono text-cyan-400">ยุค 3 (2024-2025)</span>
+                    <h4 class="font-bold text-white text-base mt-1 mb-2">AI Agents</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">AI ได้รับ "มือและเท้า" (Tool Use) สามารถรันคำสั่ง ดึงฐานข้อมูล SQL หรือเรียก API ได้ตามสั่ง</p>
+                    <div class="mt-4 pt-2 border-t border-slate-700 text-[11px] text-cyan-400">บทบาท: ปฏิบัติงานตามเป้าหมาย</div>
+                </div>
+                <div class="card border-purple-500/50">
+                    <span class="text-xs mono text-purple-400">ยุค 4 (2026+)</span>
+                    <h4 class="font-bold text-white text-base mt-1 mb-2">Agentic AI & Swarm</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">ระบบปฏิบัติการอัตโนมัติหลายตัวร่วมมือกัน แตกงาน วางแผน ตรวจสอบตัวเอง และแก้ปัญหาได้สมบูรณ์</p>
+                    <div class="mt-4 pt-2 border-t border-slate-700 text-[11px] text-purple-400 font-bold">บทบาท: ทีมงานอัตโนมัติ</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 3 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-4">
+                <span class="text-xs mono text-cyan-400 font-bold">CORE COMPARISON</span>
+                <h3 class="text-2xl font-bold text-white">ตารางเปรียบเทียบสถาปัตยกรรม 3 ระดับ</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs md:text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-300 border-b border-slate-700">
+                            <th class="p-3 w-1/4">คุณลักษณะ</th>
+                            <th class="p-3 text-slate-400">1. AI ธรรมดา (GenAI)</th>
+                            <th class="p-3 text-cyan-400">2. AI Agent</th>
+                            <th class="p-3 text-purple-400">3. Agentic AI (Multi-Agent)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        <tr>
+                            <td class="p-3 font-semibold text-slate-400">โหมดการประมวลผล</td>
+                            <td class="p-3">ถาม-ตอบ รอบเดียวจบ (One-shot)</td>
+                            <td class="p-3">รับเป้าหมาย $\rightarrow$ ยิง Tool (Linear)</td>
+                            <td class="p-3 font-semibold text-purple-300">วางแผน $\rightarrow$ ทำ $\rightarrow$ ตรวจ $\rightarrow$ แก้ (Continuous)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold text-slate-400">การเข้าถึงระบบจริง</td>
+                            <td class="p-3 text-rose-400">ไม่มี (อ่านข้อความได้อย่างเดียว)</td>
+                            <td class="p-3 text-cyan-300">มีสิทธิ์ใช้งาน Tool/DB ที่กำหนด</td>
+                            <td class="p-3 text-emerald-400 font-semibold">เชื่อมต่อทุกระบบผ่าน MCP Protocol และ APIs</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold text-slate-400">การวางแผน (Planning)</td>
+                            <td class="p-3">ไม่มี (ทำตามข้อความที่สั่ง)</td>
+                            <td class="p-3">วางแผนสั้นๆ ทีละขั้นตอน</td>
+                            <td class="p-3 text-purple-300 font-semibold">แตกงานใหญ่เป็น Roadmap และจัดสรรคน</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold text-slate-400">การตรวจแก้ข้อผิดพลาด</td>
+                            <td class="p-3">ไม่รู้ตัว ต้องให้คนมาบอก</td>
+                            <td class="p-3">แจ้ง Error กลับมาให้คนแก้</td>
+                            <td class="p-3 font-bold text-emerald-400">Self-Healing (วิเคราะห์ Log แล้วลองวิธีอื่นเอง)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold text-slate-400">การทำงานร่วมกัน</td>
+                            <td class="p-3">โมเดลเดี่ยว</td>
+                            <td class="p-3">ทำงานเดี่ยวตามภารกิจ</td>
+                            <td class="p-3 text-purple-300 font-bold">Swarm (Coordinator, Workers, QA Reviewer)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 4 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-cyan-400 font-bold">INTERNAL ARCHITECTURE</span>
+                <h3 class="text-2xl font-bold text-white">กายวิภาคภายในของ AI Agent (4 เสาหลักสู่การลงมือทำ)</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="card border-l-4 border-l-cyan-400">
+                    <h4 class="font-bold text-white text-sm mb-1">1. The Brain (สมองแกนกลาง - Core LLM)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">โมเดลภาษาชั้นสูง ทำหน้าที่ตีความเจตนาของมนุษย์ แปลงคำสั่งธุรกิจเป็นตรรกะ และตัดสินใจเลือกลำดับขั้นตอนการทำงานอย่างมีเหตุผล</p>
+                </div>
+                <div class="card border-l-4 border-l-blue-400">
+                    <h4 class="font-bold text-white text-sm mb-1">2. Memory System (ระบบความจำ 2 ชั้น)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed"><b>Short-term:</b> บริบทงานปัจจุบันในแชต | <b>Long-term:</b> RAG และ Vector DB จัดเก็บคู่มือและกฎระเบียบองค์กร เพื่อไม่ให้ทำงานผิดพลาดซ้ำ</p>
+                </div>
+                <div class="card border-l-4 border-l-amber-400">
+                    <h4 class="font-bold text-white text-sm mb-1">3. Tools & MCP (แขนขาและเครื่องมือ)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">ความสามารถในการสั่งการโปรแกรมจริง เช่น คำสั่งค้นหาไฟล์, ยิงคำสั่ง SQL ดึงยอดสต็อก, รันโค้ด หรือสั่งเปิดหน้าเว็บทดสอบระบบ</p>
+                </div>
+                <div class="card border-l-4 border-l-emerald-400">
+                    <h4 class="font-bold text-white text-sm mb-1">4. Feedback & Sensor Loop (ประสาทรับรู้)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">ระบบรับผลตอบกลับจากเครื่องมือ (Return Code, Error Log) ช่วยให้ประเมินได้ทันทีว่าสำเร็จหรือไม่ และพร้อมปรับแผนใหม่ได้ทันควัน</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 5 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-purple-400 font-bold">ANDREW NG DESIGN PATTERNS</span>
+                <h3 class="text-2xl font-bold text-white">4 รูปแบบการออกแบบระบบ Agentic AI (Design Patterns)</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="card">
+                    <div class="text-cyan-400 font-bold text-sm mb-1">1. Reflection</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">การตรวจทานผลงานซ้ำ โดย AI จะจำลองบทบาทเป็นผู้ตรวจสอบ ประเมินความถูกต้องและความปลอดภัยก่อนส่งมอบงานจริง</p>
+                </div>
+                <div class="card">
+                    <div class="text-blue-400 font-bold text-sm mb-1">2. Tool Use</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">การไม่เดาข้อมูล แต่เลือกใช้เครื่องมือที่ถูกต้องดึงข้อเท็จจริง (Grounding Data) เช่น ดึงข้อมูล OEE จาก Database ของโรงงาน</p>
+                </div>
+                <div class="card">
+                    <div class="text-amber-400 font-bold text-sm mb-1">3. Planning</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">การวางลำดับขั้นตอนก่อนลงมือทำ รับมือกับเป้าหมายใหญ่ระยะยาวที่ต้องอาศัยการทำงานต่อเนื่องหลายสิบขั้นตอน</p>
+                </div>
+                <div class="card">
+                    <div class="text-purple-400 font-bold text-sm mb-1">4. Multi-Agent</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">การแบ่งงานให้ Agent ผู้เชี่ยวชาญคนละด้าน (Coordinator, Developer, QA) ช่วยให้ผลงานมีคุณภาพสูงกว่าใช้โมเดลเดี่ยว</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 6 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-cyan-400 font-bold">KEY TECH TERMINOLOGY</span>
+                <h3 class="text-2xl font-bold text-white">เทคโนโลยีแวดล้อมที่องค์กรต้องรู้จัก (Enterprise Ecosystem)</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="card">
+                    <h4 class="font-bold text-cyan-400 text-sm mb-1">MCP (Model Context Protocol)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">มาตรฐานเปิดระดับโลก เปรียบเสมือน <b>"พอร์ต USB-C สำหรับ AI"</b> ช่วยให้ AI สามารถเสียบปลั๊กเชื่อมต่อกับฐานข้อมูลและแอปพลิเคชันในองค์กรได้อย่างปลอดภัย</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-blue-400 text-sm mb-1">RAG (Retrieval-Augmented Generation)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">การเชื่อมต่อ AI เข้ากับคลังเอกสารภายใน เช่น คู่มือมาตรฐานการผลิต (SOP) ช่วยให้ตอบคำถามแม่นยำ 100% โดยไม่ต้องส่งข้อมูลไปเทรนโมเดลภายนอก</p>
+                </div>
+                <div class="card">
+                    <h4 class="font-bold text-purple-400 text-sm mb-1">Human-in-the-Loop (HITL)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">เซฟตี้วาล์วที่กำหนดให้ AI ทำงานอัตโนมัติในกระบวนการทั่วไป แต่จะหยุดเพื่อขอการอนุมัติจากผู้จัดการทันทีเมื่อกระทบฐานข้อมูลจริงหรือการเงิน</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 7 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-emerald-400 font-bold">REAL-WORLD WORKFLOW</span>
+                <h3 class="text-2xl font-bold text-white">กรณีศึกษาจริง: การสั่งการระบบผ่าน "team-preview"</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                <div class="card">
+                    <div class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center mx-auto mb-2 text-xs">1</div>
+                    <h4 class="font-bold text-white text-xs mb-1">มนุษย์สั่งเป้าหมาย</h4>
+                    <p class="text-[11px] text-slate-300">สั่งเป้าหมายเชิงธุรกิจ เช่น "เพิ่มระบบตรวจนับคลังพร้อมทดสอบ E2E"</p>
+                </div>
+                <div class="card border-cyan-500/40">
+                    <div class="w-7 h-7 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center mx-auto mb-2 text-xs">2</div>
+                    <h4 class="font-bold text-cyan-300 text-xs mb-1">Coordinator Agent</h4>
+                    <p class="text-[11px] text-slate-300">วางแผนแตกงานออกเป็น Subtasks และส่งต่องานใน Workspace แยก</p>
+                </div>
+                <div class="card border-purple-500/40">
+                    <div class="w-7 h-7 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center mx-auto mb-2 text-xs">3</div>
+                    <h4 class="font-bold text-purple-300 text-xs mb-1">Worker Agents</h4>
+                    <p class="text-[11px] text-slate-300">Developer Agent ลงมือแก้ไขโค้ดและปรับโครงสร้าง DB ตามคำสั่ง</p>
+                </div>
+                <div class="card border-emerald-500/40">
+                    <div class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center mx-auto mb-2 text-xs">4</div>
+                    <h4 class="font-bold text-emerald-300 text-xs mb-1">QA & Self-Healing</h4>
+                    <p class="text-[11px] text-slate-300">QA รันบราวเซอร์ทดสอบระบบจริง หากพบบั๊กสั่งทีมแก้ทันทีก่อนส่งมอบ</p>
+                </div>
+            </div>
+            <div class="card mt-4 text-xs text-cyan-300 flex items-center justify-between">
+                <span>สรุปผล: นี่คือตัวตนแท้จริงของ Agentic AI ที่ทำงานหลายตัวแทนจนเสร็จสมบูรณ์</span>
+                <span class="mono text-slate-400">Autonomous Multi-Agent Architecture</span>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 8 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-cyan-400 font-bold">MANUFACTURING IMPACT</span>
+                <h3 class="text-2xl font-bold text-white">ตัวอย่างการประยุกต์ใช้ในโรงงานและระบบ MES ของบริษัทฯ</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="card border-l-4 border-l-blue-400">
+                    <h4 class="font-bold text-white text-sm mb-1">Smart Warehouse (ตรวจนับคลัง)</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">Agent ตรวจสอบยอดสต็อกคงคลังอัตโนมัติ ตรวจจับความผิดปกติของตัวเลขดิฟ (Discrepancy) และแจ้งเตือนหัวหน้างานทันที</p>
+                    <span class="text-[10px] mono bg-blue-950 text-blue-300 px-2 py-0.5 rounded">Cycle Count Automation</span>
+                </div>
+                <div class="card border-l-4 border-l-cyan-400">
+                    <h4 class="font-bold text-white text-sm mb-1">OEE & Predictive Maintenance</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">Agent วิเคราะห์รอบเวลาเครื่องจักรแบบ Real-time คำนวณ Downtime และแจ้งเตือนทีมช่างซ่อมบำรุงล่วงหน้าก่อนเครื่องหยุด</p>
+                    <span class="text-[10px] mono bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded">Autonomous Operations</span>
+                </div>
+                <div class="card border-l-4 border-l-emerald-400">
+                    <h4 class="font-bold text-white text-sm mb-1">SAP & MES Automated Sync</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">Agent ทำหน้าที่เชื่อมประสานข้อมูลใบสั่งผลิตระหว่าง SAP ERP และระบบ MES ตัดปัญหาพนักงานต้องคีย์ข้อมูลซ้ำซ้อนลง 100%</p>
+                    <span class="text-[10px] mono bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded">Zero Manual Data Entry</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 9 ================= -->
+        <section class="slide-item">
+            <div class="border-b border-slate-700 pb-3 mb-6">
+                <span class="text-xs mono text-emerald-400 font-bold">BUSINESS VALUE & SECURITY</span>
+                <h3 class="text-2xl font-bold text-white">ผลตอบแทนทางธุรกิจ (ROI) และการกำกับดูแลความปลอดภัย</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="card border-emerald-500/30">
+                    <h4 class="font-bold text-emerald-400 text-sm mb-3">ความคุ้มค่าทางธุรกิจ (Business ROI)</h4>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li>• <b>ลดระยะเวลาพัฒนาและทดสอบลง 60%:</b> ทำงานต่อเนื่องหลายขั้นตอนได้จบในเวลาอันสั้น</li>
+                        <li>• <b>การปฏิบัติงานแบบ 24/7 (Night-Shift Operations):</b> ตรวจสอบข้อมูลและเตรียมรายงานอัตโนมัติในเวลากลางคืน</li>
+                        <li>• <b>ลด Human Error:</b> ตัดความผิดพลาดจากการคำนวณและกรอกข้อมูลสต็อกคลาดเคลื่อน</li>
+                    </ul>
+                </div>
+                <div class="card border-cyan-500/30">
+                    <h4 class="font-bold text-cyan-400 text-sm mb-3">การกำกับดูแลและความปลอดภัย (Governance)</h4>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li>• <b>Least Privilege:</b> ให้สิทธิ์ Agent เท่าที่จำเป็นสำหรับภารกิจนั้นๆ เท่านั้น</li>
+                        <li>• <b>Human-in-the-Loop Gate:</b> จุดที่กระทบฐานข้อมูลหลักต้องผ่านการกดยืนยันจากมนุษย์เสมอ</li>
+                        <li>• <b>Audit Trail 100%:</b> ทุกคำสั่งและไฟล์ที่แก้ไขมี Log บันทึกย้อนหลังได้ตลอดเวลา</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SLIDE 10 ================= -->
+        <section class="slide-item">
+            <div class="text-center py-4">
+                <span class="text-xs mono font-semibold text-cyan-400 bg-cyan-950 px-3 py-1 rounded-full border border-cyan-800">
+                    EXECUTIVE SUMMARY PITCH
+                </span>
+                <h3 class="text-2xl md:text-4xl font-black text-white mt-3 mb-4">
+                    3 ประโยคทองนำเสนอท่านประธาน (ใน 3 นาที)
+                </h3>
+                
+                <div class="space-y-3 text-left max-w-3xl mx-auto my-6">
+                    <div class="card border-l-4 border-l-cyan-400">
+                        <div class="text-cyan-400 font-bold text-xs mb-1">1. ยกระดับสู่พนักงานดิจิทัล (Digital Worker)</div>
+                        <p class="text-xs text-slate-200 leading-relaxed">
+                            "ท่านประธานครับ AI ยุคนี้ไม่ได้มีแค่แชตบอตตอบคำถาม แต่มีเครื่องมือเชื่อมระบบ MES/ERP และลงมือทำงานแทนเราจนสำเร็จเป้าหมาย"
+                        </p>
+                    </div>
+                    <div class="card border-l-4 border-l-purple-400">
+                        <div class="text-purple-400 font-bold text-xs mb-1">2. ทำงานเป็นทีมคู่ขนานและตรวจแก้งานเอง (Agentic Swarm)</div>
+                        <p class="text-xs text-slate-200 leading-relaxed">
+                            "คำสั่งอย่าง team-preview สร้างทีม AI มีทั้งคนทำและคนตรวจทาน (QA) คู่ขนานกันตลอด 24 ชั่วโมง ลด Human Error และย่นเวลาทำงานลงกว่า 60%"
+                        </p>
+                    </div>
+                    <div class="card border-l-4 border-l-emerald-400">
+                        <div class="text-emerald-400 font-bold text-xs mb-1">3. ควบคุมความปลอดภัยโดยมนุษย์ 100% (Human Governance)</div>
+                        <p class="text-xs text-slate-200 leading-relaxed">
+                            "เรามีระบบเซฟตี้วาล์วที่กำหนดให้ทุกจุดสำคัญในสายการผลิต ต้องได้รับการอนุมัติจากหัวหน้างานก่อนเสมอ จึงปลอดภัยและแม่นยำสูงสุดครับ"
+                        </p>
+                    </div>
+                </div>
+
+                <button onclick="window.print()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg transition">
+                    🖨️ คลิกเพื่อพิมพ์เป็น PDF (A4 แนวนอน สวยงาม 10 หน้าเต็ม)
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Fixed Controller Bar (No Print) -->
+    <footer class="no-print bg-slate-900 border-t border-slate-800 px-6 py-3 flex items-center justify-between sticky bottom-0 z-50">
+        <div class="text-xs text-slate-400 flex items-center gap-2">
+            <span>ใช้ปุ่มลูกศร:</span>
+            <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[11px]">← ก่อนหน้า</kbd>
+            <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[11px]">→ หรือ Space ถัดไป</kbd>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="prevBtn" onclick="prevSlide()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+                ← ก่อนหน้า
+            </button>
+            <button id="nextBtn" onclick="nextSlide()" class="px-5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow transition">
+                ถัดไป →
+            </button>
+        </div>
+    </footer>
+
+    <!-- Presentation Control Logic -->
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide-item');
+        const indicator = document.getElementById('slideIndicator');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+            indicator.textContent = `Slide ${currentSlide + 1} / ${slides.length}`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+    </script>
+</body>
+</html>
