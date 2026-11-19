@@ -4,7 +4,10 @@ documents/
 test/
 Media/
 docs/*
+!docs/README.md
 !docs/blueprint/
+!docs/ai-strategy/
+!docs/ambient-ai/
 uploads/
 .vscode/
 # Agent temporary workspaces (not tracked)

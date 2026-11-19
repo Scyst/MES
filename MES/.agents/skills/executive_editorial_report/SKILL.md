@@ -40,7 +40,7 @@ Every report or guide MUST follow these 6 signature principles:
 
 ## 2. Visual & CSS Design System: Swiss Utilitarian Editorial Guide (HTML Format A)
 
-When generating a standalone HTML technical guide or deep-dive report (like `MES/docs/blueprint/ambient_proactive_ai_agent_guide.html`), strictly adhere to these CSS and layout rules:
+When generating a standalone HTML technical guide or deep-dive report (like `MES/docs/ambient-ai/ambient_proactive_ai_agent_guide.html`), strictly adhere to these CSS and layout rules:
 
 ### Typography & Palette
 - **Fonts:** `'IBM Plex Sans Thai'`, `'IBM Plex Sans'`, and `'IBM Plex Mono'` (loaded from Google Fonts).
@@ -116,7 +116,8 @@ When generating an **Executive Strategy Briefing** for the Chairman / Board of D
 ---
 
 ## Reference Templates in Repository
-- **Utilitarian Deep Technical Guide (HTML):** `MES/docs/blueprint/ambient_proactive_ai_agent_guide.html`
-- **Executive Strategy Whitepaper (Markdown):** `MES/docs/blueprint/AI_AGENTIC_EXECUTIVE_WHITEPAPER.md`
-- **Official Executive Memorandum (Markdown):** `MES/docs/blueprint/AI_AGENTIC_OFFICIAL_MEMORANDUM.md`
-- **Interactive Slide & Print Deck (HTML):** `MES/docs/blueprint/executive_presentation_agentic_ai.html`
+- **Utilitarian Deep Technical Guide (HTML):** `MES/docs/ambient-ai/ambient_proactive_ai_agent_guide.html`
+- **Dual Implementation Plan (HTML & Markdown):** `MES/docs/ambient-ai/ambient_ai_dual_implementation_plan.html`, `MES/docs/ambient-ai/AMBIENT_AI_DUAL_IMPLEMENTATION_PLAN.md`
+- **Executive Strategy Whitepaper (Markdown):** `MES/docs/ai-strategy/AI_AGENTIC_EXECUTIVE_WHITEPAPER.md`
+- **Official Executive Memorandum (Markdown):** `MES/docs/ai-strategy/AI_AGENTIC_OFFICIAL_MEMORANDUM.md`
+- **Interactive Slide & Print Deck (HTML):** `MES/docs/ai-strategy/executive_presentation_agentic_ai.html`

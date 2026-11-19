@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ร่างแผนพัฒนา Ambient &amp; Proactive AI: โปรเจ็คโรงงาน MES และระบบส่วนตัวที่บ้าน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Utilitarian Implementation Blueprint · Answer-First Hero · Dual-Track Architecture SVG + 12-Week Roadmap SVG · Open Hairline Tables · Full-Bleed OWASP Security Band · 0px Radius */
+
+:root {
+  --paper: #FFFFFF;
+  --ink: #0F172A;
+  --ink2: #334155;
+  --mute: #475569;
+  --hair: #CBD5E1;
+  --accent: #0F766E;
+  --accent-text: #115E59;
+  --accent-2: #D97706;
+  --accent-2-text: #92400E;
+  --band: #F1F5F9;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif;
+  font-size: 16.5px;
+  line-height: 1.72;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  width: 100%;
+  padding: 64px clamp(24px, 9.5vw, 112px) 92px;
+}
+
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: 24px;
+}
+
+.measure {
+  max-width: 68ch;
+}
+
+/* Typography */
+.eyebrow {
+  font-family: 'IBM Plex Mono', 'IBM Plex Sans Thai', monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin: 0 0 12px 0;
+}
+
+h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 20px 0;
+  text-wrap: balance;
+  max-width: 26ch;
+}
+
+.deck {
+  font-size: 18.5px;
+  line-height: 1.6;
+  color: var(--ink2);
+  max-width: 66ch;
+  margin: 0 0 36px 0;
+}
+
+h2 {
+  font-size: clamp(23px, 2.4vw, 30px);
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 18px 0;
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: 18.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  margin: 0 0 10px 0;
+}
+
+p {
+  margin: 0 0 18px 0;
+  color: var(--ink2);
+}
+
+p strong, li strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+a:hover {
+  color: var(--ink);
+}
+
+code, .mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.87em;
+  color: var(--ink);
+}
+
+/* Sections */
+.sec {
+  margin-top: 68px;
+  padding-top: 32px;
+  border-top: 1px solid var(--hair);
+}
+
+.sec-tight {
+  margin-top: 40px;
+}
+
+/* Hero Emphasis Strip */
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  padding: 24px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 28px;
+}
+
+.metric-val {
+  font-family: 'IBM Plex Mono', 'IBM Plex Sans Thai', monospace;
+  font-size: clamp(24px, 2.6vw, 34px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--accent-text);
+  white-space: nowrap;
+  margin-bottom: 6px;
+}
+
+.metric-val.amber {
+  color: var(--accent-2-text);
+}
+
+.metric-desc {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink2);
+  margin: 0;
+}
+
+/* Verdict Lead */
+.verdict-lead {
+  border-left: 4px solid var(--accent);
+  padding-left: 20px;
+  margin: 28px 0 0 0;
+  max-width: 68ch;
+}
+
+.verdict-lead p {
+  font-size: 17px;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* Asymmetric Split */
+.split-left {
+  grid-column: 1 / 5;
+  padding-right: 16px;
+}
+
+.split-right {
+  grid-column: 5 / 13;
+}
+
+/* Open Columns */
+.cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px 40px;
+  margin-top: 24px;
+}
+
+.cols-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px 32px;
+  margin-top: 24px;
+}
+
+.col-item {
+  border-top: 1px solid var(--hair);
+  padding-top: 16px;
+}
+
+.col-item.accent-rule {
+  border-top: 2px solid var(--accent);
+}
+
+.col-item.amber-rule {
+  border-top: 2px solid var(--accent-2);
+}
+
+/* Numbered Lists */
+.step-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0 0;
+  counter-reset: step-counter;
+}
+
+.step-list li {
+  position: relative;
+  padding-left: 44px;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--ink2);
+  max-width: 72ch;
+}
+
+.step-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.step-list li::before {
+  counter-increment: step-counter;
+  content: "0" counter(step-counter);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+/* Open Hairline Tables */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0 12px 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 15px;
+}
+
+thead th {
+  font-family: 'IBM Plex Mono', 'IBM Plex Sans Thai', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 12px 14px 12px 0;
+  vertical-align: bottom;
+}
+
+tbody td {
+  padding: 14px 16px 14px 0;
+  border-bottom: 1px solid var(--hair);
+  vertical-align: top;
+  color: var(--ink2);
+  line-height: 1.58;
+}
+
+tbody td:first-child {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.num {
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tag-lane {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.tag-hitl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-2-text);
+}
+
+/* Figures & Inline SVGs */
+figure {
+  margin: 36px 0 16px 0;
+  padding: 0;
+  width: 100%;
+}
+
+.fig-title {
+  font-size: 18.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+  margin: 0 0 16px 0;
+  max-width: 72ch;
+}
+
+figcaption {
+  font-size: 13px;
+  color: var(--mute);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Full-Bleed Band */
+.full-band {
+  margin-top: 68px;
+  margin-left: calc(clamp(24px, 9.5vw, 112px) * -1);
+  margin-right: calc(clamp(24px, 9.5vw, 112px) * -1);
+  padding: 56px clamp(24px, 9.5vw, 112px);
+  background: var(--band);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--hair);
+}
+
+/* Pull Quote */
+.pull-quote {
+  margin: 56px 0 16px 0;
+  padding: 24px 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  max-width: 58ch;
+}
+
+.pull-quote p {
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 600;
+  line-height: 1.42;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* Sources */
+.sources-list {
+  padding-left: 22px;
+  margin: 16px 0 0 0;
+  max-width: 72ch;
+}
+
+.sources-list li {
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  color: var(--ink2);
+}
+
+@media (max-width: 860px) {
+  .hero-metrics, .cols-2, .cols-3 {
+    grid-template-columns: 1fr;
+  }
+  .split-left, .split-right {
+    grid-column: 1 / 13;
+  }
+  .split-right {
+    margin-top: 12px;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1.4cm;
+  }
+  body {
+    font-size: 10.5pt;
+  }
+  .page {
+    padding: 0;
+  }
+  .full-band {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 24px;
+  }
+}
+</style>
+</head>
+<body>
+<article class="page">
+
+  <!-- ANSWER-FIRST HERO -->
+  <header>
+    <p class="eyebrow">DUAL-TRACK IMPLEMENTATION PLAN · SNC MES (FACTORY) + HOME SANDBOX</p>
+    <h1>แผนปฏิบัติการ Ambient AI 2 แทร็กคู่ขนาน: ทดลองระบบที่บ้านในสุดสัปดาห์ แล้วต่อยอดสู่โรงงาน MES ใน 12 สัปดาห์</h1>
+    <p class="deck">พิมพ์เขียวลงมือทำจริงสำหรับสร้าง AI สแตนด์บาย 24 ชั่วโมงที่ทำงานจากเหตุการณ์ (Event-Driven) โดยเชื่อมเข้ากับเครื่องมือจริงที่มีอยู่แล้วใน <code>MES/Toolbox</code> (<code>morningBriefTools.php</code> 9 Tools, <code>queryProactiveRedFlags()</code>, <code>Node-RED / MQTT</code>) ควบคู่กับสายส่วนตัวที่ใช้ <code>n8n</code> บน Docker เป็นสนามซ้อมก่อนนำขึ้นระบบโรงงาน</p>
+
+    <div class="hero-metrics">
+      <div>
+        <div class="metric-val">9 Tools พร้อมใช้</div>
+        <p class="metric-desc">ฝั่งโรงงานมี 8 Read-Only SQL Tools + Web Search และ <code>queryProactiveRedFlags()</code> ใน <code>morningBriefTools.php</code> อยู่แล้ว</p>
+      </div>
+      <div>
+        <div class="metric-val">50–300 บ./ด.</div>
+        <p class="metric-desc">งบเริ่มต้นที่บ้านและโรงงานระยะแรก เมื่อใช้ Pre-Filter กรองสัญญาณด้วยโค้ดก่อนปลุก LLM (ประหยัด Token 80–90%)</p>
+      </div>
+      <div>
+        <div class="metric-val amber">12 สัปดาห์ / 4 เฟส</div>
+        <p class="metric-desc">ไต่ระดับความเสี่ยงจาก Home Sandbox (W1–2) &rarr; Factory Read-Only Watcher (W3–6) &rarr; HITL Agent Inbox (W7–10)</p>
+      </div>
+    </div>
+
+    <div class="verdict-lead">
+      <p><strong>คำตอบสั้นที่สุด:</strong> อย่าเพิ่งสร้างระบบที่เขียนฐานข้อมูลโรงงานเองตั้งแต่วันแรก ให้เริ่มจาก<strong>สายบ้าน (Track B)</strong> ด้วย Docker + <code>n8n</code> เพื่อฝึกคุม Pre-Filter, Cooldown และปุ่มอนุมัติ HITL บน Telegram ภายใน 2 สัปดาห์ จากนั้นจึงนำ Pattern เดียวกันมาสวมทับ<strong>สายโรงงาน (Track A)</strong> โดยปลุกฟังก์ชัน Red-Flags และ Tools ที่มีอยู่เดิมใน <code>Toolbox</code> ให้กลายเป็นตัวเฝ้าระวังกะกลางคืนแบบ Read-Only ก่อนเปิดกล่องอนุมัติ Agent Inbox</p>
+    </div>
+  </header>
+
+  <!-- SECTION 1: SYNERGY ARCHITECTURE -->
+  <section class="sec">
+    <div class="grid-12">
+      <div class="split-left">
+        <h2>ทำไมต้องเดิน 2 สายคู่ขนาน: บ้านเป็นสนามซ้อม โรงงานเน้นความเสถียร</h2>
+      </div>
+      <div class="split-right measure">
+        <p>การพัฒนา Ambient AI ที่ทำงานเอง 24 ชั่วโมงมีจุดอ่อนสำคัญคือ <strong>"พฤติกรรมตอนเกิด Error ตอนไม่มีคนดู"</strong> เช่น ลูปเรียก API ไม่หยุด แจ้งเตือนสแปม หรือข้อความภายนอกหลอกให้ AI ทำผิดคำสั่ง (Indirect Prompt Injection) หากนำไปทดลองกับระบบสายการผลิตโรงงานโดยตรง ความผิดพลาดเพียงครั้งเดียวอาจรบกวนหัวหน้างานจนหมดความเชื่อถือ (Alert Fatigue)</p>
+        <p>แผนนี้จึงออกแบบให้ <strong>Track B (ที่บ้าน)</strong> ทำหน้าที่เป็น <strong>Low-Risk Sandbox</strong> สำหรับทดสอบรูปแบบ Prompt, Circuit Breaker และกลไกปุ่มอนุมัติ Human-in-the-Loop ส่วน <strong>Track A (โรงงาน B9)</strong> จะรับเฉพาะสถาปัตยกรรมที่พิสูจน์แล้วมาเชื่อมต่อกับ <code>PHP 8.2</code>, <code>SQL Server</code> และ <code>Node-RED / MQTT</code> ในวงแลนปิด <code>10.1.x.x</code></p>
+      </div>
+    </div>
+
+    <figure>
+      <div class="fig-title">ทั้งสายโรงงานและสายบ้านใช้แกนกลาง 4 ชั้นเหมือนกัน ต่างกันเพียงตัวรับสัญญาณและช่องทางอนุมัติ</div>
+      <svg viewBox="0 0 720 400" width="100%" role="img" aria-label="แผนภาพสถาปัตยกรรมคู่ขนาน Track A โรงงาน MES และ Track B บ้านส่วนตัว">
+        <!-- Top Band: Track A Factory -->
+        <rect x="16" y="18" width="688" height="154" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5"/>
+        <text x="30" y="42" font-family="IBM Plex Mono, monospace" font-size="12.5" font-weight="600" fill="#115E59">TRACK A · FACTORY MES (SNC B9 / LAN 10.1.x.x)</text>
+
+        <rect x="30" y="56" width="145" height="98" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+        <text x="42" y="78" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#0F172A">1. MES Signals</text>
+        <text x="42" y="100" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Cron 07:30 / 30m</text>
+        <text x="42" y="120" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• MQTT / Node-RED</text>
+        <text x="42" y="140" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Red-Flags / Logs</text>
+
+        <line x1="175" y1="105" x2="197" y2="105" stroke="#0F172A" stroke-width="1.8"/>
+        <polygon points="197,100 205,105 197,110" fill="#0F172A"/>
+
+        <rect x="205" y="56" width="150" height="98" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+        <text x="217" y="78" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#115E59">2. PHP/SQL Filter</text>
+        <text x="217" y="100" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• RBE Deadband</text>
+        <text x="217" y="120" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Dedup event_id</text>
+        <text x="217" y="140" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" font-weight="600" fill="#115E59">• ปกติ = 0 Token</text>
+
+        <line x1="355" y1="105" x2="377" y2="105" stroke="#0F172A" stroke-width="1.8"/>
+        <polygon points="377,100 385,105 377,110" fill="#0F172A"/>
+
+        <rect x="385" y="56" width="145" height="98" fill="#0F172A" stroke="#0F172A" stroke-width="1.5"/>
+        <text x="397" y="78" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">3. MES Tools AI</text>
+        <text x="397" y="100" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• Read-Only 9 Tools</text>
+        <text x="397" y="120" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• AI_AMBIENT_JOBS</text>
+        <text x="397" y="140" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#FCD34D">• Max Rounds = 4</text>
+
+        <line x1="530" y1="105" x2="552" y2="105" stroke="#0F172A" stroke-width="1.8"/>
+        <polygon points="552,100 560,105 552,110" fill="#0F172A"/>
+
+        <rect x="560" y="56" width="130" height="98" fill="#FFFBEB" stroke="#D97706" stroke-width="1.8"/>
+        <text x="572" y="78" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#92400E">4. Factory Action</text>
+        <text x="572" y="100" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Brief เช้า 07:30</text>
+        <text x="572" y="120" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Agent Inbox</text>
+        <text x="572" y="140" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" font-weight="600" fill="#92400E">• RBAC Approve</text>
+
+        <!-- Synergy Arrow between Track B and Track A -->
+        <line x1="360" y1="212" x2="360" y2="178" stroke="#0F766E" stroke-width="2" stroke-dasharray="4 3"/>
+        <polygon points="355,182 360,172 365,182" fill="#0F766E"/>
+        <rect x="224" y="184" width="272" height="24" fill="#FFFFFF" stroke="#0F766E" stroke-width="1"/>
+        <text x="360" y="200" text-anchor="middle" font-family="IBM Plex Sans Thai, sans-serif" font-size="11.5" font-weight="600" fill="#115E59">ถ่ายทอด Pattern ที่นิ่งแล้วจากบ้าน &rarr; โรงงาน</text>
+
+        <!-- Bottom Band: Track B Home -->
+        <rect x="16" y="218" width="688" height="154" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.5"/>
+        <text x="30" y="242" font-family="IBM Plex Mono, monospace" font-size="12.5" font-weight="600" fill="#334155">TRACK B · HOME LAB &amp; DIGITAL SECRETARY (DOCKER / MINI PC)</text>
+
+        <rect x="30" y="256" width="145" height="98" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+        <text x="42" y="278" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#0F172A">1. Home Signals</text>
+        <text x="42" y="300" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Gmail / Calendar</text>
+        <text x="42" y="320" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Schedule 07:30/20:00</text>
+        <text x="42" y="340" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• UPS / NAS / บิล</text>
+
+        <line x1="175" y1="305" x2="197" y2="305" stroke="#0F172A" stroke-width="1.8"/>
+        <polygon points="197,300 205,305 197,310" fill="#0F172A"/>
+
+        <rect x="205" y="256" width="150" height="98" fill="#F8FAFC" stroke="#0F766E" stroke-width="2"/>
+        <text x="217" y="278" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#115E59">2. n8n Pre-Filter</text>
+        <text x="217" y="300" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• ตัดเมลโฆษณาออก</text>
+        <text x="217" y="320" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• เช็ค VIP / Sender</text>
+        <text x="217" y="340" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" font-weight="600" fill="#115E59">• กันซ้ำ msg_id</text>
+
+        <line x1="355" y1="305" x2="377" y2="305" stroke="#0F172A" stroke-width="1.8"/>
+        <polygon points="377,300 385,305 377,310" fill="#0F172A"/>
+
+        <rect x="385" y="256" width="145" height="98" fill="#0F172A" stroke="#0F172A" stroke-width="1.5"/>
+        <text x="397" y="278" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">3. n8n AI Node</text>
+        <text x="397" y="300" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• สรุป/จัดลำดับงาน</text>
+        <text x="397" y="320" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• ร่างคำตอบอีเมล</text>
+        <text x="397" y="340" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#FCD34D">• Wait Node Pause</text>
+
+        <line x1="530" y1="305" x2="552" y2="305" stroke="#0F172A" stroke-width="1.8"/>
+        <polygon points="552,300 560,305 552,310" fill="#0F172A"/>
+
+        <rect x="560" y="256" width="130" height="98" fill="#F0FDFA" stroke="#0F766E" stroke-width="1.8"/>
+        <text x="572" y="278" font-family="IBM Plex Sans Thai, sans-serif" font-size="13" font-weight="700" fill="#115E59">4. Mobile HITL</text>
+        <text x="572" y="300" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Telegram / LINE</text>
+        <text x="572" y="320" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• ปุ่ม [ส่ง] [แก้] [ข้าม]</text>
+        <text x="572" y="340" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" font-weight="600" fill="#115E59">• งบ 50–300 บ./ด.</text>
+      </svg>
+      <figcaption>การเดินระบบ 2 แทร็กช่วยแยกความเสี่ยงออกจากสายการผลิตจริง โดยใช้มาตรฐาน Pre-Filter, Idempotency และ Human-in-the-Loop ร่วมกัน</figcaption>
+    </figure>
+  </section>
+
+  <!-- SECTION 2: TRACK A - FACTORY MES -->
+  <section class="sec">
+    <h2>Track A — แผนต่อยอดระบบโรงงาน MES (SNC B9 / Toolbox OS)</h2>
+    <p class="measure">จากการสำรวจโค้ดจริงใน <code>MES/Toolbox/public/api/ai/morningBriefAi.php</code> และ <code>morningBriefTools.php</code> ระบบมีฟังก์ชัน Read-Only 9 ตัว (รายงานผลผลิต, GP/EBITDA, ซ่อมบำรุง PE, System Logs, เงินจมคลังสินค้า, WSM Team Planner, QMS Claims, ค้นหาเว็บ) และฟังก์ชัน <code>queryProactiveRedFlags()</code> อยู่แล้ว จึงสามารถอัปเกรดเป็น 4 Ambient Watchers ได้โดยไม่ต้องรื้อฐานข้อมูลเดิม</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:10%;">รหัส</th>
+            <th style="width:22%;">ชื่อ Ambient Watcher</th>
+            <th style="width:26%;">ตัวกระตุ้น &amp; ตัวกรองโค้ด (0 Token)</th>
+            <th style="width:24%;">Tools ที่ปลุกมาวิเคราะห์</th>
+            <th style="width:18%;">Action Lane &amp; HITL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">F1</td>
+            <td><strong>Night-Shift Brief &amp; Red-Flag Prep</strong></td>
+            <td>Cron <code>07:30 น.</code> รันเช็ค <code>queryProactiveRedFlags()</code> และเทียบยอดผลิตกับ Run Rate</td>
+            <td><code>get_daily_report</code>, <code>get_maintenance_report</code>, <code>get_quality_and_claims_report</code></td>
+            <td><span class="tag-lane">Lane A (Notify)</span><br/>เตรียม Brief เช้า + สรุปส่ง LINE ผู้บริหาร</td>
+          </tr>
+          <tr>
+            <td class="num">F2</td>
+            <td><strong>IIoT / MQTT Machine Anomaly Watcher</strong></td>
+            <td>Node-RED RBE Deadband (<code>flow.get/set</code>) จับค่าไฟ/แก๊สพุ่ง หรือเครื่องหยุดซ้ำ &gt; 30 นาที</td>
+            <td><code>get_maintenance_report</code> (เช็คงานค้าง) + <code>search_external_web</code> (ค้น Alarm Code)</td>
+            <td><span class="tag-hitl">Lane B (HITL)</span><br/>ร่างใบแจ้งซ่อม PE รอหัวหน้ากะกดอนุมัติ</td>
+          </tr>
+          <tr>
+            <td class="num">F3</td>
+            <td><strong>Security &amp; System Audit Sentinel</strong></td>
+            <td>Cron ทุก 30 นาที สแกน <code>SYSTEM_LOGS</code> หา <code>API_ERROR</code> ผิดปกติหรือ IP นอกวง <code>10.1.x.x</code></td>
+            <td><code>get_system_audit_logs</code> สรุปกลุ่มพฤติกรรมเสี่ยงและผู้ใช้ที่เกี่ยวข้อง</td>
+            <td><span class="tag-hitl">Lane A / B</span><br/>แจ้ง Admin (Cooldown 1 ชม.) + เสนอระงับบัญชี</td>
+          </tr>
+          <tr>
+            <td class="num">F4</td>
+            <td><strong>Cycle Count &amp; WSM Escalator</strong></td>
+            <td>Cron <code>16:00 น.</code> เช็คยอดดิฟคลังสินค้าเกินเกณฑ์และงาน <code>OVERDUE</code> ใน Team Planner</td>
+            <td><code>get_inventory_health_report</code> + <code>get_wsm_action_items</code> จัดลำดับตามมูลค่าเงินจม</td>
+            <td><span class="tag-hitl">Lane B (HITL)</span><br/>เสนอร่าง Task ติดตามงานให้ Manager กดยืนยัน</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cols-3 sec-tight">
+      <div class="col-item accent-rule">
+        <h3><code>dbo.AI_PROCESSED_EVENTS</code></h3>
+        <p>ตารางเก็บ <code>event_id</code>, <code>dedup_hash</code> และ <code>cooldown_until</code> เพื่อกัน Cron รอบใหม่หรือ Webhook ยิงเบิ้ลมาปลุก AI ซ้ำเรื่องเดิม</p>
+      </div>
+      <div class="col-item accent-rule">
+        <h3><code>dbo.AI_AMBIENT_JOBS</code></h3>
+        <p>เก็บสถานะงาน (<code>waiting_human</code>, <code>approved</code>, <code>completed</code>, <code>halted</code>), <code>proposed_action_json</code>, <code>tokens_in/out</code> และผู้กดอนุมัติ (RBAC Audit)</p>
+      </div>
+      <div class="col-item amber-rule">
+        <h3><code>dbo.AI_CIRCUIT_BREAKER_CONFIG</code></h3>
+        <p>กำหนดเพดาน <code>max_retries &lt;= 5</code>, <code>max_tool_rounds &lt;= 4</code>, งบ Token รายวัน และปุ่ม Kill Switch ปิด Agent รายตัวทันที</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: TRACK B - HOME & PERSONAL -->
+  <section class="sec">
+    <h2>Track B — แผนสร้างระบบส่วนตัวที่บ้าน (n8n Sandbox &amp; Digital Secretary)</h2>
+    <p class="measure">ฝั่งที่บ้านเน้นติดตั้งเร็ว ดูแลง่าย และเป็นเจ้าของข้อมูล 100% โดยใช้ <strong>Self-Hosted <code>n8n</code> บน Docker</strong> (รันบนคอมพิวเตอร์เดิมหรือ Mini PC งบ <code>6,000–12,000 บ.</code>) เชื่อมต่อกับ <strong>Telegram Bot</strong> ที่รองรับปุ่มกด Inline Keyboard สำหรับ Pause-and-Resume ได้ทันที</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:10%;">รหัส</th>
+            <th style="width:22%;">ชื่อ Workflow ส่วนตัว</th>
+            <th style="width:26%;">ตัวกระตุ้น &amp; Pre-Filter ใน n8n</th>
+            <th style="width:24%;">บทบาทของ AI Agent</th>
+            <th style="width:18%;">Action Lane &amp; HITL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">H1</td>
+            <td><strong>Morning &amp; Evening Digest</strong></td>
+            <td>Schedule <code>07:30</code> / <code>20:00 น.</code> ดึง Calendar + Gmail (IF Node ตัดเมลโฆษณา / No-Reply ออก)</td>
+            <td>จัดลำดับความสำคัญอีเมล + สรุปนัดหมายพรุ่งนี้ + เตือนงานส่วนตัวที่ค้างอยู่</td>
+            <td><span class="tag-lane">Lane A (Notify)</span><br/>ส่งสรุป 1 ข้อความสั้นเข้า Telegram / LINE</td>
+          </tr>
+          <tr>
+            <td class="num">H2</td>
+            <td><strong>Smart Email Triage &amp; Reply Draft</strong></td>
+            <td>Gmail Trigger (คัดเฉพาะผู้ส่งสำคัญ/งานด่วน + เช็ค <code>message_id</code> กันซ้ำ)</td>
+            <td>สรุปประเด็น + ร่างคำตอบภาษาไทย/อังกฤษ โดยครอบเนื้อหาเมลด้วย <code>&lt;untrusted_data&gt;</code></td>
+            <td><span class="tag-hitl">Lane B (HITL Wait)</span><br/>ส่งร่างเข้า Telegram พร้อมปุ่ม [ส่ง] [แก้] [ข้าม]</td>
+          </tr>
+          <tr>
+            <td class="num">H3</td>
+            <td><strong>Home Lab / NAS &amp; Slip Watcher</strong></td>
+            <td>Webhook / MQTT ที่บ้าน (UPS ไฟดับ, Disk เต็ม) หรืออัปโหลดสลิป/บิลเข้าโฟลเดอร์</td>
+            <td>สรุป Log สาเหตุแจ้งเตือน หรือแยกหมวดหมู่รายจ่ายจากข้อความสลิป</td>
+            <td><span class="tag-hitl">Lane A / B</span><br/>บันทึกแถว Draft รอยืนยันก่อนปิดรายการ</td>
+          </tr>
+          <tr>
+            <td class="num">H4</td>
+            <td><strong>Guardrail &amp; Prompt Lab</strong></td>
+            <td>จำลองเคส Error, API Timeout, และ Indirect Prompt Injection ใน Sandbox ที่บ้าน</td>
+            <td>ทดสอบความเสถียรของ Circuit Breaker และวัด Token จริงตลอด 14 วัน</td>
+            <td><span class="tag-lane">Synergy Transfer</span><br/>คัดเฉพาะ Pattern ที่ผ่าน 100% ไปขึ้นโรงงาน</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 4: 12-WEEK ROADMAP -->
+  <section class="sec">
+    <h2>แผนปฏิบัติการ 12 สัปดาห์ (Phased Rollout Roadmap)</h2>
+    <p class="measure">แบ่งเป็น 4 ระยะที่วัดผลได้ชัดเจนทุก 2–4 สัปดาห์ ไม่ลงแรงสร้างระบบใหญ่ทีเดียวจนควบคุมไม่ได้ และมีจุดตัดสินใจเรื่องฮาร์ดแวร์ (Local LLM) ในสัปดาห์ที่ 11–12</p>
+
+    <figure>
+      <div class="fig-title">เริ่มทดสอบที่บ้านใน 2 สัปดาห์แรก ก่อนเปิดโรงงานแบบ Read-Only และเพิ่มกล่องอนุมัติ HITL ในสัปดาห์ที่ 7</div>
+      <svg viewBox="0 0 720 260" width="100%" role="img" aria-label="แผนการดำเนินงาน 12 สัปดาห์ 4 ระยะ">
+        <!-- Timeline Axis -->
+        <line x1="20" y1="42" x2="700" y2="42" stroke="#0F172A" stroke-width="2"/>
+        <text x="20" y="26" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#0F172A">W1–W2 (HOME)</text>
+        <text x="195" y="26" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#115E59">W3–W6 (MES READ-ONLY)</text>
+        <text x="395" y="26" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#92400E">W7–W10 (HITL INBOX)</text>
+        <text x="575" y="26" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#0F172A">W11–W12 (SCALE)</text>
+
+        <!-- Phase 1 -->
+        <rect x="20" y="58" width="160" height="170" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5"/>
+        <text x="32" y="82" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="700" fill="#0F172A">ระยะ 1: Home Sandbox</text>
+        <line x1="32" y1="92" x2="168" y2="92" stroke="#CBD5E1" stroke-width="1"/>
+        <text x="32" y="114" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• Docker + n8n</text>
+        <text x="32" y="136" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• ทำ H1, H2 + Telegram</text>
+        <text x="32" y="158" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• ทดสอบ Pre-Filter</text>
+        <text x="32" y="180" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• วัด Token 14 วัน</text>
+        <text x="32" y="212" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="#115E59">งบ: 50–300 บ./ด.</text>
+
+        <!-- Phase 2 -->
+        <rect x="195" y="58" width="185" height="170" fill="#F0FDFA" stroke="#0F766E" stroke-width="2"/>
+        <text x="207" y="82" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="700" fill="#115E59">ระยะ 2: MES Watcher</text>
+        <line x1="207" y1="92" x2="368" y2="92" stroke="#CBD5E1" stroke-width="1"/>
+        <text x="207" y="114" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• เพิ่ม 3 ตาราง AI Jobs</text>
+        <text x="207" y="136" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• เปิด F1 Red-Flag Brief</text>
+        <text x="207" y="158" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• เปิด F3 Audit Sentinel</text>
+        <text x="207" y="180" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• หน้า Jobs &amp; Heartbeat</text>
+        <text x="207" y="212" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="#115E59">สิทธิ์: Read-Only 100%</text>
+
+        <!-- Phase 3 -->
+        <rect x="395" y="58" width="165" height="170" fill="#FFFBEB" stroke="#D97706" stroke-width="2"/>
+        <text x="407" y="82" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="700" fill="#92400E">ระยะ 3: Agent Inbox</text>
+        <line x1="407" y1="92" x2="548" y2="92" stroke="#CBD5E1" stroke-width="1"/>
+        <text x="407" y="114" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• กล่องอนุมัติ Toolbox</text>
+        <text x="407" y="136" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• เชื่อม MQTT &rarr; F2</text>
+        <text x="407" y="158" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• เชื่อม Cycle Count/WSM</text>
+        <text x="407" y="180" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#334155">• คุมอนุมัติผ่าน RBAC</text>
+        <text x="407" y="212" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="#92400E">สิทธิ์: Mandatory HITL</text>
+
+        <!-- Phase 4 -->
+        <rect x="575" y="58" width="125" height="170" fill="#0F172A" stroke="#0F172A" stroke-width="1.5"/>
+        <text x="587" y="82" font-family="IBM Plex Sans Thai, sans-serif" font-size="13.5" font-weight="700" fill="#FFFFFF">ระยะ 4: Scale</text>
+        <line x1="587" y1="92" x2="688" y2="92" stroke="#334155" stroke-width="1"/>
+        <text x="587" y="114" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• ประเมิน Token 60 วัน</text>
+        <text x="587" y="136" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• วัดค่า Acceptance</text>
+        <text x="587" y="158" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• พิจารณา Local GPU</text>
+        <text x="587" y="180" font-family="IBM Plex Sans Thai, sans-serif" font-size="12" fill="#E2E8F0">• สลับผ่าน .env</text>
+        <text x="587" y="212" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="#5EEAD4">Zero API Option</text>
+      </svg>
+      <figcaption>การจัดลำดับ 4 เฟสช่วยพิสูจน์ความคุ้มค่าจากตัวเลขจริงก่อนตัดสินใจลงทุนฮาร์ดแวร์ Local LLM (GPU 24GB งบ ~110k–145k บ.)</figcaption>
+    </figure>
+  </section>
+
+  <!-- SECTION 5: FULL-BLEED SECURITY BAND -->
+  <section class="full-band">
+    <h2>เกณฑ์ความปลอดภัยบังคับก่อนเปิดใช้งานจริง (OWASP &amp; Circuit Breaker Gate)</h2>
+    <p class="measure">ทุก Workflow ทั้งฝั่งโรงงานและที่บ้านต้องผ่านการตรวจรับความปลอดภัย 5 ข้อนี้ก่อนเปิดรันแบบอัตโนมัติ ตามแนวทาง <a href="https://genai.owasp.org/llm-top-10/" target="_blank" rel="noopener noreferrer">OWASP Top 10 for LLM Applications</a> และกฎประจำโปรเจ็ค <code>owasp-ai-security.md</code></p>
+
+    <div class="cols-2">
+      <div class="col-item amber-rule">
+        <h3>ป้องกัน Prompt Injection (OWASP LLM01)</h3>
+        <p>ข้อมูลจากภายนอกหรือข้อความที่ผู้ใช้กรอก (เช่น เนื้อหาอีเมลส่วนตัว, คำอธิบายอาการเสียจากหน้างาน, Webhook ภายนอก) ต้องถูกครอบด้วยแท็ก <code>&lt;untrusted_data&gt;...&lt;/untrusted_data&gt;</code> และห้ามนำผลลัพธ์จาก LLM ไปต่อสตริงใน SQL หรือ Shell Command โดยตรง</p>
+      </div>
+      <div class="col-item amber-rule">
+        <h3>จำกัดขอบเขตสิทธิ์ (OWASP LLM06 Excessive Agency)</h3>
+        <p>ห้ามมอบบัญชี Admin Database หรือสิทธิ์ <code>DELETE / DROP</code> ให้ Agent เด็ดขาด ชั้น Reasoning ต้องเห็นเฉพาะ Read-Only Tools ส่วนการเขียนลง Production ต้องถูกแยกออกไปอยู่หลังปุ่มอนุมัติ HITL ที่มี RBAC และ CSRF Protection</p>
+      </div>
+    </div>
+
+    <div class="cols-3" style="margin-top: 32px;">
+      <div class="col-item accent-rule">
+        <h3>1. Idempotency &amp; Lock</h3>
+        <p>บันทึก <code>event_id</code> และ <code>dedup_hash</code> ทุกครั้ง กันปัญหา Cron รอบใหม่วิ่งชนรอบเก่าหรือแจ้งเตือนซ้ำซ้อน</p>
+      </div>
+      <div class="col-item accent-rule">
+        <h3>2. Circuit Breaker</h3>
+        <p>จำกัด <code>max_retries &lt;= 5</code>, <code>max_tool_rounds &lt;= 4</code> และเพดาน Token รายวัน ชนเพดานเมื่อไรตัดสวิตช์ทันที</p>
+      </div>
+      <div class="col-item accent-rule">
+        <h3>3. Heartbeat &amp; Audit Log</h3>
+        <p>บันทึก <code>job_id</code>, <code>trigger_source</code>, <code>tokens_used</code>, <code>status</code> ทุกครั้ง เพื่อไม่ให้ระบบพังเงียบๆ โดยไม่มีใครรู้</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: ACTIONABLE STARTER CHECKLIST -->
+  <section class="sec">
+    <h2>ก้าวแรกที่ลงมือทำได้ทันทีในสุดสัปดาห์นี้</h2>
+    <p class="measure">เพื่อไม่ให้แผนนี้ค้างอยู่แค่บนกระดาษ นี่คือ 3 ขั้นตอนแรกที่เริ่มลงมือได้ทันทีโดยไม่กระทบระบบ Production ของโรงงาน</p>
+
+    <ol class="step-list">
+      <li><strong>ตั้งสนามซ้อมที่บ้าน (Track B · เสาร์-อาทิตย์นี้):</strong> รัน Docker Compose สำหรับ <code>n8n</code> Self-Hosted บนคอมพิวเตอร์ส่วนตัว เชื่อม Telegram Bot แล้วสร้าง Workflow <strong>H1</strong> (สรุปนัดหมาย + อีเมลคัดกรองตอน 07:30 น.) เพื่อจับจังหวะการเขียน Pre-Filter และดูค่า Token จริง</li>
+      <li><strong>ทดลองระบบ Pause-and-Resume (Track B · สัปดาห์ที่ 2):</strong> เพิ่มปุ่มอนุมัติใน Telegram ด้วย <code>n8n Wait Node</code> สำหรับร่างตอบอีเมล (<strong>H2</strong>) และทดสอบส่งข้อความจำลองที่มี Prompt Injection เข้ามาเพื่อเช็คว่า Tagging และ Read-Only Sandbox เอาอยู่จริง</li>
+      <li><strong>เปิดประตูสู่โรงงานด้วย Read-Only Watcher (Track A · สัปดาห์ที่ 3):</strong> ระบุตาราง 3 ตัวลงใน <code>db_changes.md</code> แล้วนำ <code>queryProactiveRedFlags()</code> กับ Tools ใน <code>morningBriefTools.php</code> มาผูกกับ Cron 07:30 น. เพื่อส่งรายงานเตรียมพร้อมก่อนประชุมเช้าแบบ Read-Only 100%</li>
+    </ol>
+
+    <div class="pull-quote">
+      <p>ระบบ Ambient AI ที่สร้างคุณค่าได้จริงไม่ใช่งานที่ซับซ้อนที่สุด แต่คือระบบที่กรองเรื่องปกติทิ้งด้วยโค้ดธรรมดา แล้วปลุก AI มาช่วยคิดเฉพาะตอนที่มนุษย์ต้องตัดสินใจ</p>
+    </div>
+  </section>
+
+  <!-- SOURCES & REPO GROUNDING -->
+  <section class="sec">
+    <h2>เอกสารอ้างอิงและไฟล์ต้นทางในระบบ</h2>
+    <ol class="sources-list">
+      <li>ไฟล์ระบบโรงงาน MES (Toolbox OS): <code>MES/Toolbox/public/api/ai/morningBriefAi.php</code> และ <code>MES/Toolbox/public/api/ai/morningBriefTools.php</code></li>
+      <li>เอกสารแผนฉบับแก้ไข/ติดตามความคืบหน้า: <a href="./AMBIENT_AI_DUAL_IMPLEMENTATION_PLAN.md">AMBIENT_AI_DUAL_IMPLEMENTATION_PLAN.md</a> และ <a href="./ambient_proactive_ai_agent_guide.html">ambient_proactive_ai_agent_guide.html</a></li>
+      <li>LangChain Ambient Agents &amp; Agent Inbox: <a href="https://www.langchain.com/blog/introducing-ambient-agents" target="_blank" rel="noopener noreferrer">Introducing Ambient Agents</a> / <a href="https://github.com/langchain-ai/agent-inbox" target="_blank" rel="noopener noreferrer">Agent Inbox Pattern</a></li>
+      <li>OWASP AI Security Standards: <a href="https://genai.owasp.org/llm-top-10/" target="_blank" rel="noopener noreferrer">OWASP Top 10 for LLM Applications</a> และกฎประจำโปรเจ็ค <code>MES/.agents/rules/owasp-ai-security.md</code></li>
+    </ol>
+  </section>
+
+</article>
+</body>
+</html>
