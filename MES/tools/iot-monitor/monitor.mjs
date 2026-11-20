@@ -204,7 +204,7 @@ function printReport(data) {
   if (db.ok) {
     const s = db.summary;
     const diff = s.freshestSecondsAgo;
-    
+
     let flowBadge = '🟢 ปกติ (ACTIVE)';
     let flowColorDesc = 'ข้อมูลไหลเข้าอย่างต่อเนื่อง';
     if (diff > 120) {
