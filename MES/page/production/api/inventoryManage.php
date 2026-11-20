@@ -175,7 +175,7 @@ try {
                 $sd = trim((string)$_GET['startDate']);
                 if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้น (startDate) ไม่ถูกต้อง']);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
                     exit;
                 }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
@@ -185,7 +185,7 @@ try {
                 $ed = trim((string)$_GET['endDate']);
                 if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุด (endDate) ไม่ถูกต้อง']);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
                     exit;
                 }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
@@ -1376,7 +1376,7 @@ try {
                 $sd = trim((string)$_GET['startDate']);
                 if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้น (startDate) ไม่ถูกต้อง']);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
                     exit;
                 }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
@@ -1386,7 +1386,7 @@ try {
                 $ed = trim((string)$_GET['endDate']);
                 if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุด (endDate) ไม่ถูกต้อง']);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
                     exit;
                 }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
@@ -1470,7 +1470,7 @@ try {
                 $sd = trim((string)$_GET['startDate']);
                 if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้น (startDate) ไม่ถูกต้อง']);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
                     exit;
                 }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
@@ -1480,7 +1480,7 @@ try {
                 $ed = trim((string)$_GET['endDate']);
                 if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุด (endDate) ไม่ถูกต้อง']);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
                     exit;
                 }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";

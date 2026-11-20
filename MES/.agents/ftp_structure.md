@@ -190,6 +190,7 @@ Here is the complete list of all directories on the FTP server.
 /MES/MES/page/userManage/components
 /MES/MES/page/userManage/script
 /MES/MES/uploads
+/MES/MES/uploads/accessories_inspection
 /MES/MES/uploads/documentCenter
 /MES/MES/uploads/items
 /MES/MES/uploads/loading_reports

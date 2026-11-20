@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Boxes, MapPin, ShieldAlert, FileText, ShoppingCart, PackagePlus,
-  ClipboardList, AlertTriangle
+  ClipboardList, AlertTriangle, X
 } from 'lucide-react';
 import InventoryDashboardTab from './components/InventoryDashboardTab';
 import MaterialRequisitionTab from './components/MaterialRequisitionTab';
@@ -26,6 +26,7 @@ export default function StoreApp({ forceRequisitionOnly = false }) {
   const requestedTab = searchParams.get('tab') || (hasWarehouseAccess ? 'onhand' : 'requisition');
   const currentTab = hasWarehouseAccess ? requestedTab : 'requisition';
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
+  const [restrictedNotice, setRestrictedNotice] = useState('');
 
   const setTab = (tabKey) => {
     if (!hasWarehouseAccess && tabKey !== 'requisition') return;
@@ -36,10 +37,13 @@ export default function StoreApp({ forceRequisitionOnly = false }) {
     if (!hasWarehouseAccess && !forceRequisitionOnly) {
       const tabParam = searchParams.get('tab');
       if (tabParam && tabParam !== 'requisition') {
+        setRestrictedNotice(
+          `บัญชีของคุณสังกัดแผนก ${user?.line || '-'} สามารถใช้งานได้เฉพาะหน้าเบิกพัสดุ — หากต้องการสิทธิ์คลังสินค้าส่วนกลางกรุณาติดต่อผู้ดูแลระบบ`
+        );
         setSearchParams({ tab: 'requisition' }, { replace: true });
       }
     }
-  }, [hasWarehouseAccess, forceRequisitionOnly, searchParams, setSearchParams]);
+  }, [hasWarehouseAccess, forceRequisitionOnly, searchParams, setSearchParams, user?.line]);
 
   useEffect(() => {
     if (!hasWarehouseAccess) {
@@ -192,6 +196,23 @@ export default function StoreApp({ forceRequisitionOnly = false }) {
           </div>
         )}
       </div>
+
+      {restrictedNotice && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 px-3 py-2 flex items-center justify-between gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{restrictedNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRestrictedNotice('')}
+            className="p-1 rounded-lg hover:bg-amber-200/50 dark:hover:bg-amber-900/50"
+            aria-label="ปิดการแจ้งเตือน"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Offline Resilience Banner & Queue */}
       <StoreOfflineBanner />

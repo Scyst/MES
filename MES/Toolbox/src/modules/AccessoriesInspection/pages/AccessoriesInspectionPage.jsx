@@ -216,12 +216,18 @@ export default function AccessoriesInspectionPage() {
     return map;
   }, [hourly]);
 
+  const getCamErrorMessage = (err, fallback) =>
+    err?.response?.data?.message || err?.message || fallback;
+
   const handleApplySettings = async (patch) => {
     if (!camConfigured || !isOnline) return;
     try {
       await accessoriesApi.updateSettings(patch);
-    } catch {
-      setNotice({ type: 'error', message: 'ไม่สามารถส่งคำสั่งตั้งค่าไปยังเครื่องกล้องได้' });
+    } catch (err) {
+      setNotice({
+        type: 'error',
+        message: getCamErrorMessage(err, 'ไม่สามารถส่งคำสั่งตั้งค่าไปยังเครื่องกล้องได้ (ตรวจสอบการเชื่อมต่อ AI Vision)'),
+      });
     }
   };
 
@@ -231,8 +237,8 @@ export default function AccessoriesInspectionPage() {
     try {
       await accessoriesApi.loadModel(selectedModel);
       setModelLoadingMsg(`ส่งคำสั่งโหลด ${selectedModel} แล้ว`);
-    } catch {
-      setModelLoadingMsg('ไม่สามารถติดต่อเครื่อง AI Vision ได้');
+    } catch (err) {
+      setModelLoadingMsg(getCamErrorMessage(err, 'ไม่สามารถติดต่อเครื่อง AI Vision ได้'));
     }
   };
 
@@ -247,10 +253,13 @@ export default function AccessoriesInspectionPage() {
       if (res?.ok) {
         setNotice({ type: 'success', message: 'เริ่มระบบตรวจจับอัตโนมัติแล้ว' });
       } else {
-        setNotice({ type: 'error', message: res?.reason || 'ไม่สามารถเริ่มตรวจจับได้' });
+        setNotice({ type: 'error', message: res?.reason || 'ไม่สามารถเริ่มตรวจจับได้ กรุณาตรวจสอบสถานะกล้อง/Sensor' });
       }
-    } catch {
-      setNotice({ type: 'error', message: 'ไม่สามารถติดต่อกล้อง AI Vision ได้' });
+    } catch (err) {
+      setNotice({
+        type: 'error',
+        message: getCamErrorMessage(err, 'ไม่สามารถติดต่อกล้อง AI Vision ได้ (ตรวจสอบสาย LAN หรือสิทธิ์ผู้ใช้งาน)'),
+      });
     }
   };
 
@@ -259,11 +268,14 @@ export default function AccessoriesInspectionPage() {
       const res = await accessoriesApi.captureSnapshot();
       setNotice({
         type: res?.ok ? 'success' : 'error',
-        message: res?.ok ? 'บันทึกภาพตรวจจับเรียบร้อยแล้ว' : 'ไม่สามารถ Capture ภาพได้',
+        message: res?.ok ? 'บันทึกภาพตรวจจับเรียบร้อยแล้ว' : (res?.reason || 'ไม่สามารถ Capture ภาพได้ กรุณาลองใหม่'),
       });
       loadLogs(true);
-    } catch {
-      setNotice({ type: 'error', message: 'ไม่สามารถติดต่อกล้อง AI Vision ได้' });
+    } catch (err) {
+      setNotice({
+        type: 'error',
+        message: getCamErrorMessage(err, 'ไม่สามารถติดต่อกล้อง AI Vision ได้ (ตรวจสอบสาย LAN หรือสิทธิ์ผู้ใช้งาน)'),
+      });
     }
   };
 

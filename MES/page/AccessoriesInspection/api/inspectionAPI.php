@@ -11,7 +11,7 @@
  *   (ถ้ายังไม่ได้ ALTER TABLE เพิ่ม S1_IN_TIME/S1_OUT_TIME จะ fallback เป็นชุดเดิม)
  *
  * คอลัมน์ alias เป็นตัวเล็กให้ตรงกับที่ accessoriesInspection.js ใช้ (renderLogs)
- * รูป (image) เป็นชื่อไฟล์ที่หน้าเว็บเปิดจาก img/ บน web server เดียวกัน
+ * รูป (image) เป็นชื่อไฟล์ที่หน้าเว็บเปิดจาก ../../uploads/accessories_inspection/ (fallback img/)
  */
 
 require_once __DIR__ . '/../../../auth/check_auth.php';

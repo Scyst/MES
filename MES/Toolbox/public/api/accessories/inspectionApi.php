@@ -255,9 +255,9 @@ try {
             }
 
             $candidates = [
-                __DIR__ . '/../../../MES/MES/page/AccessoriesInspection/img/' . $file,
-                __DIR__ . '/../../uploads/accessories_inspection/' . $file,
                 __DIR__ . '/../../../MES/MES/uploads/accessories_inspection/' . $file,
+                __DIR__ . '/../../uploads/accessories_inspection/' . $file,
+                __DIR__ . '/../../../MES/MES/page/AccessoriesInspection/img/' . $file,
                 __DIR__ . '/../../../page/AccessoriesInspection/img/' . $file,
             ];
 

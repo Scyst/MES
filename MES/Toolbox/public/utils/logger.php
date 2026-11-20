@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Global Enterprise Audit & Error Logging Utility
  * Project: MES Toolbox OS
@@ -146,6 +146,45 @@ if (!function_exists('writeErrorLog')) {
     }
 }
 
+if (!function_exists('translateSqlErrorMessage')) {
+    /**
+     * Converts raw SQL Server/ODBC error messages into actionable Thai user guidance
+     * while preserving genuine Thai business errors raised from application logic or SPs.
+     */
+    function translateSqlErrorMessage(string $fullErrorMessage): string {
+        $clean = $fullErrorMessage;
+        if (strpos($fullErrorMessage, '[SQL Server]') !== false) {
+            $parts = explode('[SQL Server]', $fullErrorMessage);
+            $clean = trim(end($parts));
+        }
+        $lower = strtolower($fullErrorMessage);
+
+        if (strpos($lower, 'deadlock') !== false || strpos($lower, 'sqlstate[40001]') !== false) {
+            return 'มีผู้ใช้งานอื่นกำลังทำรายการเดียวกันพร้อมกัน ระบบยกเลิกชั่วคราวเพื่อป้องกันข้อมูลชนกัน กรุณากดยืนยันใหม่อีกครั้ง';
+        }
+        if (strpos($lower, 'unique key') !== false || strpos($lower, 'primary key') !== false || strpos($lower, 'duplicate key') !== false) {
+            return 'ข้อมูลซ้ำกับรายการที่มีอยู่ในระบบแล้ว กรุณาตรวจสอบรหัส/เลขที่เอกสารและลองใหม่อีกครั้ง';
+        }
+        if (strpos($lower, 'reference constraint') !== false || strpos($lower, 'foreign key') !== false) {
+            return 'ไม่สามารถลบหรือแก้ไขข้อมูลนี้ได้ เนื่องจากถูกอ้างอิงใช้งานอยู่ในรายการอื่นแล้ว';
+        }
+        if (strpos($lower, 'sqlstate[22007]') !== false || strpos($lower, 'converting date') !== false || strpos($lower, 'out-of-range value') !== false) {
+            return 'รูปแบบวันที่หรือเวลาไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลักที่ถูกต้อง (เช่น 2026)';
+        }
+        if (strpos($lower, 'sqlstate[22001]') !== false || strpos($lower, 'truncated') !== false) {
+            return 'ข้อมูลที่กรอกยาวเกินขนาดที่ระบบรองรับ กรุณาย่อข้อความและลองใหม่อีกครั้ง';
+        }
+        // Keep deliberate Thai business errors (e.g. from Stored Procedure RAISERROR)
+        if (preg_match('/[\x{0E00}-\x{0E7F}]/u', $clean)) {
+            return $clean;
+        }
+        if (strpos($lower, 'sqlstate[') !== false || strpos($lower, '[sql server]') !== false || strpos($lower, 'odbc driver') !== false) {
+            return 'ระบบฐานข้อมูลขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ';
+        }
+        return $clean;
+    }
+}
+
 if (!function_exists('handleApiError')) {
     /**
      * Global API Error Handler
@@ -156,12 +195,8 @@ if (!function_exists('handleApiError')) {
         }
 
         $fullErrorMessage = $e->getMessage();
-        $displayMessage = $fullErrorMessage;
+        $displayMessage = translateSqlErrorMessage($fullErrorMessage);
         $httpCode = 400;
-        if (strpos($fullErrorMessage, '[SQL Server]') !== false) {
-            $parts = explode('[SQL Server]', $fullErrorMessage);
-            $displayMessage = trim(end($parts));
-        }
 
         if ($pdo !== null) {
             try {
@@ -198,6 +233,7 @@ if (!function_exists('handleApiError')) {
         http_response_code($httpCode);
         echo json_encode([
             'success' => false,
+            'data' => null,
             'message' => $displayMessage
         ], JSON_UNESCAPED_UNICODE);
         exit;

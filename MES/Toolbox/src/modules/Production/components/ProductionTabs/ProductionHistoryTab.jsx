@@ -10,6 +10,14 @@ import { useConfirm, useToast } from '../../../../shared/contexts/FeedbackContex
 import ItemSearchSelect from '../ItemSearchSelect';
 import OperatorMultiSelect from '../OperatorMultiSelect';
 
+const isValidFilterDate = (val) => {
+  if (!val) return true;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(val));
+  if (!match) return false;
+  const year = Number(match[1]);
+  return year >= 1900 && year <= 2099;
+};
+
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const HOUR_SLOTS = Array.from({ length: 24 }, (_, hr) => {
@@ -117,6 +125,9 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
   );
 
   const loadData = useCallback(async () => {
+    if (!isValidFilterDate(startDate) || !isValidFilterDate(endDate)) {
+      return;
+    }
     setLoading(true);
     try {
       const params = {
@@ -533,10 +544,16 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
           <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             <input
               type="date"
+              min="2000-01-01"
+              max="2099-12-31"
               value={startDate}
               onChange={(e) => {
-                setStartDate(e.target.value);
+                const val = e.target.value;
+                setStartDate(val);
                 setPage(1);
+                if (val && !isValidFilterDate(val)) {
+                  toast.warning('รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลักระหว่าง 1900–2099 (เช่น 2026)');
+                }
               }}
               aria-label="วันที่เริ่มต้น"
               className="min-h-[36px] rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
@@ -544,10 +561,16 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
             <span className="text-xs text-slate-400">-</span>
             <input
               type="date"
+              min="2000-01-01"
+              max="2099-12-31"
               value={endDate}
               onChange={(e) => {
-                setEndDate(e.target.value);
+                const val = e.target.value;
+                setEndDate(val);
                 setPage(1);
+                if (val && !isValidFilterDate(val)) {
+                  toast.warning('รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลักระหว่าง 1900–2099 (เช่น 2026)');
+                }
               }}
               aria-label="วันที่สิ้นสุด"
               className="min-h-[36px] rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"

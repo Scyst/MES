@@ -4,7 +4,7 @@
  *
  * เครื่อง Python (db.py → image_uploader.py) จะ POST รูป JPEG มาที่นี่หลังตรวจเสร็จ
  * เพื่อให้หน้าเว็บแสดงรูปได้แม้เครื่อง Python จะออฟไลน์
- * วางไฟล์นี้ไว้โฟลเดอร์เดียวกับ accessoriesInspectionUI.php — รูปจะถูกเก็บใน img/
+ * วางไฟล์นี้ไว้โฟลเดอร์เดียวกับ accessoriesInspectionUI.php — รูปจะถูกเก็บใน ../../uploads/accessories_inspection/
  *
  * Protocol (ตรงกับ image_uploader.py):
  *   POST  (raw body = JPEG bytes)
@@ -58,8 +58,8 @@ if (substr($data, 0, 3) !== "\xFF\xD8\xFF") {
     exit;
 }
 
-// ── เขียนลง img/ ─────────────────────────────────────────────────────────────
-$dir = __DIR__ . '/img';
+// ── เขียนลง ../../uploads/accessories_inspection/ (มาตรฐานกลาง MES/uploads/) ──
+$dir = __DIR__ . '/../../uploads/accessories_inspection';
 if (!is_dir($dir) && !@mkdir($dir, 0775, true)) {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => 'mkdir_failed']);
