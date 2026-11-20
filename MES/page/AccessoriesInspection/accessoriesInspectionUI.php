@@ -28,6 +28,7 @@ $products = [
     "TC-4210TBLK", "TC-4210TBLU", "TC-4210TSR", "TC-4210TGRY", "TC-4210TSGRE","TC-4210TSPR",
     "CH-5608HGBLK","CH-5608HGBLU","CH-5608HGR","CH-5608HGGRY","CH-5608HGGRE","CH-5608HGPR",
     "TC-5608TSBLK","TC-5608TSBLU","TC-5608TSR","TC-5608TSGRY","TC-5608TSGRE","TC-5608TSPR",
+    "C-2053WMBTHA",
 ];
 
 /**
@@ -337,6 +338,18 @@ function accessory_product_label(string $code): string {
             <div class="history-header">
                 <h6 class="history-title"><i class="fas fa-history"></i> ประวัติการตรวจสอบ</h6>
                 <div class="log-filters">
+                    <button type="button" class="chart-open-btn"
+                            onclick="openChartModal()"
+                            title="ดูกราฟของกะ/วันที่ที่เลือก" aria-label="ดูกราฟ">
+                        <svg class="chart-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
+                             fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"/>
+                            <rect x="7"  y="12" width="3" height="6" rx="1" fill="currentColor" stroke="none"/>
+                            <rect x="12" y="8"  width="3" height="10" rx="1" fill="currentColor" stroke="none"/>
+                            <rect x="17" y="5"  width="3" height="13" rx="1" fill="currentColor" stroke="none"/>
+                        </svg>
+                    </button>
                     <select id="logShiftFilter" class="form-control log-date-input"
                             onchange="pollLogs()">
                         <option value="all">ทุกกะ</option>
@@ -366,14 +379,19 @@ function accessory_product_label(string $code): string {
                     <thead>
                         <tr>
                             <th class="col-ts">เวลา</th>
+                            <th class="col-diff" title="เวลาห่างจากชิ้นก่อนหน้าในชั่วโมงเดียวกัน">Diff</th>
                             <th class="col-model">Model</th>
                             <th class="col-result">Result</th>
                             <th class="col-elapsed">Elapsed</th>
+                            <th class="col-cycle" title="เวลาที่งานมาถึง Sensor 1">S1 เข้า</th>
+                            <th class="col-cycle" title="เวลาที่งานพ้น Sensor 1">S1 ออก</th>
+                            <th class="col-cycle" title="ระยะเวลาที่ Sensor 1 จับงานอยู่: S1 ออก − S1 เข้า">Detect</th>
+                            <th class="col-cycle" title="เวลาว่างระหว่างงาน: S1 เข้า ของชิ้นถัดไป − S1 ออก ของชิ้นนี้">Idle</th>
                             <th class="col-img">Image</th>
                         </tr>
                     </thead>
                     <tbody id="logBody">
-                        <tr><td colspan="5" class="empty-state">กำลังโหลด...</td></tr>
+                        <tr><td colspan="10" class="empty-state">กำลังโหลด...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -398,6 +416,68 @@ function accessory_product_label(string $code): string {
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-secondary px-4"
                         data-bs-dismiss="modal">ตกลง</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="chartModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2 px-3">
+                <h6 class="modal-title mb-0">
+                    <i class="fas fa-chart-bar"></i> กราฟ
+                    <small id="chartRangeLabel" class="text-secondary ms-2"></small>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="chartStats" class="chart-stats"></div>
+
+                <div class="chart-block">
+                    <div class="chart-head">
+                        <span class="chart-title">จำนวนงานรายชั่วโมง</span>
+                        <span class="chart-legend">
+                            <span class="lg-item"><i class="lg-sw sw-ok"></i>OK</span>
+                            <span class="lg-item"><i class="lg-sw sw-alarm"></i>ALARM</span>
+                        </span>
+                    </div>
+                    <div id="chartHourly" class="chart-svg"></div>
+                </div>
+
+                <div class="chart-block">
+                    <div class="chart-head">
+                        <span class="chart-title">Idle (วินาที) — งานพ้น S1 → ชิ้นถัดไปเข้า S1</span>
+                        <span class="chart-legend">
+                            <span class="lg-item"><i class="lg-dash"></i>เกณฑ์ 300s</span>
+                        </span>
+                    </div>
+                    <div id="chartGap" class="chart-svg"></div>
+                </div>
+
+                <div class="chart-block">
+                    <div class="chart-head">
+                        <span class="chart-title">Detect (วินาที) — Sensor 1 จับงานอยู่นานเท่าไหร่</span>
+                        <span class="chart-legend">
+                            <span class="lg-item"><i class="lg-sw sw-ok"></i>OK</span>
+                            <span class="lg-item"><i class="lg-sw sw-alarm"></i>ALARM</span>
+                            <span class="lg-item"><i class="lg-dash lg-dash-med"></i>ค่ากลาง</span>
+                        </span>
+                    </div>
+                    <div id="chartDetect" class="chart-svg"></div>
+                </div>
+
+                <div class="chart-block">
+                    <div class="chart-head">
+                        <span class="chart-title">Timeline — ช่วงที่มีงานอยู่ที่ S1</span>
+                        <span class="chart-legend">
+                            <span class="lg-item"><i class="lg-sw sw-ok"></i>OK</span>
+                            <span class="lg-item"><i class="lg-sw sw-alarm"></i>ALARM</span>
+                            <span class="lg-item"><i class="lg-sw sw-idle"></i>ว่าง</span>
+                        </span>
+                    </div>
+                    <div id="chartTimeline" class="chart-svg"></div>
+                </div>
             </div>
         </div>
     </div>

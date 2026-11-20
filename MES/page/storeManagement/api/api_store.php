@@ -6,6 +6,21 @@ require_once __DIR__ . '/../../components/init.php';
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 
+/** Generates a collision-free child WIP serial tag <= varchar(50). */
+function generateUniqueWipChildSerial(PDO $pdo, string $parentSerial): string {
+    $checkStmt = $pdo->prepare("SELECT 1 FROM dbo.RM_SERIAL_TAGS WITH (UPDLOCK, HOLDLOCK) WHERE serial_no = ?");
+    for ($attempt = 0; $attempt < 20; $attempt++) {
+        $suffix = '-W' . random_int(100, 999);
+        $candidate = substr($parentSerial, 0, max(1, 50 - strlen($suffix))) . $suffix;
+        $checkStmt->execute([$candidate]);
+        if ($checkStmt->fetchColumn() === false) {
+            return $candidate;
+        }
+    }
+    $fallback = '-W' . strtoupper(bin2hex(random_bytes(2)));
+    return substr($parentSerial, 0, max(1, 50 - strlen($fallback))) . $fallback;
+}
+
 try {
     if (!isset($_SESSION['user'])) {
         http_response_code(401);
@@ -284,8 +299,8 @@ try {
                             $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'ISSUE_PARTIAL', ?, ?, ?, ?)")
                                 ->execute([$t['serial_no'], -$qty_to_deduct, $req_number, $issuer_id, "Transfer to WIP Partial"]);
                             
-                            // Clone tag to WIP
-                            $childSerial = $t['serial_no'] . '-W' . rand(100, 999);
+                            // Clone tag to WIP (collision-safe unique serial_no)
+                            $childSerial = generateUniqueWipChildSerial($pdo, (string)$t['serial_no']);
                             $pdo->prepare("
                                 INSERT INTO dbo.RM_SERIAL_TAGS (serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, location_id, created_at, created_by, received_date)
                                 VALUES (?, ?, ?, ?, ?, 'WIP', ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)

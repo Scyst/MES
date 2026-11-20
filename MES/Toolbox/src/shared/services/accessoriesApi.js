@@ -12,15 +12,17 @@ export const accessoriesApi = {
 
   getLogs: (params = {}) => apiGet(INSPECTION_API, { action: 'get_logs', ...params }),
 
+  getChartData: (params = {}) => apiGet(INSPECTION_API, { action: 'get_chart_data', ...params }),
+
   getStreamUrl: (bustTs = Date.now()) => `${PROXY_API}?p=/stream&t=${bustTs}`,
 
-  /** Returns ordered image candidate URLs from Toolbox API -> legacy uploads -> legacy img -> live cam node. */
+  /** Returns ordered image candidate URLs from Toolbox API -> live legacy img -> legacy uploads -> live cam node. */
   getImageCandidates: (filename) => {
     const encoded = encodeURIComponent(filename);
     return [
       `${INSPECTION_API}?action=get_image&file=${encoded}`,
-      `/iot-toolbox/sandbox-b9/MES/MES/uploads/accessories_inspection/${encoded}`,
       `/iot-toolbox/sandbox-b9/MES/MES/page/AccessoriesInspection/img/${encoded}`,
+      `/iot-toolbox/sandbox-b9/MES/MES/uploads/accessories_inspection/${encoded}`,
       `${PROXY_API}?p=/images/${encoded}`,
     ];
   },

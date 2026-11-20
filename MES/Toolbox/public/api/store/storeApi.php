@@ -75,10 +75,31 @@ require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../utils/check_auth.php';
 require_once __DIR__ . '/../../utils/logger.php';
 
+/** Emits 401/403 JSON without triggering handleApiError 500 logging. */
+function storeRejectJson(int $httpCode, string $message): void {
+    http_response_code($httpCode);
+    echo json_encode(['success' => false, 'data' => null, 'message' => $message], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** Generates a collision-free child WIP serial tag <= varchar(50). */
+function generateUniqueWipChildSerial(PDO $pdo, string $parentSerial): string {
+    $checkStmt = $pdo->prepare("SELECT 1 FROM dbo.RM_SERIAL_TAGS WITH (UPDLOCK, HOLDLOCK) WHERE serial_no = ?");
+    for ($attempt = 0; $attempt < 20; $attempt++) {
+        $suffix = '-W' . random_int(100, 999);
+        $candidate = substr($parentSerial, 0, max(1, 50 - strlen($suffix))) . $suffix;
+        $checkStmt->execute([$candidate]);
+        if ($checkStmt->fetchColumn() === false) {
+            return $candidate;
+        }
+    }
+    $fallback = '-W' . strtoupper(bin2hex(random_bytes(2)));
+    return substr($parentSerial, 0, max(1, 50 - strlen($fallback))) . $fallback;
+}
+
 try {
     if (!isset($_SESSION['user'])) {
-        http_response_code(401);
-        throw new Exception('Unauthorized Access');
+        storeRejectJson(401, 'Unauthorized Access');
     }
 
     $jsonPayload = [];
@@ -133,12 +154,10 @@ try {
     if (!in_array($action, $requisitionSelfServiceActions, true)) {
         if (in_array($action, $scrapQaActions, true)) {
             if (!$hasCentralStoreAccess && !$isQaOrProdLead) {
-                http_response_code(403);
-                throw new Exception('Forbidden: คุณไม่มีสิทธิ์เข้าถึงข้อมูลของเสียและทดแทน');
+                storeRejectJson(403, 'Forbidden: คุณไม่มีสิทธิ์เข้าถึงข้อมูลของเสียและทดแทน');
             }
         } elseif (!$hasCentralStoreAccess) {
-            http_response_code(403);
-            throw new Exception('Forbidden: เฉพาะเจ้าหน้าที่คลังสินค้าหรือผู้มีสิทธิ์เท่านั้นที่เข้าถึงระบบส่วนกลางได้');
+            storeRejectJson(403, 'Forbidden: เฉพาะเจ้าหน้าที่คลังสินค้าหรือผู้มีสิทธิ์เท่านั้นที่เข้าถึงระบบส่วนกลางได้');
         }
     }
     $writeActions = [
@@ -158,8 +177,7 @@ try {
         $clientToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? $jsonPayload['csrf_token'] ?? '';
         $sessionToken = $_SESSION['csrf_token'] ?? '';
         if (empty($clientToken) || empty($sessionToken) || !hash_equals($sessionToken, $clientToken)) {
-            http_response_code(403);
-            throw new Exception('CSRF Token Validation Failed. Please refresh the page.');
+            storeRejectJson(403, 'CSRF Token Validation Failed. Please refresh the page.');
         }
     }
 
@@ -405,8 +423,8 @@ try {
                             $pdo->prepare("INSERT INTO dbo.TAG_TRANSACTIONS (serial_no, transaction_type, quantity_changed, reference_id, created_by_user_id, notes) VALUES (?, 'ISSUE_PARTIAL', ?, ?, ?, ?)")
                                 ->execute([$t['serial_no'], -$qty_to_deduct, $req_number, $issuer_id, "Transfer to WIP Partial"]);
                             
-                            // Clone tag to WIP
-                            $childSerial = $t['serial_no'] . '-W' . rand(100, 999);
+                            // Clone tag to WIP (collision-safe unique serial_no)
+                            $childSerial = generateUniqueWipChildSerial($pdo, (string)$t['serial_no']);
                             $pdo->prepare("
                                 INSERT INTO dbo.RM_SERIAL_TAGS (serial_no, master_pallet_no, item_id, qty_per_pallet, current_qty, status, po_number, warehouse_no, pallet_no, ctn_number, week_no, remark, location_id, created_at, created_by, received_date)
                                 VALUES (?, ?, ?, ?, ?, 'WIP', ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)

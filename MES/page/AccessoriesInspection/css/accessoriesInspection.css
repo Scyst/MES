@@ -406,11 +406,13 @@
 }
 
 /* ── Column widths & alignment ───────────────────────────────────────────────*/
-.col-ts      { width: 38%; text-align: left; }
-.col-model   { width: 28%; text-align: left; }
-.col-result  { width: 14%; text-align: center; }
-.col-elapsed { width: 11%; text-align: right; }
-.col-img     { width: 9%;  text-align: center; }
+.col-ts      { width: 19%; text-align: left; }
+.col-diff    { width: 7%;  text-align: center; }
+.col-model   { width: 15%; text-align: left; }
+.col-result  { width: 8%;  text-align: center; }
+.col-elapsed { width: 8%;  text-align: right; }
+.col-cycle   { width: 9%;  text-align: right; }
+.col-img     { width: 7%;  text-align: center; }
 
 .log-table tbody td {
     padding: 5px 8px;
@@ -422,12 +424,36 @@
     white-space: nowrap;
 }
 .log-table tbody td.col-result { text-align: center; }
-.log-table tbody td.col-elapsed {
+.log-table tbody td.col-elapsed,
+.log-table tbody td.col-cycle {
     text-align: right;
     font-variant-numeric: tabular-nums;
     color: var(--bs-secondary-color);
     font-size: 0.8rem;
 }
+.log-table tbody td.col-diff { text-align: center; }
+
+/* เวลา: ชั่วโมง:นาที:วินาทีตัวหนา + วันที่ตัวเล็กจาง */
+.ts-time {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+.ts-date {
+    margin-left: 8px;
+    font-size: 0.72rem;
+    color: var(--bs-secondary-color);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Diff: ตัวอักษรปกติ เหมือน Elapsed — เกิน 5 นาทีเป็นสีส้ม */
+.diff-pill {
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+}
+.diff-pill.diff-long { color: #b86e00; font-weight: 600; }
+.diff-none { color: var(--bs-secondary-color); opacity: 0.6; }
 .log-table tbody td.col-img { text-align: center; }
 
 .log-table tbody tr:last-child td { border-bottom: none; }
@@ -660,11 +686,104 @@ tr.hour-band-3 td { background-color: rgba(255,193,7,0.04); }
     .scroll-hint  { display: none; }
     .status-grid  { grid-template-columns: 1fr 1fr 1fr; }
     .history-header { flex-direction: column; align-items: flex-start; }
-    .log-filters    { width: 100%; }
+    .log-filters    { width: 100%; flex-wrap: wrap; }
     .log-date-input { flex: 1; max-width: 100%; }
     .log-container  { max-height: none; }
     .log-table      { table-layout: auto; }
+    .ts-date        { display: none; }
     .col-model      { display: none; }
     .log-table thead th.col-model,
     .log-table tbody td.col-model { display: none; }
 }
+
+
+/* ── Chart modal (ปุ่ม "กราฟ" ในประวัติการตรวจสอบ) ───────────────────────────*/
+.chart-open-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--bs-primary);
+    background: rgba(13,110,253,0.08);
+    border: 1px solid rgba(13,110,253,0.3);
+    border-radius: 9px;
+    transition: background .15s ease, color .15s ease,
+                border-color .15s ease, transform .1s ease, box-shadow .15s ease;
+}
+.chart-open-btn:hover {
+    color: #fff;
+    background: var(--bs-primary);
+    border-color: var(--bs-primary);
+    box-shadow: 0 2px 8px rgba(13,110,253,0.3);
+}
+.chart-open-btn:active { transform: scale(0.92); }
+.chart-open-btn .chart-icon { display: block; }
+.chart-open-btn:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+.chart-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.cs-tile {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+}
+.cs-label { font-size: 0.72rem; color: var(--bs-secondary-color); }
+.cs-val   { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums;
+            color: var(--bs-body-color); }
+.cs-ok    { border-left: 4px solid #0d9e74; }
+.cs-alarm { border-left: 4px solid #c0392b; }
+.cs-warn  { border-left: 4px solid #e0a100; }
+
+.chart-block { margin-bottom: 16px; }
+.chart-head {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 6px; margin-bottom: 4px;
+}
+.chart-title  { font-size: 0.85rem; font-weight: 600; color: var(--bs-body-color); }
+.chart-legend { display: flex; gap: 12px; font-size: 0.75rem; color: var(--bs-secondary-color); }
+.lg-item { display: inline-flex; align-items: center; gap: 5px; }
+.lg-sw   { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.sw-ok    { background: #20b486; }
+.sw-alarm { background: #d9534f; }
+.sw-idle  { background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); }
+.lg-dash  { display: inline-block; width: 16px; border-top: 2px dashed #e0a100; }
+.chart-svg   { width: 100%; }
+.chart-svg svg { display: block; overflow: visible; }
+.chart-empty {
+    padding: 28px 10px; text-align: center;
+    font-size: 0.85rem; color: var(--bs-secondary-color);
+    border: 1px dashed var(--bs-border-color); border-radius: 8px;
+}
+
+/* SVG marks — สีข้อความใช้ token ของธีม (รองรับ dark mode) */
+.chart-svg .c-grid  { stroke: var(--bs-border-color); stroke-width: 1; opacity: 0.6; }
+.chart-svg .c-axis  { stroke: var(--bs-secondary-color); stroke-width: 1; }
+.chart-svg .c-tick  { fill: var(--bs-secondary-color); font-size: 11px; }
+.chart-svg .c-val   { fill: var(--bs-body-color); font-size: 10px; font-weight: 600; }
+.chart-svg .c-limit { stroke: #e0a100; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart-svg .m-ok    { fill: #20b486; }
+.chart-svg .m-alarm { fill: #d9534f; }
+.chart-svg .m-idle  { fill: var(--bs-tertiary-bg); stroke: var(--bs-border-color); }
+.chart-svg .m-line  { fill: none; stroke: var(--bs-primary); stroke-width: 1.5; opacity: 0.45; }
+.chart-svg .m-dot   { fill: var(--bs-primary); stroke: var(--bs-body-bg); stroke-width: 1.5; }
+.chart-svg .m-dot-warn { fill: #e0a100; stroke: var(--bs-body-bg); stroke-width: 1.5; }
+.chart-svg .m-dot-ok    { fill: #20b486; stroke: var(--bs-body-bg); stroke-width: 1.5; }
+.chart-svg .m-dot-alarm { fill: #d9534f; stroke: var(--bs-body-bg); stroke-width: 1.5; }
+.chart-svg .c-median    { stroke: var(--bs-secondary-color); stroke-width: 1.5; stroke-dasharray: 2 4; }
+.lg-dash-med { border-top-color: var(--bs-secondary-color); border-top-style: dotted; }
+.chart-svg .c-hit:hover .m-dot-ok,
+.chart-svg .c-hit:hover .m-dot-alarm { filter: brightness(1.15); stroke: var(--bs-body-color); }
+.chart-svg .c-hit:hover .m-ok,
+.chart-svg .c-hit:hover .m-alarm,
+.chart-svg .c-hit:hover .m-dot,
+.chart-svg .c-hit:hover .m-dot-warn { filter: brightness(1.15); stroke: var(--bs-body-color); stroke-width: 1.5; }

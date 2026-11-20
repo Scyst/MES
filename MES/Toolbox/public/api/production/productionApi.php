@@ -96,6 +96,11 @@ try {
         default:
             prodJsonError("ไม่พบ Action '{$action}' ในระบบ Production API", 400);
     }
+} catch (InvalidArgumentException $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    prodJsonError($e->getMessage(), 400);
 } catch (Throwable $e) {
     handleApiError($e, $pdo ?? null, $input ?? $_REQUEST);
 }

@@ -115,9 +115,14 @@ function parseDateOrDefault(?string $dateStr, string $fallback = ''): string {
     if ($trimmed === '') {
         return $fallback !== '' ? $fallback : date('Y-m-d');
     }
-    $dt = DateTime::createFromFormat('Y-m-d', $trimmed);
-    if (!$dt || $dt->format('Y-m-d') !== $trimmed) {
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $trimmed, $m)) {
         throw new InvalidArgumentException('รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)');
+    }
+    $y = (int)$m[1];
+    $mo = (int)$m[2];
+    $d = (int)$m[3];
+    if ($y < 1753 || $y > 9999 || !checkdate($mo, $d, $y)) {
+        throw new InvalidArgumentException('วันที่ไม่ถูกต้องหรืออยู่นอกช่วงปีที่ระบบรองรับ (1753-9999)');
     }
     return $trimmed;
 }

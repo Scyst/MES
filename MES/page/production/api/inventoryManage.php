@@ -172,12 +172,24 @@ try {
                 $params[] = 'PRODUCTION_' . $_GET['count_type'];
             }
             if (!empty($_GET['startDate'])) {
+                $sd = trim((string)$_GET['startDate']);
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้น (startDate) ไม่ถูกต้อง']);
+                    exit;
+                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $_GET['startDate'];
+                $params[] = $sd;
             }
             if (!empty($_GET['endDate'])) {
+                $ed = trim((string)$_GET['endDate']);
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุด (endDate) ไม่ถูกต้อง']);
+                    exit;
+                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $_GET['endDate'];
+                $params[] = $ed;
             }
 
             if (!empty($_GET['line'])) {
@@ -1361,12 +1373,24 @@ try {
             }
 
             if (!empty($_GET['startDate'])) {
+                $sd = trim((string)$_GET['startDate']);
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้น (startDate) ไม่ถูกต้อง']);
+                    exit;
+                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $_GET['startDate'];
+                $params[] = $sd;
             }
             if (!empty($_GET['endDate'])) {
+                $ed = trim((string)$_GET['endDate']);
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุด (endDate) ไม่ถูกต้อง']);
+                    exit;
+                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $_GET['endDate'];
+                $params[] = $ed;
             }
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 // Do nothing, can see all
@@ -1443,12 +1467,24 @@ try {
             }
 
             if (!empty($_GET['startDate'])) {
+                $sd = trim((string)$_GET['startDate']);
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้น (startDate) ไม่ถูกต้อง']);
+                    exit;
+                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $_GET['startDate'];
+                $params[] = $sd;
             }
             if (!empty($_GET['endDate'])) {
+                $ed = trim((string)$_GET['endDate']);
+                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุด (endDate) ไม่ถูกต้อง']);
+                    exit;
+                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $_GET['endDate'];
+                $params[] = $ed;
             }
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 // Do nothing, can see all

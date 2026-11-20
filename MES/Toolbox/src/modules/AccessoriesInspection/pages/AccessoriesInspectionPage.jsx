@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  BarChart3,
   Camera,
   CheckCircle2,
   Clock,
@@ -11,9 +12,16 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { accessoriesApi } from '../../../shared/services/accessoriesApi';
+import AccessoriesChartModal from '../components/AccessoriesChartModal';
 import CameraStationPanel from '../components/CameraStationPanel';
 import InspectionImageModal from '../components/InspectionImageModal';
-import { formatInspectionTime, getProductionDateStr } from '../utils/accessoriesHelpers';
+import {
+  GAP_LIMIT_SEC,
+  computeRowCycleMetrics,
+  formatClockOnly,
+  formatDiffDuration,
+  getProductionDateStr,
+} from '../utils/accessoriesHelpers';
 
 /**
  * Self-contained Accessories Inspection (AI Vision) SPA page.
@@ -42,6 +50,11 @@ export default function AccessoriesInspectionPage() {
   const [summary, setSummary] = useState({ total: 0, ok: 0, alarm: 0, avg_elapsed_s: 0 });
   const [hourly, setHourly] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 200, total_rows: 0, total_pages: 1 });
+  const [rangeWindow, setRangeWindow] = useState({ start: '', end: '' });
+  const [newerS1In, setNewerS1In] = useState(null);
+  const [chartOpen, setChartOpen] = useState(false);
+  const [chartRows, setChartRows] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [notice, setNotice] = useState(null);
   const [previewImage, setPreviewImage] = useState('');
@@ -144,6 +157,8 @@ export default function AccessoriesInspectionPage() {
       setSummary(payload.summary || { total: 0, ok: 0, alarm: 0, avg_elapsed_s: 0 });
       setHourly(Array.isArray(payload.hourly) ? payload.hourly : []);
       setPagination(payload.pagination || { page: 1, limit: 200, total_rows: 0, total_pages: 1 });
+      setRangeWindow({ start: payload.range_start || '', end: payload.range_end || '' });
+      setNewerS1In(payload.newer_s1_in || null);
     } catch (err) {
       if (!silent) setNotice({ type: 'error', message: err?.message || 'ไม่สามารถดึงประวัติการตรวจสอบได้' });
     } finally {
@@ -151,9 +166,47 @@ export default function AccessoriesInspectionPage() {
     }
   }, [dateFilter, shiftFilter, resultFilter, debouncedSearch, page]);
 
+  const loadChartDataset = useCallback(async () => {
+    setChartLoading(true);
+    try {
+      const res = await accessoriesApi.getChartData({
+        date: dateFilter,
+        shift: shiftFilter,
+        result: resultFilter,
+        search: debouncedSearch,
+      });
+      const payload = res.data || {};
+      setChartRows(Array.isArray(payload.rows) ? payload.rows : []);
+      if (payload.range_start && payload.range_end) {
+        setRangeWindow({ start: payload.range_start, end: payload.range_end });
+      }
+    } catch (err) {
+      setNotice({ type: 'error', message: err?.message || 'ไม่สามารถโหลดข้อมูลกราฟได้' });
+    } finally {
+      setChartLoading(false);
+    }
+  }, [dateFilter, shiftFilter, resultFilter, debouncedSearch]);
+
   useEffect(() => {
     loadLogs(false);
   }, [loadLogs]);
+
+  useEffect(() => {
+    if (!isOnline) return undefined;
+    const timer = setInterval(() => {
+      if (page === 1) loadLogs(true);
+      if (chartOpen) loadChartDataset();
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [isOnline, page, chartOpen, loadLogs, loadChartDataset]);
+
+  useEffect(() => {
+    if (chartOpen) {
+      loadChartDataset();
+    }
+  }, [chartOpen, loadChartDataset]);
+
+  const rowMetrics = useMemo(() => computeRowCycleMetrics(logs, newerS1In), [logs, newerS1In]);
 
   const hourlyMap = useMemo(() => {
     const map = {};
@@ -215,7 +268,7 @@ export default function AccessoriesInspectionPage() {
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-3">
       {!isOnline && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 px-4 py-2.5 flex items-center gap-2 text-sm text-amber-800 font-medium">
           <WifiOff size={18} />
@@ -324,6 +377,15 @@ export default function AccessoriesInspectionPage() {
             />
             <button
               type="button"
+              onClick={() => setChartOpen(true)}
+              className="min-h-[44px] px-3 flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 text-xs font-bold transition-colors"
+              title="ดูกราฟ Cycle & S1 Analytics"
+            >
+              <BarChart3 size={16} />
+              <span>กราฟ</span>
+            </button>
+            <button
+              type="button"
               onClick={() => loadLogs(false)}
               className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
               title="รีเฟรชประวัติ"
@@ -364,23 +426,28 @@ export default function AccessoriesInspectionPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 dark:bg-gray-900/70 text-xs font-bold uppercase text-gray-500 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th className="px-4 py-3">เวลา</th>
-                <th className="px-4 py-3">รุ่นสินค้า (Model)</th>
-                <th className="px-4 py-3">ผลตรวจ</th>
-                <th className="px-4 py-3 text-right">เวลาที่ใช้</th>
-                <th className="px-4 py-3 text-center">รูปภาพ</th>
+                <th className="px-3 py-2.5">เวลา</th>
+                <th className="px-2.5 py-2.5 text-center" title="เวลาห่างจากชิ้นก่อนหน้าในชั่วโมงเดียวกัน">Diff</th>
+                <th className="px-3 py-2.5 hidden sm:table-cell">รุ่นสินค้า (Model)</th>
+                <th className="px-2.5 py-2.5 text-center">ผลตรวจ</th>
+                <th className="px-2.5 py-2.5 text-right">Elapsed</th>
+                <th className="px-2.5 py-2.5 text-right" title="เวลาที่งานมาถึง Sensor 1">S1 เข้า</th>
+                <th className="px-2.5 py-2.5 text-right" title="เวลาที่งานพ้น Sensor 1">S1 ออก</th>
+                <th className="px-2.5 py-2.5 text-right" title="ระยะเวลาที่ Sensor 1 จับงานอยู่">Detect</th>
+                <th className="px-2.5 py-2.5 text-right" title="เวลาว่างระหว่างงาน S1 ออก → ชิ้นถัดไปเข้า">Idle</th>
+                <th className="px-3 py-2.5 text-center">รูปภาพ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {loadingLogs && logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
                     กำลังโหลดประวัติผลการตรวจ...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
                     ไม่มีรายการตรวจสอบในช่วงเวลาที่เลือก
                   </td>
                 </tr>
@@ -393,12 +460,14 @@ export default function AccessoriesInspectionPage() {
                   const hh = hourKey.slice(11, 13);
                   const nextHh = String((Number(hh || 0) + 1) % 24).padStart(2, '0');
                   const isOk = row.result === 'ok';
+                  const metrics = rowMetrics[idx] || { diffSec: null, detectSec: null, idleSec: null };
+                  const ts = row.timestamp || '';
 
                   return (
                     <React.Fragment key={row.id || `${row.timestamp}_${idx}`}>
                       {showDivider && (
                         <tr className="bg-slate-100 dark:bg-slate-900/70">
-                          <td colSpan={5} className="px-4 py-2">
+                          <td colSpan={10} className="px-4 py-2">
                             <div className="flex items-center justify-between text-xs font-bold">
                               <span className="text-slate-700 dark:text-slate-200">
                                 ช่วงเวลา {hh}.00 - {nextHh}.00 น.
@@ -418,25 +487,55 @@ export default function AccessoriesInspectionPage() {
                         </tr>
                       )}
                       <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
-                        <td className="px-4 py-2.5 font-mono text-xs whitespace-nowrap">
-                          {formatInspectionTime(row.timestamp)}
+                        <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
+                          {ts.length >= 19 ? (
+                            <>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">{ts.slice(11, 19)}</span>
+                              <span className="hidden sm:inline ml-2 text-[11px] text-gray-400">
+                                {`${ts.slice(8, 10)}/${ts.slice(5, 7)}/${ts.slice(0, 4)}`}
+                              </span>
+                            </>
+                          ) : '-'}
                         </td>
-                        <td className="px-4 py-2.5 font-semibold text-gray-800 dark:text-gray-200">
+                        <td className="px-2.5 py-2 text-center font-mono text-xs tabular-nums">
+                          {metrics.diffSec !== null ? (
+                            <span className={metrics.diffSec >= GAP_LIMIT_SEC ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-500'}>
+                              {formatDiffDuration(metrics.diffSec)}
+                            </span>
+                          ) : <span className="text-gray-400">–</span>}
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-200 hidden sm:table-cell whitespace-nowrap">
                           {row.model || '-'}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-2.5 py-2 text-center">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                               isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                             }`}
                           >
                             {isOk ? 'OK' : 'ALARM'}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs">
+                        <td className="px-2.5 py-2 text-right font-mono text-xs tabular-nums text-gray-600 dark:text-gray-300">
                           {Number(row.elapsed_s || 0).toFixed(2)}s
                         </td>
-                        <td className="px-4 py-2.5 text-center">
+                        <td className="px-2.5 py-2 text-right font-mono text-xs tabular-nums text-gray-500" title={row.s1_in || ''}>
+                          {formatClockOnly(row.s1_in) || <span className="text-gray-400">–</span>}
+                        </td>
+                        <td className="px-2.5 py-2 text-right font-mono text-xs tabular-nums text-gray-500" title={row.s1_out || ''}>
+                          {formatClockOnly(row.s1_out) || <span className="text-gray-400">–</span>}
+                        </td>
+                        <td className="px-2.5 py-2 text-right font-mono text-xs tabular-nums text-gray-600 dark:text-gray-300">
+                          {metrics.detectSec !== null ? `${metrics.detectSec.toFixed(1)}s` : <span className="text-gray-400">–</span>}
+                        </td>
+                        <td className="px-2.5 py-2 text-right font-mono text-xs tabular-nums">
+                          {metrics.idleSec !== null ? (
+                            <span className={metrics.idleSec >= GAP_LIMIT_SEC ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-500'}>
+                              {metrics.idleSec.toFixed(1)}s
+                            </span>
+                          ) : <span className="text-gray-400">–</span>}
+                        </td>
+                        <td className="px-3 py-2 text-center">
                           {row.image ? (
                             <button
                               type="button"
@@ -486,6 +585,16 @@ export default function AccessoriesInspectionPage() {
       </div>
 
       <InspectionImageModal imageName={previewImage} onClose={() => setPreviewImage('')} />
+
+      <AccessoriesChartModal
+        isOpen={chartOpen}
+        onClose={() => setChartOpen(false)}
+        rows={chartRows.length > 0 || chartLoading ? chartRows : logs}
+        rangeStart={rangeWindow.start}
+        rangeEnd={rangeWindow.end}
+        shift={shiftFilter}
+        loading={chartLoading}
+      />
     </div>
   );
 }

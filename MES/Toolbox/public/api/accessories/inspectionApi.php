@@ -13,10 +13,99 @@ require_once __DIR__ . '/_common.php';
 $action = '';
 $input = [];
 
+/** Validates strict SQL-safe YYYY-MM-DD date within 1753..9999, or returns false. */
+function isValidAccessoriesDate(string $date): bool {
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m)) {
+        return false;
+    }
+    $y = (int)$m[1];
+    $mo = (int)$m[2];
+    $d = (int)$m[3];
+    return $y >= 1753 && $y <= 9999 && checkdate($mo, $d, $y);
+}
+
 /** Computes MES production date boundary (before 08:00 counts toward yesterday). */
 function resolveAccessoriesProdDate(): string {
     $hour = (int)date('G');
     return ($hour < 8) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d');
+}
+
+/** Resolves shift window and shared SQL WHERE clause + bound parameters. */
+function resolveAccessoriesQueryWindow(array $input): array {
+    $rawDate = trim((string)($input['date'] ?? ''));
+    $date = ($rawDate !== '' && isValidAccessoriesDate($rawDate))
+        ? $rawDate
+        : resolveAccessoriesProdDate();
+
+    $shift = strtolower(trim((string)($input['shift'] ?? 'all')));
+    if (!in_array($shift, ['all', 'day', 'night'], true)) {
+        $shift = 'all';
+    }
+    $resultFilter = strtolower(trim((string)($input['result'] ?? 'all')));
+    $search = trim((string)($input['search'] ?? ''));
+
+    $nextDate = date('Y-m-d', strtotime($date . ' +1 day'));
+    if ($shift === 'day') {
+        $rangeStart = "{$date} 08:00:00";
+        $rangeEnd = "{$date} 20:00:00";
+    } elseif ($shift === 'night') {
+        $rangeStart = "{$date} 20:00:00";
+        $rangeEnd = "{$nextDate} 08:00:00";
+    } else {
+        $rangeStart = "{$date} 08:00:00";
+        $rangeEnd = "{$nextDate} 08:00:00";
+    }
+
+    $where = ["TIME_STAMP >= ? AND TIME_STAMP < ?"];
+    $params = [$rangeStart, $rangeEnd];
+
+    if ($resultFilter === 'ok') {
+        $where[] = "LOWER(RESULT) = 'ok'";
+    } elseif ($resultFilter === 'alarm') {
+        $where[] = "LOWER(RESULT) <> 'ok'";
+    }
+    if ($search !== '') {
+        $where[] = "(MODEL LIKE ? OR IMAGE LIKE ?)";
+        $kw = "%{$search}%";
+        $params[] = $kw;
+        $params[] = $kw;
+    }
+
+    return [
+        'date' => $date,
+        'shift' => $shift,
+        'range_start' => $rangeStart,
+        'range_end' => $rangeEnd,
+        'where_sql' => implode(' AND ', $where),
+        'params' => $params,
+    ];
+}
+
+/** Executes paginated or bounded inspection query with graceful fallback when S1 columns are absent. */
+function queryInspectionRowsWithS1(PDO $pdo, string $colsWithS1, string $colsBase, string $whereSql, array $params, ?int $offset = null, ?int $limit = null, string $prefixTop = ''): array {
+    $run = static function (string $cols) use ($pdo, $whereSql, $params, $offset, $limit, $prefixTop): array {
+        $sql = "SELECT {$prefixTop} {$cols} FROM dbo.ACCESSORIES_INSPECTION_LOG WITH (NOLOCK) WHERE {$whereSql} ORDER BY ID DESC";
+        if ($offset !== null && $limit !== null) {
+            $sql .= " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        }
+        $stmt = $pdo->prepare($sql);
+        $idx = 1;
+        foreach ($params as $val) {
+            $stmt->bindValue($idx++, $val, PDO::PARAM_STR);
+        }
+        if ($offset !== null && $limit !== null) {
+            $stmt->bindValue($idx++, $offset, PDO::PARAM_INT);
+            $stmt->bindValue($idx++, $limit, PDO::PARAM_INT);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    };
+
+    try {
+        return [$run($colsWithS1), true];
+    } catch (PDOException $e) {
+        return [$run($colsBase), false];
+    }
 }
 
 try {
@@ -33,45 +122,13 @@ try {
         }
 
         case 'get_logs': {
-            $rawDate = trim((string)($input['date'] ?? ''));
-            $date = ($rawDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate))
-                ? $rawDate
-                : resolveAccessoriesProdDate();
-
-            $shift = strtolower(trim((string)($input['shift'] ?? 'all')));
-            $resultFilter = strtolower(trim((string)($input['result'] ?? 'all')));
-            $search = trim((string)($input['search'] ?? ''));
+            $win = resolveAccessoriesQueryWindow($input);
             $page = max(1, (int)($input['page'] ?? 1));
             $limit = max(20, min(500, (int)($input['limit'] ?? 200)));
             $offset = ($page - 1) * $limit;
 
-            $nextDate = date('Y-m-d', strtotime($date . ' +1 day'));
-            if ($shift === 'day') {
-                $rangeStart = "{$date} 08:00:00";
-                $rangeEnd = "{$date} 20:00:00";
-            } elseif ($shift === 'night') {
-                $rangeStart = "{$date} 20:00:00";
-                $rangeEnd = "{$nextDate} 08:00:00";
-            } else {
-                $rangeStart = "{$date} 08:00:00";
-                $rangeEnd = "{$nextDate} 08:00:00";
-            }
-
-            $where = ["TIME_STAMP >= ? AND TIME_STAMP < ?"];
-            $params = [$rangeStart, $rangeEnd];
-
-            if ($resultFilter === 'ok') {
-                $where[] = "LOWER(RESULT) = 'ok'";
-            } elseif ($resultFilter === 'alarm') {
-                $where[] = "LOWER(RESULT) <> 'ok'";
-            }
-            if ($search !== '') {
-                $where[] = "(MODEL LIKE ? OR IMAGE LIKE ?)";
-                $kw = "%{$search}%";
-                $params[] = $kw;
-                $params[] = $kw;
-            }
-            $whereSql = implode(' AND ', $where);
+            $whereSql = $win['where_sql'];
+            $params = $win['params'];
 
             $sumStmt = $pdo->prepare("
                 SELECT COUNT(*) AS total_count,
@@ -98,33 +155,42 @@ try {
             $hourlyStmt->execute($params);
             $hourlyRows = $hourlyStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            $sql = "
-                SELECT ID AS id,
+            $baseCols = "ID AS id,
                        MODEL AS model,
                        CONVERT(VARCHAR(19), TIME_STAMP, 120) AS timestamp,
                        LOWER(ISNULL(RESULT, '')) AS result,
                        CAST(ISNULL(ELAPSED_S, 0) AS FLOAT) AS elapsed_s,
-                       ISNULL(IMAGE, '') AS image
-                FROM dbo.ACCESSORIES_INSPECTION_LOG WITH (NOLOCK)
-                WHERE {$whereSql}
-                ORDER BY ID DESC
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            ";
-            $stmt = $pdo->prepare($sql);
-            $idx = 1;
-            foreach ($params as $val) {
-                $stmt->bindValue($idx++, $val, PDO::PARAM_STR);
+                       ISNULL(IMAGE, '') AS image";
+            $s1Cols = $baseCols . ",
+                       CONVERT(VARCHAR(23), S1_IN_TIME, 121) AS s1_in,
+                       CONVERT(VARCHAR(23), S1_OUT_TIME, 121) AS s1_out";
+
+            [$rows, $s1Available] = queryInspectionRowsWithS1($pdo, $s1Cols, $baseCols, $whereSql, $params, $offset, $limit);
+
+            // When browsing Page 2+, fetch the immediate newer row's s1_in so row 0 Idle computes seamlessly
+            $newerS1In = null;
+            if ($offset > 0 && $s1Available) {
+                [$peekRows] = queryInspectionRowsWithS1(
+                    $pdo,
+                    "CONVERT(VARCHAR(23), S1_IN_TIME, 121) AS s1_in",
+                    "NULL AS s1_in",
+                    $whereSql,
+                    $params,
+                    $offset - 1,
+                    1
+                );
+                $newerS1In = $peekRows[0]['s1_in'] ?? null;
             }
-            $stmt->bindValue($idx++, $offset, PDO::PARAM_INT);
-            $stmt->bindValue($idx++, $limit, PDO::PARAM_INT);
-            $stmt->execute();
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $totalCount = (int)($summaryRow['total_count'] ?? 0);
 
             accessoriesJsonSuccess([
-                'date' => $date,
-                'shift' => $shift,
+                'date' => $win['date'],
+                'shift' => $win['shift'],
+                'range_start' => $win['range_start'],
+                'range_end' => $win['range_end'],
+                's1_available' => $s1Available,
+                'newer_s1_in' => $newerS1In,
                 'summary' => [
                     'total' => $totalCount,
                     'ok' => (int)($summaryRow['ok_count'] ?? 0),
@@ -151,6 +217,37 @@ try {
             break;
         }
 
+        case 'get_chart_data': {
+            $win = resolveAccessoriesQueryWindow($input);
+            $baseCols = "MODEL AS model,
+                       CONVERT(VARCHAR(19), TIME_STAMP, 120) AS timestamp,
+                       LOWER(ISNULL(RESULT, '')) AS result";
+            $s1Cols = $baseCols . ",
+                       CONVERT(VARCHAR(23), S1_IN_TIME, 121) AS s1_in,
+                       CONVERT(VARCHAR(23), S1_OUT_TIME, 121) AS s1_out";
+
+            [$rows, $s1Available] = queryInspectionRowsWithS1(
+                $pdo,
+                $s1Cols,
+                $baseCols,
+                $win['where_sql'],
+                $win['params'],
+                null,
+                null,
+                'TOP 3000'
+            );
+
+            accessoriesJsonSuccess([
+                'date' => $win['date'],
+                'shift' => $win['shift'],
+                'range_start' => $win['range_start'],
+                'range_end' => $win['range_end'],
+                's1_available' => $s1Available,
+                'rows' => $rows,
+            ], 'Chart analytics loaded');
+            break;
+        }
+
         case 'get_image': {
             $file = basename((string)($input['file'] ?? ''));
             if (!preg_match('/^[A-Za-z0-9._-]+\.(jpg|jpeg|png)$/i', $file)) {
@@ -158,10 +255,10 @@ try {
             }
 
             $candidates = [
+                __DIR__ . '/../../../MES/MES/page/AccessoriesInspection/img/' . $file,
                 __DIR__ . '/../../uploads/accessories_inspection/' . $file,
                 __DIR__ . '/../../../MES/MES/uploads/accessories_inspection/' . $file,
                 __DIR__ . '/../../../page/AccessoriesInspection/img/' . $file,
-                __DIR__ . '/../../../MES/MES/page/AccessoriesInspection/img/' . $file,
             ];
 
             foreach ($candidates as $localPath) {
