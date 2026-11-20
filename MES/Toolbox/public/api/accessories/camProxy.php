@@ -8,6 +8,42 @@ ob_start();
 define('ACCESSORIES_SKIP_JSON_HEADER', true);
 require_once __DIR__ . '/_common.php';
 
+/** Translates Python camera node or cURL failure strings into actionable Thai messages. */
+function translateCameraUpstreamError(string $rawCodeOrMsg, int $curlErrno = 0): string {
+    $trimmed = trim($rawCodeOrMsg);
+    $key = strtolower($trimmed);
+
+    $reasonMap = [
+        'camera_not_connected' => 'กล้องไม่ได้เชื่อมต่อ — กรุณาตรวจสอบสาย LAN และโปรแกรม main.py',
+        'model_not_loaded' => 'ยังไม่ได้โหลด Model — กรุณาเลือก Model แล้วกดปุ่มโหลด Model ก่อนสั่งเริ่มงาน',
+        'product_not_selected' => 'ยังไม่ได้เลือกรุ่นงาน (Product) — กรุณาเลือกรุ่นงานก่อนกด START',
+        'already_armed' => 'ระบบกำลังทำงานตรวจจับอยู่แล้ว',
+        'already_running' => 'ระบบกำลังทำงานตรวจจับอยู่แล้ว',
+        'capture_failed' => 'ไม่สามารถบันทึกภาพได้ เนื่องจากยังไม่ได้รับภาพจากกล้อง',
+        'no_frame' => 'ยังไม่ได้รับภาพจากกล้อง กรุณาตรวจสอบสัญญาณภาพ',
+        'model_not_found' => 'ไม่พบไฟล์ Model ที่เลือกบนเครื่อง AI Vision',
+        'read_only' => 'สิทธิ์ของคุณดูได้อย่างเดียว ไม่สามารถสั่งงานเครื่องกล้องได้',
+        'forbidden path' => 'ไม่อนุญาตให้เข้าถึงเส้นทางปลายทางนี้',
+    ];
+    if (isset($reasonMap[$key])) {
+        return $reasonMap[$key];
+    }
+
+    if ($curlErrno === 28 || preg_match('/timed?\s*out/i', $trimmed)) {
+        return 'เครื่อง AI Vision หน้าไลน์ตอบสนองช้าเกินกำหนด — กรุณาตรวจสอบสถานะเครื่องหรือการเชื่อมต่อเครือข่าย';
+    }
+    if (in_array($curlErrno, [6, 7], true) || preg_match('/could not resolve|failed to connect|connection refused/i', $trimmed)) {
+        return 'ไม่สามารถเชื่อมต่อเครื่อง AI Vision หน้าไลน์ได้ — กรุณาตรวจสอบสาย LAN และตรวจว่าโปรแกรม main.py กำลังทำงานอยู่';
+    }
+    if ($trimmed !== '' && preg_match('/[\x{0E00}-\x{0E7F}]/u', $trimmed)) {
+        return $trimmed;
+    }
+    if ($curlErrno !== 0) {
+        return 'ไม่สามารถติดต่อเครื่อง AI Vision หน้าไลน์ได้ กรุณาตรวจสอบสาย LAN และโปรแกรม main.py แล้วลองใหม่';
+    }
+    return 'ไม่สามารถสั่งงานเครื่องกล้องได้ กรุณาตรวจสอบสถานะเครื่อง AI Vision และลองใหม่อีกครั้ง';
+}
+
 try {
     $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
     $path = '/' . ltrim((string)($_GET['p'] ?? '/api/status'), '/');
@@ -150,7 +186,13 @@ try {
     }
 
     if ($resp === false || $resp === '') {
-        accessoriesJsonError('ไม่สามารถเชื่อมต่อเครื่อง AI Vision หน้าไลน์ได้ (' . ($err !== '' ? $err : 'connection failed') . ')', 502, [
+        writeErrorLog(
+            $pdo ?? null,
+            'ACCESSORIES_PROXY',
+            "cURL({$errno}): " . ($err !== '' ? $err : 'empty response'),
+            ['path' => $pathOnly]
+        );
+        accessoriesJsonError(translateCameraUpstreamError($err, $errno), 502, [
             'configured' => true,
             'online' => false,
             'errno' => $errno,
@@ -159,20 +201,26 @@ try {
 
     $decoded = json_decode($resp, true);
     if (is_array($decoded)) {
+        $isOk = (bool)($decoded['ok'] ?? $decoded['success'] ?? ($code >= 200 && $code < 300));
+        $rawMsg = (string)($decoded['message'] ?? $decoded['error'] ?? ($decoded['reason'] ?? ''));
+        $friendlyMsg = $isOk
+            ? ($rawMsg !== '' ? $rawMsg : 'OK')
+            : translateCameraUpstreamError($rawMsg);
+        if (!$isOk && empty($decoded['message'])) {
+            $decoded['message'] = $friendlyMsg;
+        }
         http_response_code($code ?: 200);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
-            'success' => (bool)($decoded['ok'] ?? $decoded['success'] ?? ($code >= 200 && $code < 300)),
+            'success' => $isOk,
             'data' => $decoded,
-            'message' => $decoded['message'] ?? $decoded['error'] ?? ($decoded['reason'] ?? 'OK'),
+            'message' => $friendlyMsg,
         ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     }
 
-    http_response_code($code ?: 502);
-    header('Content-Type: application/json; charset=utf-8');
-    echo $resp;
-    exit;
+    writeErrorLog($pdo ?? null, 'ACCESSORIES_PROXY', "Non-JSON upstream reply (HTTP {$code}): " . substr(trim($resp), 0, 200), ['path' => $pathOnly]);
+    accessoriesJsonError('เครื่อง AI Vision ส่งข้อมูลผิดรูปแบบหรือไม่พร้อมใช้งานชั่วคราว', ($code >= 400 ? $code : 502));
 } catch (Throwable $e) {
     if (ob_get_level()) {
         ob_end_clean();

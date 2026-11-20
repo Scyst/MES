@@ -18,6 +18,7 @@ import InspectionImageModal from '../components/InspectionImageModal';
 import {
   GAP_LIMIT_SEC,
   computeRowCycleMetrics,
+  formatCameraErrorMessage,
   formatClockOnly,
   formatDiffDuration,
   getProductionDateStr,
@@ -216,17 +217,20 @@ export default function AccessoriesInspectionPage() {
     return map;
   }, [hourly]);
 
-  const getCamErrorMessage = (err, fallback) =>
-    err?.response?.data?.message || err?.message || fallback;
-
   const handleApplySettings = async (patch) => {
     if (!camConfigured || !isOnline) return;
     try {
-      await accessoriesApi.updateSettings(patch);
+      const res = await accessoriesApi.updateSettings(patch);
+      if (res && res.ok === false) {
+        setNotice({
+          type: 'error',
+          message: formatCameraErrorMessage(res, 'ไม่สามารถบันทึกการตั้งค่าไปยังเครื่องกล้องได้'),
+        });
+      }
     } catch (err) {
       setNotice({
         type: 'error',
-        message: getCamErrorMessage(err, 'ไม่สามารถส่งคำสั่งตั้งค่าไปยังเครื่องกล้องได้ (ตรวจสอบการเชื่อมต่อ AI Vision)'),
+        message: formatCameraErrorMessage(err, 'ไม่สามารถส่งคำสั่งตั้งค่าไปยังเครื่องกล้องได้ (ตรวจสอบการเชื่อมต่อ AI Vision)'),
       });
     }
   };
@@ -235,10 +239,18 @@ export default function AccessoriesInspectionPage() {
     if (!selectedModel || !camConfigured || !isOnline) return;
     setModelLoadingMsg(`กำลังโหลด Model ${selectedModel}...`);
     try {
-      await accessoriesApi.loadModel(selectedModel);
+      const res = await accessoriesApi.loadModel(selectedModel);
+      if (res && res.ok === false) {
+        const msg = formatCameraErrorMessage(res, `ไม่สามารถโหลด Model ${selectedModel} ได้`);
+        setModelLoadingMsg(msg);
+        setNotice({ type: 'error', message: msg });
+        return;
+      }
       setModelLoadingMsg(`ส่งคำสั่งโหลด ${selectedModel} แล้ว`);
     } catch (err) {
-      setModelLoadingMsg(getCamErrorMessage(err, 'ไม่สามารถติดต่อเครื่อง AI Vision ได้'));
+      const msg = formatCameraErrorMessage(err, 'ไม่สามารถติดต่อเครื่อง AI Vision ได้');
+      setModelLoadingMsg(msg);
+      setNotice({ type: 'error', message: msg });
     }
   };
 
@@ -253,12 +265,15 @@ export default function AccessoriesInspectionPage() {
       if (res?.ok) {
         setNotice({ type: 'success', message: 'เริ่มระบบตรวจจับอัตโนมัติแล้ว' });
       } else {
-        setNotice({ type: 'error', message: res?.reason || 'ไม่สามารถเริ่มตรวจจับได้ กรุณาตรวจสอบสถานะกล้อง/Sensor' });
+        setNotice({
+          type: 'error',
+          message: formatCameraErrorMessage(res, 'ไม่สามารถเริ่มตรวจจับได้ กรุณาตรวจสอบสถานะกล้องและ Sensor'),
+        });
       }
     } catch (err) {
       setNotice({
         type: 'error',
-        message: getCamErrorMessage(err, 'ไม่สามารถติดต่อกล้อง AI Vision ได้ (ตรวจสอบสาย LAN หรือสิทธิ์ผู้ใช้งาน)'),
+        message: formatCameraErrorMessage(err, 'ไม่สามารถติดต่อกล้อง AI Vision ได้ (ตรวจสอบสาย LAN หรือสิทธิ์ผู้ใช้งาน)'),
       });
     }
   };
@@ -268,13 +283,15 @@ export default function AccessoriesInspectionPage() {
       const res = await accessoriesApi.captureSnapshot();
       setNotice({
         type: res?.ok ? 'success' : 'error',
-        message: res?.ok ? 'บันทึกภาพตรวจจับเรียบร้อยแล้ว' : (res?.reason || 'ไม่สามารถ Capture ภาพได้ กรุณาลองใหม่'),
+        message: res?.ok
+          ? 'บันทึกภาพตรวจจับเรียบร้อยแล้ว'
+          : formatCameraErrorMessage(res, 'ไม่สามารถ Capture ภาพได้ กรุณาลองใหม่อีกครั้ง'),
       });
       loadLogs(true);
     } catch (err) {
       setNotice({
         type: 'error',
-        message: getCamErrorMessage(err, 'ไม่สามารถติดต่อกล้อง AI Vision ได้ (ตรวจสอบสาย LAN หรือสิทธิ์ผู้ใช้งาน)'),
+        message: formatCameraErrorMessage(err, 'ไม่สามารถติดต่อกล้อง AI Vision ได้ (ตรวจสอบสาย LAN หรือสิทธิ์ผู้ใช้งาน)'),
       });
     }
   };

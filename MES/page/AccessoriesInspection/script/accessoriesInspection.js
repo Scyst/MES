@@ -18,6 +18,44 @@ function escHtml(s) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+const _camReasonMap = {
+    camera_not_connected: 'กล้องไม่ได้เชื่อมต่อ — กรุณาตรวจสอบสาย LAN และโปรแกรม main.py',
+    model_not_loaded:     'ยังไม่ได้โหลด Model — กรุณาเลือก Model แล้วกด "โหลด Model" ก่อน',
+    product_not_selected: 'ยังไม่ได้เลือกรุ่นงาน (Product) — กรุณาเลือกรุ่นงานก่อนกด START',
+    already_armed:        'ระบบกำลังทำงานตรวจจับอยู่แล้ว',
+    already_running:      'ระบบกำลังทำงานตรวจจับอยู่แล้ว',
+    capture_failed:       'ไม่สามารถบันทึกภาพได้ เนื่องจากยังไม่ได้รับภาพจากกล้อง',
+    no_frame:             'ยังไม่ได้รับภาพจากกล้อง กรุณาตรวจสอบสัญญาณภาพ',
+    model_not_found:      'ไม่พบไฟล์ Model ที่เลือกบนเครื่อง AI Vision',
+    read_only:            'สิทธิ์ของคุณดูได้อย่างเดียว ไม่สามารถสั่งงานเครื่องกล้องได้',
+    'forbidden path':     'ไม่อนุญาตให้เข้าถึงเส้นทางปลายทางนี้',
+};
+
+function _fmtCamErr(payloadOrErr, fallback) {
+    if (typeof payloadOrErr === 'string') {
+        const key = payloadOrErr.trim().toLowerCase();
+        if (_camReasonMap[key]) return _camReasonMap[key];
+        return /[\u0E00-\u0E7F]/.test(payloadOrErr) ? payloadOrErr : fallback;
+    }
+    const candidates = [
+        payloadOrErr?.message,
+        payloadOrErr?.reason,
+        payloadOrErr?.error,
+    ];
+    for (const raw of candidates) {
+        if (!raw || typeof raw !== 'string') continue;
+        const trimmed = raw.trim();
+        const mapped  = _camReasonMap[trimmed.toLowerCase()];
+        if (mapped) return mapped;
+        if (/[\u0E00-\u0E7F]/.test(trimmed)) return trimmed;
+        if (/timed?\s*out/i.test(trimmed)) return 'เครื่อง AI Vision ตอบสนองช้าเกินกำหนด — กรุณาตรวจสอบโปรแกรม main.py';
+        if (/upstream unreachable|failed to connect|connection refused/i.test(trimmed)) {
+            return 'ไม่สามารถเชื่อมต่อเครื่อง AI Vision หน้าไลน์ได้ — กรุณาตรวจสอบสาย LAN และโปรแกรม main.py';
+        }
+    }
+    return fallback;
+}
+
 let _currentModelClassesStr = "";
 
 let _prev       = {};
@@ -257,7 +295,7 @@ function updateErrorBanner(s) {
     } else if (s.last_error) {
         banner.className     = 'error-banner banner-warn';
         icon.className       = 'fas fa-exclamation-triangle me-2';
-        text.textContent     = s.last_error;
+        text.textContent     = _fmtCamErr(s.last_error, 'พบข้อผิดพลาดจากเครื่องกล้อง AI Vision');
         banner.style.display = 'flex';
     } else {
         banner.style.display = 'none';
@@ -632,13 +670,18 @@ async function loadModel() {
         const json = await res.json();
         if (!json.ok) {
             clearTimeout(loadTimer);
-            ms.textContent = '✗ โหลดไม่ได้';
+            const errMsg = _fmtCamErr(json, 'ไม่สามารถโหลด Model ได้');
+            ms.textContent = `✗ ${errMsg}`;
             ms.className   = 'model-status model-err mb-1';
+            showToast(errMsg, 'var(--bs-danger)');
         }
         // ok=true: command queued — pollStatus will update model_name on success
-    } catch (_) {
+    } catch (err) {
         clearTimeout(loadTimer);
-        ms.textContent = '✗ ติดต่อ Python ไม่ได้';
+        const msg = err?.name === 'TimeoutError'
+            ? 'เครื่องกล้องตอบสนองช้าเกินกำหนด (Timeout)'
+            : 'ไม่สามารถติดต่อเครื่อง AI Vision ได้ — ตรวจสอบสาย LAN และโปรแกรม main.py';
+        ms.textContent = `✗ ${msg}`;
         ms.className   = 'model-status model-err mb-1';
     }
 }
@@ -809,11 +852,15 @@ async function cmdStart() {
                 camera_not_connected: { t: 'กล้องไม่ได้เชื่อมต่อ',   m: 'ตรวจสอบสาย LAN และ main.py' },
                 model_not_loaded:     { t: 'ยังไม่ได้โหลด Model',    m: 'กรุณาโหลด Model ก่อนกด START' },
                 product_not_selected: { t: 'ยังไม่ได้เลือกรุ่นงาน', m: 'กรุณาเลือกรุ่นงานก่อนกด START' },
-            }[json.reason] ?? { t: 'ไม่สามารถสั่ง START ได้', m: json.reason ?? '' };
+                read_only:            { t: 'ไม่มีสิทธิ์สั่งงาน',       m: 'สิทธิ์ของคุณดูได้อย่างเดียว ไม่สามารถสั่งงานเครื่องกล้องได้' },
+            }[json.reason ?? json.error] ?? { t: 'ไม่สามารถสั่ง START ได้', m: _fmtCamErr(json, 'กรุณาตรวจสอบสถานะกล้องและ Sensor') };
             showModal(errMsg.t, errMsg.m, 'error');
         }
-    } catch (_) {
-        showModal('ติดต่อกล้องไม่ได้', 'ไม่สามารถเชื่อมต่อ Python กรุณาตรวจสอบว่า main.py รันอยู่', 'error');
+    } catch (err) {
+        const msg = err?.name === 'TimeoutError'
+            ? 'เครื่องกล้องตอบสนองช้าเกินกำหนด — กรุณาตรวจสอบว่าโปรแกรม main.py ทำงานอยู่'
+            : 'ไม่สามารถเชื่อมต่อเครื่อง AI Vision ได้ กรุณาตรวจสอบว่าโปรแกรม main.py รันอยู่';
+        showModal('ติดต่อกล้องไม่ได้', msg, 'error');
     }
 }
 
@@ -824,9 +871,12 @@ async function capture() {
         });
         const json = await res.json();
         if (json.ok) showToast('บันทึกภาพแล้ว', 'var(--mes-color-success, #198754)');
-        else         showToast('ไม่สามารถ Capture ได้', 'var(--bs-danger)');
-    } catch (_) {
-        showToast('ไม่สามารถติดต่อกล้องได้', 'var(--bs-danger)');
+        else         showToast(_fmtCamErr(json, 'ไม่สามารถ Capture ภาพได้'), 'var(--bs-danger)');
+    } catch (err) {
+        const msg = err?.name === 'TimeoutError'
+            ? 'เครื่องกล้องตอบสนองช้าเกินกำหนด — กรุณาลองใหม่'
+            : 'ไม่สามารถติดต่อกล้อง AI Vision ได้ — ตรวจสอบสาย LAN และ main.py';
+        showToast(msg, 'var(--bs-danger)');
     }
 }
 

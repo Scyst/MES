@@ -217,3 +217,83 @@ export function niceChartMax(value) {
   }
   return 10 * power;
 }
+
+const CAMERA_REASON_MESSAGES = {
+  camera_not_connected: 'กล้องไม่ได้เชื่อมต่อ — กรุณาตรวจสอบสาย LAN และโปรแกรม main.py',
+  model_not_loaded: 'ยังไม่ได้โหลด Model — กรุณาเลือก Model แล้วกดปุ่มโหลด Model ก่อนสั่งเริ่มงาน',
+  product_not_selected: 'ยังไม่ได้เลือกรุ่นงาน (Product) — กรุณาเลือกรุ่นงานก่อนกด START',
+  already_armed: 'ระบบกำลังทำงานตรวจจับอยู่แล้ว',
+  already_running: 'ระบบกำลังทำงานตรวจจับอยู่แล้ว',
+  capture_failed: 'ไม่สามารถบันทึกภาพได้ เนื่องจากยังไม่ได้รับภาพจากกล้อง',
+  no_frame: 'ยังไม่ได้รับภาพจากกล้อง กรุณาตรวจสอบสัญญาณภาพ',
+  model_not_found: 'ไม่พบไฟล์ Model ที่เลือกบนเครื่อง AI Vision',
+  read_only: 'สิทธิ์ของคุณดูได้อย่างเดียว ไม่สามารถสั่งงานเครื่องกล้องได้',
+  'forbidden path': 'ไม่อนุญาตให้เข้าถึงเส้นทางปลายทางนี้',
+};
+
+const CAMERA_HTTP_MESSAGES = {
+  401: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+  403: 'สิทธิ์ของคุณดูได้อย่างเดียว ไม่สามารถสั่งงานเครื่องกล้องได้',
+  404: 'ไม่พบคำสั่งหรือบริการกล้อง AI Vision',
+  502: 'ไม่สามารถเชื่อมต่อเครื่อง AI Vision หน้าไลน์ได้ — กรุณาตรวจสอบสาย LAN และโปรแกรม main.py',
+  503: 'ยังไม่ได้ตั้งค่าการเชื่อมต่อกล้อง AI Vision ในระบบ',
+  504: 'เครื่อง AI Vision ตอบสนองช้าเกินกำหนด กรุณาตรวจสอบสถานะเครื่องหน้าไลน์',
+};
+
+function translateRawCameraText(raw, isTimeoutCode = false) {
+  if (!raw || typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+
+  const mapped = CAMERA_REASON_MESSAGES[trimmed.toLowerCase()];
+  if (mapped) return mapped;
+
+  if (/[\u0E00-\u0E7F]/.test(trimmed)) {
+    // Strip raw parenthesized English curl diagnostics if returned by an older proxy response
+    return trimmed.replace(/\s*\([A-Za-z0-9:._/\-\s]+\)\s*$/, '').trim() || trimmed;
+  }
+  if (isTimeoutCode || /timeout of \d+ms exceeded|timed?\s*out/i.test(trimmed)) {
+    return 'เครื่อง AI Vision ตอบสนองช้าเกินกำหนด — กรุณาตรวจสอบว่าโปรแกรม main.py ทำงานอยู่';
+  }
+  if (/network error|failed to fetch|upstream unreachable|failed to connect|connection refused/i.test(trimmed)) {
+    return 'ไม่สามารถเชื่อมต่อเครื่อง AI Vision หน้าไลน์ได้ — กรุณาตรวจสอบสาย LAN และการเชื่อมต่อเครือข่าย';
+  }
+  return '';
+}
+
+/**
+ * Translates Axios errors, HTTP status codes, and Python upstream `reason` codes
+ * into human-readable, actionable Thai messages for operators.
+ */
+export function formatCameraErrorMessage(errOrPayload, fallback = 'ไม่สามารถติดต่อเครื่อง AI Vision ได้') {
+  if (typeof errOrPayload === 'string') {
+    return translateRawCameraText(errOrPayload) || fallback;
+  }
+  const resData = errOrPayload?.response?.data;
+  const isTimeoutCode = errOrPayload?.code === 'ECONNABORTED';
+  const candidates = [
+    resData?.message,
+    resData?.data?.message,
+    resData?.data?.reason,
+    resData?.reason,
+    resData?.error,
+    errOrPayload?.data?.reason,
+    errOrPayload?.reason,
+    errOrPayload?.error,
+    errOrPayload?.message,
+  ];
+
+  for (const candidate of candidates) {
+    const translated = translateRawCameraText(candidate, isTimeoutCode);
+    if (translated) return translated;
+  }
+
+  const status = errOrPayload?.response?.status ?? errOrPayload?.status;
+  if (status && CAMERA_HTTP_MESSAGES[status]) {
+    return CAMERA_HTTP_MESSAGES[status];
+  }
+  if (isTimeoutCode) {
+    return 'เครื่อง AI Vision ตอบสนองช้าเกินกำหนด — กรุณาตรวจสอบว่าโปรแกรม main.py ทำงานอยู่';
+  }
+  return fallback;
+}

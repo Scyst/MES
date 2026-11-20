@@ -17,7 +17,11 @@ import {
   VideoOff,
 } from 'lucide-react';
 import { accessoriesApi } from '../../../shared/services/accessoriesApi';
-import { ACCESSORY_PRODUCTS, formatAccessoryProductLabel } from '../utils/accessoriesHelpers';
+import {
+  ACCESSORY_PRODUCTS,
+  formatAccessoryProductLabel,
+  formatCameraErrorMessage,
+} from '../utils/accessoriesHelpers';
 
 /**
  * Live AI Vision camera stream & station controls panel.
@@ -84,15 +88,14 @@ export default function CameraStationPanel({
         <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-bold">
             <span
-              className={`px-2.5 py-0.5 rounded-full ${
-                ioState === 'alarm'
+              className={`px-2.5 py-0.5 rounded-full ${ioState === 'alarm'
                   ? 'bg-red-600'
                   : ioState === 'detecting'
                     ? 'bg-blue-600'
                     : isArmed
                       ? 'bg-emerald-600'
                       : 'bg-slate-700'
-              }`}
+                }`}
             >
               {stateLabel}
             </span>
@@ -122,6 +125,13 @@ export default function CameraStationPanel({
           <div className="px-4 py-2 bg-red-600/90 text-white text-xs sm:text-sm font-bold flex items-center gap-2">
             <Bell size={16} />
             <span>ALARM — ชิ้นงานหลุดออกก่อนตรวจจับสำเร็จ กรุณาตรวจสอบ</span>
+          </div>
+        )}
+
+        {ioState !== 'alarm' && Boolean(camStatus?.last_error) && (
+          <div className="px-4 py-2 bg-amber-500/95 text-slate-950 text-xs sm:text-sm font-bold flex items-center gap-2">
+            <AlertTriangle size={16} />
+            <span>{formatCameraErrorMessage(camStatus.last_error, 'พบข้อผิดพลาดจากเครื่องกล้อง AI Vision')}</span>
           </div>
         )}
 
