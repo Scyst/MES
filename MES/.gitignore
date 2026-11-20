@@ -10,6 +10,8 @@ docs/*
 !docs/ambient-ai/
 uploads/
 .vscode/
+*.code-workspace
+mcp-cursor-executed.txt
 # Agent temporary workspaces (not tracked)
 .agents/teamwork_preview_*/
 .agents/sentinel_*/

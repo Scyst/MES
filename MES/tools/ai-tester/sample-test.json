@@ -1,0 +1,19 @@
+{
+  "name": "ตรวจสอบองค์ประกอบหลักบนหน้าจอ Gemini",
+  "steps": [
+    {
+      "action": "assert",
+      "target": "แชทใหม่",
+      "expected": true
+    },
+    {
+      "action": "wait",
+      "value": 500
+    },
+    {
+      "action": "assert",
+      "target": "ค้นหาแชท",
+      "expected": true
+    }
+  ]
+}
