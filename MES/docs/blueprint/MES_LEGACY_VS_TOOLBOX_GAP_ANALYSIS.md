@@ -202,14 +202,14 @@ graph LR
 
 ---
 
-### 2.4 Manpower & Human Resource
-* **โครงสร้างเดิม:** 16 PHP files, 5 JS files
-* **ฟังก์ชันการทำงานหลักที่ยังคงค้างอยู่ในระบบเดิม:**
-  1. **Daily Manpower Operations (`manpowerUI.php`):** จัดกำลังคนประจำวัน มอบหมายพนักงานลงเครื่องจักร/ไลน์ บันทึกการลา/ขาด/มาสาย
-  2. **4D Employee Performance Grading (`employeeGrading.php`):** ระบบประเมินผลงาน 4 มิติ และคำนวณเบี้ยขยัน/เงินพิเศษ
-  3. **Grading Trend Analytics (`gradingTrend.php`):** แนวโน้มผลการประเมินย้อนหลังรายบุคคลและรายแผนก
-  4. **Competence Skill Matrix (`skillMatrix.php`):** แผนผังระดับทักษะความเชี่ยวชาญของพนักงาน (Level 1-4)
-  5. **Company Holidays Calendar (`holidayUI.php`):** ปฏิทินวันหยุดโรงงานประจำปี
+### 2.4 Manpower & Human Resource — ✅ **ย้าย & ขยายสโคปเกรด 4D สมบูรณ์ (20/11/2026)**
+* **โครงสร้างเดิม:** `page/manpower/` (16 PHP files, 5 JS files)
+* **โครงสร้างใหม่:** `Toolbox/src/modules/Manpower/` (`#/manpower`, 8 แท็บรวม `ตรวจ 5ส (คณะกรรมการ)`) + `Toolbox/public/api/manpower/` (`_grading_helpers.php`, `api_my_performance.php`, `audit5sApi.php`, `employeeGradingApi.php`) + `Toolbox/public/api/learning/learningApi.php`
+* **ฟังก์ชันที่พัฒนาสมบูรณ์เทียบเท่าสโคปผู้บริหาร:**
+  1. **Daily Manpower Operations, Skill Matrix, Holidays & Master:** จัดกำลังคนประจำวัน, ซิงค์เครื่องสแกน, ทักษะ 1–4, วันหยุด
+  2. **4D Self-View + Financial Masking:** เปิดให้พนักงานทุกคนดูเกรด 4D (`A–D`) และ Ratio ของตนเองบน Header & `#/profile` โดยซ่อนค่าแรง/รายได้บาท (THB) สำหรับ Non-Management
+  3. **5S Multi-Auditor Committee (3–5 คน):** รอบตรวจแบบ Blind Peer Audit, แนบรูปภาพจากมือถือนอก `page/` ที่ `/MES/MES/uploads/5s_audits/`, คำนวณคะแนนเฉลี่ยหารเท่า (`1/N`)
+  4. **Learning Hub Mandatory Cycles (1ด./3ด.):** กติกาหลักสูตรบังคับแยกกลุ่มผสม (แผนก/สายผลิต + Tier 1/2/3), รีเซ็ทรายเดือน/รายไตรมาส, และสูตรหน่วยกิตมหาวิทยาลัย (จำกัดเกรด C หากค้างวิชาบังคับ)
 
 ---
 
@@ -308,3 +308,4 @@ graph LR
 ### 🛠️ UAT Round 2 & Accessories Inspection S1 Sync (20/11/2026)
 - [x] **Accessories Inspection S1 & Cycle Analytics Parity**: ดึงอัปเดตจาก FTP Server (`/MES/MES/page/AccessoriesInspection/*`) มาซิงค์ลง `page/AccessoriesInspection/` และพอร์ตลง `Toolbox` (`inspectionApi.php` รองรับ `S1_IN_TIME`/`S1_OUT_TIME` + `get_chart_data`, `accessoriesHelpers.js` เพิ่มรุ่น `C-2053WMBTHA` + ตัวคำนวณ `Diff`/`Detect`/`Idle`, ตาราง 10 คอลัมน์ใน `AccessoriesInspectionPage.jsx` + Auto-Refresh 20s และ `AccessoriesChartModal.jsx` แสดง 10 KPI + กราฟ SVG 4 ชุด พร้อมปรับลำดับ `get_image` รองรับภาพหน้างานใน `page/AccessoriesInspection/img/`)
 - [x] **Production UAT Error Hardening (`SYSTEM_LOGS` Audit)**: ป้องกัน SQL `22007` Date Overflow (`startDate`/`endDate` ปี `1753–9999`) ใน `production/_common.php`, `productionApi.php` และ `inventoryManage.php`; ป้องกัน `RM_SERIAL_TAGS` Unique Key Collision (`-WNNN`) ด้วย `generateUniqueWipChildSerial()` ใน `storeApi.php` และ `api_store.php`; ปรับ 401/403 RBAC/CSRF ใน `storeApi.php` ให้คืน JSON สถานะจริงโดยไม่บันทึกเป็น `API_ERROR 500`; ลบไฟล์ค้าง `/Toolbox/api/debug_session.php` ออกจาก FTP Server
+- [x] **4D Employee Grading Full-Scope Engine (20/11/2026)**: เพิ่ม `_grading_helpers.php`, เปิด Employee Self-View 4D พร้อม Masking ค่าแรง/รายได้ (THB) ใน `api_my_performance.php` / `AppLayout.jsx` / `Profile4DGradingTab.jsx`, สร้างระบบกรรมการ 5ส 3–5 คน + แนบรูปนอก `page/` (`/MES/MES/uploads/5s_audits/`) + Blind Peer Audit + เฉลี่ยหารเท่า (`1/N`) ใน `audit5sApi.php` & `Audit5sCommitteePanel.jsx`, และย้าย Learning Hub สู่ `learningApi.php` พร้อมระบบหลักสูตรบังคับแยกกลุ่มผสมรีเซ็ท 1/3 เดือน + สูตรหน่วยกิตมหาวิทยาลัย (`CurriculumRulesModal.jsx` & `Catalog.jsx`)

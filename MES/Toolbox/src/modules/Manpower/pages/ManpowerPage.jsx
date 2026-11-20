@@ -2,16 +2,17 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Users, ClipboardList, Star, TrendingUp, Award, CalendarDays, Settings,
-  RefreshCw, WifiOff, CloudDownload, X
+  RefreshCw, WifiOff, CloudDownload, X, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
-import { manpowerMasterApi, manpowerSyncApi } from '../../../shared/services/manpowerApi';
+import { manpowerMasterApi, manpowerSyncApi, audit5sApi } from '../../../shared/services/manpowerApi';
 import { getTodayIso, offsetIsoDate } from '../utils/manpowerHelpers';
 
 const ManpowerOverviewTab = lazy(() => import('../components/ManpowerOverviewTab'));
 const DailyAttendanceTab = lazy(() => import('../components/DailyAttendanceTab'));
 const EmployeeGradingTab = lazy(() => import('../components/EmployeeGradingTab'));
+const Audit5sCommitteePanel = lazy(() => import('../components/Audit5sCommitteePanel'));
 const GradingTrendTab = lazy(() => import('../components/GradingTrendTab'));
 const SkillMatrixTab = lazy(() => import('../components/SkillMatrixTab'));
 const HolidayCalendarTab = lazy(() => import('../components/HolidayCalendarTab'));
@@ -21,6 +22,7 @@ const TABS = [
   { id: 'overview', label: 'ภาพรวม & ต้นทุน', icon: Users, restricted: false },
   { id: 'attendance', label: 'ลงเวลาประจำวัน', icon: ClipboardList, restricted: false },
   { id: 'grading', label: 'ประเมินเกรด 4D', icon: Star, restricted: true },
+  { id: 'audit5s', label: 'ตรวจ 5ส (คณะกรรมการ)', icon: CheckCircle2, auditOnly: true },
   { id: 'trends', label: 'แนวโน้มเกรด', icon: TrendingUp, restricted: true },
   { id: 'skills', label: 'Skill Matrix', icon: Award, restricted: false },
   { id: 'holidays', label: 'ปฏิทินวันหยุด', icon: CalendarDays, restricted: false },
@@ -31,13 +33,19 @@ export default function ManpowerPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [is5sCommitteeMember, setIs5sCommitteeMember] = useState(false);
 
   const role = String(user?.role || '').toLowerCase();
   const canAccessGrading = ['creator', 'admin', 'manager'].includes(role);
+  const canAccess5sCommittee = canAccessGrading || is5sCommitteeMember;
   const canEdit = ['creator', 'admin', 'manager', 'supervisor'].includes(role);
 
   const requestedTab = searchParams.get('tab') || 'overview';
-  const activeTab = TABS.some((t) => t.id === requestedTab && (!t.restricted || canAccessGrading))
+  const activeTab = TABS.some((t) => (
+    t.id === requestedTab
+    && (!t.restricted || canAccessGrading)
+    && (!t.auditOnly || canAccess5sCommittee)
+  ))
     ? requestedTab
     : 'overview';
 
@@ -79,6 +87,21 @@ export default function ManpowerPage() {
   useEffect(() => {
     loadStructure();
   }, [loadStructure]);
+
+  useEffect(() => {
+    if (!user?.emp_id) return;
+    let cancelled = false;
+    audit5sApi.getMyAssignments('')
+      .then((res) => {
+        if (!cancelled && res?.data?.is_committee_member) {
+          setIs5sCommitteeMember(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.emp_id]);
 
   const switchTab = (tabId) => {
     const next = new URLSearchParams(searchParams);
@@ -182,7 +205,7 @@ export default function ManpowerPage() {
 
       {/* Main Navigation Tabs */}
       <div className="flex gap-1.5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-        {TABS.filter((t) => !t.restricted || canAccessGrading).map((t) => {
+        {TABS.filter((t) => (!t.restricted || canAccessGrading) && (!t.auditOnly || canAccess5sCommittee)).map((t) => {
           const Icon = t.icon;
           const active = activeTab === t.id;
           return (
@@ -230,6 +253,14 @@ export default function ManpowerPage() {
             hcGroup={hcGroup}
             structure={structure}
             isOnline={isOnline}
+            onOpenCommitteeTab={() => switchTab('audit5s')}
+          />
+        )}
+        {activeTab === 'audit5s' && canAccess5sCommittee && (
+          <Audit5sCommitteePanel
+            structure={structure}
+            isOnline={isOnline}
+            onRoundUpdated={() => setRefreshSignal((s) => s + 1)}
           />
         )}
         {activeTab === 'trends' && canAccessGrading && (

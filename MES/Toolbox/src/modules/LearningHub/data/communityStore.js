@@ -265,9 +265,10 @@ export function saveUserGrading(grading) {
   }
 }
 
-export const API_LEARNING_URL = '../MES/MES/page/manpower/api/api_learning.php';
-export const API_VERIFY_URL = '../MES/MES/auth/api_verify.php?silent=1';
-export const MES_LOGOUT_URL = '../Toolbox/logout.php';
+const TOOLBOX_BASE = (import.meta?.env?.BASE_URL || '/iot-toolbox/sandbox-b9/Toolbox/');
+export const API_LEARNING_URL = `${TOOLBOX_BASE}api/learning/learningApi.php`;
+export const API_VERIFY_URL = `${TOOLBOX_BASE}check.php?silent=1`;
+export const MES_LOGOUT_URL = `${TOOLBOX_BASE}logout.php`;
 
 export function getMesLoginUrl() {
   if (typeof window === 'undefined') {
@@ -315,7 +316,7 @@ function buildSyncedUserFromApi(u, grading = null) {
   const exp = storedExp !== null ? parseInt(storedExp, 10) : (u.exp || 450);
   const sysRoleLower = String(u.sys_role || u.role || '').toLowerCase();
   const canViewGrading = Boolean(
-    u.can_view_grading ?? ['creator', 'admin', 'manager'].includes(sysRoleLower)
+    u.can_view_grading ?? (Boolean(u.emp_id) || ['creator', 'admin', 'manager'].includes(sysRoleLower))
   );
 
   const candidateUser = {
@@ -332,8 +333,10 @@ function buildSyncedUserFromApi(u, grading = null) {
     exp: exp,
     isLoggedInReal: true,
     isAdmin: Boolean(u.is_admin === true || ['creator', 'admin'].includes(sysRoleLower)),
+    isManager: Boolean(u.is_manager === true || ['creator', 'admin', 'manager'].includes(sysRoleLower)),
     can_view_grading: canViewGrading,
-    grading: canViewGrading ? grading : null
+    grading: canViewGrading ? grading : null,
+    curriculum: u.curriculum || null,
   };
 
   candidateUser.isTrainer = isUserInstructorOrAdmin(candidateUser);
@@ -463,9 +466,13 @@ async function reconcileLocalLiveRecordsWithBackend(synchedUser, backendCourses 
       let didSyncAny = false;
       for (const rec of livePassed) {
         const crs = allCoursesList.find(c => c.id === rec.courseId);
+        const csrfToken = (typeof window !== 'undefined' && window.csrf_token) ? window.csrf_token : '';
         const res = await fetch(`${API_LEARNING_URL}?action=save_course_progress`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+          },
           credentials: 'include',
           body: JSON.stringify({
             emp_id: synchedUser.emp_id,
@@ -524,10 +531,16 @@ export async function fetchRealUserSession() {
       const json = await res.json();
 
       if (json && json.authenticated === true && json.data && json.data.user) {
+        if (json.data.csrf_token && typeof window !== 'undefined') {
+          window.csrf_token = json.data.csrf_token;
+        }
         const canView = Boolean(json.data.user.can_view_grading);
         const grading = canView ? (json.data.grading || null) : null;
         saveUserGrading(grading);
-        const synchedUser = buildSyncedUserFromApi(json.data.user, grading);
+        const synchedUser = buildSyncedUserFromApi(
+          { ...json.data.user, curriculum: json.data.curriculum || null },
+          grading
+        );
         syncBackendCoursesToLocal(synchedUser, json.data.courses || []);
         saveCurrentUser(synchedUser);
         reconcileLocalLiveRecordsWithBackend(synchedUser, json.data.courses || []);
@@ -553,6 +566,9 @@ export async function fetchRealUserSession() {
     if (verifyRes.ok) {
       const verifyJson = await verifyRes.json();
       if (verifyJson && verifyJson.success && verifyJson.user) {
+        if (verifyJson.csrf_token && typeof window !== 'undefined') {
+          window.csrf_token = verifyJson.csrf_token;
+        }
         const synchedUser = buildSyncedUserFromApi(verifyJson.user, getUserGrading());
         saveCurrentUser(synchedUser);
         return synchedUser;

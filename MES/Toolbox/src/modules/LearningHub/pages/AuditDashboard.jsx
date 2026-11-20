@@ -47,7 +47,8 @@ export default function AuditDashboard() {
   const [liveAuditData, setLiveAuditData] = useState(null);
 
   useEffect(() => {
-    fetch('../MES/MES/page/manpower/api/api_learning.php?action=get_audit_matrix', { credentials: 'include' })
+    const toolboxBase = import.meta?.env?.BASE_URL || '/iot-toolbox/sandbox-b9/Toolbox/';
+    fetch(`${toolboxBase}api/learning/learningApi.php?action=get_audit_matrix`, { credentials: 'include' })
       .then(res => (res.ok ? res.json() : null))
       .then(json => {
         if (json && json.success && json.data) {

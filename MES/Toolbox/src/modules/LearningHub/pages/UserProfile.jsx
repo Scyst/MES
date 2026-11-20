@@ -81,8 +81,9 @@ export default function UserProfile() {
     const targetId = empId || currentUser.emp_id || currentUser.id;
     if (!targetId) return;
 
+    const toolboxBase = import.meta?.env?.BASE_URL || '/iot-toolbox/sandbox-b9/Toolbox/';
     setViewedPassportData(null);
-    fetch(`../MES/MES/page/manpower/api/api_learning.php?action=get_employee_passport&emp_id=${encodeURIComponent(targetId)}`, { credentials: 'include' })
+    fetch(`${toolboxBase}api/learning/learningApi.php?action=get_employee_passport&emp_id=${encodeURIComponent(targetId)}`, { credentials: 'include' })
       .then(res => (res.ok ? res.json() : null))
       .then(json => {
         if (json && json.success && json.data) {
@@ -99,22 +100,10 @@ export default function UserProfile() {
 
   const { employee, currentUserIsMe, rank, exp, userPosts, totalLikesReceived } = passport;
 
-  // Active 4-Dimension Grading state (Strictly visible to Admin / Manager / Creator only)
-  const canViewGrading = Boolean(currentUser?.can_view_grading);
+  // Active 4-Dimension Self/Management Grading state
+  const canViewGrading = Boolean(currentUser?.can_view_grading && (currentUserIsMe || currentUser?.isManager || currentUser?.isAdmin));
   const activeGrading = canViewGrading
-    ? (viewedPassportData?.grading || passport.grading || currentUser.grading || getUserGrading() || {
-        evaluation_period: '2026-10',
-        grade_overall: 'B',
-        grade_iph: 'B',
-        grade_5s: 'A',
-        grade_attendance: 'A',
-        grade_learning: 'C',
-        skill_count: 1,
-        passed_courses: passport.totalPassedCount || 1,
-        learning_tier_name: 'ระดับบริหารและวิศวกร (Tier 3)',
-        learning_target_a: 8,
-        learning_criteria_label: 'A (≥ 8 ทักษะ) · B (5-7 ทักษะ) · C (2-4 ทักษะ) · D (0-1 ทักษะ)'
-      })
+    ? (viewedPassportData?.grading || passport.grading || currentUser.grading || getUserGrading() || null)
     : null;
 
   // Inspect another employee's Competency Passport without overwriting own logged-in session
@@ -345,19 +334,18 @@ export default function UserProfile() {
             </span>
           </div>
 
-          <a
-            href="../MES/MES/page/manpower/employeeGrading.php"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => navigate(currentUser?.isManager || currentUser?.isAdmin ? '/manpower?tab=grading' : '/profile?tab=grading')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm self-start sm:self-auto ${
               isDark
                 ? 'bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white border-indigo-700/50'
                 : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
             }`}
           >
-            <span>เปิดหน้าต่างประเมินเกรดหลัก</span>
+            <span>{currentUser?.isManager || currentUser?.isAdmin ? 'เปิดหน้าประเมินเกรดหลัก (4D)' : 'ดูรายละเอียด 4 มิติในโปรไฟล์'}</span>
             <FiExternalLink className="w-3.5 h-3.5" />
-          </a>
+          </button>
         </div>
 
         {/* 4 Dimension Grid */}

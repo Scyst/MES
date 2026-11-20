@@ -2,7 +2,7 @@ import { EnterpriseFullStackRoadmapWidget } from '../data/content/EnterpriseFull
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { getAllMergedCourses, getCurrentUser, isUserInstructorOrAdmin } from '../data/communityStore';
+import { getAllMergedCourses, getCurrentUser, isUserInstructorOrAdmin, fetchRealUserSession } from '../data/communityStore';
 import { getUserCourseStatus } from '../data/trainingAuditStore';
 import { DEFAULT_COURSE_IMAGE, COURSE_OFFLINE_IMAGES, CATEGORY_OFFLINE_IMAGES, COURSE_PHOTO_MAP } from '../data/offlineAssets';
 import { CURATED_TRACKS } from '../data/courses';
@@ -77,8 +77,23 @@ export default function Catalog() {
       }
     };
     window.addEventListener('mes-user-updated', handleUserUpdated);
+    if (!currentUser?.curriculum) {
+      fetchRealUserSession().then((u) => {
+        if (u) setCurrentUser(u);
+      }).catch(() => {});
+    }
     return () => window.removeEventListener('mes-user-updated', handleUserUpdated);
   }, []);
+
+  const curriculum = currentUser?.curriculum || null;
+  const mandatoryCourses = useMemo(
+    () => (Array.isArray(curriculum?.mandatory_courses) ? curriculum.mandatory_courses : []),
+    [curriculum]
+  );
+  const mandatoryMap = useMemo(
+    () => new Map(mandatoryCourses.map((m) => [m.course_id, m])),
+    [mandatoryCourses]
+  );
 
   // Combine static official courses with custom-built and promoted courses
   const allCourses = useMemo(() => {
@@ -230,7 +245,10 @@ export default function Catalog() {
   // Reusable Single Course Card
   const renderCourseCard = (course) => {
     const userStatus = getUserCourseStatus(course.id);
-    const isDone = userStatus.passed || userStatus.status === 'completed';
+    const mandatoryInfo = mandatoryMap.get(course.id);
+    const isDone = mandatoryInfo
+      ? Boolean(mandatoryInfo.is_passed_current_cycle)
+      : (userStatus.passed || userStatus.status === 'completed');
     const inProgress = !isDone && userStatus.progressPercent > 0;
 
     return (
@@ -260,7 +278,15 @@ export default function Catalog() {
           
           {/* Top Right Badges */}
           <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
-            {isDone ? (
+            {mandatoryInfo && !mandatoryInfo.is_passed_current_cycle ? (
+              <div className="bg-amber-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm animate-pulse">
+                <span>วิชาบังคับ · {mandatoryInfo.cycle_key} (รอสอบ)</span>
+              </div>
+            ) : mandatoryInfo && mandatoryInfo.is_passed_current_cycle ? (
+              <div className="bg-emerald-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
+                <FiCheck className="w-3.5 h-3.5" /> ผ่านบังคับ {mandatoryInfo.cycle_key}
+              </div>
+            ) : isDone ? (
               <div className="bg-emerald-500/95 text-slate-950 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1 backdrop-blur-sm">
                 <FiCheck className="w-3.5 h-3.5" /> ผ่านแล้ว 100%
               </div>
@@ -447,6 +473,54 @@ export default function Catalog() {
           )}
         </div>
       </div>
+
+      {/* Mandatory Curriculum Checklist Banner (1M / 3M Reset Cycles + Credits) */}
+      {curriculum && curriculum.mandatory_total > 0 && (
+        <div className={`rounded-2xl border p-4 sm:p-5 space-y-3 ${
+          curriculum.mandatory_missing > 0
+            ? (isDark ? 'bg-amber-950/25 border-amber-500/40' : 'bg-amber-50/80 border-amber-200')
+            : (isDark ? 'bg-emerald-950/25 border-emerald-500/40' : 'bg-emerald-50/80 border-emerald-200')
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className={`text-sm font-black flex flex-wrap items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <span>ภารกิจหลักสูตรบังคับประจำรอบของกลุ่มคุณ ({curriculum.tier_name})</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  curriculum.mandatory_missing > 0
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'bg-emerald-500 text-slate-950'
+                }`}>
+                  ผ่านแล้ว {curriculum.mandatory_passed}/{curriculum.mandatory_total} วิชา · สะสม {curriculum.total_credits}/{curriculum.target_a} หน่วยกิต (เกรด {curriculum.grade})
+                </span>
+              </h2>
+              {curriculum.is_capped_by_mandatory && (
+                <p className={`text-xs mt-1 font-semibold ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                  {curriculum.cap_reason}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {mandatoryCourses.map((mc) => (
+              <button
+                key={`${mc.course_id}-${mc.cycle_key}`}
+                type="button"
+                onClick={() => navigate(`/learning/course/${mc.course_id}`)}
+                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                  mc.is_passed_current_cycle
+                    ? (isDark ? 'bg-emerald-900/40 border-emerald-500/40 text-emerald-300' : 'bg-white border-emerald-300 text-emerald-800')
+                    : (isDark ? 'bg-slate-900 border-amber-500/50 text-amber-300 hover:bg-amber-950/60' : 'bg-white border-amber-300 text-amber-900 hover:bg-amber-100/50')
+                }`}
+              >
+                <span>{mc.is_passed_current_cycle ? '✓' : '●'} {mc.course_title}</span>
+                <span className="text-[10px] font-mono opacity-80">
+                  {mc.cycle_key}{mc.expires_at ? ` (ถึง ${mc.expires_at})` : ''}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 🌟 HERO SPOTLIGHT BANNER (Flagship Courses Showcase with Game-Style Carousel) */}
       <div className="space-y-3">

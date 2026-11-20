@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Lock, Unlock, Sparkles, Save, Download, Sliders, Award, BookOpen,
-  CheckCircle2, BarChart2, X, RefreshCw
+  CheckCircle2, BarChart2, X, RefreshCw, Users, GraduationCap, Printer, AlertTriangle
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell
@@ -11,11 +11,12 @@ import { useToast } from '../../../shared/contexts/FeedbackContext';
 import {
   calculateOverallGrade, formatMoney, GRADE_BADGE_MAP, getMonthIso, getTodayIso, exportRowsToExcel
 } from '../utils/manpowerHelpers';
+import CurriculumRulesModal from './CurriculumRulesModal';
 
 const GRADE_OPTIONS = ['', 'A', 'B', 'C', 'D'];
 const GRADE_COLORS = { A: '#10b981', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
 
-export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
+export default function EmployeeGradingTab({ hcGroup, structure, isOnline, onOpenCommitteeTab }) {
   const { showToast } = useToast();
 
   const [periodMode, setPeriodMode] = useState('MONTH');
@@ -37,8 +38,9 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
   const [passwordInput, setPasswordInput] = useState('');
   const [verifyingPwd, setVerifyingPwd] = useState(false);
 
-  // Modals: Weightage, Criteria, 5S Audit, Formula Guide
+  // Modals: Weightage, Criteria, 5S Audit, Curriculum Rules, Formula Guide
   const [weightModalOpen, setWeightModalOpen] = useState(false);
+  const [curriculumModalOpen, setCurriculumModalOpen] = useState(false);
   const [weightForm, setWeightForm] = useState({
     hc_group: hcGroup === 'ALL' ? 'MAIN' : hcGroup,
     weight_iph: 25,
@@ -133,28 +135,41 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
 
   const handleAutoGradeAll = () => {
     const nextDirty = {};
+    let missingCount = 0;
     setRows((prev) => prev.map((r) => {
+      const auto5s = r.system_grade_5s && r.system_grade_5s !== 'N/A'
+        ? r.system_grade_5s
+        : (r.grade_5s || '');
+      const autoAtt = r.system_grade_attendance && r.system_grade_attendance !== 'N/A'
+        ? r.system_grade_attendance
+        : (r.grade_attendance || '');
+      if (auto5s === '' || autoAtt === '') {
+        missingCount++;
+      }
       const next = {
         ...r,
-        grade_iph: r.system_grade_iph || r.grade_iph || 'C',
-        grade_5s: r.system_grade_5s || r.grade_5s || 'B',
-        grade_attendance: r.system_grade_attendance && r.system_grade_attendance !== 'N/A'
-          ? r.system_grade_attendance
-          : (r.grade_attendance || 'B'),
-        grade_learning: r.system_grade_learning || r.grade_learning || 'C',
+        grade_iph: r.system_grade_iph || r.grade_iph || '',
+        grade_5s: auto5s,
+        grade_attendance: autoAtt,
+        grade_learning: r.system_grade_learning || r.grade_learning || '',
       };
       const calc = calculateOverallGrade(next);
-      next.grade_overall = calc.grade || 'C';
+      next.grade_overall = calc.grade || r.grade_overall || '';
       next.grade = next.grade_overall;
       nextDirty[r.emp_id] = next;
       return next;
     }));
     setDirtyMap((dm) => ({ ...dm, ...nextDirty }));
-    showToast(`คำนวณเกรดอัตโนมัติตามเกณฑ์ 4 มิติครบ ${Object.keys(nextDirty).length} คนแล้ว (กดบันทึกเพื่อยืนยัน)`, 'info');
+    const note = missingCount > 0 ? ` (พบ ${missingCount} คนที่ยังไม่มีผลตรวจ 5ส/เกณฑ์มาสาย จึงเว้นว่างไว้แทนการเดา)` : '';
+    showToast(`คำนวณเกรดอัตโนมัติครบ ${Object.keys(nextDirty).length} คนแล้ว${note}`, 'info');
   };
 
   const handleSaveGrades = async () => {
     if (!isOnline) return;
+    if (periodMode === 'RANGE') {
+      showToast('ไม่สามารถบันทึกเกรดในโหมดช่วงเวลา (RANGE) ได้ กรุณาเลือกโหมดรายเดือน', 'warning');
+      return;
+    }
     const toSave = Object.values(dirtyMap);
     if (!toSave.length) {
       showToast('ยังไม่มีรายการที่เปลี่ยนแปลง', 'info');
@@ -291,13 +306,54 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
       } : {}),
       'IPH Grade': r.grade_iph || r.system_grade_iph || '',
       '5S Grade': r.grade_5s || r.system_grade_5s || '',
+      '5S Score': r.score_5s ?? '',
       'Att Grade': r.grade_attendance || r.system_grade_attendance || '',
       'Learn Grade': r.grade_learning || r.system_grade_learning || '',
+      'Credits': r.skill_count ?? 0,
+      'Mandatory': r.learning_mandatory_total > 0 ? `${r.learning_mandatory_passed}/${r.learning_mandatory_total}` : '-',
       'Overall Grade': r.grade_overall || calculateOverallGrade(r).grade,
       Notes: r.notes || '',
     }));
     exportRowsToExcel(data, 'Grading_4D', `Employee_Grading_4D_${activePeriod}.xlsx`);
     showToast('ส่งออกไฟล์ Excel เกรดพนักงานสำเร็จ', 'success');
+  };
+
+  const handlePrintPdfSummary = () => {
+    if (!filteredRows.length) {
+      showToast('ไม่มีข้อมูลสำหรับพิมพ์รายงาน', 'warning');
+      return;
+    }
+    const win = window.open('', '_blank', 'width=1100,height=800');
+    if (!win) {
+      showToast('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาต Popup เพื่อพิมพ์ PDF', 'warning');
+      return;
+    }
+    const safe = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const bodyRows = filteredRows.map((r, i) => {
+      const ov = r.grade_overall || calculateOverallGrade(r).grade || '-';
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${safe(r.emp_id)}</td>
+        <td>${safe(r.name_th)}</td>
+        <td>${safe(r.line)}</td>
+        <td>${unlocked ? Number(r.ratio || 0).toFixed(2) + 'x' : '•••'}</td>
+        <td style="text-align:center">${safe(r.grade_iph || r.system_grade_iph || '-')}</td>
+        <td style="text-align:center">${safe(r.grade_5s || r.system_grade_5s || '-')}</td>
+        <td style="text-align:center">${safe(r.grade_attendance || r.system_grade_attendance || '-')}</td>
+        <td style="text-align:center">${safe(r.grade_learning || r.system_grade_learning || '-')}</td>
+        <td style="text-align:center;font-weight:bold">${safe(ov)}</td>
+      </tr>`;
+    }).join('');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>4D Grading Summary (${safe(activePeriod)})</title>
+      <style>body{font-family:sans-serif;padding:24px;color:#0f172a}h2{margin:0 0 6px}p{margin:0 0 14px;color:#475569;font-size:12px}
+      table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #cbd5e1;padding:6px 8px}th{background:#f1f5f9}</style>
+      </head><body>
+      <h2>รายงานสรุปผลการประเมินพนักงาน 4 มิติ (4D Employee Grading)</h2>
+      <p>งวดประเมิน: ${safe(activePeriod)} · สายการผลิต: ${safe(lineFilter)} · กลุ่ม: ${safe(hcGroup)} · จำนวน ${filteredRows.length} คน</p>
+      <table><thead><tr><th>#</th><th>รหัส</th><th>ชื่อ-สกุล</th><th>สายผลิต</th><th>Ratio</th><th>IPH</th><th>5S</th><th>Attd</th><th>Learn</th><th>รวม</th></tr></thead>
+      <tbody>${bodyRows}</tbody></table>
+      <script>window.onload=function(){window.print();}</script></body></html>`);
+    win.document.close();
   };
 
   const dirtyCount = Object.keys(dirtyMap).length;
@@ -399,6 +455,26 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
             บันทึกผลตรวจ 5ส
           </button>
 
+          {onOpenCommitteeTab && (
+            <button
+              type="button"
+              onClick={onOpenCommitteeTab}
+              className="min-h-[44px] inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+            >
+              <Users className="h-4 w-4" />
+              กรรมการ 5ส (3–5 คน)
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setCurriculumModalOpen(true)}
+            className="min-h-[44px] inline-flex items-center gap-1.5 rounded-lg border border-fuchsia-300 bg-fuchsia-50 px-3 text-xs font-semibold text-fuchsia-700 hover:bg-fuchsia-100 dark:border-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300"
+          >
+            <GraduationCap className="h-4 w-4" />
+            หลักสูตรบังคับ (1ด./3ด.)
+          </button>
+
           <button
             type="button"
             onClick={() => setWeightModalOpen(true)}
@@ -437,12 +513,22 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
 
           <button
             type="button"
-            disabled={!isOnline || savingGrades || dirtyCount === 0}
+            disabled={!isOnline || savingGrades || dirtyCount === 0 || periodMode === 'RANGE'}
             onClick={handleSaveGrades}
+            title={periodMode === 'RANGE' ? 'ไม่สามารถบันทึกในโหมด RANGE ได้ กรุณาเลือกโหมดรายเดือน' : 'บันทึกเกรดงวดนี้'}
             className="min-h-[44px] inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {savingGrades ? 'กำลังบันทึก...' : `บันทึก (${dirtyCount})`}
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintPdfSummary}
+            className="min-h-[44px] inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <Printer className="h-4 w-4 text-slate-600" />
+            พิมพ์ / PDF
           </button>
 
           <button
@@ -455,6 +541,13 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
           </button>
         </div>
       </div>
+
+      {periodMode === 'RANGE' && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          โหมดช่วงเวลา (RANGE) ใช้สำหรับเปรียบเทียบและตรวจสอบผลย้อนหลังเท่านั้น ระบบปิดปุ่มบันทึกเพื่อป้องกันข้อมูลทับงวดรายเดือน (กรุณาเปลี่ยนเป็นรายเดือน MONTH ก่อนบันทึก)
+        </div>
+      )}
 
       {/* Summary + Distribution Bar */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -538,9 +631,21 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
                       </td>
                       {[
                         { field: 'grade_iph', sys: r.system_grade_iph, hint: `Sys: ${r.system_grade_iph || '-'}` },
-                        { field: 'grade_5s', sys: r.system_grade_5s, hint: `5S: ${r.system_grade_5s || '-'}` },
-                        { field: 'grade_attendance', sys: r.system_grade_attendance, hint: `Late ${r.late_days}/Abs ${r.absent_days}` },
-                        { field: 'grade_learning', sys: r.system_grade_learning, hint: `${r.skill_count}/${r.learning_target_a} (${r.system_grade_learning})` },
+                        {
+                          field: 'grade_5s',
+                          sys: r.system_grade_5s,
+                          hint: r.score_5s !== null && r.score_5s !== undefined
+                            ? `${Number(r.score_5s).toFixed(1)} (${r.audit_5s_submitted || 1}/${r.audit_5s_required || 1})`
+                            : 'รอตรวจ 5ส',
+                        },
+                        { field: 'grade_attendance', sys: r.system_grade_attendance, hint: `Late ${r.late_days}/Abs ${r.absent_days} (${r.system_grade_attendance})` },
+                        {
+                          field: 'grade_learning',
+                          sys: r.system_grade_learning,
+                          hint: r.learning_mandatory_total > 0
+                            ? `${r.skill_count}/${r.learning_target_a} · บังคับ ${r.learning_mandatory_passed}/${r.learning_mandatory_total}${r.learning_is_capped ? ' ⚠Cap C' : ''}`
+                            : `${r.skill_count}/${r.learning_target_a} (${r.system_grade_learning})`,
+                        },
                       ].map((dim) => (
                         <td key={dim.field} className="px-2 py-2 text-center">
                           <select
@@ -833,6 +938,13 @@ export default function EmployeeGradingTab({ hcGroup, structure, isOnline }) {
           </div>
         </div>
       )}
+      {/* Curriculum Rules Modal */}
+      <CurriculumRulesModal
+        isOpen={curriculumModalOpen}
+        onClose={() => setCurriculumModalOpen(false)}
+        isOnline={isOnline}
+        onRulesUpdated={fetchGrading}
+      />
     </div>
   );
 }

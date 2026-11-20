@@ -1,10 +1,12 @@
 <?php
 /**
- * Self-contained Confidential 4D Employee Grading & 5S Audit API.
+ * Self-contained Confidential 4D Employee Grading & Criteria API.
  * Strictly restricted to creator / admin / manager with manage_manpower permission.
+ * Integrates Multi-Auditor 5S consensus and University-Style Learning rules via _grading_helpers.php.
  */
 
 require_once __DIR__ . '/_common.php';
+require_once __DIR__ . '/_grading_helpers.php';
 
 $input = [];
 try {
@@ -12,7 +14,7 @@ try {
     requireMpAccess(true, true);
 
     $userId = (int)$currentUser['id'];
-    $empIdSelf = trim((string)($currentUser['emp_id'] ?? ($currentUser['username'] ?? 'SYSTEM')));
+    $empIdSelf = resolveSessionEmpId($pdo, $currentUser);
 
     switch ($action) {
         case 'get_grading_data':
@@ -25,7 +27,9 @@ try {
 
             $sql = "
                 SELECT TOP (1000)
-                    E.emp_id, E.name_th, E.position, E.line, E.team_group,
+                    E.emp_id, E.name_th, E.position, E.department_api, E.line, E.team_group,
+                    ISNULL(TS.hc_group, '') AS hc_group,
+                    U.sys_role,
                     G.grade, G.notes, G.grade_iph, G.grade_5s, G.grade_attendance, G.grade_learning, G.grade_overall,
                     ISNULL(INC.income_per_head, 0) AS income_per_head,
                     ISNULL(WAGE.total_wage, 350.0) AS total_wage,
@@ -39,13 +43,15 @@ try {
                     ISNULL(TS.weight_iph, 25) AS weight_iph,
                     ISNULL(TS.weight_5s, 25) AS weight_5s,
                     ISNULL(TS.weight_attendance, 25) AS weight_attendance,
-                    ISNULL(TS.weight_learning, 25) AS weight_learning,
-                    AUDIT5S.grade AS system_grade_5s,
-                    AUDIT5S.total_score AS score_5s,
-                    ISNULL(SKL.skill_count, 0) AS skill_count,
-                    ISNULL(LRN.passed_courses, 0) AS passed_courses
+                    ISNULL(TS.weight_learning, 25) AS weight_learning
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
                 LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+                OUTER APPLY (
+                    SELECT TOP 1 role AS sys_role
+                    FROM dbo.USERS WITH (NOLOCK)
+                    WHERE emp_id = E.emp_id COLLATE Thai_CI_AS
+                    ORDER BY is_active DESC, id ASC
+                ) U
                 INNER JOIN (
                     SELECT DISTINCT emp_id
                     FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
@@ -112,32 +118,10 @@ try {
                     ) RATES ON RATES.emp_id = LOGS.emp_id COLLATE Thai_CI_AS
                 ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
                 LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
-                LEFT JOIN (
-                    SELECT a.line, a.grade, a.total_score
-                    FROM dbo.AUDIT_5S a WITH (NOLOCK)
-                    INNER JOIN (
-                        SELECT line, MAX(audit_date) AS max_date
-                        FROM dbo.AUDIT_5S WITH (NOLOCK)
-                        WHERE audit_date >= ? AND audit_date < ?
-                        GROUP BY line
-                    ) latest ON a.line = latest.line AND a.audit_date = latest.max_date
-                ) AUDIT5S ON AUDIT5S.line = E.line
-                LEFT JOIN (
-                    SELECT es.emp_id, COUNT(*) AS skill_count
-                    FROM dbo.EMP_SKILLS es WITH (NOLOCK)
-                    WHERE es.level >= 2
-                    GROUP BY es.emp_id
-                ) SKL ON SKL.emp_id = E.emp_id COLLATE Thai_CI_AS
-                LEFT JOIN (
-                    SELECT lr.emp_id, COUNT(*) AS passed_courses
-                    FROM dbo.LEARNING_RECORDS lr WITH (NOLOCK)
-                    WHERE lr.passed = 1
-                    GROUP BY lr.emp_id
-                ) LRN ON LRN.emp_id = E.emp_id COLLATE Thai_CI_AS
                 WHERE E.is_active = 1
             ";
 
-            $params = [$startDate, $endDate, $period, $startDate, $endDate, $startDate, $endDate, $startDate, $endDate];
+            $params = [$startDate, $endDate, $period, $startDate, $endDate, $startDate, $endDate];
             if ($line !== 'ALL' && $line !== '') {
                 $sql .= ' AND E.line = ?';
                 $params[] = $line;
@@ -152,77 +136,41 @@ try {
             $stmt->execute($params);
             $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            $empIds = array_column($employees, 'emp_id');
+            $learnCtx = fetchLearningEvalContext($pdo, $empIds);
+            $consensus5s = fetch5sPeriodConsensusMap($pdo, $startDate, $endDate);
+
             $results = [];
             foreach ($employees as $emp) {
+                $eid = trim((string)$emp['emp_id']);
+                $ln = trim((string)($emp['line'] ?? ''));
                 $income = (float)$emp['income_per_head'];
                 $wage = (float)$emp['total_wage'];
                 $ratio = $wage > 0 ? ($income / $wage) : 0.0;
-
-                if (isset($emp['threshold_a']) && (float)$emp['threshold_a'] > 0) {
-                    if ($ratio >= (float)$emp['threshold_a']) $systemGrade = 'A';
-                    elseif ($ratio >= (float)$emp['threshold_b']) $systemGrade = 'B';
-                    elseif ($ratio >= (float)$emp['threshold_c']) $systemGrade = 'C';
-                    else $systemGrade = 'D';
-                } else {
-                    if ($ratio >= 2.0) $systemGrade = 'A';
-                    elseif ($ratio >= 1.5) $systemGrade = 'B';
-                    elseif ($ratio >= 1.0) $systemGrade = 'C';
-                    else $systemGrade = 'D';
-                }
-
                 $lateDays = (int)($emp['late_days'] ?? 0);
                 $absentDays = (int)($emp['absent_days'] ?? 0);
-                $infractions = $lateDays + $absentDays;
-                $attGrade = 'N/A';
-                if (isset($emp['att_max_late_a']) || isset($emp['att_max_late_b']) || isset($emp['att_max_late_c'])) {
-                    $maxA = (int)($emp['att_max_late_a'] ?? 0);
-                    $maxB = (int)($emp['att_max_late_b'] ?? 1);
-                    $maxC = (int)($emp['att_max_late_c'] ?? 2);
-                    if ($infractions <= $maxA) $attGrade = 'A';
-                    elseif ($infractions <= $maxB) $attGrade = 'B';
-                    elseif ($infractions <= $maxC) $attGrade = 'C';
-                    else $attGrade = 'D';
-                }
 
-                $skillCount = (int)($emp['skill_count'] ?? 0);
-                $passedCourses = (int)($emp['passed_courses'] ?? 0);
-                $effectiveLearningCount = max($skillCount, $passedCourses);
+                $sysIph = evaluateIphGrade($ratio, $emp);
+                $sysAtt = evaluateAttendanceGrade($lateDays, $absentDays, $emp);
 
-                $posUpper = mb_strtoupper(trim((string)($emp['position'] ?? '')), 'UTF-8');
-                $isTier3 = mb_strpos($posUpper, 'ผู้จัดการ', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'บริหาร', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'MINI MD', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'วิศวกร', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'ENGINEER', 0, 'UTF-8') !== false;
-                $isTier2 = !$isTier3 && (
-                    mb_strpos($posUpper, 'หัวหน้า', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'SUPERVISOR', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'LEADER', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'SPECIAL', 0, 'UTF-8') !== false
-                    || mb_strpos($posUpper, 'เทคนิค', 0, 'UTF-8') !== false
+                $line5s = $consensus5s[$ln] ?? null;
+                $sys5s = $line5s ? $line5s['grade_5s'] : 'N/A';
+
+                $learnEval = evaluateUniversityLearning(
+                    $emp,
+                    $learnCtx['rules'],
+                    $learnCtx['records_by_emp'][$eid] ?? [],
+                    (int)($learnCtx['manual_skills_by_emp'][$eid] ?? 0),
+                    $period
                 );
 
-                if ($isTier3) {
-                    $lrnTargetA = 8; $lrnTargetB = 5; $lrnTargetC = 2;
-                    $lrnTierName = 'Tier 3: บริหาร/วิศวกร (A≥8, B≥5, C≥2)';
-                } elseif ($isTier2) {
-                    $lrnTargetA = 5; $lrnTargetB = 3; $lrnTargetC = 1;
-                    $lrnTierName = 'Tier 2: หัวหน้างาน/เทคนิค (A≥5, B≥3, C≥1)';
-                } else {
-                    $lrnTargetA = 3; $lrnTargetB = 2; $lrnTargetC = 1;
-                    $lrnTierName = 'Tier 1: ปฏิบัติการทั่วไป (A≥3, B=2, C=1)';
-                }
-
-                $learningGrade = 'D';
-                if ($effectiveLearningCount >= $lrnTargetA) $learningGrade = 'A';
-                elseif ($effectiveLearningCount >= $lrnTargetB) $learningGrade = 'B';
-                elseif ($effectiveLearningCount >= $lrnTargetC) $learningGrade = 'C';
-
                 $results[] = [
-                    'emp_id' => $emp['emp_id'],
+                    'emp_id' => $eid,
                     'name_th' => $emp['name_th'],
                     'position' => $emp['position'],
-                    'line' => $emp['line'],
+                    'department_api' => $emp['department_api'],
+                    'hc_group' => $emp['hc_group'],
+                    'line' => $ln,
                     'team_group' => $emp['team_group'],
                     'income_per_head' => round($income, 2),
                     'total_wage' => round($wage, 2),
@@ -232,15 +180,23 @@ try {
                     'late_days' => $lateDays,
                     'absent_days' => $absentDays,
                     'ratio' => round($ratio, 2),
-                    'system_grade_iph' => $systemGrade,
-                    'system_grade_attendance' => $attGrade,
-                    'system_grade_5s' => $emp['system_grade_5s'] ?? null,
-                    'score_5s' => (int)($emp['score_5s'] ?? 0),
-                    'skill_count' => $effectiveLearningCount,
-                    'passed_courses' => $passedCourses,
-                    'learning_target_a' => $lrnTargetA,
-                    'learning_tier_name' => $lrnTierName,
-                    'system_grade_learning' => $learningGrade,
+                    'system_grade_iph' => $sysIph,
+                    'system_grade_attendance' => $sysAtt,
+                    'system_grade_5s' => $sys5s,
+                    'score_5s' => $line5s ? $line5s['score_5s'] : null,
+                    'audit_5s_submitted' => $line5s ? (int)$line5s['submitted_count'] : 0,
+                    'audit_5s_required' => $line5s ? (int)$line5s['required_auditors'] : 0,
+                    'audit_5s_consensus_complete' => $line5s ? (bool)$line5s['is_consensus_complete'] : false,
+                    'audit_5s_source' => $line5s['source'] ?? null,
+                    'skill_count' => $learnEval['total_credits'],
+                    'passed_courses' => $learnEval['passed_courses_total'],
+                    'learning_target_a' => $learnEval['target_a'],
+                    'learning_tier_name' => $learnEval['criteria_label'],
+                    'learning_mandatory_passed' => $learnEval['mandatory_passed'],
+                    'learning_mandatory_total' => $learnEval['mandatory_total'],
+                    'learning_is_capped' => $learnEval['is_capped_by_mandatory'],
+                    'learning_cap_reason' => $learnEval['cap_reason'],
+                    'system_grade_learning' => $learnEval['grade'],
                     'grade' => $emp['grade'] ?? '',
                     'grade_iph' => $emp['grade_iph'] ?? '',
                     'grade_5s' => $emp['grade_5s'] ?? '',
@@ -267,7 +223,7 @@ try {
             $whereSql = implode(' AND ', $where);
             $stmt = $pdo->prepare("
                 SELECT TOP (200)
-                    audit_id, line, CONVERT(VARCHAR(10), audit_date, 120) AS audit_date,
+                    audit_id, round_id, line, CONVERT(VARCHAR(10), audit_date, 120) AS audit_date,
                     auditor_emp_id, score_seiri, score_seiton, score_seiso, score_seiketsu, score_shitsuke,
                     total_score, grade, remarks, created_at
                 FROM dbo.AUDIT_5S WITH (NOLOCK)
@@ -285,7 +241,7 @@ try {
             $s3 = max(0, min(20, (int)($input['score_seiso'] ?? 0)));
             $s4 = max(0, min(20, (int)($input['score_seiketsu'] ?? 0)));
             $s5 = max(0, min(20, (int)($input['score_shitsuke'] ?? 0)));
-            $remarks = substr(trim((string)($input['remarks'] ?? '')), 0, 500);
+            $remarks = mb_substr(trim((string)($input['remarks'] ?? '')), 0, 500, 'UTF-8');
             if ($auditLine === '') {
                 throw new InvalidArgumentException('กรุณาเลือกสายการผลิตสำหรับตรวจ 5ส');
             }
@@ -295,17 +251,22 @@ try {
                 INSERT INTO dbo.AUDIT_5S
                 (line, audit_date, auditor_emp_id, score_seiri, score_seiton, score_seiso, score_seiketsu, score_shitsuke, remarks, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())
-            ")->execute([$auditLine, $auditDate, $empIdSelf, $s1, $s2, $s3, $s4, $s5, $remarks]);
+            ")->execute([$auditLine, $auditDate, $empIdSelf ?: 'ADMIN', $s1, $s2, $s3, $s4, $s5, $remarks]);
             $newId = (int)$pdo->lastInsertId();
             $total = $s1 + $s2 + $s3 + $s4 + $s5;
             writeLog($pdo, 'CREATE', 'AUDIT_5S', (string)$newId, null, [
                 'line' => $auditLine, 'audit_date' => $auditDate, 'total_score' => $total,
-            ], "Recorded 5S audit for {$auditLine} ({$total}/100)");
+            ], "Recorded standalone 5S audit for {$auditLine} ({$total}/100)");
             $pdo->commit();
-            mpJsonSuccess(['audit_id' => $newId, 'total_score' => $total], 'บันทึกผลตรวจ 5ส เรียบร้อยแล้ว');
+            mpJsonSuccess(['audit_id' => $newId, 'total_score' => $total, 'grade' => scoreTo5sGrade($total)], 'บันทึกผลตรวจ 5ส เรียบร้อยแล้ว');
 
         case 'save_grades':
             $period = trim((string)($input['period'] ?? date('Y-m')));
+            if (preg_match('/^\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}$/', $period)) {
+                throw new InvalidArgumentException('ไม่สามารถบันทึกเกรดในโหมดช่วงเวลา (RANGE) ได้ กรุณาเลือกโหมดรายเดือน (MONTH)');
+            }
+            parseMpPeriod($period);
+
             $gradesRaw = $input['grades'] ?? [];
             if (is_string($gradesRaw)) {
                 $gradesRaw = json_decode($gradesRaw, true) ?? [];
@@ -314,8 +275,9 @@ try {
                 throw new InvalidArgumentException('ไม่พบข้อมูลเกรดที่ต้องการบันทึก');
             }
 
+            $validGrades = ['A', 'B', 'C', 'D', ''];
             $pdo->beginTransaction();
-            $check = $pdo->prepare('SELECT TOP 1 id, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall FROM dbo.EMPLOYEE_GRADES WHERE emp_id = ? AND evaluation_period = ?');
+            $check = $pdo->prepare('SELECT TOP 1 id, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, notes FROM dbo.EMPLOYEE_GRADES WHERE emp_id = ? AND evaluation_period = ?');
             $ins = $pdo->prepare('INSERT INTO dbo.EMPLOYEE_GRADES (emp_id, evaluation_period, grade, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall, evaluated_by, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())');
             $upd = $pdo->prepare('UPDATE dbo.EMPLOYEE_GRADES SET grade = ?, grade_iph = ?, grade_5s = ?, grade_attendance = ?, grade_learning = ?, grade_overall = ?, evaluated_by = ?, notes = ?, updated_at = GETDATE() WHERE id = ?');
 
@@ -325,26 +287,37 @@ try {
                 if ($empId === '') {
                     continue;
                 }
-                $gIph = strtoupper(trim((string)($g['grade_iph'] ?? '')));
-                $g5s = strtoupper(trim((string)($g['grade_5s'] ?? '')));
-                $gAtt = strtoupper(trim((string)($g['grade_attendance'] ?? '')));
-                $gLrn = strtoupper(trim((string)($g['grade_learning'] ?? '')));
-                $gOv = strtoupper(trim((string)($g['grade_overall'] ?? ($g['grade'] ?? ''))));
-                $gradeMain = $gOv !== '' ? $gOv : strtoupper(trim((string)($g['grade'] ?? 'C')));
-                $notes = substr(trim((string)($g['notes'] ?? '')), 0, 500);
+                $cleanG = static function ($v) use ($validGrades): string {
+                    $up = strtoupper(trim((string)$v));
+                    return in_array($up, $validGrades, true) ? $up : '';
+                };
+                $gIph = $cleanG($g['grade_iph'] ?? '');
+                $g5s = $cleanG($g['grade_5s'] ?? '');
+                $gAtt = $cleanG($g['grade_attendance'] ?? '');
+                $gLrn = $cleanG($g['grade_learning'] ?? '');
+                $gOv = $cleanG($g['grade_overall'] ?? ($g['grade'] ?? ''));
+                $gradeMain = $gOv !== '' ? $gOv : 'C';
+                $notes = mb_substr(trim((string)($g['notes'] ?? '')), 0, 500, 'UTF-8');
 
                 $check->execute([$empId, $period]);
                 $oldRow = $check->fetch(PDO::FETCH_ASSOC);
+                $newPayload = [
+                    'grade' => $gradeMain, 'grade_iph' => $gIph, 'grade_5s' => $g5s,
+                    'grade_attendance' => $gAtt, 'grade_learning' => $gLrn, 'grade_overall' => $gOv,
+                    'notes' => $notes,
+                ];
+
                 if ($oldRow) {
                     $upd->execute([$gradeMain, $gIph, $g5s, $gAtt, $gLrn, $gOv, $userId, $notes, $oldRow['id']]);
+                    writeLog($pdo, 'UPDATE', 'EMPLOYEE_GRADING', "{$empId}@{$period}", $oldRow, $newPayload, "Updated 4D grade for {$empId} ({$period})");
                 } else {
                     $ins->execute([$empId, $period, $gradeMain, $gIph, $g5s, $gAtt, $gLrn, $gOv, $userId, $notes]);
+                    writeLog($pdo, 'CREATE', 'EMPLOYEE_GRADING', "{$empId}@{$period}", null, $newPayload, "Created 4D grade for {$empId} ({$period})");
                 }
                 $savedCount++;
             }
-            writeLog($pdo, 'UPDATE', 'EMPLOYEE_GRADING', $period, null, ['saved_count' => $savedCount], "Saved 4D evaluation grades for {$savedCount} employees ({$period})");
             $pdo->commit();
-            mpJsonSuccess(['saved_count' => $savedCount], "บันทึกเกรดพนักงาน {$savedCount} คน ประจำงวด {$period} เรียบร้อยแล้ว");
+            mpJsonSuccess(['saved_count' => $savedCount], "บันทึกเกรดพนักงาน {$savedCount} คน ประจำงวด {$period} พร้อม Audit Log เรียบร้อยแล้ว");
 
         case 'save_weightage':
             $hcGroup = trim((string)($input['department_api'] ?? ($input['hc_group'] ?? '')));
@@ -356,14 +329,18 @@ try {
             if ($hcGroup === '' || $hcGroup === 'ALL') {
                 throw new InvalidArgumentException('กรุณาเลือกกลุ่มทีม (ไม่รวม ALL)');
             }
-            if ($wIph + $w5s + $wAtt + $wLrn !== 100) {
+            if ($wIph < 0 || $w5s < 0 || $wAtt < 0 || $wLrn < 0 || ($wIph + $w5s + $wAtt + $wLrn) !== 100) {
                 throw new InvalidArgumentException('ผลรวมน้ำหนักทั้ง 4 มิติต้องเท่ากับ 100% พอดี');
             }
 
             $pdo->beginTransaction();
+            $stmtOldW = $pdo->prepare('SELECT TOP 1 weight_iph, weight_5s, weight_attendance, weight_learning FROM dbo.MANPOWER_TEAM_SETTINGS WHERE hc_group = ? OR department_api = ?');
+            $stmtOldW->execute([$hcGroup, $hcGroup]);
+            $oldW = $stmtOldW->fetch(PDO::FETCH_ASSOC);
+
             $stmt = $pdo->prepare('UPDATE dbo.MANPOWER_TEAM_SETTINGS SET weight_iph = ?, weight_5s = ?, weight_attendance = ?, weight_learning = ? WHERE hc_group = ? OR department_api = ?');
             $stmt->execute([$wIph, $w5s, $wAtt, $wLrn, $hcGroup, $hcGroup]);
-            writeLog($pdo, 'UPDATE', 'GRADING_WEIGHTAGE', $hcGroup, null, ['iph' => $wIph, '5s' => $w5s, 'att' => $wAtt, 'learn' => $wLrn], "Updated 4D grading weightage for {$hcGroup}");
+            writeLog($pdo, 'UPDATE', 'GRADING_WEIGHTAGE', $hcGroup, $oldW ?: null, ['weight_iph' => $wIph, 'weight_5s' => $w5s, 'weight_attendance' => $wAtt, 'weight_learning' => $wLrn], "Updated 4D grading weightage for {$hcGroup}");
             $pdo->commit();
             mpJsonSuccess(null, "บันทึกสัดส่วนน้ำหนักกลุ่ม {$hcGroup} เรียบร้อยแล้ว");
 
@@ -399,7 +376,7 @@ try {
                 throw new InvalidArgumentException('ไม่พบข้อมูลเกณฑ์ที่ต้องการบันทึก');
             }
             $pdo->beginTransaction();
-            $check = $pdo->prepare('SELECT 1 FROM dbo.EMPLOYEE_GRADING_CRITERIA WHERE line = ?');
+            $check = $pdo->prepare('SELECT line, threshold_a, threshold_b, threshold_c, att_max_late_a, att_max_late_b, att_max_late_c FROM dbo.EMPLOYEE_GRADING_CRITERIA WHERE line = ?');
             $upd = $pdo->prepare('UPDATE dbo.EMPLOYEE_GRADING_CRITERIA SET threshold_a = ?, threshold_b = ?, threshold_c = ?, att_max_late_a = ?, att_max_late_b = ?, att_max_late_c = ?, updated_by = ?, updated_at = GETDATE() WHERE line = ?');
             $ins = $pdo->prepare('INSERT INTO dbo.EMPLOYEE_GRADING_CRITERIA (line, threshold_a, threshold_b, threshold_c, att_max_late_a, att_max_late_b, att_max_late_c, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())');
             $count = 0;
@@ -414,15 +391,24 @@ try {
                 $attA = isset($c['att_max_late_a']) && $c['att_max_late_a'] !== '' ? (int)$c['att_max_late_a'] : 0;
                 $attB = isset($c['att_max_late_b']) && $c['att_max_late_b'] !== '' ? (int)$c['att_max_late_b'] : 1;
                 $attC = isset($c['att_max_late_c']) && $c['att_max_late_c'] !== '' ? (int)$c['att_max_late_c'] : 2;
+                if ($a < $b || $b < $cVal) {
+                    throw new InvalidArgumentException("เกณฑ์ IPH ของ {$ln} ต้องเรียงจากมากไปน้อย (A ≥ B ≥ C)");
+                }
+                if ($attA > $attB || $attB > $attC) {
+                    throw new InvalidArgumentException("เกณฑ์จำนวนวันสาย/ขาดของ {$ln} ต้องเรียงจากน้อยไปมาก (A ≤ B ≤ C)");
+                }
                 $check->execute([$ln]);
-                if ($check->fetchColumn()) {
+                $oldCrit = $check->fetch(PDO::FETCH_ASSOC);
+                $newCrit = ['threshold_a' => $a, 'threshold_b' => $b, 'threshold_c' => $cVal, 'att_max_late_a' => $attA, 'att_max_late_b' => $attB, 'att_max_late_c' => $attC];
+                if ($oldCrit) {
                     $upd->execute([$a, $b, $cVal, $attA, $attB, $attC, $userId, $ln]);
+                    writeLog($pdo, 'UPDATE', 'GRADING_CRITERIA', $ln, $oldCrit, $newCrit, "Updated grading criteria for {$ln}");
                 } else {
                     $ins->execute([$ln, $a, $b, $cVal, $attA, $attB, $attC, $userId]);
+                    writeLog($pdo, 'CREATE', 'GRADING_CRITERIA', $ln, null, $newCrit, "Created grading criteria for {$ln}");
                 }
                 $count++;
             }
-            writeLog($pdo, 'UPDATE', 'GRADING_CRITERIA', 'BATCH_' . $count, null, ['count' => $count], 'Updated 4D grading criteria thresholds');
             $pdo->commit();
             mpJsonSuccess(['count' => $count], 'บันทึกเกณฑ์การตัดเกรดเรียบร้อยแล้ว');
 

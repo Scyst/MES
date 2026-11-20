@@ -174,7 +174,8 @@ export const AuthProvider = ({ children }) => {
             reqUrl.includes('check.php') ||
             reqUrl.includes('login.php') ||
             reqUrl.includes('api_verify.php') ||
-            reqUrl.includes('api_learning.php');
+            reqUrl.includes('api_learning.php') ||
+            reqUrl.includes('learningApi.php');
           if (error.response.status === 401 && !isCheckEndpoint) {
             performLocalLogoutRedirect(true);
           } else if (error.response.status === 403 && !isCheckEndpoint) {
@@ -200,7 +201,8 @@ export const AuthProvider = ({ children }) => {
         reqUrl.includes('check.php') ||
         reqUrl.includes('login.php') ||
         reqUrl.includes('api_verify.php') ||
-        reqUrl.includes('api_learning.php');
+        reqUrl.includes('api_learning.php') ||
+        reqUrl.includes('learningApi.php');
       if (!isAuthCheck) {
         if (
           response.status === 401 ||

@@ -614,6 +614,91 @@ ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
 | `ip_address` | VARCHAR(50) NULL | |
 | `logged_at` | DATETIME DEFAULT GETDATE() | |
 
+---
+
+## 2026-11-20: 4D Grading Upgrade (5S Multi-Auditor Committee & Learning Mandatory Cycles)
+
+### `dbo.AUDIT_5S_ROUNDS` (New Table)
+| Column | Type | Notes |
+|---|---|---|
+| `round_id` | INT IDENTITY(1,1) PRIMARY KEY | รหัสรอบการตรวจประเมิน 5ส |
+| `eval_period` | VARCHAR(10) NOT NULL | งวดประเมิน (`YYYY-MM`) |
+| `line` | VARCHAR(100) NOT NULL | สายการผลิต/แผนก |
+| `round_name` | NVARCHAR(150) NOT NULL | ชื่อรอบตรวจ 5ส |
+| `audit_date` | DATE NOT NULL | วันที่ตรวจประเมิน |
+| `required_auditors` | INT NOT NULL DEFAULT 3 | จำนวนกรรมการ 3–5 คน (`CHECK BETWEEN 3 AND 5`) |
+| `submitted_count` | INT NOT NULL DEFAULT 0 | จำนวนกรรมการที่ส่งผลแล้ว |
+| `status` | VARCHAR(20) NOT NULL DEFAULT 'OPEN' | `OPEN` / `COMPLETED` / `LOCKED` |
+| `weighted_score` | DECIMAL(6,2) NULL | คะแนนเฉลี่ยรวมแบบหารเท่า (`1/N`) จากกรรมการที่ส่ง |
+| `final_grade` | VARCHAR(1) NULL | เกรดรวม 5ส (`>=85 A`, `>=70 B`, `>=55 C`, `<55 D`) |
+| `notes` | NVARCHAR(500) NULL | หมายเหตุรอบตรวจ |
+| `created_by` | VARCHAR(50) NULL | ผู้สร้างรอบ |
+| `created_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+| `updated_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+
+### `dbo.AUDIT_5S_COMMITTEE` (New Table)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INT IDENTITY(1,1) PRIMARY KEY | |
+| `round_id` | INT NOT NULL | FK -> `dbo.AUDIT_5S_ROUNDS(round_id)` ON DELETE CASCADE |
+| `auditor_emp_id` | VARCHAR(50) NOT NULL | รหัสพนักงานกรรมการผู้ตรวจ (`UQ_AUDIT_5S_COMMITTEE_ROUND_EMP`) |
+| `auditor_name` | NVARCHAR(200) NULL | ชื่อกรรมการ |
+| `assigned_role` | NVARCHAR(50) NOT NULL DEFAULT 'AUDITOR' | บทบาท (`CHAIR` / `AUDITOR`) — คิดน้ำหนักหารเท่า `1/N` |
+| `weight_pct` | DECIMAL(6,2) NOT NULL DEFAULT 1.00 | สัดส่วนน้ำหนักกำกับ (Equal Weight) |
+| `is_completed` | BIT NOT NULL DEFAULT 0 | สถานะส่งผลประเมินของกรรมการ |
+| `audit_id` | INT NULL | FK อ้างอิง `dbo.AUDIT_5S(audit_id)` |
+| `submitted_at` | DATETIME NULL | เวลาที่ส่งผลตรวจ |
+| `assigned_by` | VARCHAR(50) NULL | |
+| `created_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+
+### `dbo.AUDIT_5S` (Alter Table)
+| Column | Type | Notes |
+|---|---|---|
+| `round_id` | INT NULL | เชื่อมรอบตรวจ 5ส (`AUDIT_5S_ROUNDS`) พร้อม `UQ_AUDIT_5S_ROUND_AUDITOR` |
+| `auditor_weight` | DECIMAL(6,2) NULL | น้ำหนักคะแนนของกรรมการในรอบนั้น |
+| `status` | VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED' | สถานะใบตรวจ (`SUBMITTED` / `LOCKED`) |
+
+### `dbo.AUDIT_5S_PHOTOS` (New Table)
+| Column | Type | Notes |
+|---|---|---|
+| `photo_id` | INT IDENTITY(1,1) PRIMARY KEY | รหัสรูปหลักฐาน 5ส |
+| `audit_id` | INT NOT NULL | FK -> `dbo.AUDIT_5S(audit_id)` ON DELETE CASCADE |
+| `round_id` | INT NULL | รหัสรอบตรวจ 5ส |
+| `category_5s` | VARCHAR(20) NOT NULL DEFAULT 'GENERAL' | หมวด `SEIRI` / `SEITON` / `SEISO` / `SEIKETSU` / `SHITSUKE` / `GENERAL` |
+| `file_name` | VARCHAR(255) NOT NULL | ชื่อไฟล์ภาพที่จัดเก็บใน `/MES/MES/uploads/5s_audits/` (นอก `page/`) |
+| `file_path` | VARCHAR(300) NOT NULL | Relative path (`uploads/5s_audits/<file>`) |
+| `original_name` | NVARCHAR(255) NULL | ชื่อไฟล์ต้นฉบับ |
+| `caption` | NVARCHAR(300) NULL | คำอธิบายจุดที่ตรวจพบ |
+| `uploaded_by` | VARCHAR(50) NULL | รหัสผู้ตรวจผู้อัปโหลด |
+| `uploaded_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+
+### `dbo.LEARNING_CURRICULUM_RULES` (New Table)
+| Column | Type | Notes |
+|---|---|---|
+| `rule_id` | INT IDENTITY(1,1) PRIMARY KEY | รหัสกฎหลักสูตรบังคับ/หน่วยกิต |
+| `course_id` | VARCHAR(100) NOT NULL | รหัสหลักสูตร Learning Hub (เช่น `c-iso-45001`) |
+| `course_title` | NVARCHAR(255) NOT NULL | ชื่อหลักสูตร |
+| `hc_group_filter` | VARCHAR(50) NOT NULL DEFAULT 'ALL' | กรองกลุ่มกำลังคน (`ALL` / `TEAM 1` / `EXCLUDE`) |
+| `department_filter` | NVARCHAR(100) NOT NULL DEFAULT 'ALL' | กรองตาม `department_api` หรือ `ALL` |
+| `line_filter` | VARCHAR(100) NOT NULL DEFAULT 'ALL' | กรองตาม `line` หรือ `ALL` |
+| `tier_filter` | VARCHAR(20) NOT NULL DEFAULT 'ALL' | กรองตามระดับตำแหน่ง (`ALL` / `TIER_1` / `TIER_2` / `TIER_3`) |
+| `requirement_type` | VARCHAR(20) NOT NULL DEFAULT 'MANDATORY' | ประเภทหลักสูตร (`MANDATORY` / `ELECTIVE`) |
+| `reset_cycle` | VARCHAR(20) NOT NULL DEFAULT 'MONTHLY' | รอบรีเซ็ท (`MONTHLY` 1 เดือน / `QUARTERLY` 3 เดือน / `NONE`) |
+| `credits` | DECIMAL(4,1) NOT NULL DEFAULT 1.0 | หน่วยกิตที่ได้รับเมื่อสอบผ่าน |
+| `pass_score_pct` | INT NOT NULL DEFAULT 80 | เกณฑ์คะแนนขั้นต่ำ (%) |
+| `is_active` | BIT NOT NULL DEFAULT 1 | สถานะใช้งาน |
+| `notes` | NVARCHAR(300) NULL | |
+| `created_by` | VARCHAR(50) NULL | |
+| `created_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+| `updated_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+
+### `dbo.LEARNING_RECORDS` (Alter Table)
+| Column | Type | Notes |
+|---|---|---|
+| `cycle_key` | VARCHAR(20) NOT NULL DEFAULT 'PERM' | รหัสรอบ (`YYYY-MM`, `YYYY-QN`, หรือ `PERM` — แทน `UQ_Emp_Course` ด้วย `UQ_Emp_Course_Cycle(emp_id, course_id, cycle_key)`) |
+| `rule_id` | INT NULL | รหัสกฎ `LEARNING_CURRICULUM_RULES` ที่ใช้รอบนั้น |
+| `expires_at` | DATE NULL | วันหมดอายุของรอบทบทวน (`NULL` สำหรับถาวร) |
+
 
 
 

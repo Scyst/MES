@@ -97,15 +97,14 @@ export default function AppLayout() {
   const { logout, user } = useAuth();
 
   const userRoleLower = (user?.role || '').toLowerCase();
-  const canViewPerformance =
-    Boolean(user?.emp_id) && ['creator', 'admin', 'manager'].includes(userRoleLower);
+  const canViewPerformance = Boolean(user?.emp_id);
 
   // Reset avatar fallback when user changes
   useEffect(() => {
     setAvatarIdx(0);
   }, [user?.profile_picture]);
 
-  // Fetch live employee performance & grading summary from self-contained Toolbox2 API
+  // Fetch live self-view performance & 4D grading summary (raw THB masked server-side for Non-Management)
   useEffect(() => {
     if (!canViewPerformance) return;
 
@@ -117,9 +116,30 @@ export default function AppLayout() {
           { withCredentials: true }
         );
         if (!cancelled && res.data && res.data.success && res.data.data) {
-          setPerformance(res.data.data);
+          const payload = res.data.data;
+          setPerformance(payload);
           try {
-            localStorage.setItem('mes_learning_user_grading', JSON.stringify(res.data.data));
+            const safeCache = {
+              grade: payload.grade,
+              system_grade: payload.system_grade,
+              grade_overall: payload.grade_overall,
+              grade_learning: payload.grade_learning,
+              system_grade_learning: payload.system_grade_learning,
+              income_ratio: payload.income_ratio,
+              wage_masked: Boolean(payload.wage_masked),
+              skill_count: payload.skill_count,
+              passed_courses: payload.passed_courses,
+              learning_eval: payload.learning_eval
+                ? {
+                    mandatory_total: payload.learning_eval.mandatory_total,
+                    mandatory_passed: payload.learning_eval.mandatory_passed,
+                    mandatory_missing: payload.learning_eval.mandatory_missing,
+                    total_credits: payload.learning_eval.total_credits,
+                    is_capped_by_mandatory: payload.learning_eval.is_capped_by_mandatory,
+                  }
+                : null,
+            };
+            localStorage.setItem('mes_learning_user_grading', JSON.stringify(safeCache));
           } catch {
             // ignore storage errors
           }
@@ -338,20 +358,27 @@ export default function AppLayout() {
                             : finalGrade}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          ค่าผลงาน (IPH):
-                        </span>
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                          {iphFormatted}
-                        </span>
-                      </div>
+                      {!performance?.wage_masked && performance?.income_per_head !== null && (
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            ค่าผลงาน (IPH):
+                          </span>
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                            {iphFormatted}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-500 dark:text-gray-400">Ratio:</span>
                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          {ratioFormatted}
+                          {ratioFormatted}x
                         </span>
                       </div>
+                      {performance?.learning_eval?.mandatory_missing > 0 && (
+                        <div className="mt-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                          ค้างหลักสูตรบังคับรอบนี้ {performance.learning_eval.mandatory_missing} วิชา
+                        </div>
+                      )}
                     </div>
                   )}
 

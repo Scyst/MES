@@ -2,13 +2,15 @@
  * Self-contained API client for Toolbox Manpower & Daily Planning (Command Center) modules.
  * All requests go to Toolbox-local endpoints under import.meta.env.BASE_URL.
  */
-import { apiGet, apiPost } from './apiClient';
+import { apiGet, apiPost, request } from './apiClient';
 
 const BASE = import.meta.env.BASE_URL || '/iot-toolbox/sandbox-b9/Toolbox/';
 const OPS_ENDPOINT = `${BASE}api/manpower/dailyOperationsApi.php`;
 const MASTER_ENDPOINT = `${BASE}api/manpower/masterDataApi.php`;
 const HOLIDAY_ENDPOINT = `${BASE}api/manpower/holidayApi.php`;
 const GRADING_ENDPOINT = `${BASE}api/manpower/employeeGradingApi.php`;
+const AUDIT5S_ENDPOINT = `${BASE}api/manpower/audit5sApi.php`;
+const LEARNING_ENDPOINT = `${BASE}api/learning/learningApi.php`;
 const SKILL_ENDPOINT = `${BASE}api/manpower/skillMatrixApi.php`;
 const TREND_ENDPOINT = `${BASE}api/manpower/gradingTrendApi.php`;
 const SYNC_ENDPOINT = `${BASE}api/manpower/syncScansApi.php`;
@@ -97,4 +99,26 @@ export const planningApi = {
   saveMeeting: (payload) => apiPost(PLANNING_ENDPOINT, { action: 'save_meeting', ...payload }),
   addPlan: (payload) => apiPost(PLANNING_ENDPOINT, { action: 'add_plan', ...payload }),
   updatePlanQty: (payload) => apiPost(PLANNING_ENDPOINT, { action: 'update_plan_qty', ...payload }),
+};
+
+export const audit5sApi = {
+  getMyAssignments: (evalPeriod = '') => apiGet(AUDIT5S_ENDPOINT, { action: 'get_my_5s_assignments', eval_period: evalPeriod }),
+  getRoundDetail: (roundId) => apiGet(AUDIT5S_ENDPOINT, { action: 'get_5s_round_detail', round_id: roundId }),
+  getAuditorCandidates: (q = '') => apiGet(AUDIT5S_ENDPOINT, { action: 'get_auditor_candidates', q }),
+  saveRound: (payload) => apiPost(AUDIT5S_ENDPOINT, { action: 'save_5s_round', ...payload }),
+  toggleRoundLock: (roundId, lock) => apiPost(AUDIT5S_ENDPOINT, { action: 'toggle_5s_round_lock', round_id: roundId, lock: lock ? 1 : 0 }),
+  submitAudit: (formData) => request({
+    method: 'post',
+    url: `${AUDIT5S_ENDPOINT}?action=submit_5s_audit`,
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getPhotoUrl: (fileName) => `${AUDIT5S_ENDPOINT}?action=view_5s_photo&file=${encodeURIComponent(fileName || '')}`,
+};
+
+export const learningCurriculumApi = {
+  getRules: () => apiGet(LEARNING_ENDPOINT, { action: 'get_curriculum_rules' }),
+  saveRule: (payload) => apiPost(LEARNING_ENDPOINT, { action: 'save_curriculum_rule', ...payload }),
+  deleteRule: (ruleId) => apiPost(LEARNING_ENDPOINT, { action: 'delete_curriculum_rule', rule_id: ruleId }),
+  getCurrentUser: () => apiGet(LEARNING_ENDPOINT, { action: 'get_current_user' }),
 };

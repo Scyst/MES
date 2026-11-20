@@ -821,7 +821,9 @@ export async function syncCourseProgressToBackend({
     return null;
   }
 
-  const endpoint = '../MES/MES/page/manpower/api/api_learning.php?action=save_course_progress';
+  const toolboxBase = import.meta?.env?.BASE_URL || '/iot-toolbox/sandbox-b9/Toolbox/';
+  const endpoint = `${toolboxBase}api/learning/learningApi.php?action=save_course_progress`;
+  const csrfToken = (typeof window !== 'undefined' && window.csrf_token) ? window.csrf_token : '';
 
   const payload = {
     emp_id: empId,
@@ -839,7 +841,10 @@ export async function syncCourseProgressToBackend({
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+      },
       credentials: 'include',
       body: JSON.stringify(payload)
     });

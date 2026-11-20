@@ -272,3 +272,23 @@ writeLog(
 รายละเอียดการปฏิบัติตามมาตรฐานสากล **IATF 16949:2016**, **ISO/IEC 27001:2022**, และ **พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)** พร้อมคู่มือแนวทางการตอบข้อซักถามออดิท (Auditor Q&A Cheat Sheet) ได้รับการรวบรวมไว้ใน:
 👉 **[คู่มือมาตรฐานความมั่นคงปลอดภัยและการตรวจสอบย้อนกลับสากล](file:///E:/MES/MES/MES/Toolbox/docs/AUDIT_COMPLIANCE_HANDBOOK.md)** (`Toolbox/docs/AUDIT_COMPLIANCE_HANDBOOK.md`)
 *(สามารถสั่งพิมพ์หรือส่งต่อให้ผู้บริหารและทีมงานใช้อ้างอิงขณะรับการตรวจประเมินโรงงานได้ทันที)*
+
+---
+
+## ⭐ 10. ระบบประเมินเกรดพนักงาน 4 มิติเต็มรูปแบบ (4D Employee Grading Engine — 2026-11 Upgrade)
+
+โครงสร้างกลางใน [\_grading\_helpers.php](file:///E:/MES/MES/MES/Toolbox/public/api/manpower/_grading_helpers.php) ใช้ร่วมกันระหว่าง Profile, Header, Manpower Admin Grading, 5S Committee และ Learning Hub:
+
+1. **Self-View + Financial Masking ([api\_my\_performance.php](file:///E:/MES/MES/MES/Toolbox/public/api/manpower/api_my_performance.php), [AppLayout.jsx](file:///E:/MES/MES/MES/Toolbox/src/shared/components/AppLayout.jsx), [Profile4DGradingTab.jsx](file:///E:/MES/MES/MES/Toolbox/src/modules/Profile/components/Profile4DGradingTab.jsx))**:
+   - พนักงานทุกคนที่ผูก `emp_id` เข้าถึงผลเกรด 4 มิติ (`A–D`), `income_ratio` (`x`), `5S Consensus`, และภารกิจหลักสูตรบังคับของตนเองผ่าน `$_SESSION['user']['emp_id']` เท่านั้น
+   - กลุ่มไม่ใช่ผู้บริหาร (`!creator/admin/manager`) จะถูก mask ค่าเงิน (`income_per_head = null`, `total_wage = null`, `wage_masked = true`) ทั้งใน API, UI และ `localStorage`
+2. **คณะกรรมการตรวจ 5ส แบบ 3–5 คน + ถ่ายรูป + หารเท่า 1/N ([audit5sApi.php](file:///E:/MES/MES/MES/Toolbox/public/api/manpower/audit5sApi.php), [Audit5sCommitteePanel.jsx](file:///E:/MES/MES/MES/Toolbox/src/modules/Manpower/components/Audit5sCommitteePanel.jsx))**:
+   - ตาราง `dbo.AUDIT_5S_ROUNDS`, `dbo.AUDIT_5S_COMMITTEE`, `dbo.AUDIT_5S_PHOTOS` (บังคับจำนวนกรรมการ `3–5` คนต่อรอบ)
+   - รองรับ **Blind Peer Audit** (ซ่อนคะแนนกรรมการคนอื่นจนกว่าจะส่งผลครบองค์ประชุม) และการแนบภาพถ่ายจากมือถือเก็บนอก `page/` ที่ `/MES/MES/uploads/5s_audits/`
+   - คะแนนเฉลี่ยรวมคำนวณแบบ **หารเท่า (`1/N`)** แล้วแปลงเป็นเกรด `≥85 A`, `≥70 B`, `≥55 C`, `<55 D` ซิงค์เข้าตารางประเมิน 4 มิติทันที
+3. **หลักสูตรบังคับแยกกลุ่มผสม & รอบรีเซ็ท 1/3 เดือน ([learningApi.php](file:///E:/MES/MES/MES/Toolbox/public/api/learning/learningApi.php), [CurriculumRulesModal.jsx](file:///E:/MES/MES/MES/Toolbox/src/modules/Manpower/components/CurriculumRulesModal.jsx))**:
+   - ตาราง `dbo.LEARNING_CURRICULUM_RULES` รองรับกรองกลุ่มแบบผสม (`hc_group_filter` + `department_filter` + `line_filter` + `tier_filter`) ตั้งรอบรีเซ็ทได้ทั้ง `MONTHLY` (ทุก 1 เดือน `YYYY-MM`), `QUARTERLY` (ทุก 3 เดือน `YYYY-QN`), และ `NONE`
+   - ขยาย `dbo.LEARNING_RECORDS` ด้วย `cycle_key` และ `UQ_Emp_Course_Cycle` เพื่อคงประวัติใบรับรองเก่าทั้งหมดไว้ขณะบังคับสอบทบทวนในรอบใหม่
+   - **สูตรหน่วยกิตมหาวิทยาลัย (`evaluateUniversityLearning`)**: รวมหน่วยกิตจากวิชาบังคับรอบปัจจุบัน + วิชาเลือก + ทักษะปฏิบัติ เทียบเกณฑ์ Tier (`Tier 1: A≥3/B≥2/C≥1`, `Tier 2: A≥5/B≥3/C≥1`, `Tier 3: A≥8/B≥5/C≥2`) โดย **จำกัดเกรดสูงสุดไม่เกิน `C`** หากวิชาบังคับประจำรอบยังสอบผ่านไม่ครบ 100%
+4. **ความปลอดภัยและ Audit Completeness ([employeeGradingApi.php](file:///E:/MES/MES/MES/Toolbox/public/api/manpower/employeeGradingApi.php), [EmployeeGradingTab.jsx](file:///E:/MES/MES/MES/Toolbox/src/modules/Manpower/components/EmployeeGradingTab.jsx))**:
+   - ปิดปุ่ม Save ในโหมด `RANGE`, คง `N/A` เมื่อไม่มีผลตรวจ 5ส/เกณฑ์มาสาย, บันทึก `oldData`/`newData` รายพนักงานใน `SYSTEM_LOGS`, และเพิ่มการพิมพ์สรุป PDF + ส่งออก Excel ครบทุกมิติ

@@ -190,6 +190,7 @@ Here is the complete list of all directories on the FTP server.
 /MES/MES/page/userManage/components
 /MES/MES/page/userManage/script
 /MES/MES/uploads
+/MES/MES/uploads/5s_audits
 /MES/MES/uploads/accessories_inspection
 /MES/MES/uploads/documentCenter
 /MES/MES/uploads/items
@@ -290,6 +291,7 @@ Here is the complete list of all directories on the FTP server.
 /Toolbox/api/documentCenter
 /Toolbox/api/fleetLog
 /Toolbox/api/forklift
+/Toolbox/api/learning
 /Toolbox/api/loading
 /Toolbox/api/management
 /Toolbox/api/manpower

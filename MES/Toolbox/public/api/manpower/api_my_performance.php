@@ -1,99 +1,75 @@
 <?php
-// /page/manpower/api/api_my_performance.php
-session_start();
+/**
+ * Self-View 4D Employee Performance API (Header Widget & #/profile).
+ * - Always scopes data strictly to the authenticated session user's emp_id.
+ * - Opens 4D evaluation visibility for all employees matched to an emp_id.
+ * - Masks raw THB financial amounts (income_per_head, total_wage) for Non-Management roles.
+ */
 
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-
-header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../../db.php';
-
-if (!isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit;
-}
-
-// Strict confidentiality: Only Admin / Manager / Creator can view 4D evaluation grades
-$sessionRole = strtolower(trim($_SESSION['user']['role'] ?? ''));
-$canViewGrading = in_array($sessionRole, ['creator', 'admin', 'manager'], true);
-if (!$canViewGrading) {
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'has_data'        => false,
-            'restricted'      => true,
-            'grade'           => '-',
-            'grade_iph'       => '-',
-            'grade_5s'        => '-',
-            'grade_attendance'=> '-',
-            'grade_learning'  => '-',
-            'grade_overall'   => '-',
-            'income_per_head' => 0,
-            'total_wage'      => 0,
-            'income_ratio'    => 0,
-            'skill_count'     => 0,
-            'passed_courses'  => 0,
-            'trend'           => [],
-        ]
-    ]);
-    exit;
-}
-
-$emp_id = trim($_SESSION['user']['emp_id'] ?? '');
-if (empty($emp_id)) {
-    $fullName = trim($_SESSION['user']['fullname'] ?? '');
-    if (!empty($fullName)) {
-        try {
-            $stmtMatch = $pdo->prepare("SELECT TOP 1 emp_id FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK) WHERE name_th = ? ORDER BY is_active DESC, emp_id DESC");
-            $stmtMatch->execute([$fullName]);
-            $emp_id = (string)($stmtMatch->fetchColumn() ?: '');
-        } catch (Exception $ignore) {}
-    }
-}
-
-if (empty($emp_id)) {
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'has_data'        => false,
-            'grade'           => '-',
-            'grade_iph'       => '-',
-            'grade_5s'        => '-',
-            'grade_attendance' => '-',
-            'grade_learning'  => '-',
-            'grade_overall'   => '-',
-            'income_per_head' => 0,
-            'total_wage'      => 0,
-            'income_ratio'    => 0,
-            'skill_count'     => 0,
-            'passed_courses'  => 0,
-            'trend'           => [],
-        ]
-    ]);
-    exit;
-}
-
-$currentPeriod = date('Y-m');
+require_once __DIR__ . '/_common.php';
+require_once __DIR__ . '/_grading_helpers.php';
 
 try {
-    // ── Main: Current month performance ──────────────────────────────────
+    [, , $currentUser] = parseMpRequest('get_my_performance');
+    $canViewFinancials = isGradingManagerUser($currentUser);
+    $empId = resolveSessionEmpId($pdo, $currentUser);
+
+    $emptyPayload = [
+        'has_data' => false,
+        'restricted' => false,
+        'wage_masked' => !$canViewFinancials,
+        'can_view_financials' => $canViewFinancials,
+        'grade' => '-',
+        'grade_iph' => '-',
+        'grade_5s' => '-',
+        'grade_attendance' => '-',
+        'grade_learning' => '-',
+        'grade_overall' => '-',
+        'system_grade' => '-',
+        'system_grade_5s' => '-',
+        'system_grade_attendance' => '-',
+        'system_grade_learning' => '-',
+        'system_grade_overall' => '-',
+        'income_per_head' => $canViewFinancials ? 0 : null,
+        'total_wage' => $canViewFinancials ? 0 : null,
+        'income_ratio' => 0,
+        'late_days' => 0,
+        'absent_days' => 0,
+        'score_5s' => null,
+        'audit_5s' => null,
+        'skill_count' => 0,
+        'passed_courses' => 0,
+        'weights' => ['iph' => 25, 's5' => 25, 'attendance' => 25, 'learning' => 25],
+        'learning_eval' => null,
+        'trend' => [],
+    ];
+
+    if ($empId === '') {
+        mpJsonSuccess($emptyPayload, 'ไม่พบรหัสพนักงานที่ผูกกับบัญชีผู้ใช้');
+    }
+
+    $currentPeriod = date('Y-m');
+    $startDate = $currentPeriod . '-01';
+    $endDate = date('Y-m-d', strtotime($startDate . ' +1 month'));
+
     $sql = "
         SELECT
-            E.position,
-            G.grade,
-            G.grade_iph,
-            G.grade_5s,
-            G.grade_attendance,
-            G.grade_learning,
-            G.grade_overall,
+            E.emp_id, E.name_th, E.position, E.department_api, E.line,
+            ISNULL(TS.hc_group, '') AS hc_group,
+            ISNULL(TS.weight_iph, 25) AS weight_iph,
+            ISNULL(TS.weight_5s, 25) AS weight_5s,
+            ISNULL(TS.weight_attendance, 25) AS weight_attendance,
+            ISNULL(TS.weight_learning, 25) AS weight_learning,
+            G.evaluation_period AS saved_period,
+            G.grade, G.grade_iph, G.grade_5s, G.grade_attendance, G.grade_learning, G.grade_overall,
             ISNULL(INC.income_per_head, 0) AS income_per_head,
             ISNULL(WAGE.total_wage, 350.0) AS total_wage,
             ISNULL(WAGE.late_days, 0) AS late_days,
             ISNULL(WAGE.absent_days, 0) AS absent_days,
-            C.threshold_a,
-            C.threshold_b,
-            C.threshold_c
+            C.threshold_a, C.threshold_b, C.threshold_c,
+            C.att_max_late_a, C.att_max_late_b, C.att_max_late_c
         FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+        LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
         LEFT JOIN (
             SELECT
                 stu.emp_id,
@@ -114,18 +90,15 @@ try {
             SELECT
                 ml.emp_id,
                 SUM(
-                    COALESCE(
-                        CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END,
-                        350.0
-                    ) +
-                    (
-                        CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL
-                        THEN
-                            CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570
-                            THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5
+                    CASE WHEN ml.status IN ('PRESENT', 'LATE') THEN
+                        COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END, 350.0) +
+                        (CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL
+                            THEN CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) > 570
+                                THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(ml.log_date, ' ', ms.start_time) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5
+                                ELSE 0 END
                             ELSE 0 END
-                        ELSE 0 END
-                    ) * (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
+                        ) * (COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5)
+                    ELSE 0 END
                 ) AS total_wage,
                 SUM(CASE WHEN ml.status = 'LATE' THEN 1 ELSE 0 END) AS late_days,
                 SUM(CASE WHEN ml.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_days
@@ -133,12 +106,12 @@ try {
             LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
             LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
             OUTER APPLY (
-                SELECT TOP 1 * FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK)
+                SELECT TOP 1 hourly_rate, rate_type FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK)
                 WHERE emp.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS
                 ORDER BY display_order DESC
             ) cm
             WHERE CONVERT(VARCHAR(7), ml.log_date, 120) = :period2
-              AND ml.status IN ('PRESENT', 'LATE')
+              AND ml.status IN ('PRESENT', 'LATE', 'ABSENT')
             GROUP BY ml.emp_id
         ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
         OUTER APPLY (
@@ -152,57 +125,31 @@ try {
     ";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':period1' => $currentPeriod, ':period2' => $currentPeriod, ':period3' => $currentPeriod, ':empId' => $emp_id]);
+    $stmt->execute([
+        ':period1' => $currentPeriod,
+        ':period2' => $currentPeriod,
+        ':period3' => $currentPeriod,
+        ':empId' => $empId,
+    ]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // ── Skill count & Passed Courses count ─────────────────────────────────
-    $stmtSkill = $pdo->prepare("SELECT COUNT(*) FROM dbo.EMP_SKILLS WITH (NOLOCK) WHERE emp_id = ? AND level >= 2");
-    $stmtSkill->execute([$emp_id]);
-    $rawSkillCount = (int)$stmtSkill->fetchColumn();
-
-    $stmtLearn = $pdo->prepare("SELECT COUNT(*) FROM dbo.LEARNING_RECORDS WITH (NOLOCK) WHERE emp_id = ? AND passed = 1");
-    $stmtLearn->execute([$emp_id]);
-    $passedCourses = (int)$stmtLearn->fetchColumn();
-
-    $skillCount = max($rawSkillCount, $passedCourses);
-
-    $posUpper = mb_strtoupper(trim((string)($data['position'] ?? '')), 'UTF-8');
-    $isTier3 = (
-        in_array($sessionRole, ['creator', 'admin', 'manager'], true) ||
-        mb_strpos($posUpper, 'ผู้จัดการ') !== false ||
-        mb_strpos($posUpper, 'MINI MD') !== false ||
-        mb_strpos($posUpper, 'ประธาน') !== false ||
-        mb_strpos($posUpper, 'บริหาร') !== false ||
-        mb_strpos($posUpper, 'วิศวกร') !== false ||
-        mb_strpos($posUpper, 'ENGINEER') !== false
-    );
-    $isTier2 = !$isTier3 && (
-        in_array($sessionRole, ['supervisor', 'leader', 'planner'], true) ||
-        mb_strpos($posUpper, 'หัวหน้า') !== false ||
-        mb_strpos($posUpper, 'SUPERVISOR') !== false ||
-        mb_strpos($posUpper, 'LEADER') !== false ||
-        mb_strpos($posUpper, 'SPECIAL') !== false ||
-        mb_strpos($posUpper, 'เทคนิค') !== false ||
-        mb_strpos($posUpper, 'QC') !== false ||
-        mb_strpos($posUpper, 'QA') !== false
+    $learnCtx = fetchLearningEvalContext($pdo, [$empId]);
+    $empForEval = [
+        'emp_id' => $empId,
+        'position' => $data['position'] ?? '',
+        'sys_role' => $currentUser['role'] ?? '',
+        'department_api' => $data['department_api'] ?? '',
+        'line' => $data['line'] ?? ($currentUser['line'] ?? ''),
+        'hc_group' => $data['hc_group'] ?? '',
+    ];
+    $learnEval = evaluateUniversityLearning(
+        $empForEval,
+        $learnCtx['rules'],
+        $learnCtx['records_by_emp'][$empId] ?? [],
+        (int)($learnCtx['manual_skills_by_emp'][$empId] ?? 0),
+        $currentPeriod
     );
 
-    $systemLearningGrade = 'D';
-    if ($isTier3) {
-        if ($skillCount >= 8)      $systemLearningGrade = 'A';
-        elseif ($skillCount >= 5)  $systemLearningGrade = 'B';
-        elseif ($skillCount >= 2)  $systemLearningGrade = 'C';
-    } elseif ($isTier2) {
-        if ($skillCount >= 5)      $systemLearningGrade = 'A';
-        elseif ($skillCount >= 3)  $systemLearningGrade = 'B';
-        elseif ($skillCount >= 1)  $systemLearningGrade = 'C';
-    } else {
-        if ($skillCount >= 3)      $systemLearningGrade = 'A';
-        elseif ($skillCount >= 2)  $systemLearningGrade = 'B';
-        elseif ($skillCount >= 1)  $systemLearningGrade = 'C';
-    }
-
-    // ── 3-month trend ──────────────────────────────────────────────────
     $stmtTrend = $pdo->prepare("
         SELECT evaluation_period, grade_iph, grade_5s, grade_attendance, grade_learning, grade_overall
         FROM dbo.EMPLOYEE_GRADES WITH (NOLOCK)
@@ -210,69 +157,95 @@ try {
         ORDER BY evaluation_period DESC
         OFFSET 0 ROWS FETCH NEXT 6 ROWS ONLY
     ");
-    $stmtTrend->execute([$emp_id]);
+    $stmtTrend->execute([$empId]);
     $trend = array_reverse($stmtTrend->fetchAll(PDO::FETCH_ASSOC));
 
-    if ($data) {
-        $income = (float)$data['income_per_head'];
-        $wage   = (float)$data['total_wage'];
-        $ratio  = $wage > 0 ? ($income / $wage) : 0;
-
-        $systemGrade = 'N/A';
-        if (!empty($data['threshold_a']) && $data['threshold_a'] > 0) {
-            if ($ratio >= $data['threshold_a'])      $systemGrade = 'A';
-            elseif ($ratio >= $data['threshold_b'])  $systemGrade = 'B';
-            elseif ($ratio >= $data['threshold_c'])  $systemGrade = 'C';
-            else                                     $systemGrade = 'D';
-        } else {
-            if ($ratio >= 2.0)      $systemGrade = 'A';
-            elseif ($ratio >= 1.5)  $systemGrade = 'B';
-            elseif ($ratio >= 1.0)  $systemGrade = 'C';
-            else                    $systemGrade = 'D';
-        }
-
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'has_data'              => true,
-                'grade'                 => !empty($data['grade'])            ? $data['grade']            : (!empty($data['grade_overall']) ? $data['grade_overall'] : '-'),
-                'grade_iph'             => !empty($data['grade_iph'])        ? $data['grade_iph']        : '-',
-                'grade_5s'              => !empty($data['grade_5s'])         ? $data['grade_5s']         : '-',
-                'grade_attendance'      => !empty($data['grade_attendance']) ? $data['grade_attendance'] : '-',
-                'grade_learning'        => !empty($data['grade_learning'])   ? $data['grade_learning']   : $systemLearningGrade,
-                'grade_overall'         => !empty($data['grade_overall'])    ? $data['grade_overall']    : (!empty($data['grade']) ? $data['grade'] : '-'),
-                'system_grade'          => $systemGrade,
-                'system_grade_learning' => $systemLearningGrade,
-                'income_per_head'       => $income,
-                'total_wage'            => $wage,
-                'income_ratio'          => round($ratio, 2),
-                'late_days'             => (int)($data['late_days']   ?? 0),
-                'absent_days'           => (int)($data['absent_days'] ?? 0),
-                'skill_count'           => $skillCount,
-                'passed_courses'        => $passedCourses,
-                'trend'                 => $trend,
-            ]
-        ]);
-    } else {
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'has_data'              => false,
-                'grade'                 => '-', 'grade_iph' => '-', 'grade_5s' => '-',
-                'grade_attendance'      => '-', 'grade_learning' => $systemLearningGrade, 'grade_overall' => '-',
-                'system_grade_learning' => $systemLearningGrade,
-                'income_per_head'       => 0,
-                'total_wage'            => 0,
-                'income_ratio'          => 0,
-                'late_days'             => 0,
-                'absent_days'           => 0,
-                'skill_count'           => $skillCount,
-                'passed_courses'        => $passedCourses,
-                'trend'                 => $trend,
-            ]
-        ]);
+    if (!$data) {
+        $emptyPayload['skill_count'] = $learnEval['total_credits'];
+        $emptyPayload['passed_courses'] = $learnEval['passed_courses_total'];
+        $emptyPayload['grade_learning'] = $learnEval['grade'];
+        $emptyPayload['system_grade_learning'] = $learnEval['grade'];
+        $emptyPayload['learning_eval'] = $learnEval;
+        $emptyPayload['trend'] = $trend;
+        mpJsonSuccess($emptyPayload);
     }
 
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Database error', 'error' => $e->getMessage()]);
+    $consensusMap = fetch5sPeriodConsensusMap($pdo, $startDate, $endDate);
+    $line5s = $consensusMap[trim((string)($data['line'] ?? ''))] ?? null;
+
+    $income = (float)$data['income_per_head'];
+    $wage = (float)$data['total_wage'];
+    $ratio = $wage > 0 ? ($income / $wage) : 0.0;
+    $lateDays = (int)($data['late_days'] ?? 0);
+    $absentDays = (int)($data['absent_days'] ?? 0);
+
+    $sysIph = evaluateIphGrade($ratio, $data);
+    $sys5s = $line5s['grade_5s'] ?? 'N/A';
+    $sysAtt = evaluateAttendanceGrade($lateDays, $absentDays, $data);
+    $sysLrn = $learnEval['grade'];
+
+    $wIph = (int)($data['weight_iph'] ?? 25);
+    $w5s = (int)($data['weight_5s'] ?? 25);
+    $wAtt = (int)($data['weight_attendance'] ?? 25);
+    $wLrn = (int)($data['weight_learning'] ?? 25);
+
+    $hasSavedCurrentPeriod = (($data['saved_period'] ?? '') === $currentPeriod);
+    $effIph = ($hasSavedCurrentPeriod && !empty($data['grade_iph'])) ? $data['grade_iph'] : $sysIph;
+    $eff5s = ($hasSavedCurrentPeriod && !empty($data['grade_5s'])) ? $data['grade_5s'] : ($sys5s !== 'N/A' ? $sys5s : (!empty($data['grade_5s']) ? $data['grade_5s'] : '-'));
+    $effAtt = ($hasSavedCurrentPeriod && !empty($data['grade_attendance'])) ? $data['grade_attendance'] : ($sysAtt !== 'N/A' ? $sysAtt : (!empty($data['grade_attendance']) ? $data['grade_attendance'] : '-'));
+    $effLrn = ($hasSavedCurrentPeriod && !empty($data['grade_learning'])) ? $data['grade_learning'] : $sysLrn;
+
+    $liveOverall = calculateWeightedOverallGrade($effIph, $eff5s, $effAtt, $effLrn, $wIph, $w5s, $wAtt, $wLrn);
+    $effOverall = ($hasSavedCurrentPeriod && !empty($data['grade_overall']))
+        ? $data['grade_overall']
+        : ($liveOverall['grade'] !== '-' ? $liveOverall['grade'] : (!empty($data['grade']) ? $data['grade'] : '-'));
+
+    $payload = [
+        'has_data' => true,
+        'restricted' => false,
+        'can_view_financials' => $canViewFinancials,
+        'evaluation_period' => $currentPeriod,
+        'is_official_saved' => $hasSavedCurrentPeriod,
+        'grade' => $effOverall,
+        'grade_iph' => $effIph,
+        'grade_5s' => $eff5s,
+        'grade_attendance' => $effAtt,
+        'grade_learning' => $effLrn,
+        'grade_overall' => $effOverall,
+        'gpa' => $liveOverall['gpa'],
+        'system_grade' => $sysIph,
+        'system_grade_5s' => $sys5s,
+        'system_grade_attendance' => $sysAtt,
+        'system_grade_learning' => $sysLrn,
+        'system_grade_overall' => $liveOverall['grade'],
+        'income_per_head' => round($income, 2),
+        'total_wage' => round($wage, 2),
+        'income_ratio' => round($ratio, 2),
+        'late_days' => $lateDays,
+        'absent_days' => $absentDays,
+        'score_5s' => $line5s['score_5s'] ?? null,
+        'audit_5s' => $line5s,
+        'skill_count' => $learnEval['total_credits'],
+        'passed_courses' => $learnEval['passed_courses_total'],
+        'weights' => [
+            'iph' => $wIph,
+            's5' => $w5s,
+            'attendance' => $wAtt,
+            'learning' => $wLrn,
+        ],
+        'criteria' => [
+            'threshold_a' => (float)($data['threshold_a'] ?? 2.0),
+            'threshold_b' => (float)($data['threshold_b'] ?? 1.5),
+            'threshold_c' => (float)($data['threshold_c'] ?? 1.0),
+            'att_max_late_a' => isset($data['att_max_late_a']) ? (int)$data['att_max_late_a'] : null,
+            'att_max_late_b' => isset($data['att_max_late_b']) ? (int)$data['att_max_late_b'] : null,
+            'att_max_late_c' => isset($data['att_max_late_c']) ? (int)$data['att_max_late_c'] : null,
+        ],
+        'learning_eval' => $learnEval,
+        'trend' => $trend,
+    ];
+
+    mpJsonSuccess(applyPerformanceFinancialMasking($payload, $canViewFinancials));
+} catch (Throwable $e) {
+    handleMpException($pdo, 'MY_PERFORMANCE_API', $e);
 }
