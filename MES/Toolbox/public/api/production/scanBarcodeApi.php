@@ -180,6 +180,18 @@ function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
         prodJsonError('ไม่พบข้อมูล Location ที่เลือก', 404);
     }
 
+    if ($jobNo !== '') {
+        $jobStmt = $pdo->prepare('SELECT TOP 1 job_id, status FROM dbo.PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?');
+        $jobStmt->execute([$jobNo]);
+        $jobRow = $jobStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$jobRow) {
+            prodJsonError("ไม่พบเลขที่ใบงาน '{$jobNo}' ในระบบ กรุณารีเฟรชและเลือกใบงานใหม่", 404);
+        }
+        if (in_array(strtoupper((string)$jobRow['status']), ['COMPLETED', 'CLOSED', 'CANCELLED'], true)) {
+            prodJsonError("ใบงาน '{$jobNo}' ปิดงานหรือยกเลิกแล้ว ไม่สามารถสแกนเพิ่มได้ — กรุณารีเฟรชคิวงานและเลือกใบงานที่กำลังดำเนินการอยู่", 409);
+        }
+    }
+
     $itemId = (int)$item['item_id'];
     $scanNow = date('Y-m-d H:i:s');
     $curHour = date('H');

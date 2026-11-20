@@ -201,9 +201,9 @@ try {
                             <div class="col-12 col-md-auto" id="date-range-filter">
                                 <div class="input-group input-group-sm shadow-sm">
                                     <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-muted"></i></span>
-                                    <input type="date" class="form-control fw-bold" id="filterStartDate">
+                                    <input type="date" min="2000-01-01" max="2099-12-31" class="form-control fw-bold" id="filterStartDate">
                                     <span class="input-group-text bg-light text-muted">to</span>
-                                    <input type="date" class="form-control fw-bold" id="filterEndDate">
+                                    <input type="date" min="2000-01-01" max="2099-12-31" class="form-control fw-bold" id="filterEndDate">
                                 </div>
                             </div>
 

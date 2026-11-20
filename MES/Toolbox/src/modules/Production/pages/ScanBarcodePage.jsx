@@ -138,33 +138,29 @@ export default function ScanBarcodePage() {
     };
   }, [toast]);
 
-  // Load RUNNING jobs when location changes
-  useEffect(() => {
-    if (!locationId) {
+  const refreshRunningJobs = useCallback(async (targetLocId = locationId) => {
+    if (!targetLocId) {
       setRunningJobs([]);
       return;
     }
-    let cancelled = false;
-    const loadJobs = async () => {
-      try {
-        const res = await productionApi.getActiveJobs(locationId);
-        if (cancelled) return;
-        const allJobs = res?.data || [];
-        const running = allJobs.filter((j) => String(j.status || '').toUpperCase() === 'RUNNING');
-        setRunningJobs(running);
-        setJobNo((prev) => {
-          if (prev && running.some((j) => j.job_no === prev)) return prev;
-          return running.length === 1 ? running[0].job_no : '';
-        });
-      } catch {
-        if (!cancelled) setRunningJobs([]);
-      }
-    };
-    loadJobs();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const res = await productionApi.getActiveJobs(targetLocId);
+      const allJobs = res?.data || [];
+      const running = allJobs.filter((j) => String(j.status || '').toUpperCase() === 'RUNNING');
+      setRunningJobs(running);
+      setJobNo((prev) => {
+        if (prev && running.some((j) => j.job_no === prev)) return prev;
+        return running.length === 1 ? running[0].job_no : '';
+      });
+    } catch {
+      setRunningJobs([]);
+    }
   }, [locationId]);
+
+  // Load RUNNING jobs when location changes
+  useEffect(() => {
+    refreshRunningJobs(locationId);
+  }, [locationId, refreshRunningJobs]);
 
   const loadLogs = useCallback(async () => {
     setLoadingLogs(true);
@@ -248,6 +244,9 @@ export default function ScanBarcodePage() {
         loadLogs();
       } catch (err) {
         if (soundEnabled) playScanTone('error');
+        if (err?.status === 409 || err?.status === 404) {
+          refreshRunningJobs(locationId);
+        }
         toast.error(err?.message || 'บันทึกการสแกนไม่สำเร็จ');
       } finally {
         submittingRef.current = false;
@@ -255,7 +254,7 @@ export default function ScanBarcodePage() {
         setTimeout(() => barcodeInputRef.current?.focus(), 60);
       }
     },
-    [barcode, isOffline, locationId, prodType, lotRef, jobNo, notes, teamUserIds, soundEnabled, toast, loadLogs],
+    [barcode, isOffline, locationId, prodType, lotRef, jobNo, notes, teamUserIds, soundEnabled, toast, loadLogs, refreshRunningJobs],
   );
 
   // Camera Scanner lifecycle

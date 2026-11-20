@@ -121,8 +121,13 @@ try {
                 $job = $jobStmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($job) {
-                    if (in_array(strtoupper($job['status']), ['COMPLETED', 'CLOSED'])) {
-                        throw new Exception("Cannot log scan for a closed/completed Job.");
+                    if (in_array(strtoupper((string)$job['status']), ['COMPLETED', 'CLOSED', 'CANCELLED'], true)) {
+                        http_response_code(409);
+                        echo json_encode([
+                            'success' => false,
+                            'message' => "ใบงาน '{$job_no}' ปิดงานหรือยกเลิกแล้ว ไม่สามารถสแกนเพิ่มได้ — กรุณารีเฟรชและเลือกใบงานใหม่",
+                        ], JSON_UNESCAPED_UNICODE);
+                        exit;
                     }
                     if (!empty($lot_ref)) {
                         $notes = "[Lot: " . $lot_ref . "] " . $notes;
@@ -130,7 +135,12 @@ try {
                     $notes = "[Job: " . $job_no . "] " . $notes;
                     $lot_ref = $job_no; // Override lot_ref to store Job No as reference_id in transactions
                 } else {
-                    throw new Exception("Job No not found.");
+                    http_response_code(404);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => "ไม่พบเลขที่ใบงาน '{$job_no}' ในระบบ กรุณาเลือกใบงานใหม่อีกครั้ง",
+                    ], JSON_UNESCAPED_UNICODE);
+                    exit;
                 }
             }
 

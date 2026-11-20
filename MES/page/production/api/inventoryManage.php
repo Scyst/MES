@@ -20,6 +20,21 @@ function generateShortUUID($length = 8) {
     }
 }
 
+/** Validates SQL Server DATETIME bounds (YYYY-MM-DD, year 1753..9999) or exits HTTP 400 with Thai guidance. */
+function validateSqlDateParam(string $rawDate, string $label = 'วันที่'): string {
+    $clean = trim($rawDate);
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $clean, $m) || (int)$m[1] < 1753 || (int)$m[1] > 9999 || !checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'data' => null,
+            'message' => "รูปแบบ{$label}ไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)",
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    return $clean;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     if (!isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         http_response_code(403);
@@ -172,24 +187,12 @@ try {
                 $params[] = 'PRODUCTION_' . $_GET['count_type'];
             }
             if (!empty($_GET['startDate'])) {
-                $sd = trim((string)$_GET['startDate']);
-                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
-                    exit;
-                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $sd;
+                $params[] = validateSqlDateParam((string)$_GET['startDate'], 'วันที่เริ่มต้น');
             }
             if (!empty($_GET['endDate'])) {
-                $ed = trim((string)$_GET['endDate']);
-                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
-                    exit;
-                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $ed;
+                $params[] = validateSqlDateParam((string)$_GET['endDate'], 'วันที่สิ้นสุด');
             }
 
             if (!empty($_GET['line'])) {
@@ -414,9 +417,11 @@ try {
             }
 
             if (!empty($_GET['startDate']) && !empty($_GET['endDate'])) {
+                $sd = validateSqlDateParam((string)$_GET['startDate'], 'วันที่เริ่มต้น');
+                $ed = validateSqlDateParam((string)$_GET['endDate'], 'วันที่สิ้นสุด');
                 $date_where_clause = "AND DATEADD(HOUR, -8, t.transaction_timestamp) >= ? AND DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
-                $date_params[] = $_GET['startDate'];
-                $date_params[] = $_GET['endDate'];
+                $date_params[] = $sd;
+                $date_params[] = $ed;
             }
 
             $baseQuery = "
@@ -583,11 +588,11 @@ try {
 
             if (!empty($_GET['startDate'])) {
                 $conditions[] = "DATEADD(HOUR, -8, t.transaction_timestamp) >= ?";
-                $params[] = $_GET['startDate'];
+                $params[] = validateSqlDateParam((string)$_GET['startDate'], 'วันที่เริ่มต้น');
             }
             if (!empty($_GET['endDate'])) {
                 $conditions[] = "DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
-                $params[] = $_GET['endDate'];
+                $params[] = validateSqlDateParam((string)$_GET['endDate'], 'วันที่สิ้นสุด');
             }
 
             $whereClause = "WHERE " . implode(" AND ", $conditions);
@@ -1251,11 +1256,11 @@ try {
 
             if (!empty($startDate)) {
                 $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) >= ?";
-                $params[] = $startDate;
+                $params[] = validateSqlDateParam((string)$startDate, 'วันที่เริ่มต้น');
             }
             if (!empty($endDate)) {
                 $dateCondition .= " AND DATEADD(HOUR, -8, t.transaction_timestamp) < DATEADD(day, 1, ?)";
-                $params[] = $endDate;
+                $params[] = validateSqlDateParam((string)$endDate, 'วันที่สิ้นสุด');
             }
             $inSql = "SELECT transaction_timestamp, transaction_type, quantity
                       FROM " . TRANSACTIONS_TABLE . " t
@@ -1373,24 +1378,12 @@ try {
             }
 
             if (!empty($_GET['startDate'])) {
-                $sd = trim((string)$_GET['startDate']);
-                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
-                    exit;
-                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $sd;
+                $params[] = validateSqlDateParam((string)$_GET['startDate'], 'วันที่เริ่มต้น');
             }
             if (!empty($_GET['endDate'])) {
-                $ed = trim((string)$_GET['endDate']);
-                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
-                    exit;
-                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $ed;
+                $params[] = validateSqlDateParam((string)$_GET['endDate'], 'วันที่สิ้นสุด');
             }
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 // Do nothing, can see all
@@ -1467,24 +1460,12 @@ try {
             }
 
             if (!empty($_GET['startDate'])) {
-                $sd = trim((string)$_GET['startDate']);
-                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $sd, $sm) || (int)$sm[1] < 1753 || (int)$sm[1] > 9999 || !checkdate((int)$sm[2], (int)$sm[3], (int)$sm[1])) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่เริ่มต้นไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
-                    exit;
-                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) >= ?";
-                $params[] = $sd;
+                $params[] = validateSqlDateParam((string)$_GET['startDate'], 'วันที่เริ่มต้น');
             }
             if (!empty($_GET['endDate'])) {
-                $ed = trim((string)$_GET['endDate']);
-                if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ed, $em) || (int)$em[1] < 1753 || (int)$em[1] > 9999 || !checkdate((int)$em[2], (int)$em[3], (int)$em[1])) {
-                    http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'รูปแบบวันที่สิ้นสุดไม่ถูกต้อง กรุณาระบุปี ค.ศ. 4 หลัก (1753–9999 เช่น 2026-11-20)']);
-                    exit;
-                }
                 $conditions[] = "CAST(DATEADD(HOUR, -8, t.transaction_timestamp) AS DATE) <= ?";
-                $params[] = $ed;
+                $params[] = validateSqlDateParam((string)$_GET['endDate'], 'วันที่สิ้นสุด');
             }
             if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'creator') {
                 // Do nothing, can see all
@@ -1551,7 +1532,7 @@ try {
         case 'get_production_hourly_summary':
             try {
                 $sp_name = SP_CALC_OEE_HOURLY; 
-                $target_date = $_GET['endDate'] ?? date('Y-m-d');
+                $target_date = validateSqlDateParam(!empty($_GET['endDate']) ? (string)$_GET['endDate'] : date('Y-m-d'), 'วันที่');
                 $line_filter = $_GET['line'] ?? null; 
                 $model_filter = $_GET['model'] ?? null; 
 
@@ -1572,8 +1553,8 @@ try {
 
         case 'get_production_hourly_counts':
             try {
-                $start_date = $_GET['startDate'] ?? date('Y-m-d');
-                $target_date = $_GET['endDate'] ?? date('Y-m-d');
+                $start_date = validateSqlDateParam(!empty($_GET['startDate']) ? (string)$_GET['startDate'] : date('Y-m-d'), 'วันที่เริ่มต้น');
+                $target_date = validateSqlDateParam(!empty($_GET['endDate']) ? (string)$_GET['endDate'] : date('Y-m-d'), 'วันที่สิ้นสุด');
                 $line_filter = $currentUser['line'] ?? null;
                 $search_terms_array = $_GET['search_terms'] ?? []; 
 
