@@ -4,28 +4,28 @@ import { getEmployeeCompetencyPassport } from '../data/trainingAuditStore';
 import { getCurrentUser, fetchRealUserSession, fetchEmployeesList, switchActiveEmployee, getUserGrading } from '../data/communityStore';
 import { DEFAULT_AVATAR, DEFAULT_COURSE_IMAGE } from '../data/offlineAssets';
 import { useTheme } from '../context/ThemeContext';
-import { 
-  FiArrowLeft, 
-  FiAward, 
-  FiShield, 
-  FiCheckCircle, 
-  FiXCircle, 
-  FiClock, 
-  FiBookOpen, 
-  FiHeart, 
-  FiPrinter, 
-  FiUser, 
+import {
+  FiArrowLeft,
+  FiAward,
+  FiShield,
+  FiCheckCircle,
+  FiXCircle,
+  FiClock,
+  FiBookOpen,
+  FiHeart,
+  FiPrinter,
+  FiUser,
   FiUsers,
   FiSearch,
   FiFilter,
   FiActivity,
   FiDatabase,
   FiRefreshCw,
-  FiLayers, 
-  FiAlertTriangle, 
-  FiTrendingUp, 
-  FiCheck, 
-  FiX, 
+  FiLayers,
+  FiAlertTriangle,
+  FiTrendingUp,
+  FiCheck,
+  FiX,
   FiChevronRight,
   FiShare2,
   FiFileText,
@@ -90,7 +90,7 @@ export default function UserProfile() {
           setViewedPassportData(json.data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [empId, currentUser.emp_id, currentUser.id]);
 
   // Compute passport data based on URL parameter or current logged in user
@@ -142,13 +142,11 @@ export default function UserProfile() {
   return (
     <div className="learning-container py-6 space-y-6">
       {/* Unified Page Header */}
-      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${
-        isDark ? 'border-slate-800' : 'border-slate-200'
-      }`}>
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 ${isDark ? 'border-slate-800' : 'border-slate-200'
+        }`}>
         <div className="min-w-0">
-          <h1 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight ${
-            isDark ? 'text-white' : 'text-slate-900'
-          }`}>
+          <h1 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'
+            }`}>
             <span>สมุดพกสมรรถนะบุคลากร</span>
             <span className="text-sm sm:text-base lg:text-lg font-bold opacity-75 whitespace-nowrap ml-2">
               (Competency Passport)
@@ -163,11 +161,10 @@ export default function UserProfile() {
           {!currentUserIsMe && (
             <button
               onClick={handleResetToMyProfile}
-              className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${
-                isDark
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${isDark
                   ? 'bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-300 hover:text-white border-emerald-700/60'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
-              }`}
+                }`}
               title="กลับไปดูพาสปอร์ตสมรรถนะและเกรดของบัญชีคุณ"
             >
               <FiArrowLeft className="w-3.5 h-3.5 text-emerald-500" />
@@ -178,11 +175,10 @@ export default function UserProfile() {
           {/* Employee Directory / Switcher Modal Button */}
           <button
             onClick={() => setIsEmpSelectorOpen(true)}
-            className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${
-              isDark
+            className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap ${isDark
                 ? 'bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 hover:text-white border-indigo-700/60'
                 : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
-            }`}
+              }`}
             title="ค้นหาและตรวจสอบพาสปอร์ตสมรรถนะของพนักงานโรงงานจากฐานข้อมูลจริง"
           >
             <FiUsers className="w-3.5 h-3.5 text-indigo-500" />
@@ -191,11 +187,10 @@ export default function UserProfile() {
 
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap ${
-              isDark
+            className={`h-10 px-3.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-colors shadow-sm whitespace-nowrap ${isDark
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
                 : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-300'
-            }`}
+              }`}
           >
             <FiPrinter className="w-3.5 h-3.5 text-cyan-500" />
             <span>พิมพ์พาสปอร์ต</span>
@@ -204,11 +199,10 @@ export default function UserProfile() {
       </div>
 
       {/* Industrial Plant ID Card / Employee Hero Badge */}
-      <div className={`relative rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden border transition-all ${
-        isDark
+      <div className={`relative rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden border transition-all ${isDark
           ? 'bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-slate-700/80'
           : 'bg-white border-slate-200'
-      }`}>
+        }`}>
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
           {/* Avatar and Identity */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -229,15 +223,13 @@ export default function UserProfile() {
                 <h2 className={`text-lg sm:text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {employee.name}
                 </h2>
-                <span className={`px-2 py-0.5 rounded-lg font-mono text-xs font-bold ${
-                  isDark ? 'bg-slate-800 border border-slate-700 text-fuchsia-400' : 'bg-slate-100 border border-slate-200 text-fuchsia-700'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-lg font-mono text-xs font-bold ${isDark ? 'bg-slate-800 border border-slate-700 text-fuchsia-400' : 'bg-slate-100 border border-slate-200 text-fuchsia-700'
+                  }`}>
                   {employee.empId}
                 </span>
                 {currentUserIsMe && (
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${
-                    isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
+                    }`}>
                     บัญชีของคุณ
                   </span>
                 )}
@@ -280,16 +272,14 @@ export default function UserProfile() {
               สถานะความสอดคล้องตามเกณฑ์ตำแหน่ง (ISO 9001 Clause 7.2)
             </div>
             {passport.isAuditReady ? (
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
-                isDark ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-              }`}>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${isDark ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                }`}>
                 <FiCheck className="w-4 h-4 text-emerald-500" />
                 <span>สมรรถนะพร้อมรับออดิท 100%</span>
               </div>
             ) : (
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${
-                isDark ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
-              }`}>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border ${isDark ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800'
+                }`}>
                 <FiAlertTriangle className="w-4 h-4 text-amber-500" />
                 <span>ต้องอบรมเพิ่ม ({passport.skillGaps.length} วิชาบังคับ)</span>
               </div>
@@ -300,170 +290,156 @@ export default function UserProfile() {
 
       {/* 4-Dimension Manpower Employee Grading Matrix Card (Strictly Admin / Manager / Creator Only) */}
       {canViewGrading && activeGrading && (
-      <div className={`relative rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden border transition-all ${
-        isDark 
-          ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/30 border-indigo-500/30' 
-          : 'bg-white border-indigo-100'
-      }`}>
-        {/* Top Header of Grading Card */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 ${
-          isDark ? 'border-slate-700/60' : 'border-slate-200'
-        }`}>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <FiActivity className="w-4 h-4 text-indigo-500" />
-              <h2 className={`text-base sm:text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                ผลการประเมินเกรดสมรรถนะ 4 มิติ (ผู้บริหาร)
-              </h2>
-            </div>
-            <span className={`px-3 py-0.5 rounded-xl font-black text-sm border ${
-              (activeGrading.grade_overall === 'A') 
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
-                : (activeGrading.grade_overall === 'B')
-                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                  : (activeGrading.grade_overall === 'C')
-                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                    : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+        <div className={`relative rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden border transition-all ${isDark
+            ? 'bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/30 border-indigo-500/30'
+            : 'bg-white border-indigo-100'
+          }`}>
+          {/* Top Header of Grading Card */}
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 ${isDark ? 'border-slate-700/60' : 'border-slate-200'
             }`}>
-              เกรดรวม: {activeGrading.grade_overall || 'B'}
-            </span>
-            <span className={`text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg ${
-              isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
-            }`}>
-              งวด {activeGrading.evaluation_period || '2026-10'}
-            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <FiActivity className="w-4 h-4 text-indigo-500" />
+                <h2 className={`text-base sm:text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  ผลการประเมินเกรดสมรรถนะ 4 มิติ (ผู้บริหาร)
+                </h2>
+              </div>
+              <span className={`px-3 py-0.5 rounded-xl font-black text-sm border ${(activeGrading.grade_overall === 'A')
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : (activeGrading.grade_overall === 'B')
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                    : (activeGrading.grade_overall === 'C')
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                }`}>
+                เกรดรวม: {activeGrading.grade_overall || 'B'}
+              </span>
+              <span className={`text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg ${isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+                }`}>
+                งวด {activeGrading.evaluation_period || '2026-10'}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate(currentUser?.isManager || currentUser?.isAdmin ? '/manpower?tab=grading' : '/profile?tab=grading')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm self-start sm:self-auto ${isDark
+                  ? 'bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white border-indigo-700/50'
+                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+                }`}
+            >
+              <span>{currentUser?.isManager || currentUser?.isAdmin ? 'เปิดหน้าประเมินเกรดหลัก (4D)' : 'ดูรายละเอียด 4 มิติในโปรไฟล์'}</span>
+              <FiExternalLink className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate(currentUser?.isManager || currentUser?.isAdmin ? '/manpower?tab=grading' : '/profile?tab=grading')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all shadow-sm self-start sm:self-auto ${
-              isDark
-                ? 'bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white border-indigo-700/50'
-                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
-            }`}
-          >
-            <span>{currentUser?.isManager || currentUser?.isAdmin ? 'เปิดหน้าประเมินเกรดหลัก (4D)' : 'ดูรายละเอียด 4 มิติในโปรไฟล์'}</span>
-            <FiExternalLink className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* 4 Dimension Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4">
-          {/* Dimension 1: IPH */}
-          <div className={`rounded-xl p-3.5 border transition-all ${
-            isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
-          }`}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                1. รายได้ต่อหัว (IPH)
-              </span>
-              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
-                activeGrading.grade_iph === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
-                activeGrading.grade_iph === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
-                activeGrading.grade_iph === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
-                'bg-rose-500/20 text-rose-400 border-rose-500/40'
+          {/* 4 Dimension Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4">
+            {/* Dimension 1: IPH */}
+            <div className={`rounded-xl p-3.5 border transition-all ${isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
               }`}>
-                Grade {activeGrading.grade_iph || 'B'}
-              </span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  1. รายได้ต่อหัว (IPH)
+                </span>
+                <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${activeGrading.grade_iph === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                    activeGrading.grade_iph === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                      activeGrading.grade_iph === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                        'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                  }`}>
+                  Grade {activeGrading.grade_iph || 'B'}
+                </span>
+              </div>
+              <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                ประสิทธิภาพการผลิตเทียบต้นทุนแรงงาน
+              </div>
+              <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                เกณฑ์: Ratio ≥ 2.0 (A) · ≥ 1.5 (B) · ≥ 1.0 (C)
+              </div>
             </div>
-            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              ประสิทธิภาพการผลิตเทียบต้นทุนแรงงาน
-            </div>
-            <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              เกณฑ์: Ratio ≥ 2.0 (A) · ≥ 1.5 (B) · ≥ 1.0 (C)
-            </div>
-          </div>
 
-          {/* Dimension 2: 5S Audit */}
-          <div className={`rounded-xl p-3.5 border transition-all ${
-            isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
-          }`}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                2. การตรวจ 5 ส (5S Audit)
-              </span>
-              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
-                activeGrading.grade_5s === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
-                activeGrading.grade_5s === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
-                activeGrading.grade_5s === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
-                'bg-rose-500/20 text-rose-400 border-rose-500/40'
+            {/* Dimension 2: 5S Audit */}
+            <div className={`rounded-xl p-3.5 border transition-all ${isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
               }`}>
-                Grade {activeGrading.grade_5s || 'A'}
-              </span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  2. การตรวจ 5 ส (5S Audit)
+                </span>
+                <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${activeGrading.grade_5s === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                    activeGrading.grade_5s === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                      activeGrading.grade_5s === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                        'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                  }`}>
+                  Grade {activeGrading.grade_5s || 'A'}
+                </span>
+              </div>
+              <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                ความเป็นระเบียบและความปลอดภัยพื้นที่งาน
+              </div>
+              <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                เกณฑ์: คะแนน ≥ 85 (A) · ≥ 70 (B) · ≥ 55 (C)
+              </div>
             </div>
-            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              ความเป็นระเบียบและความปลอดภัยพื้นที่งาน
-            </div>
-            <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              เกณฑ์: คะแนน ≥ 85 (A) · ≥ 70 (B) · ≥ 55 (C)
-            </div>
-          </div>
 
-          {/* Dimension 3: Attendance */}
-          <div className={`rounded-xl p-3.5 border transition-all ${
-            isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
-          }`}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                3. การมาทำงาน (Attendance)
-              </span>
-              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
-                activeGrading.grade_attendance === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
-                activeGrading.grade_attendance === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
-                activeGrading.grade_attendance === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
-                'bg-rose-500/20 text-rose-400 border-rose-500/40'
+            {/* Dimension 3: Attendance */}
+            <div className={`rounded-xl p-3.5 border transition-all ${isDark ? 'bg-slate-800/70 border-slate-700/70' : 'bg-slate-50 border-slate-200'
               }`}>
-                Grade {activeGrading.grade_attendance || 'A'}
-              </span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  3. การมาทำงาน (Attendance)
+                </span>
+                <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${activeGrading.grade_attendance === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                    activeGrading.grade_attendance === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                      activeGrading.grade_attendance === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                        'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                  }`}>
+                  Grade {activeGrading.grade_attendance || 'A'}
+                </span>
+              </div>
+              <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                ความตรงต่อเวลาและวินัยการทำงานรายเดือน
+              </div>
+              <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                เกณฑ์: สาย/ขาด 0 วัน (A) · ≤ 1 วัน (B) · ≤ 3 วัน (C)
+              </div>
             </div>
-            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              ความตรงต่อเวลาและวินัยการทำงานรายเดือน
-            </div>
-            <div className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              เกณฑ์: สาย/ขาด 0 วัน (A) · ≤ 1 วัน (B) · ≤ 3 วัน (C)
-            </div>
-          </div>
 
-          {/* Dimension 4: Learning & Skills */}
-          <div className={`rounded-xl p-3.5 border relative overflow-hidden transition-all ${
-            isDark 
-              ? 'bg-gradient-to-br from-indigo-900/40 to-fuchsia-900/30 border-indigo-400/50' 
-              : 'bg-gradient-to-br from-indigo-50 to-fuchsia-50/50 border-indigo-300'
-          }`}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className={`text-xs font-black flex items-center gap-1.5 ${isDark ? 'text-indigo-300' : 'text-indigo-900'}`}>
-                <span>4. ทักษะ &amp; การเรียนรู้</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="ซิงค์อัตโนมัติ"></span>
-              </span>
-              <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${
-                activeGrading.grade_learning === 'A' ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400' :
-                activeGrading.grade_learning === 'B' ? 'bg-blue-500/25 text-blue-300 border-blue-400' :
-                activeGrading.grade_learning === 'C' ? 'bg-amber-500/25 text-amber-300 border-amber-400' :
-                'bg-rose-500/25 text-rose-300 border-rose-400'
+            {/* Dimension 4: Learning & Skills */}
+            <div className={`rounded-xl p-3.5 border relative overflow-hidden transition-all ${isDark
+                ? 'bg-gradient-to-br from-indigo-900/40 to-fuchsia-900/30 border-indigo-400/50'
+                : 'bg-gradient-to-br from-indigo-50 to-fuchsia-50/50 border-indigo-300'
               }`}>
-                Grade {activeGrading.grade_learning || 'D'}
-              </span>
-            </div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-xs font-black flex items-center gap-1.5 ${isDark ? 'text-indigo-300' : 'text-indigo-900'}`}>
+                  <span>4. ทักษะ &amp; การเรียนรู้</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="ซิงค์อัตโนมัติ"></span>
+                </span>
+                <span className={`px-2 py-0.5 rounded-lg text-xs font-black border ${activeGrading.grade_learning === 'A' ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400' :
+                    activeGrading.grade_learning === 'B' ? 'bg-blue-500/25 text-blue-300 border-blue-400' :
+                      activeGrading.grade_learning === 'C' ? 'bg-amber-500/25 text-amber-300 border-amber-400' :
+                        'bg-rose-500/25 text-rose-300 border-rose-400'
+                  }`}>
+                  Grade {activeGrading.grade_learning || 'D'}
+                </span>
+              </div>
 
-            <div className={`text-[11px] flex items-center justify-between ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              <span>ทักษะสะสม / เป้าเกรด A:</span>
-              <strong className="font-mono text-cyan-400">{activeGrading.skill_count || 0} / {activeGrading.learning_target_a || 3} ทักษะ</strong>
-            </div>
+              <div className={`text-[11px] flex items-center justify-between ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <span>ทักษะสะสม / เป้าเกรด A:</span>
+                <strong className="font-mono text-cyan-400">{activeGrading.skill_count || 0} / {activeGrading.learning_target_a || 3} ทักษะ</strong>
+              </div>
 
-            <div className={`mt-2 text-[11px] font-semibold truncate ${isDark ? 'text-amber-300' : 'text-indigo-900'}`} title={activeGrading.learning_tier_name}>
-              {activeGrading.learning_tier_name || 'เกณฑ์ตามระดับตำแหน่ง (3-Tier)'}
+              <div className={`mt-2 text-[11px] font-semibold truncate ${isDark ? 'text-amber-300' : 'text-indigo-900'}`} title={activeGrading.learning_tier_name}>
+                {activeGrading.learning_tier_name || 'เกณฑ์ตามระดับตำแหน่ง (3-Tier)'}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* 4 Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
-          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
-        }`}>
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+          }`}>
           <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span>หลักสูตรที่สำเร็จแล้ว</span>
             <FiBookOpen className="text-fuchsia-500" />
@@ -476,9 +452,8 @@ export default function UserProfile() {
           </div>
         </div>
 
-        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
-          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
-        }`}>
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+          }`}>
           <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-cyan-400' : 'text-cyan-700 font-bold'}`}>
             <span>เกณฑ์บังคับตามตำแหน่ง</span>
             <FiShield className="text-cyan-500" />
@@ -491,9 +466,8 @@ export default function UserProfile() {
           </div>
         </div>
 
-        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
-          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
-        }`}>
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+          }`}>
           <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-amber-400' : 'text-amber-700 font-bold'}`}>
             <span>คะแนนสอบเฉลี่ย</span>
             <FiAward className="text-amber-500" />
@@ -506,9 +480,8 @@ export default function UserProfile() {
           </div>
         </div>
 
-        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${
-          isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
-        }`}>
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all ${isDark ? 'bg-slate-800/80 border-slate-700/80' : 'bg-white border-slate-200'
+          }`}>
           <div className={`flex items-center justify-between text-xs font-semibold mb-2 ${isDark ? 'text-rose-400' : 'text-rose-700 font-bold'}`}>
             <span>องค์ความรู้ที่แบ่งปัน</span>
             <FiHeart className="text-rose-500" />
@@ -524,9 +497,8 @@ export default function UserProfile() {
 
       {/* Skill Gap Alert Card (if missing mandatory courses) */}
       {passport.skillGaps.length > 0 && (
-        <div className={`rounded-2xl p-5 shadow-sm space-y-3 border ${
-          isDark ? 'bg-rose-500/10 border-rose-500/30' : 'bg-rose-50 border-rose-300'
-        }`}>
+        <div className={`rounded-2xl p-5 shadow-sm space-y-3 border ${isDark ? 'bg-rose-500/10 border-rose-500/30' : 'bg-rose-50 border-rose-300'
+          }`}>
           <div className={`flex items-center gap-2 font-bold text-sm ${isDark ? 'text-rose-300' : 'text-rose-900'}`}>
             <FiAlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0" />
             <span>หลักสูตรบังคับประจำตำแหน่งที่ยังไม่ผ่านเกณฑ์ (Mandatory Courses Required)</span>
@@ -536,9 +508,8 @@ export default function UserProfile() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             {passport.skillGaps.map(gap => (
-              <div key={gap.courseId} className={`rounded-xl p-3 flex items-center justify-between gap-3 border ${
-                isDark ? 'bg-slate-900/90 border-rose-500/20' : 'bg-white border-rose-200 shadow-sm'
-              }`}>
+              <div key={gap.courseId} className={`rounded-xl p-3 flex items-center justify-between gap-3 border ${isDark ? 'bg-slate-900/90 border-rose-500/20' : 'bg-white border-rose-200 shadow-sm'
+                }`}>
                 <div className="min-w-0">
                   <div className={`font-bold text-xs truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{gap.title}</div>
                   <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>{gap.category} · {gap.duration}</div>
@@ -561,65 +532,60 @@ export default function UserProfile() {
           <div className="flex items-center gap-2 overflow-x-auto">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeFilter === 'all'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeFilter === 'all'
                   ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md'
-                  : isDark 
+                  : isDark
                     ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
                     : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
-              }`}
+                }`}
             >
               หลักสูตรทั้งหมด ({passport.courseStatusList.length})
             </button>
 
             <button
               onClick={() => setActiveFilter('passed')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeFilter === 'passed'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeFilter === 'passed'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                  : isDark 
+                  : isDark
                     ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
                     : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
-              }`}
+                }`}
             >
               ผ่านการอบรมแล้ว ({passport.totalPassedCount})
             </button>
 
             <button
               onClick={() => setActiveFilter('mandatory')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeFilter === 'mandatory'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeFilter === 'mandatory'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                  : isDark 
+                  : isDark
                     ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
                     : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
-              }`}
+                }`}
             >
               หลักสูตรบังคับตำแหน่ง ({passport.mandatoryCoursesCount})
             </button>
 
             <button
               onClick={() => setActiveFilter('in_progress')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeFilter === 'in_progress'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeFilter === 'in_progress'
                   ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md'
-                  : isDark 
+                  : isDark
                     ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
                     : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
-              }`}
+                }`}
             >
               กำลังเรียน / ต้องสอบใหม่ ({passport.courseStatusList.filter(c => c.status === 'in_progress' || (!c.passed && c.status === 'failed')).length})
             </button>
 
             <button
               onClick={() => setActiveFilter('posts')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeFilter === 'posts'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeFilter === 'posts'
                   ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md'
-                  : isDark 
+                  : isDark
                     ? 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 hover:bg-slate-700'
                     : 'bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
-              }`}
+                }`}
             >
               บทเรียนที่เขียนแชร์ ({userPosts.length})
             </button>
@@ -636,18 +602,16 @@ export default function UserProfile() {
               return (
                 <div
                   key={courseItem.courseId}
-                  className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all group border ${
-                    isDark
+                  className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all group border ${isDark
                       ? 'bg-slate-800/90 border-slate-700/80 hover:border-slate-600 shadow-md'
                       : 'bg-white border-slate-200 hover:border-fuchsia-400 hover:shadow-lg shadow-sm'
-                  }`}
+                    }`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border ${
-                          isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'
-                        }`}>
+                        <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'
+                          }`}>
                           <img
                             src={courseItem.image || DEFAULT_COURSE_IMAGE}
                             alt={courseItem.title}
@@ -657,22 +621,19 @@ export default function UserProfile() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                              isDark ? 'text-fuchsia-400' : 'text-fuchsia-700 font-extrabold'
-                            }`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-fuchsia-400' : 'text-fuchsia-700 font-extrabold'
+                              }`}>
                               {courseItem.category}
                             </span>
                             {courseItem.isMandatory && (
-                              <span className={`px-2 py-0.2 rounded text-[9px] font-bold border ${
-                                isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
-                              }`}>
+                              <span className={`px-2 py-0.2 rounded text-[9px] font-bold border ${isDark ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
+                                }`}>
                                 บังคับตามตำแหน่ง
                               </span>
                             )}
                           </div>
-                          <h3 className={`text-sm font-bold truncate transition-colors ${
-                            isDark ? 'text-white group-hover:text-fuchsia-300' : 'text-slate-900 group-hover:text-fuchsia-700'
-                          }`}>
+                          <h3 className={`text-sm font-bold truncate transition-colors ${isDark ? 'text-white group-hover:text-fuchsia-300' : 'text-slate-900 group-hover:text-fuchsia-700'
+                            }`}>
                             {courseItem.title}
                           </h3>
                         </div>
@@ -681,27 +642,23 @@ export default function UserProfile() {
                       {/* Status Badge */}
                       <div className="flex-shrink-0">
                         {isPassed ? (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                            isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            }`}>
                             <FiCheck className="w-3 h-3 text-emerald-500" /> ผ่านเกณฑ์
                           </span>
                         ) : courseItem.status === 'in_progress' ? (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                            isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-300'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-300'
+                            }`}>
                             <FiClock className="w-3 h-3 text-amber-500" /> กำลังเรียน
                           </span>
                         ) : courseItem.status === 'failed' ? (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                            isDark ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-800 border-rose-300'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${isDark ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-800 border-rose-300'
+                            }`}>
                             <FiX className="w-3 h-3 text-rose-500" /> ต้องสอบใหม่
                           </span>
                         ) : (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-                            isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                            }`}>
                             ยังไม่เข้าเรียน
                           </span>
                         )}
@@ -714,16 +671,14 @@ export default function UserProfile() {
 
                     {/* Score and Certificate Details Box */}
                     {hasScore && (
-                      <div className={`rounded-xl p-3 border flex flex-wrap items-center justify-between gap-2 text-xs ${
-                        isDark ? 'bg-slate-900/90 border-slate-750' : 'bg-slate-50 border-slate-200'
-                      }`}>
+                      <div className={`rounded-xl p-3 border flex flex-wrap items-center justify-between gap-2 text-xs ${isDark ? 'bg-slate-900/90 border-slate-750' : 'bg-slate-50 border-slate-200'
+                        }`}>
                         <div className="flex items-center gap-2">
                           <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>ผลการทดสอบ:</span>
-                          <span className={`font-bold font-mono px-2 py-0.5 rounded border ${
-                            isPassed 
-                              ? isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                          <span className={`font-bold font-mono px-2 py-0.5 rounded border ${isPassed
+                              ? isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                               : isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-800 border-rose-300'
-                          }`}>
+                            }`}>
                             {courseItem.scoreDisplay} ({courseItem.quizPercentage}%)
                           </span>
                         </div>
@@ -746,9 +701,8 @@ export default function UserProfile() {
                                 instructorName: 'ณภัทร นุ่มทอง',
                                 instructorTitle: 'วิทยากรผู้เชี่ยวชาญและหัวหน้าฝ่ายวิศวกรรม (Lead Enterprise Architect)'
                               })}
-                              className={`px-2.5 py-1 rounded-lg border font-bold flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 shadow-xs ${
-                                isDark ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
-                              }`}
+                              className={`px-2.5 py-1 rounded-lg border font-bold flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 shadow-xs ${isDark ? 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
+                                }`}
                               title="คลิกเพื่อดูและพิมพ์ใบประกาศนียบัตรรับรองสมรรถนะ (Official Certificate)"
                             >
                               <span>{courseItem.certificateId}</span>
@@ -761,9 +715,8 @@ export default function UserProfile() {
                   </div>
 
                   {/* Card Footer */}
-                  <div className={`pt-3 mt-3 border-t flex items-center justify-between text-xs ${
-                    isDark ? 'border-slate-700/80 text-slate-400' : 'border-slate-100 text-slate-600'
-                  }`}>
+                  <div className={`pt-3 mt-3 border-t flex items-center justify-between text-xs ${isDark ? 'border-slate-700/80 text-slate-400' : 'border-slate-100 text-slate-600'
+                    }`}>
                     <div>
                       {courseItem.completedDate !== '-' ? (
                         <span>จบเมื่อ: {courseItem.completedDate}</span>
@@ -774,11 +727,10 @@ export default function UserProfile() {
 
                     <button
                       onClick={() => navigate(`/learning/course/${courseItem.courseId}`)}
-                      className={`px-3 py-1.5 rounded-xl font-semibold transition-all inline-flex items-center gap-1.5 ${
-                        isDark 
-                          ? 'bg-slate-700 hover:bg-fuchsia-600 hover:text-white text-slate-200' 
+                      className={`px-3 py-1.5 rounded-xl font-semibold transition-all inline-flex items-center gap-1.5 ${isDark
+                          ? 'bg-slate-700 hover:bg-fuchsia-600 hover:text-white text-slate-200'
                           : 'bg-slate-100 hover:bg-fuchsia-600 hover:text-white text-slate-800 border border-slate-300 hover:border-fuchsia-600 shadow-sm'
-                      }`}
+                        }`}
                     >
                       <span>{isPassed ? 'ทบทวนบทเรียน' : 'เริ่มเรียนหลักสูตร'}</span>
                       <FiChevronRight className="w-3.5 h-3.5" />
@@ -798,11 +750,10 @@ export default function UserProfile() {
                 <div
                   key={post.id}
                   onClick={() => navigate(`/learning/community/${post.id}`)}
-                  className={`border rounded-2xl p-5 cursor-pointer transition-all hover:shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
-                    isDark
+                  className={`border rounded-2xl p-5 cursor-pointer transition-all hover:shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${isDark
                       ? 'bg-slate-800/90 border-slate-700/80 hover:border-fuchsia-500/50'
                       : 'bg-white border-slate-200 hover:border-fuchsia-400 shadow-sm'
-                  }`}
+                    }`}
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -810,16 +761,14 @@ export default function UserProfile() {
                         {post.category}
                       </span>
                       {post.isOfficial && (
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                          isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-300'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-300'
+                          }`}>
                           ยกระดับเป็นหลักสูตรมาตรฐานแล้ว
                         </span>
                       )}
                     </div>
-                    <h3 className={`text-base font-bold transition-colors ${
-                      isDark ? 'text-white hover:text-fuchsia-300' : 'text-slate-900 hover:text-fuchsia-700'
-                    }`}>
+                    <h3 className={`text-base font-bold transition-colors ${isDark ? 'text-white hover:text-fuchsia-300' : 'text-slate-900 hover:text-fuchsia-700'
+                      }`}>
                       {post.title}
                     </h3>
                     <p className={`text-xs line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -842,14 +791,13 @@ export default function UserProfile() {
                 </div>
               ))
             ) : (
-              <div className={`p-12 text-center rounded-2xl border ${
-                isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
+              <div className={`p-12 text-center rounded-2xl border ${isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
                 <FiBookOpen className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
                 <h4 className={`text-sm font-bold mb-1 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>ยังไม่มีบทเรียนที่เขียนแชร์</h4>
                 <p className={`text-xs max-w-sm mx-auto mb-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  {currentUserIsMe 
-                    ? 'คุณสามารถเขียนแชร์เทคนิคหน้างาน หรือขั้นตอนการแก้ปัญหาเครื่องจักรเพื่อรับ +50 EXP ได้ทันที!' 
+                  {currentUserIsMe
+                    ? 'คุณสามารถเขียนแชร์เทคนิคหน้างาน หรือขั้นตอนการแก้ปัญหาเครื่องจักรเพื่อรับ +50 EXP ได้ทันที!'
                     : 'พนักงานท่านนี้ยังไม่ได้เขียนบทเรียนในคลังความรู้ชุมชน'}
                 </p>
                 {currentUserIsMe && (
@@ -877,7 +825,7 @@ export default function UserProfile() {
                 <FiPrinter className="text-cyan-400" />
                 <span>ตัวอย่างเอกสารพาสปอร์ตสมรรถนะบุคลากร (Employee Competency Passport)</span>
               </div>
-              <button 
+              <button
                 onClick={() => setIsPrintModalOpen(false)}
                 className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700"
               >
@@ -1002,13 +950,11 @@ export default function UserProfile() {
       {/* 405 Factory Employees Directory & Switcher Modal */}
       {isEmpSelectorOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className={`w-full max-w-3xl rounded-3xl shadow-2xl border overflow-hidden flex flex-col max-h-[88vh] ${
-            isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            {/* Modal Header */}
-            <div className={`p-5 border-b flex items-center justify-between gap-4 ${
-              isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-indigo-50/70 border-slate-200'
+          <div className={`w-full max-w-3xl rounded-3xl shadow-2xl border overflow-hidden flex flex-col max-h-[88vh] ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
+            {/* Modal Header */}
+            <div className={`p-5 border-b flex items-center justify-between gap-4 ${isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-indigo-50/70 border-slate-200'
+              }`}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
                   <FiUsers className="w-5 h-5" />
@@ -1025,18 +971,16 @@ export default function UserProfile() {
 
               <button
                 onClick={() => setIsEmpSelectorOpen(false)}
-                className={`p-2 rounded-xl transition-colors ${
-                  isDark ? 'hover:bg-slate-700 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-600'
-                }`}
+                className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-400 hover:text-white' : 'hover:bg-slate-200 text-slate-600'
+                  }`}
               >
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
             {/* Filter and Search Bar */}
-            <div className={`p-4 border-b flex flex-col sm:flex-row items-center gap-3 ${
-              isDark ? 'bg-slate-850 border-slate-700' : 'bg-slate-50 border-slate-200'
-            }`}>
+            <div className={`p-4 border-b flex flex-col sm:flex-row items-center gap-3 ${isDark ? 'bg-slate-850 border-slate-700' : 'bg-slate-50 border-slate-200'
+              }`}>
               <div className="relative flex-1 w-full">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -1044,11 +988,10 @@ export default function UserProfile() {
                   value={empSearchQuery}
                   onChange={(e) => setEmpSearchQuery(e.target.value)}
                   placeholder="ค้นหาด้วยรหัสพนักงาน, ชื่อ หรือตำแหน่ง..."
-                  className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs sm:text-sm border transition-all ${
-                    isDark 
-                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-indigo-500' 
+                  className={`w-full pl-10 pr-4 py-2 rounded-xl text-xs sm:text-sm border transition-all ${isDark
+                      ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-indigo-500'
                       : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-indigo-500'
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -1057,9 +1000,8 @@ export default function UserProfile() {
                 <select
                   value={empLineFilter}
                   onChange={(e) => setEmpLineFilter(e.target.value)}
-                  className={`px-3 py-2 rounded-xl text-xs sm:text-sm border font-semibold ${
-                    isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-800'
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs sm:text-sm border font-semibold ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-800'
+                    }`}
                 >
                   <option value="ALL">ทุกสายการผลิต (All Lines)</option>
                   {(employeeDirectory.lines || []).map(line => (
@@ -1069,9 +1011,8 @@ export default function UserProfile() {
 
                 <button
                   onClick={handleResetToMyProfile}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${
-                    isDark ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-amber-700 border-slate-300'
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors whitespace-nowrap ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700' : 'bg-white hover:bg-slate-100 text-amber-700 border-slate-300'
+                    }`}
                   title="กลับสู่โปรไฟล์พนักงานตนเอง"
                 >
                   <FiRefreshCw className="inline mr-1" /> โปรไฟล์ฉัน
@@ -1098,16 +1039,14 @@ export default function UserProfile() {
                       <div
                         key={emp.emp_id}
                         onClick={() => handleSelectEmployee(emp)}
-                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                          isSelected
+                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
                             ? (isDark ? 'bg-indigo-900/30 border-indigo-500 shadow-md' : 'bg-indigo-50 border-indigo-400 shadow-sm')
                             : (isDark ? 'bg-slate-800/70 hover:bg-slate-800 border-slate-700/80 hover:border-indigo-500/50' : 'bg-white hover:bg-indigo-50/50 border-slate-200 hover:border-indigo-300 shadow-sm')
-                        }`}
+                          }`}
                       >
                         <div className="min-w-0 flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs uppercase border ${
-                            isDark ? 'bg-slate-700 border-slate-600 text-cyan-300' : 'bg-slate-100 border-slate-300 text-indigo-700'
-                          }`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs uppercase border ${isDark ? 'bg-slate-700 border-slate-600 text-cyan-300' : 'bg-slate-100 border-slate-300 text-indigo-700'
+                            }`}>
                             {emp.name_th ? emp.name_th.charAt(0) : 'E'}
                           </div>
                           <div className="min-w-0">
@@ -1135,12 +1074,11 @@ export default function UserProfile() {
 
                         {canViewGrading ? (
                           <div className="text-right flex-shrink-0">
-                            <div className={`px-2.5 py-1 rounded-xl text-xs font-black border ${
-                              emp.grade_learning === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                              emp.grade_learning === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                              emp.grade_learning === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                              'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                            }`}>
+                            <div className={`px-2.5 py-1 rounded-xl text-xs font-black border ${emp.grade_learning === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                emp.grade_learning === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                  emp.grade_learning === 'C' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                    'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                              }`}>
                               Lrn: {emp.grade_learning || 'D'}
                             </div>
                             <div className="text-[10px] text-slate-400 mt-1">
@@ -1162,9 +1100,8 @@ export default function UserProfile() {
             </div>
 
             {/* Modal Footer */}
-            <div className={`p-4 border-t flex items-center justify-between text-xs ${
-              isDark ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
-            }`}>
+            <div className={`p-4 border-t flex items-center justify-between text-xs ${isDark ? 'bg-slate-800/80 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+              }`}>
               <span>แสดงผล {employeeDirectory.employees?.length || 0} พนักงาน</span>
               <button
                 onClick={() => setIsEmpSelectorOpen(false)}
@@ -1178,10 +1115,10 @@ export default function UserProfile() {
       )}
 
       {/* Official Certificate of Competency Modal */}
-      <CertificateModal 
-        isOpen={!!selectedCertData} 
-        onClose={() => setSelectedCertData(null)} 
-        data={selectedCertData} 
+      <CertificateModal
+        isOpen={!!selectedCertData}
+        onClose={() => setSelectedCertData(null)}
+        data={selectedCertData}
       />
     </div>
   );

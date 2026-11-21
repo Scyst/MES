@@ -97,7 +97,7 @@ export default function ManpowerPage() {
           setIs5sCommitteeMember(true);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };
@@ -213,11 +213,10 @@ export default function ManpowerPage() {
               key={t.id}
               type="button"
               onClick={() => switchTab(t.id)}
-              className={`min-h-[44px] shrink-0 inline-flex items-center gap-2 rounded-lg px-4 text-xs font-bold transition ${
-                active
+              className={`min-h-[44px] shrink-0 inline-flex items-center gap-2 rounded-lg px-4 text-xs font-bold transition ${active
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-              }`}
+                }`}
             >
               <Icon className="h-4 w-4" />
               {t.label}

@@ -787,7 +787,7 @@ export function getAllEmployees() {
       empId: currentEmpId,
       name: currentUser.name,
       role: currentUser.role || 'พนักงานปฏิบัติการ (MES User)',
-      department: currentUser.role?.includes('ผลิต') 
+      department: currentUser.role?.includes('ผลิต')
         ? 'แผนกผลิตปั๊มขึ้นรูป (Production Stamping)'
         : currentUser.role?.includes('คลัง') || currentUser.role?.includes('Store')
           ? 'แผนกคลังสินค้าและโลจิสติกส์ (Store & Warehouse)'
@@ -1050,7 +1050,7 @@ export function recordLiveUserQuizAttempt({ courseId, score, totalQuestions }) {
       quizPercentage: quizPct,
       passed: passed,
       certificateId: newRecord.certificateId
-    }).catch(() => {});
+    }).catch(() => { });
   } catch {
     // Ignore async error
   }
@@ -1076,7 +1076,7 @@ export function markModuleCompleted({ courseId, moduleId, totalModules }) {
   const currentUser = getCurrentUser();
   const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
   const key = `mes_learning_module_progress_${empId}_${courseId}`;
-  
+
   let completed = [];
   try {
     const stored = localStorage.getItem(key);
@@ -1140,7 +1140,7 @@ export function markModuleCompleted({ courseId, moduleId, totalModules }) {
       quizPercentage: 0,
       passed: false,
       certificateId: null
-    }).catch(() => {});
+    }).catch(() => { });
   } catch {
     // Ignore async error
   }
@@ -1149,12 +1149,12 @@ export function markModuleCompleted({ courseId, moduleId, totalModules }) {
 }
 
 // Explicit course completion via passing Post-Test Assessment (>=80%)
-export function recordCourseCompletion({ 
-  courseId, 
-  totalModules = 1, 
+export function recordCourseCompletion({
+  courseId,
+  totalModules = 1,
   moduleIds = [],
   score = 4,
-  totalQuestions = 4 
+  totalQuestions = 4
 }) {
   const currentUser = getCurrentUser();
   const empId = currentUser.emp_id || `EMP-${currentUser.id || 'ME'}`;
@@ -1217,7 +1217,7 @@ export function recordCourseCompletion({
       quizPercentage: quizPct,
       passed: isPassed,
       certificateId: record.certificateId
-    }).catch(() => {});
+    }).catch(() => { });
   } catch {
     // Ignore async error
   }
@@ -1274,7 +1274,7 @@ export function recordFailedAssessment({ courseId, score = 0, totalQuestions = 4
       quizPercentage: quizPct,
       passed: prevPassed,
       certificateId: record.certificateId
-    }).catch(() => {});
+    }).catch(() => { });
   } catch {
     // Ignore async error
   }
@@ -1425,7 +1425,7 @@ export function getEmployeeCompetencyPassport(empId, livePassportData = null) {
   const allEmployees = getAllEmployees();
   const currentUser = getCurrentUser();
   const currentEmpId = currentUser.emp_id || `EMP-${currentUser.id || '5928'}`;
-  
+
   let employee = null;
   let currentUserIsMe = false;
 
@@ -1477,8 +1477,8 @@ export function getEmployeeCompetencyPassport(empId, livePassportData = null) {
     };
     currentUserIsMe = (employee.empId === currentEmpId);
   } else {
-    const matchedStatic = allEmployees.find(e => 
-      e.empId === lookupId || 
+    const matchedStatic = allEmployees.find(e =>
+      e.empId === lookupId ||
       e.empId?.toLowerCase() === lookupId?.toLowerCase() ||
       e.name === lookupId ||
       e.name.includes(lookupId) ||
@@ -1571,10 +1571,10 @@ export function getEmployeeCompetencyPassport(empId, livePassportData = null) {
   const mandatoryList = courseStatusList.filter(c => c.isMandatory);
   const mandatoryPassed = mandatoryList.filter(c => c.passed);
   const totalPassed = courseStatusList.filter(c => c.passed).length;
-  
+
   // Mandatory Compliance Rate
-  const complianceRate = mandatoryList.length > 0 
-    ? Math.round((mandatoryPassed.length / mandatoryList.length) * 100) 
+  const complianceRate = mandatoryList.length > 0
+    ? Math.round((mandatoryPassed.length / mandatoryList.length) * 100)
     : 100;
 
   // Skill gaps (mandatory courses not yet passed)
@@ -1588,9 +1588,9 @@ export function getEmployeeCompetencyPassport(empId, livePassportData = null) {
 
   // Community contributions & rank calculation
   const posts = getCommunityPosts();
-  const userPosts = posts.filter(p => 
-    p.author?.id === employee.empId || 
-    p.author?.name === employee.name || 
+  const userPosts = posts.filter(p =>
+    p.author?.id === employee.empId ||
+    p.author?.name === employee.name ||
     (currentUserIsMe && p.author?.id === currentUser.id)
   );
   const totalLikesReceived = userPosts.reduce((acc, p) => acc + (p.likesCount || 0), 0);
