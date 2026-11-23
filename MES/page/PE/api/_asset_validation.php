@@ -7,6 +7,7 @@ function getPeStandardExtraAreas(): array {
         'Facility & Utility',
         'ST/WH',
         'MT/PE',
+        'QA/QC',
         'Office / อาคารสำนักงาน',
         'Outdoor / นอกอาคารและพื้นที่ส่วนกลาง',
     ];
