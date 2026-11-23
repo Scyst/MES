@@ -265,8 +265,8 @@ export default function ManpowerOverviewTab({
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
 
-  // Accordion expand state for 3-level matrix
-  const [expandedKeys, setExpandedKeys] = useState(() => new Set());
+  // Accordion collapse state for 3-level matrix (all levels expanded by default)
+  const [collapsedKeys, setCollapsedKeys] = useState(() => new Set());
 
   // Rich Filterable Detail Modal (parity with legacy openDetailModal)
   const [detailModal, setDetailModal] = useState({
@@ -331,9 +331,9 @@ export default function ManpowerOverviewTab({
     fetchOverview();
   }, [fetchOverview, refreshSignal]);
 
-  // Reset expanded accordions when switching grouping mode
+  // Reset collapsed accordions on view switch so all levels remain expanded by default
   useEffect(() => {
-    setExpandedKeys(new Set());
+    setCollapsedKeys(new Set());
   }, [viewMode]);
 
   const { groups: matrixGroups, grandTotal } = useMemo(
@@ -394,7 +394,7 @@ export default function ManpowerOverviewTab({
   };
 
   const toggleExpand = (id) => {
-    setExpandedKeys((prev) => {
+    setCollapsedKeys((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -402,9 +402,11 @@ export default function ManpowerOverviewTab({
     });
   };
 
+  const hasAnyExpanded = matrixGroups.some((g) => !collapsedKeys.has(g.id));
+
   const toggleExpandAll = () => {
-    if (expandedKeys.size > 0) {
-      setExpandedKeys(new Set());
+    if (!hasAnyExpanded) {
+      setCollapsedKeys(new Set());
       return;
     }
     const allIds = new Set();
@@ -414,7 +416,7 @@ export default function ManpowerOverviewTab({
         allIds.add(s.id);
       }
     }
-    setExpandedKeys(allIds);
+    setCollapsedKeys(allIds);
   };
 
   const handleLoadAnalysis = async (customRange) => {
@@ -690,11 +692,10 @@ export default function ManpowerOverviewTab({
           <button
             type="button"
             onClick={() => setUseNewFormula((v) => !v)}
-            className={`min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition ${
-              useNewFormula
+            className={`min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition ${useNewFormula
                 ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
                 : 'border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'
-            }`}
+              }`}
             title="สลับสูตรคำนวณต้นทุนค่าแรง V1 (มาตรฐาน) และ V2 (ปรับปรุงใหม่ + แรงจูงใจ)"
           >
             <ArrowRightLeft className="h-3.5 w-3.5" />
@@ -859,11 +860,10 @@ export default function ManpowerOverviewTab({
                       key={dVal}
                       type="button"
                       onClick={() => setTrendDays(dVal)}
-                      className={`rounded-md px-2 py-1 text-[11px] font-bold transition ${
-                        trendDays === dVal
+                      className={`rounded-md px-2 py-1 text-[11px] font-bold transition ${trendDays === dVal
                           ? 'bg-indigo-600 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300'
-                      }`}
+                        }`}
                     >
                       {dVal} วัน
                     </button>
@@ -882,22 +882,20 @@ export default function ManpowerOverviewTab({
                 <button
                   type="button"
                   onClick={() => setChartView('daily')}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
-                    chartView === 'daily'
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${chartView === 'daily'
                       ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
-                  }`}
+                    }`}
                 >
                   รายวัน By Line
                 </button>
                 <button
                   type="button"
                   onClick={() => setChartView('trend')}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
-                    chartView === 'trend'
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${chartView === 'trend'
                       ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
-                  }`}
+                    }`}
                 >
                   แนวโน้ม Trend
                 </button>
@@ -1065,11 +1063,10 @@ export default function ManpowerOverviewTab({
                     key={m.id}
                     type="button"
                     onClick={() => setViewMode(m.id)}
-                    className={`min-h-[32px] rounded-md px-2.5 text-[11px] font-bold transition ${
-                      active
+                    className={`min-h-[32px] rounded-md px-2.5 text-[11px] font-bold transition ${active
                         ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                    }`}
+                      }`}
                   >
                     {m.shortLabel}
                   </button>
@@ -1083,7 +1080,7 @@ export default function ManpowerOverviewTab({
                 className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
               >
                 <ChevronsUpDown className="h-3.5 w-3.5" />
-                {expandedKeys.size > 0 ? 'ยุบทุกชั้น' : 'ขยายทุกชั้น'}
+                {hasAnyExpanded ? 'ยุบทุกชั้น' : 'ขยายทุกชั้น'}
               </button>
             )}
             {loading && <RefreshCw className="h-4 w-4 animate-spin text-indigo-500" />}
@@ -1150,7 +1147,7 @@ export default function ManpowerOverviewTab({
 
                   {/* Level 1 Parent Groups */}
                   {matrixGroups.map((g) => {
-                    const pOpen = expandedKeys.has(g.id);
+                    const pOpen = !collapsedKeys.has(g.id);
                     return (
                       <React.Fragment key={g.id}>
                         <tr
@@ -1169,7 +1166,7 @@ export default function ManpowerOverviewTab({
 
                         {/* Level 2 Sub-Groups */}
                         {pOpen && g.subs.map((sub) => {
-                          const sOpen = expandedKeys.has(sub.id);
+                          const sOpen = !collapsedKeys.has(sub.id);
                           return (
                             <React.Fragment key={sub.id}>
                               <tr
@@ -1302,11 +1299,10 @@ export default function ManpowerOverviewTab({
                     key={t.id}
                     type="button"
                     onClick={() => setAnalysisSubTab(t.id)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                      analysisSubTab === t.id
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analysisSubTab === t.id
                         ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-700 dark:text-white'
                         : 'text-slate-600 dark:text-slate-400'
-                    }`}
+                      }`}
                   >
                     {t.label}
                   </button>
