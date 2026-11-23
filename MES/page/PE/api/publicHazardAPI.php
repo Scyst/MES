@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../../components/php/logger.php';
 require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/_asset_validation.php';
 
 $input = json_decode(file_get_contents("php://input"), true) ?? $_POST;
 $action = $_REQUEST['action'] ?? $input['action'] ?? '';
@@ -37,23 +38,40 @@ function generateWONumber($pdo) {
 }
 
 try {
-    $machineCode = $input['machine_code'] ?? '';
-    $issueTitle = $input['issue_title'] ?? 'Safety Hazard Reported';
-    $issueDetail = $input['issue_detail'] ?? '';
-    $requestedBy = !empty($input['requested_by']) ? $input['requested_by'] : 'Anonymous (Quick Report)';
-    
-    if (empty($machineCode)) {
-        throw new Exception("Machine code is required.");
+    $assetMode = trim((string)($input['asset_mode'] ?? ''));
+    $machineCode = trim((string)($input['machine_code'] ?? ''));
+    $issueTitle = trim((string)($input['issue_title'] ?? 'Safety Hazard Reported'));
+    $issueDetail = trim((string)($input['issue_detail'] ?? ''));
+    $requestedBy = !empty($input['requested_by']) ? trim((string)$input['requested_by']) : 'Anonymous (Quick Report)';
+
+    if ($assetMode === 'general') {
+        $resolved = resolveValidatedAsset($pdo, $input);
+        $machineId = null;
+        $machineName = $resolved['machine_name'];
+        $line = $resolved['line'];
+    } else {
+        $machineIdInput = !empty($input['machine_id']) ? intval($input['machine_id']) : null;
+        if ($machineIdInput) {
+            $mStmt = $pdo->prepare("SELECT machine_id, machine_code, machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE machine_id = ? AND is_active = 1");
+            $mStmt->execute([$machineIdInput]);
+            $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
+        } else {
+            if ($machineCode === '') {
+                throw new Exception("กรุณาเลือกเครื่องจักร หรือระบุพื้นที่/อุปกรณ์ทั่วไป");
+            }
+            $mStmt = $pdo->prepare("SELECT TOP 1 machine_id, machine_code, machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE (machine_code = ? OR machine_name = ?) AND is_active = 1");
+            $mStmt->execute([$machineCode, $machineCode]);
+            $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if (!$mData) {
+            throw new Exception("ไม่พบรหัสเครื่องจักร '{$machineCode}' ในระบบ");
+        }
+        $machineId = (int)$mData['machine_id'];
+        $machineName = $mData['machine_name'];
+        $line = $mData['line'];
+        $machineCode = $mData['machine_code'];
     }
-    
-    // Look up machine details
-    $mStmt = $pdo->prepare("SELECT machine_id, machine_name, line FROM " . PE_MACHINES_TABLE . " WHERE machine_code = ? OR machine_name = ?");
-    $mStmt->execute([$machineCode, $machineCode]);
-    $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
-    
-    $machineId = $mData ? $mData['machine_id'] : null;
-    $machineName = $mData ? $mData['machine_name'] : $machineCode;
-    $line = $mData ? $mData['line'] : 'Unknown';
     
     // Handle image upload if provided
     $imagePath = null;

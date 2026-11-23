@@ -102,20 +102,10 @@ try {
                 throw new InvalidArgumentException('กรุณาระบุหัวข้อปัญหา / อาการเสีย');
             }
 
-            $machineId = !empty($input['machine_id']) ? parsePePositiveInt($input['machine_id'], 'เครื่องจักร') : null;
-            $machineName = mb_substr(trim((string)($input['machine_name'] ?? '')), 0, 200);
-            $line = mb_substr(trim((string)($input['line'] ?? '')), 0, 100);
-            if ($machineId !== null) {
-                $mStmt = $pdo->prepare("SELECT machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE machine_id = ?");
-                $mStmt->execute([$machineId]);
-                $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
-                if ($mData) {
-                    $machineName = $mData['machine_name'];
-                    if ($line === '') {
-                        $line = (string)$mData['line'];
-                    }
-                }
-            }
+            $resolvedAsset = resolveToolboxPeAsset($pdo, $input);
+            $machineId = $resolvedAsset['machine_id'];
+            $machineName = $resolvedAsset['machine_name'];
+            $line = $resolvedAsset['line'];
 
             $requestedAt = parsePeDateTimeOrNull($input['requested_at'] ?? null) ?? date('Y-m-d H:i:s');
             $woType = trim((string)($input['wo_type'] ?? 'Corrective'));
@@ -529,9 +519,13 @@ try {
                  ORDER BY line ASC"
             )->fetchAll(PDO::FETCH_COLUMN);
 
+            $generalAreas = array_values(array_unique(array_merge($lines ?: [], getPeStandardExtraAreas())));
+
             peJsonSuccess($machines, 'โหลดข้อมูลเครื่องจักรและรายชื่อช่างสำเร็จ', [
                 'technicians' => $technicians,
                 'lines' => $lines,
+                'general_areas' => $generalAreas,
+                'general_categories' => getPeGeneralCategories(),
             ]);
             break;
         }

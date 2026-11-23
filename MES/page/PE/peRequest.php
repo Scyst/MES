@@ -94,27 +94,43 @@ if ($preselectedCode !== '') {
             border: none; border-radius: 50%; width: 28px; height: 28px; z-index: 5;
         }
         .asset-mode-switch {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-            background: #f1f5f9; padding: 4px; border-radius: 12px; border: 1px solid #e2e8f0;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+            background: #f1f5f9; padding: 3px; border-radius: 10px; border: 1px solid #e2e8f0;
         }
         .asset-mode-btn {
-            min-height: 44px; border: none; border-radius: 9px; font-size: 0.82rem; font-weight: 700;
-            color: #475569; background: transparent; transition: all 0.18s ease;
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px;
+            min-height: 38px; border: none; border-radius: 8px; font-size: 0.78rem; font-weight: 700;
+            color: #475569; background: transparent; transition: all 0.15s ease;
+            display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+            padding: 4px 8px; white-space: nowrap;
         }
         .asset-mode-btn.active-primary {
-            background: #2563eb; color: #fff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            background: #2563eb; color: #fff; box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
         }
         .asset-mode-btn.active-danger {
-            background: #dc2626; color: #fff; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+            background: #dc2626; color: #fff; box-shadow: 0 1px 4px rgba(220, 38, 38, 0.25);
         }
-        .pe-readonly-box {
-            background-color: #f8fafc !important; color: #334155 !important;
-            cursor: not-allowed; border-style: dashed !important;
+        .asset-mode-btn.active-warning {
+            background: #d97706; color: #fff; box-shadow: 0 1px 4px rgba(217, 119, 6, 0.25);
         }
+        .machine-search-wrap {
+            position: relative;
+        }
+        .machine-search-wrap .search-icon {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            color: #94a3b8; font-size: 0.8rem; pointer-events: none;
+        }
+        .machine-search-wrap .pe-form-input {
+            padding-left: 32px; font-size: 0.88rem;
+        }
+        .issue-chips-row {
+            display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto;
+            padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .issue-chips-row::-webkit-scrollbar { display: none; }
         .issue-chip {
-            min-height: 36px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;
-            border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600;
+            flex-shrink: 0; white-space: nowrap; border: 1px solid #cbd5e1;
+            background: #f8fafc; color: #475569; border-radius: 999px;
+            padding: 4px 10px; font-size: 0.75rem; font-weight: 600;
             cursor: pointer; transition: all 0.15s ease;
         }
         .issue-chip:hover, .issue-chip.active {
@@ -125,115 +141,145 @@ if ($preselectedCode !== '') {
 </head>
 <body>
     <?php
-    function renderAssetSelectorBlock($prefix, $accentClass, $uniqueLines, $generalAreas, $generalCategories, $machines, $preselectedMachine) {
+    /**
+     * Renders a compact, mobile-friendly machine/general-equipment selector matching the original flat form style.
+     * Displays human-friendly machine names first so general operators don't have to memorize machine codes.
+     */
+    function renderAssetSelectorBlock($prefix, $accentClass, $uniqueLines, $generalAreas, $generalCategories, $machines, $preselectedMachine, $allowGeneral = true, $submitByCodeOnly = false, $extraRightSlot = null) {
         $isDanger = ($accentClass === 'danger');
-        $activeBtnClass = $isDanger ? 'active-danger' : 'active-primary';
-        $borderClass = $isDanger ? 'border-danger' : 'border-primary';
-        $textAccent = $isDanger ? 'text-danger' : 'text-primary';
+        $isWarning = ($accentClass === 'warning');
+        $activeBtnClass = $isDanger ? 'active-danger' : ($isWarning ? 'active-warning' : 'active-primary');
+        $borderClass = $isDanger ? 'border-danger' : ($isWarning ? 'border-warning' : 'border-primary');
+        $textAccent = $isDanger ? 'text-danger' : ($isWarning ? 'text-warning-emphasis' : 'text-primary');
         $preLine = $preselectedMachine['line'] ?? '';
         $preId = $preselectedMachine['machine_id'] ?? '';
+        $preCode = $preselectedMachine['machine_code'] ?? '';
         $preName = $preselectedMachine['machine_name'] ?? '';
         $isQrLocked = ($preselectedMachine !== null);
         ?>
-        <div class="mb-3">
-            <input type="hidden" id="<?= $prefix ?>_asset_mode" name="asset_mode" value="machine">
-            <label class="pe-form-label <?= $textAccent ?>"><i class="fas fa-crosshairs me-1"></i> ประเภทอุปกรณ์ที่แจ้ง <span class="required">*</span></label>
-            <div class="asset-mode-switch" role="group" aria-label="เลือกประเภทอุปกรณ์">
-                <button type="button" class="asset-mode-btn <?= $activeBtnClass ?>" data-asset-switch="<?= $prefix ?>" data-mode="machine">
-                    <i class="fas fa-industry"></i> <span>เครื่องจักรในระบบ</span>
-                </button>
-                <button type="button" class="asset-mode-btn" data-asset-switch="<?= $prefix ?>" data-mode="general" <?= $isQrLocked ? 'disabled title="สแกน QR เครื่องจักรแล้ว"' : '' ?>>
-                    <i class="fas fa-tools"></i> <span>อุปกรณ์ทั่วไป / นอกอาคาร</span>
-                </button>
+        <input type="hidden" id="<?= $prefix ?>_asset_mode" name="asset_mode" value="machine">
+        <?php if ($allowGeneral): ?>
+            <div class="mb-3">
+                <div class="asset-mode-switch" role="group" aria-label="เลือกประเภทอุปกรณ์">
+                    <button type="button" class="asset-mode-btn <?= $activeBtnClass ?>" data-asset-switch="<?= $prefix ?>" data-mode="machine">
+                        <i class="fas fa-industry"></i> <span>เครื่องจักร</span>
+                    </button>
+                    <button type="button" class="asset-mode-btn" data-asset-switch="<?= $prefix ?>" data-mode="general" <?= $isQrLocked ? 'disabled title="สแกน QR เครื่องจักรแล้ว"' : '' ?>>
+                        <i class="fas fa-tools"></i> <span>ทั่วไป / นอกอาคาร</span>
+                    </button>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
 
-        <!-- Mode A: Registered Machine (PE_MACHINES) -->
-        <div id="<?= $prefix ?>_mode_machine" class="mb-3 p-3 rounded-3 border bg-light bg-opacity-50">
+        <!-- Mode A: Registered Machine -->
+        <div id="<?= $prefix ?>_mode_machine">
             <?php if ($isQrLocked): ?>
-                <div class="alert alert-success py-2 px-3 mb-2 small d-flex align-items-center justify-content-between gap-2">
-                    <span><i class="fas fa-qrcode me-1"></i> สแกนจากรหัสเครื่อง: <strong><?= htmlspecialchars($preselectedMachine['machine_code']) ?></strong></span>
-                    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" onclick="unlockQrMachine('<?= $prefix ?>')">เปลี่ยนเครื่อง</button>
+                <div class="alert alert-success py-1.5 px-2.5 mb-2 small d-flex align-items-center justify-content-between gap-2">
+                    <span class="text-truncate"><i class="fas fa-qrcode me-1"></i> <strong><?= htmlspecialchars($preName) ?></strong> (<?= htmlspecialchars($preCode) ?>)</span>
+                    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" onclick="unlockQrMachine('<?= $prefix ?>')">เปลี่ยน</button>
                 </div>
             <?php endif; ?>
 
             <div class="row g-2 mb-2">
-                <div class="col-12 col-sm-5">
-                    <label class="pe-form-label">1. กรองตามไลน์ / พื้นที่</label>
-                    <select class="pe-form-select <?= $borderClass ?>" id="<?= $prefix ?>_filter_line" <?= $isQrLocked ? 'disabled' : '' ?>>
-                        <option value="">-- ทุกพื้นที่ (ค้นหาทั้งหมด) --</option>
-                        <?php foreach ($uniqueLines as $ln): ?>
-                            <option value="<?= htmlspecialchars($ln) ?>" <?= ($preLine === $ln) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($ln) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-12 col-sm-7">
-                    <label class="pe-form-label d-flex justify-content-between align-items-center">
-                        <span>2. ค้นหารหัส / ชื่อเครื่อง</span>
-                        <small class="text-muted fw-normal" id="<?= $prefix ?>_machine_count"></small>
-                    </label>
-                    <input type="search" class="pe-form-input" id="<?= $prefix ?>_machine_search" placeholder="เช่น AC-001, ปั้มลม, Spot..." autocomplete="off" <?= $isQrLocked ? 'readonly' : '' ?>>
-                </div>
+                <?php if (is_callable($extraRightSlot)): ?>
+                    <div class="col-6">
+                        <?php $extraRightSlot(); ?>
+                    </div>
+                    <div class="col-6">
+                        <label class="pe-form-label">ไลน์ / พื้นที่</label>
+                        <select class="pe-form-select <?= $borderClass ?>" id="<?= $prefix ?>_filter_line" <?= $isQrLocked ? 'disabled' : '' ?>>
+                            <option value="">ทั้งหมด</option>
+                            <?php foreach ($uniqueLines as $ln): ?>
+                                <option value="<?= htmlspecialchars($ln) ?>" <?= ($preLine === $ln) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($ln) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php else: ?>
+                    <div class="col-5">
+                        <label class="pe-form-label">ไลน์ / พื้นที่</label>
+                        <select class="pe-form-select <?= $borderClass ?>" id="<?= $prefix ?>_filter_line" <?= $isQrLocked ? 'disabled' : '' ?>>
+                            <option value="">ทั้งหมด</option>
+                            <?php foreach ($uniqueLines as $ln): ?>
+                                <option value="<?= htmlspecialchars($ln) ?>" <?= ($preLine === $ln) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($ln) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-7">
+                        <label class="pe-form-label">ค้นหาเครื่องจักร</label>
+                        <div class="machine-search-wrap">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="search" class="pe-form-input" id="<?= $prefix ?>_machine_search" placeholder="ชื่อเครื่อง / รหัส..." autocomplete="off" <?= $isQrLocked ? 'readonly' : '' ?>>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
-            <div class="mb-2">
-                <label class="pe-form-label <?= $textAccent ?>">3. เลือกเครื่องจักรจากระบบ <span class="required">*</span></label>
-                <select class="pe-form-select <?= $borderClass ?>" id="<?= $prefix ?>_machine_id" name="machine_id" required <?= $isQrLocked ? 'data-qr-locked="1"' : '' ?>>
-                    <option value="">-- กรุณาเลือกเครื่องจักร --</option>
+            <?php if (is_callable($extraRightSlot)): ?>
+                <div class="mb-2">
+                    <div class="machine-search-wrap">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="search" class="pe-form-input" id="<?= $prefix ?>_machine_search" placeholder="พิมพ์ชื่อเครื่องที่เรียกกัน เช่น ปั้มลม, เตาอบ, Spot..." autocomplete="off" <?= $isQrLocked ? 'readonly' : '' ?>>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <div class="mb-3">
+                <label class="pe-form-label d-flex justify-content-between align-items-center <?= $textAccent ?>">
+                    <span>เลือกเครื่องจักร <span class="required">*</span></span>
+                    <small class="text-muted fw-normal" id="<?= $prefix ?>_machine_count"></small>
+                </label>
+                <select class="pe-form-select <?= $borderClass ?>" id="<?= $prefix ?>_machine_id" <?= $submitByCodeOnly ? '' : 'name="machine_id"' ?> required <?= $isQrLocked ? 'data-qr-locked="1"' : '' ?>>
+                    <option value="">-- เลือกเครื่องจักร --</option>
                     <?php foreach ($machines as $m):
                         $selected = ((string)$preId === (string)$m['machine_id']) ? 'selected' : '';
                     ?>
                         <option value="<?= (int)$m['machine_id'] ?>" data-line="<?= htmlspecialchars($m['line']) ?>" data-name="<?= htmlspecialchars($m['machine_name']) ?>" data-code="<?= htmlspecialchars($m['machine_code']) ?>" <?= $selected ?>>
-                            <?= htmlspecialchars($m['line'] . ' | ' . $m['machine_code'] . ' — ' . $m['machine_name']) ?>
+                            <?= htmlspecialchars($m['machine_name'] . ' (' . $m['machine_code'] . ')') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-            </div>
-
-            <div class="row g-2">
-                <div class="col-7">
-                    <label class="pe-form-label"><i class="fas fa-lock me-1 text-muted"></i>ชื่อเครื่องจักร (ตามระบบ)</label>
-                    <input type="text" class="pe-form-input pe-readonly-box" id="<?= $prefix ?>_machine_name" name="machine_name" value="<?= htmlspecialchars($preName) ?>" placeholder="เลือกเครื่องจักรด้านบน..." readonly required>
-                </div>
-                <div class="col-5">
-                    <label class="pe-form-label"><i class="fas fa-lock me-1 text-muted"></i>ไลน์ / พื้นที่</label>
-                    <input type="text" class="pe-form-input pe-readonly-box" id="<?= $prefix ?>_line" name="line" value="<?= htmlspecialchars($preLine) ?>" placeholder="-" readonly required>
-                </div>
+                <?php if ($submitByCodeOnly): ?>
+                    <input type="hidden" id="<?= $prefix ?>_machineCode" name="machine_code" value="<?= htmlspecialchars($preCode) ?>">
+                <?php else: ?>
+                    <input type="hidden" id="<?= $prefix ?>_machine_name" name="machine_name" value="<?= htmlspecialchars($preName) ?>">
+                    <input type="hidden" id="<?= $prefix ?>_line" name="line" value="<?= htmlspecialchars($preLine) ?>">
+                <?php endif; ?>
             </div>
         </div>
 
-        <!-- Mode B: General / Facility / Outdoor Equipment (Structured, No Free-Text Line) -->
-        <div id="<?= $prefix ?>_mode_general" class="mb-3 p-3 rounded-3 border border-warning bg-warning bg-opacity-10" style="display: none;">
-            <div class="small text-dark mb-2">
-                <i class="fas fa-info-circle text-warning me-1"></i> สำหรับอุปกรณ์ย่อย พัดลม หลอดไฟ ปืนลม อาคาร หรือพื้นที่นอกอาคาร (ไม่ปนกับสถิติเครื่องจักรหลัก)
-            </div>
-            <div class="row g-2 mb-2">
-                <div class="col-12 col-sm-6">
-                    <label class="pe-form-label">พื้นที่ / แผนกที่พบปัญหา <span class="required">*</span></label>
-                    <select class="pe-form-select border-warning" id="<?= $prefix ?>_general_line" name="general_line">
-                        <option value="">-- เลือกพื้นที่ / ไลน์ --</option>
-                        <?php foreach ($generalAreas as $ga): ?>
-                            <option value="<?= htmlspecialchars($ga) ?>"><?= htmlspecialchars($ga) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+        <?php if ($allowGeneral): ?>
+            <!-- Mode B: General / Facility / Outdoor Equipment -->
+            <div id="<?= $prefix ?>_mode_general" style="display: none;">
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="pe-form-label">พื้นที่ / แผนก <span class="required">*</span></label>
+                        <select class="pe-form-select border-warning" id="<?= $prefix ?>_general_line" name="general_line">
+                            <option value="">-- เลือกพื้นที่ --</option>
+                            <?php foreach ($generalAreas as $ga): ?>
+                                <option value="<?= htmlspecialchars($ga) ?>"><?= htmlspecialchars($ga) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="pe-form-label">หมวดอุปกรณ์ <span class="required">*</span></label>
+                        <select class="pe-form-select border-warning" id="<?= $prefix ?>_general_category" name="general_category">
+                            <option value="">-- เลือกหมวด --</option>
+                            <?php foreach ($generalCategories as $gc): ?>
+                                <option value="<?= htmlspecialchars($gc) ?>"><?= htmlspecialchars($gc) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-12 col-sm-6">
-                    <label class="pe-form-label">หมวดหมู่อุปกรณ์ <span class="required">*</span></label>
-                    <select class="pe-form-select border-warning" id="<?= $prefix ?>_general_category" name="general_category">
-                        <option value="">-- เลือกหมวดหมู่ --</option>
-                        <?php foreach ($generalCategories as $gc): ?>
-                            <option value="<?= htmlspecialchars($gc) ?>"><?= htmlspecialchars($gc) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="mb-3">
+                    <label class="pe-form-label">ชื่ออุปกรณ์ / จุดที่พบปัญหา <span class="required">*</span></label>
+                    <input type="text" class="pe-form-input" id="<?= $prefix ?>_general_name" name="general_name" placeholder="เช่น พัดลมเสา B3, ปืนยิง M10, ประตูม้วน...">
                 </div>
             </div>
-            <div>
-                <label class="pe-form-label">ระบุชื่ออุปกรณ์ / จุดที่พบปัญหา <span class="required">*</span></label>
-                <input type="text" class="pe-form-input" id="<?= $prefix ?>_general_name" name="general_name" placeholder="เช่น พัดลมติดผนังเสา B3, ปืนยิง M10, ประตูม้วนโกดัง">
-            </div>
-        </div>
+        <?php endif; ?>
         <?php
     }
     ?>
@@ -271,24 +317,37 @@ if ($preselectedCode !== '') {
                     <input type="text" class="pe-form-input" name="requested_by" value="<?= htmlspecialchars($currentUserForJS['fullname'] ?? $currentUserForJS['username']) ?>" required>
                 </div>
 
-                <div class="mb-3">
-                    <label class="pe-form-label">ประเภทงาน <span class="required">*</span></label>
-                    <select class="pe-form-select border-primary" id="req_wo_type" name="wo_type" required>
-                        <option value="Corrective">ซ่อมแซม (Corrective)</option>
-                        <option value="Preventive">ป้องกัน (Preventive)</option>
-                        <option value="Improvement">พัฒนา/ปรับปรุง (Improvement)</option>
-                        <option value="Inspection">ตรวจสอบ (Inspection)</option>
-                        <option value="Setup">ตั้งเครื่อง/เปลี่ยนรุ่น (Setup)</option>
-                        <option value="Safety/Hazard">ความปลอดภัย (Safety/Hazard)</option>
-                    </select>
-                </div>
-
-                <?php renderAssetSelectorBlock('req', 'primary', $uniqueLines, $generalAreas, $generalCategories, $machines, $preselectedMachine); ?>
+                <?php
+                renderAssetSelectorBlock(
+                    'req',
+                    'primary',
+                    $uniqueLines,
+                    $generalAreas,
+                    $generalCategories,
+                    $machines,
+                    $preselectedMachine,
+                    true,
+                    false,
+                    function() {
+                        ?>
+                        <label class="pe-form-label">ประเภทงาน <span class="required">*</span></label>
+                        <select class="pe-form-select border-primary" id="req_wo_type" name="wo_type" required>
+                            <option value="Corrective">ซ่อมแซม (Corrective)</option>
+                            <option value="Preventive">ป้องกัน (Preventive)</option>
+                            <option value="Improvement">พัฒนา/ปรับปรุง (Improvement)</option>
+                            <option value="Inspection">ตรวจสอบ (Inspection)</option>
+                            <option value="Setup">ตั้งเครื่อง/เปลี่ยนรุ่น (Setup)</option>
+                            <option value="Safety/Hazard">ความปลอดภัย (Safety/Hazard)</option>
+                        </select>
+                        <?php
+                    }
+                );
+                ?>
 
                 <div class="mb-3">
                     <label class="pe-form-label">อาการเสีย / หัวข้อปัญหา <span class="required">*</span></label>
-                    <input type="text" class="pe-form-input" id="req_issue_title" name="issue_title" placeholder="เลือกอาการพบบ่อยด้านล่าง หรือระบุอาการ..." required>
-                    <div class="d-flex flex-wrap gap-1 mt-2" id="req_issue_presets">
+                    <input type="text" class="pe-form-input" id="req_issue_title" name="issue_title" placeholder="เลือกอาการด้านล่าง หรือพิมพ์อาการ..." required>
+                    <div class="issue-chips-row mt-2" id="req_issue_presets">
                         <button type="button" class="issue-chip" data-preset="เครื่องไม่ทำงาน / เปิดไม่ติด">เครื่องไม่ทำงาน</button>
                         <button type="button" class="issue-chip" data-preset="ลมรั่ว / สายลมแตก">ลมรั่ว / สายลมแตก</button>
                         <button type="button" class="issue-chip" data-preset="น้ำมัน / น้ำรั่วซึม">รั่วซึม</button>
@@ -444,10 +503,7 @@ if ($preselectedCode !== '') {
                 <small class="text-muted">ตรวจสอบความพร้อมและเช็คลิสต์ก่อนเริ่มงาน</small>
             </div>
             <form id="preopForm" class="app-card">
-                <div class="mb-3">
-                    <label class="pe-form-label text-primary">รหัสเครื่องจักร <span class="required">*</span></label>
-                    <input type="text" class="pe-form-input text-uppercase" name="machine_code" id="preop_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="เช่น MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
-                </div>
+                <?php renderAssetSelectorBlock('preop', 'primary', $uniqueLines, $generalAreas, $generalCategories, $machines, $preselectedMachine, false, true); ?>
                 <div class="row mb-3">
                     <div class="col-6">
                         <label class="pe-form-label">กะ (Shift) <span class="required">*</span></label>
@@ -490,9 +546,7 @@ if ($preselectedCode !== '') {
             <form id="hazardForm" class="app-card" style="display: flex; flex-direction: column; min-height: calc(100vh - 270px);">
                 <input type="hidden" name="action" value="submit_hazard_report">
                 <input type="hidden" id="hazard_imageBase64" name="image_base64" value="">
-                <div class="mb-3"><label class="pe-form-label text-danger">รหัสเครื่องจักร <span class="text-danger">*</span></label>
-                    <input type="text" class="pe-form-input text-uppercase" name="machine_code" id="hazard_machineCode" value="<?= htmlspecialchars($_GET['machine_code'] ?? '') ?>" placeholder="MC-01" required <?= !empty($_GET['machine_code']) ? 'readonly' : '' ?>>
-                </div>
+                <?php renderAssetSelectorBlock('hazard', 'warning', $uniqueLines, $generalAreas, $generalCategories, $machines, $preselectedMachine, true, true); ?>
                 <div class="mb-3"><label class="pe-form-label">ปัญหา (Issue) <span class="text-danger">*</span></label>
                     <select class="pe-form-select" name="issue_title" required>
                         <option value="">-- เลือกหัวข้อ --</option>

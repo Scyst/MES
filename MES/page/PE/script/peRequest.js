@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const machineSelectEl = document.getElementById(`${prefix}_machine_id`);
         const machineNameEl = document.getElementById(`${prefix}_machine_name`);
         const lineEl = document.getElementById(`${prefix}_line`);
+        const machineCodeEl = document.getElementById(`${prefix}_machineCode`);
         const genLineEl = document.getElementById(`${prefix}_general_line`);
         const genCatEl = document.getElementById(`${prefix}_general_category`);
         const genNameEl = document.getElementById(`${prefix}_general_name`);
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const filtered = (typeof MACHINES_DATA !== 'undefined' ? MACHINES_DATA : []).filter(m => {
                 if (targetLine && String(m.line || '').trim() !== targetLine) return false;
                 if (query) {
-                    const haystack = `${m.machine_code || ''} ${m.machine_name || ''} ${m.line || ''} ${m.area || ''}`.toLowerCase();
+                    const haystack = `${m.machine_name || ''} ${m.machine_code || ''} ${m.line || ''} ${m.area || ''}`.toLowerCase();
                     if (!haystack.includes(query)) return false;
                 }
                 return true;
@@ -63,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
             machineSelectEl.innerHTML = '';
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
-            defaultOpt.textContent = filtered.length > 0 ? '-- กรุณาเลือกเครื่องจักร --' : '-- ไม่พบเครื่องจักรที่ค้นหา --';
+            defaultOpt.textContent = filtered.length > 0 ? '-- เลือกเครื่องจักร --' : '-- ไม่พบเครื่องจักร --';
             machineSelectEl.appendChild(defaultOpt);
 
             let matchedInFiltered = false;
@@ -73,9 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 opt.dataset.line = m.line || '';
                 opt.dataset.name = m.machine_name || '';
                 opt.dataset.code = m.machine_code || '';
+                // Human-friendly name first so operators don't struggle with cryptic codes
                 opt.textContent = targetLine
-                    ? `${m.machine_code} — ${m.machine_name}`
-                    : `${m.line} | ${m.machine_code} — ${m.machine_name}`;
+                    ? `${m.machine_name} (${m.machine_code})`
+                    : `[${m.line}] ${m.machine_name} (${m.machine_code})`;
                 if (currentVal && String(m.machine_id) === currentVal) {
                     opt.selected = true;
                     matchedInFiltered = true;
@@ -89,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (countEl) {
-                countEl.textContent = `พบ ${filtered.length} รายการ`;
+                countEl.textContent = `${filtered.length} เครื่อง`;
             }
             syncSelectedMachineFields();
         }
@@ -102,9 +104,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (found) {
                 if (machineNameEl) machineNameEl.value = found.machine_name || '';
                 if (lineEl) lineEl.value = found.line || '';
+                if (machineCodeEl) {
+                    const changed = machineCodeEl.value !== (found.machine_code || '');
+                    machineCodeEl.value = found.machine_code || '';
+                    if (changed) machineCodeEl.dispatchEvent(new Event('change'));
+                }
             } else {
                 if (machineNameEl) machineNameEl.value = '';
                 if (lineEl) lineEl.value = '';
+                if (machineCodeEl) {
+                    const changed = machineCodeEl.value !== '';
+                    machineCodeEl.value = '';
+                    if (changed) machineCodeEl.dispatchEvent(new Event('change'));
+                }
             }
         }
 
@@ -113,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modeInput.value = nextMode;
 
             switchBtns.forEach(btn => {
-                btn.classList.remove('active-primary', 'active-danger');
+                btn.classList.remove('active-primary', 'active-danger', 'active-warning');
                 if (btn.dataset.mode === nextMode) {
                     btn.classList.add(activeBtnClass);
                 }
@@ -123,8 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (machineBox) machineBox.style.display = '';
                 if (generalBox) generalBox.style.display = 'none';
                 machineSelectEl.required = true;
-                if (machineNameEl) machineNameEl.required = true;
-                if (lineEl) lineEl.required = true;
                 if (genLineEl) genLineEl.required = false;
                 if (genCatEl) genCatEl.required = false;
                 if (genNameEl) genNameEl.required = false;
@@ -132,8 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (machineBox) machineBox.style.display = 'none';
                 if (generalBox) generalBox.style.display = '';
                 machineSelectEl.required = false;
-                if (machineNameEl) machineNameEl.required = false;
-                if (lineEl) lineEl.required = false;
                 if (genLineEl) genLineEl.required = true;
                 if (genCatEl) genCatEl.required = true;
                 if (genNameEl) genNameEl.required = true;
@@ -201,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     assetControllers.req = initAssetSelector('req', 'active-primary');
     assetControllers.dt = initAssetSelector('dt', 'active-danger');
+    assetControllers.preop = initAssetSelector('preop', 'active-primary');
+    assetControllers.hazard = initAssetSelector('hazard', 'active-warning');
 
     window.unlockQrMachine = function(prefix) {
         assetControllers[prefix]?.unlockQr();
@@ -220,15 +230,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function prepareAssetFormData(prefix, formData) {
-        const mode = formData.get(`${'asset_mode'}`) || 'machine';
+    function prepareAssetFormData(prefix, formData, codeOnly = false) {
+        const mode = formData.get('asset_mode') || 'machine';
         if (mode === 'machine') {
-            const machineId = String(formData.get('machine_id') || '').trim();
+            const machineIdEl = document.getElementById(`${prefix}_machine_id`);
+            const machineId = String(formData.get('machine_id') || machineIdEl?.value || '').trim();
             if (!machineId) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'กรุณาเลือกเครื่องจักร',
-                    text: 'กรุณาเลือกเครื่องจักรจากรายการในระบบ หรือสลับเป็นโหมด "อุปกรณ์ทั่วไป / นอกอาคาร"'
+                    text: codeOnly ? 'กรุณาเลือกเครื่องจักรจากรายการในระบบ' : 'กรุณาเลือกเครื่องจักรจากรายการ หรือสลับเป็นโหมด "ทั่วไป / นอกอาคาร"'
                 });
                 return false;
             }
@@ -239,8 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูลเครื่องจักร', text: 'กรุณาเลือกเครื่องจักรใหม่อีกครั้ง' });
                 return false;
             }
+            formData.set('machine_id', String(found.machine_id));
             formData.set('machine_name', found.machine_name || '');
             formData.set('line', found.line || '');
+            if (codeOnly) {
+                formData.set('machine_code', found.machine_code || '');
+            }
             return true;
         }
 
@@ -253,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             Swal.fire({
                 icon: 'warning',
                 title: 'ข้อมูลไม่ครบถ้วน',
-                text: 'กรุณาเลือกพื้นที่ หมวดหมู่อุปกรณ์ และระบุชื่ออุปกรณ์/จุดที่พบปัญหา'
+                text: 'กรุณาเลือกพื้นที่ หมวดอุปกรณ์ และระบุชื่ออุปกรณ์/จุดที่พบปัญหา'
             });
             return false;
         }
@@ -261,6 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.set('machine_id', '');
         formData.set('line', genLine);
         formData.set('machine_name', `[${genCat}] ${genName}`);
+        if (codeOnly) {
+            formData.set('machine_code', '');
+        }
         return true;
     }
 
@@ -864,6 +882,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const formData = new FormData(hazardForm);
+        if (!prepareAssetFormData('hazard', formData, true)) {
+            return;
+        }
+
         Swal.fire({
             title: 'กำลังส่งข้อมูล...',
             text: 'กรุณารอสักครู่',
@@ -872,8 +895,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.showLoading();
             }
         });
-
-        const formData = new FormData(hazardForm);
 
         try {
             const response = await fetch('api/publicHazardAPI.php', {
@@ -891,14 +912,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     confirmButtonColor: '#198754',
                     confirmButtonText: 'รับทราบ'
                 }).then(() => {
-                    // Reset form but keep machine code if it was prefilled
-                    const machineCode = document.getElementById('hazard_machineCode').value;
-                    const isReadonly = document.getElementById('hazard_machineCode').hasAttribute('readonly');
                     hazardForm.reset();
                     removeImgBtn.click();
-                    if (isReadonly) {
-                        document.getElementById('hazard_machineCode').value = machineCode;
-                    }
+                    assetControllers.hazard?.reset();
                 });
             } else {
                 Swal.fire('เกิดข้อผิดพลาด', result.message || 'ไม่สามารถส่งข้อมูลได้', 'error');
@@ -921,7 +937,7 @@ window.removeImage = function(itemId) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const failActionArea = document.getElementById('failActionArea');
-    const submitBtn = document.getElementById('submitBtn');
+    const submitBtn = document.getElementById('submitBtnPreop');
     
     // Auto-fill audited_by if previously saved and no session user
     const auditedByInput = document.getElementById('auditedByInput');
@@ -1079,17 +1095,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Load immediately if machineCode exists
-    const initialMachineCode = document.getElementById('preop_machineCode').value.trim();
+    // Load immediately if machineCode exists, else show friendly prompt
+    const preopCodeEl = document.getElementById('preop_machineCode');
+    const initialMachineCode = preopCodeEl?.value.trim() || '';
     if (initialMachineCode) {
         loadChecklist(initialMachineCode);
+    } else {
+        document.getElementById('checklistContainer').innerHTML = '<div class="text-center py-3 text-muted small">กรุณาเลือกเครื่องจักรด้านบนเพื่อโหลดรายการตรวจสอบ</div>';
     }
     
-    // Allow reloading if user types machine code manually
-    document.getElementById('preop_machineCode').addEventListener('blur', function(e) {
-        if(e.target.value.trim() !== '') {
+    // Auto-reload checklist whenever user selects a machine from dropdown
+    preopCodeEl?.addEventListener('change', function(e) {
+        const nextCode = e.target.value.trim();
+        if (nextCode !== '') {
             document.getElementById('checklistContainer').innerHTML = '<div class="text-center py-4 text-secondary"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">กำลังโหลดรายการตรวจสอบ...</p></div>';
-            loadChecklist(e.target.value.trim());
+            loadChecklist(nextCode);
+        } else {
+            document.getElementById('checklistContainer').innerHTML = '<div class="text-center py-3 text-muted small">กรุณาเลือกเครื่องจักรด้านบนเพื่อโหลดรายการตรวจสอบ</div>';
         }
     });
 
@@ -1097,9 +1119,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('preopForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const machineCode = document.getElementById('machineCode').value.trim();
+        const machineCode = document.getElementById('preop_machineCode')?.value.trim() || '';
         if(!machineCode) {
-            Swal.fire('Error', 'กรุณาระบุรหัสเครื่องจักร', 'error');
+            Swal.fire('กรุณาเลือกเครื่องจักร', 'กรุณาเลือกเครื่องจักรก่อนบันทึกผลตรวจสอบ', 'warning');
             return;
         }
 
@@ -1164,8 +1186,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const mc = machineCode;
                     const auditedBy = data.audited_by;
                     document.getElementById('preopForm').reset();
-                    document.getElementById('machineCode').value = mc;
+                    document.getElementById('preop_machineCode').value = mc;
                     document.querySelector('input[name="audited_by"]').value = auditedBy;
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
                     
                     checkFailures();
                     loadChecklist(mc);

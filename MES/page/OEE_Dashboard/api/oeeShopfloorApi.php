@@ -107,21 +107,74 @@ try {
         case 'getBarCharts':
             $actualStartDate = $startDate . ' 08:00:00';
             $actualEndDate = date('Y-m-d H:i:s', strtotime($endDate . ' +1 day 8 hours'));
-            $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause'; 
-            $stopCond = ["m.request_date >= ?", "m.request_date < ?"];
-            $stopParams = [$actualStartDate, $actualEndDate];
-            if ($line) { $stopCond[] = "m.line = ?"; $stopParams[] = $line; }
-            $stopWhere = "WHERE " . implode(" AND ", $stopCond);
-            
-            $colGroup = ($stopCauseGroupBy === 'line') ? 'm.line' : 'm.machine';
-            $stopSql = "SELECT ISNULL({$colGroup}, 'Unspecified') as label, 
-                               SUM(ISNULL(m.actual_repair_minutes, DATEDIFF(MINUTE, m.request_date, ISNULL(m.resolved_at, GETDATE())))) as total_minutes 
-                        FROM MAINTENANCE_REQUESTS m WITH (NOLOCK) 
-                        {$stopWhere} 
-                        GROUP BY ISNULL({$colGroup}, 'Unspecified') 
-                        HAVING SUM(ISNULL(m.actual_repair_minutes, DATEDIFF(MINUTE, m.request_date, ISNULL(m.resolved_at, GETDATE())))) > 0
+            $stopCauseGroupBy = $_GET['stopCauseGroupBy'] ?? 'cause';
+            $woCond = [
+                "w.is_active = 1",
+                "ISNULL(w.status, '') <> 'Cancelled'",
+                "COALESCE(w.started_at, w.requested_at) >= ?",
+                "COALESCE(w.started_at, w.requested_at) < ?",
+                "NOT EXISTS (SELECT 1 FROM PE_DOWNTIME_LOG dl WITH (NOLOCK) WHERE dl.wo_id = w.wo_id)"
+            ];
+            $dtCond = [
+                "COALESCE(d.start_time, CAST(d.log_date AS DATETIME)) >= ?",
+                "COALESCE(d.start_time, CAST(d.log_date AS DATETIME)) < ?"
+            ];
+            $woParams = [$actualStartDate, $actualEndDate];
+            $dtParams = [$actualStartDate, $actualEndDate];
+            if ($line) {
+                $woCond[] = "COALESCE(NULLIF(LTRIM(RTRIM(w.line)), ''), NULLIF(LTRIM(RTRIM(pm.line)), '')) = ?";
+                $woParams[] = $line;
+                $dtCond[] = "COALESCE(NULLIF(LTRIM(RTRIM(d.line)), ''), NULLIF(LTRIM(RTRIM(pm.line)), '')) = ?";
+                $dtParams[] = $line;
+            }
+            if ($machine) {
+                $woCond[] = "w.machine_id = ?";
+                $woParams[] = (int)$machine;
+                $dtCond[] = "d.machine_id = ?";
+                $dtParams[] = (int)$machine;
+            }
+
+            $woWhere = implode(" AND ", $woCond);
+            $dtWhere = implode(" AND ", $dtCond);
+            $woGroupExpr = ($stopCauseGroupBy === 'line')
+                ? "COALESCE(NULLIF(LTRIM(RTRIM(w.line)), ''), NULLIF(LTRIM(RTRIM(pm.line)), ''), 'Unspecified')"
+                : "COALESCE(NULLIF(LTRIM(RTRIM(pm.machine_name)), ''), NULLIF(LTRIM(RTRIM(w.machine_name)), ''), 'Unspecified')";
+            $dtGroupExpr = ($stopCauseGroupBy === 'line')
+                ? "COALESCE(NULLIF(LTRIM(RTRIM(d.line)), ''), NULLIF(LTRIM(RTRIM(pm.line)), ''), 'Unspecified')"
+                : "COALESCE(NULLIF(LTRIM(RTRIM(pm.machine_name)), ''), NULLIF(LTRIM(RTRIM(d.machine_name)), ''), NULLIF(LTRIM(RTRIM(d.cause_category)), ''), 'Unspecified')";
+
+            $stopSql = "SELECT TOP 25 label, SUM(total_minutes) AS total_minutes
+                        FROM (
+                            SELECT
+                                {$woGroupExpr} AS label,
+                                CASE
+                                    WHEN w.repair_minutes IS NOT NULL AND w.repair_minutes > 0 THEN w.repair_minutes
+                                    WHEN w.completed_at IS NOT NULL THEN DATEDIFF(MINUTE, COALESCE(w.started_at, w.requested_at), w.completed_at)
+                                    WHEN w.status = 'In Progress' THEN DATEDIFF(MINUTE, COALESCE(w.started_at, w.requested_at), CASE WHEN GETDATE() < ? THEN GETDATE() ELSE ? END)
+                                    ELSE 0
+                                END AS total_minutes
+                            FROM PE_WORK_ORDERS w WITH (NOLOCK)
+                            LEFT JOIN PE_MACHINES pm WITH (NOLOCK) ON w.machine_id = pm.machine_id
+                            WHERE {$woWhere}
+
+                            UNION ALL
+
+                            SELECT
+                                {$dtGroupExpr} AS label,
+                                CASE
+                                    WHEN d.duration_min IS NOT NULL AND d.duration_min > 0 THEN d.duration_min
+                                    WHEN d.end_time IS NOT NULL AND d.start_time IS NOT NULL THEN DATEDIFF(MINUTE, d.start_time, d.end_time)
+                                    ELSE 0
+                                END AS total_minutes
+                            FROM PE_DOWNTIME_LOG d WITH (NOLOCK)
+                            LEFT JOIN PE_MACHINES pm WITH (NOLOCK) ON d.machine_id = pm.machine_id
+                            WHERE {$dtWhere}
+                        ) combined
+                        WHERE total_minutes > 0
+                        GROUP BY label
                         ORDER BY total_minutes DESC";
-            
+
+            $stopParams = array_merge([$actualEndDate, $actualEndDate], $woParams, $dtParams);
             $stmt = $pdo->prepare($stopSql);
             $stmt->execute($stopParams);
             $stopResults = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -54,9 +54,11 @@ try {
         }
 
         case 'add_downtime': {
-            $machineId = !empty($input['machine_id']) ? parsePePositiveInt($input['machine_id'], 'เครื่องจักร') : null;
-            $machineName = mb_substr(trim((string)($input['machine_name'] ?? '')), 0, 200);
-            $line = mb_substr(trim((string)($input['line'] ?? '')), 0, 100);
+            $resolvedAsset = resolveToolboxPeAsset($pdo, $input);
+            $machineId = $resolvedAsset['machine_id'];
+            $machineName = $resolvedAsset['machine_name'];
+            $line = $resolvedAsset['line'];
+
             $logDate = parsePeDateOrNull($input['log_date'] ?? null) ?? date('Y-m-d');
             $startTimeRaw = trim((string)($input['start_time'] ?? ''));
             $endTimeRaw = trim((string)($input['end_time'] ?? ''));
@@ -75,18 +77,6 @@ try {
             }
             if ($startTimeRaw === '') {
                 throw new InvalidArgumentException('กรุณาระบุเวลาที่เครื่องจักรเริ่มหยุด');
-            }
-
-            if ($machineId !== null) {
-                $mStmt = $pdo->prepare("SELECT machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE machine_id = ?");
-                $mStmt->execute([$machineId]);
-                $mRow = $mStmt->fetch(PDO::FETCH_ASSOC);
-                if ($mRow) {
-                    $machineName = $mRow['machine_name'];
-                    if ($line === '') {
-                        $line = (string)$mRow['line'];
-                    }
-                }
             }
 
             $startDateTime = parsePeDateTimeOrNull("{$logDate} {$startTimeRaw}");
@@ -182,20 +172,40 @@ try {
         }
 
         case 'submit_hazard_report': {
+            $assetMode = trim((string)($input['asset_mode'] ?? ''));
             $machineCode = strtoupper(trim((string)($input['machine_code'] ?? '')));
             $issueTitle = trim((string)($input['issue_title'] ?? ''));
             $issueDetail = trim((string)($input['issue_detail'] ?? ''));
             $imageBase64 = (string)($input['image_base64'] ?? '');
 
-            if ($machineCode === '' || $issueTitle === '') {
-                throw new InvalidArgumentException('กรุณาระบุรหัสเครื่องจักรและหัวข้อความเสี่ยง');
+            if ($issueTitle === '') {
+                throw new InvalidArgumentException('กรุณาระบุหัวข้อความเสี่ยง');
             }
 
-            $mStmt = $pdo->prepare("SELECT TOP 1 machine_id, machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE machine_code = ? OR machine_name = ?");
-            $mStmt->execute([$machineCode, $machineCode]);
-            $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$mData) {
-                throw new InvalidArgumentException("ไม่พบรหัสเครื่องจักร '{$machineCode}' ในระบบ");
+            if ($assetMode === 'general') {
+                $resolved = resolveToolboxPeAsset($pdo, $input);
+                $mData = [
+                    'machine_id' => null,
+                    'machine_name' => $resolved['machine_name'],
+                    'line' => $resolved['line'],
+                ];
+            } else {
+                $machineIdInput = !empty($input['machine_id']) ? parsePePositiveInt($input['machine_id'], 'เครื่องจักร') : null;
+                if ($machineIdInput !== null) {
+                    $mStmt = $pdo->prepare("SELECT TOP 1 machine_id, machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE machine_id = ? AND is_active = 1");
+                    $mStmt->execute([$machineIdInput]);
+                    $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
+                } else {
+                    if ($machineCode === '') {
+                        throw new InvalidArgumentException('กรุณาเลือกเครื่องจักร หรือระบุพื้นที่/อุปกรณ์ทั่วไป');
+                    }
+                    $mStmt = $pdo->prepare("SELECT TOP 1 machine_id, machine_name, line FROM " . PE_MACHINES_TABLE . " WITH (NOLOCK) WHERE (machine_code = ? OR machine_name = ?) AND is_active = 1");
+                    $mStmt->execute([$machineCode, $machineCode]);
+                    $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
+                }
+                if (!$mData) {
+                    throw new InvalidArgumentException("ไม่พบรหัสเครื่องจักร '{$machineCode}' ในระบบ");
+                }
             }
 
             $imagePath = !empty($input['image_path']) ? trim((string)$input['image_path']) : null;

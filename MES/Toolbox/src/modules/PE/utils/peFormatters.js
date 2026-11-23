@@ -43,6 +43,33 @@ export const DOWNTIME_CATEGORIES = [
   { value: 'Other', label: 'อื่นๆ (Other)' },
 ];
 
+export const PE_GENERAL_AREAS_FALLBACK = [
+  'Facility & Utility',
+  'ST/WH',
+  'MT/PE',
+  'QA/QC',
+  'Office / อาคารสำนักงาน',
+  'Outdoor / นอกอาคารและพื้นที่ส่วนกลาง',
+];
+
+export const PE_GENERAL_CATEGORIES = [
+  'เครื่องมือช่าง / ปืนลม / สว่าน',
+  'ระบบไฟฟ้า / แสงสว่าง / พัดลม',
+  'ระบบปรับอากาศ / ประปา / อาคาร',
+  'Jig & Fixture / รถเข็น / ชั้นวาง',
+  'พื้นที่ภายนอกอาคาร / ประตู / ถนน',
+  'อุปกรณ์ทั่วไปอื่นๆ',
+];
+
+export const PE_ISSUE_PRESETS = [
+  { short: 'เครื่องไม่ทำงาน', value: 'เครื่องไม่ทำงาน / เปิดไม่ติด' },
+  { short: 'ลมรั่ว / สายลมแตก', value: 'ลมรั่ว / สายลมแตก' },
+  { short: 'รั่วซึม', value: 'น้ำมัน / น้ำรั่วซึม' },
+  { short: 'เสียงดัง / สั่น', value: 'เสียงดังผิดปกติ / สั่น' },
+  { short: 'เซ็นเซอร์ / ไฟขัดข้อง', value: 'เซ็นเซอร์ / ระบบไฟขัดข้อง' },
+  { short: 'ตั้งเครื่อง / เปลี่ยนรุ่น', value: 'ตั้งเครื่อง / เปลี่ยนรุ่น' },
+];
+
 export function getLocalIsoDate(daysOffset = 0) {
   const dt = new Date();
   dt.setDate(dt.getDate() + daysOffset);

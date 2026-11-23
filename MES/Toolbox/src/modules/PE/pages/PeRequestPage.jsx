@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Wrench, Ban, AlertTriangle, ClipboardCheck, History, Camera, RotateCcw,
   RotateCw, CheckCircle2, ArrowLeft, WifiOff, Send
@@ -8,8 +8,10 @@ import { peApi, compressPeImageToBase64 } from '../../../shared/services/peApi';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
 import PeImage from '../components/PeImage';
+import AssetSelector from '../components/AssetSelector';
 import {
   WO_TYPES, DOWNTIME_CATEGORIES, WO_STATUS_META,
+  PE_GENERAL_AREAS_FALLBACK, PE_GENERAL_CATEGORIES, PE_ISSUE_PRESETS,
   getLocalIsoDate, formatPeDateTime
 } from '../utils/peFormatters';
 
@@ -24,22 +26,35 @@ const HAZARD_PRESETS = [
 export default function PeRequestPage() {
   const { user } = useAuth();
   const showToast = useToast();
+  const [searchParams] = useSearchParams();
   const actorName = user?.fullname || user?.username || '';
+  const qrMachineCodeParam = (searchParams.get('machine_code') || '').trim().toUpperCase();
 
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [activeTab, setActiveTab] = useState('repair'); // 'repair' | 'downtime' | 'hazard' | 'preop' | 'history'
 
   const [machines, setMachines] = useState([]);
   const [lines, setLines] = useState([]);
+  const [generalAreas, setGeneralAreas] = useState(PE_GENERAL_AREAS_FALLBACK);
+  const [generalCategories, setGeneralCategories] = useState(PE_GENERAL_CATEGORIES);
   const [submitting, setSubmitting] = useState(false);
+
+  const emptyAssetFields = useMemo(() => ({
+    asset_mode: 'machine',
+    machine_id: '',
+    machine_code: '',
+    machine_name: '',
+    line: '',
+    general_line: '',
+    general_category: '',
+    general_name: '',
+  }), []);
 
   // 1. Repair Form State
   const [repairForm, setRepairForm] = useState({
     requested_by: actorName,
     wo_type: 'Corrective',
-    machine_id: '',
-    machine_name: '',
-    line: '',
+    ...emptyAssetFields,
     issue_title: '',
     issue_detail: '',
     priority: 'Normal',
@@ -53,9 +68,7 @@ export default function PeRequestPage() {
     const now = new Date();
     const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     return {
-      machine_id: '',
-      machine_name: '',
-      line: '',
+      ...emptyAssetFields,
       log_date: getLocalIsoDate(0),
       start_time: hhmm,
       end_date: '',
@@ -69,7 +82,7 @@ export default function PeRequestPage() {
 
   // 3. Safety Hazard State
   const [hazardForm, setHazardForm] = useState({
-    machine_code: '',
+    ...emptyAssetFields,
     issue_title: '',
     issue_detail: '',
     image_base64: '',
@@ -77,7 +90,7 @@ export default function PeRequestPage() {
 
   // 4. Pre-Op Audit State
   const [preopForm, setPreopForm] = useState({
-    machine_code: '',
+    ...emptyAssetFields,
     shift: new Date().getHours() >= 20 || new Date().getHours() < 8 ? 'Night' : 'Day',
     audited_by: actorName,
     remarks: '',
@@ -93,6 +106,11 @@ export default function PeRequestPage() {
   const [histRows, setHistRows] = useState([]);
   const [histLoading, setHistLoading] = useState(false);
 
+  const preselectedMachine = useMemo(() => {
+    if (!qrMachineCodeParam || !machines.length) return null;
+    return machines.find((m) => String(m.machine_code || '').trim().toUpperCase() === qrMachineCodeParam) || null;
+  }, [qrMachineCodeParam, machines]);
+
   useEffect(() => {
     setRepairForm((p) => (p.requested_by ? p : { ...p, requested_by: actorName }));
     setPreopForm((p) => (p.audited_by ? p : { ...p, audited_by: actorName }));
@@ -106,12 +124,36 @@ export default function PeRequestPage() {
     peApi.getMachinesAndTechnicians().then((res) => {
       setMachines(res?.data || []);
       setLines(res?.lines || []);
+      if (Array.isArray(res?.general_areas) && res.general_areas.length > 0) {
+        setGeneralAreas(res.general_areas);
+      }
+      if (Array.isArray(res?.general_categories) && res.general_categories.length > 0) {
+        setGeneralCategories(res.general_categories);
+      }
     }).catch(() => {});
     return () => {
       window.removeEventListener('offline', goOffline);
       window.removeEventListener('online', goOnline);
     };
   }, []);
+
+  useEffect(() => {
+    if (!preselectedMachine) return;
+    const locked = {
+      asset_mode: 'machine',
+      machine_id: String(preselectedMachine.machine_id),
+      machine_code: preselectedMachine.machine_code || '',
+      machine_name: preselectedMachine.machine_name || '',
+      line: preselectedMachine.line || '',
+      general_line: '',
+      general_category: '',
+      general_name: '',
+    };
+    setRepairForm((p) => (p.machine_id ? p : { ...p, ...locked }));
+    setDtForm((p) => (p.machine_id ? p : { ...p, ...locked }));
+    setHazardForm((p) => (p.machine_id ? p : { ...p, ...locked }));
+    setPreopForm((p) => (p.machine_id ? p : { ...p, ...locked }));
+  }, [preselectedMachine]);
 
   const loadHistory = useCallback(async () => {
     setHistLoading(true);
@@ -143,16 +185,21 @@ export default function PeRequestPage() {
   const handleSubmitRepair = async (e) => {
     e.preventDefault();
     if (isOffline) return;
+    if (repairForm.asset_mode === 'machine' && !repairForm.machine_id) {
+      showToast('กรุณาเลือกเครื่องจักรจากระบบ', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await peApi.createWorkOrder({
         ...repairForm,
-        machine_id: repairForm.machine_id || null,
+        machine_id: repairForm.asset_mode === 'machine' ? (repairForm.machine_id || null) : null,
         image_base64: repairForm.image_base64 || undefined,
       });
       showToast(res?.message || 'ส่งเรื่องแจ้งซ่อมสำเร็จ', 'success');
       setRepairForm((p) => ({
         ...p,
+        ...(preselectedMachine ? {} : emptyAssetFields),
         issue_title: '',
         issue_detail: '',
         image_base64: '',
@@ -167,14 +214,25 @@ export default function PeRequestPage() {
   const handleSubmitDowntime = async (e) => {
     e.preventDefault();
     if (isOffline) return;
+    if (dtForm.asset_mode === 'machine' && !dtForm.machine_id) {
+      showToast('กรุณาเลือกเครื่องจักรจากระบบ', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await peApi.addDowntime({
         ...dtForm,
-        machine_id: dtForm.machine_id || null,
+        machine_id: dtForm.asset_mode === 'machine' ? (dtForm.machine_id || null) : null,
       });
       showToast(res?.message || 'บันทึกเครื่องจักรหยุดสำเร็จ', 'success');
-      setDtForm((p) => ({ ...p, cause_detail: '', end_date: '', end_time: '', create_wo: false }));
+      setDtForm((p) => ({
+        ...p,
+        ...(preselectedMachine ? {} : emptyAssetFields),
+        cause_detail: '',
+        end_date: '',
+        end_time: '',
+        create_wo: false,
+      }));
     } finally {
       setSubmitting(false);
     }
@@ -183,20 +241,39 @@ export default function PeRequestPage() {
   const handleSubmitHazard = async (e) => {
     e.preventDefault();
     if (isOffline) return;
+    if (hazardForm.asset_mode === 'machine' && !hazardForm.machine_id && !hazardForm.machine_code) {
+      showToast('กรุณาเลือกเครื่องจักรจากระบบ', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
-      const res = await peApi.submitHazardReport(hazardForm);
+      const res = await peApi.submitHazardReport({
+        ...hazardForm,
+        machine_id: hazardForm.asset_mode === 'machine' ? (hazardForm.machine_id || null) : null,
+      });
       showToast(res?.message || 'ส่งรายงานจุดเสี่ยงฉุกเฉินแล้ว', 'success');
-      setHazardForm({ machine_code: '', issue_title: '', issue_detail: '', image_base64: '' });
+      setHazardForm({
+        ...emptyAssetFields,
+        ...(preselectedMachine ? {
+          machine_id: String(preselectedMachine.machine_id),
+          machine_code: preselectedMachine.machine_code,
+          machine_name: preselectedMachine.machine_name,
+          line: preselectedMachine.line,
+        } : {}),
+        issue_title: '',
+        issue_detail: '',
+        image_base64: '',
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleLookupChecklist = async () => {
-    const code = preopForm.machine_code.trim().toUpperCase();
+  const handleLookupChecklist = useCallback(async (overrideCode = null) => {
+    const code = (overrideCode ?? preopForm.machine_code).trim().toUpperCase();
     if (!code) {
-      showToast('กรุณาระบุรหัสเครื่องจักรก่อนค้นหารายการตรวจ', 'error');
+      setChecklist([]);
+      setAlreadyAudited(false);
       return;
     }
     setLoadingChecklist(true);
@@ -208,7 +285,13 @@ export default function PeRequestPage() {
     } finally {
       setLoadingChecklist(false);
     }
-  };
+  }, [preopForm.machine_code]);
+
+  useEffect(() => {
+    if (activeTab === 'preop' && preopForm.machine_code) {
+      handleLookupChecklist(preopForm.machine_code);
+    }
+  }, [activeTab, preopForm.machine_code, handleLookupChecklist]);
 
   const hasPreopFail = useMemo(() => checklist.some((item) => item.answer === 'no'), [checklist]);
 
@@ -309,80 +392,42 @@ export default function PeRequestPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ประเภทงาน *</label>
-              <select
-                value={repairForm.wo_type}
-                onChange={(e) => setRepairForm((p) => ({ ...p, wo_type: e.target.value }))}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-              >
-                {WO_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ระดับความสำคัญ *</label>
-              <select
-                value={repairForm.priority}
-                onChange={(e) => setRepairForm((p) => ({ ...p, priority: e.target.value }))}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-              >
-                <option value="Normal">Normal (รอได้)</option>
-                <option value="High">High (ด่วน)</option>
-                <option value="Critical">Critical (ฉุกเฉิน)</option>
-              </select>
-            </div>
-          </div>
-
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">เลือกเครื่องจักรจากระบบ</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">ระดับความสำคัญ *</label>
             <select
-              value={repairForm.machine_id}
-              onChange={(e) => {
-                const id = e.target.value;
-                const found = machines.find((m) => String(m.machine_id) === id);
-                setRepairForm((p) => ({
-                  ...p,
-                  machine_id: id,
-                  machine_name: found ? found.machine_name : p.machine_name,
-                  line: found ? found.line : p.line,
-                }));
-              }}
+              value={repairForm.priority}
+              onChange={(e) => setRepairForm((p) => ({ ...p, priority: e.target.value }))}
               className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
             >
-              <option value="">-- ไม่ระบุ / อุปกรณ์ทั่วไป --</option>
-              {machines.map((m) => (
-                <option key={m.machine_id} value={m.machine_id}>{m.line} - {m.machine_code} ({m.machine_name})</option>
-              ))}
+              <option value="Normal">Normal (รอได้)</option>
+              <option value="High">High (ด่วน)</option>
+              <option value="Critical">Critical (ฉุกเฉิน)</option>
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ชื่ออุปกรณ์/เครื่องจักร *</label>
-              <input
-                type="text"
-                required
-                value={repairForm.machine_name}
-                onChange={(e) => setRepairForm((p) => ({ ...p, machine_name: e.target.value }))}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ไลน์ผลิต/แผนก *</label>
-              <input
-                type="text"
-                required
-                list="reqLinesList"
-                value={repairForm.line}
-                onChange={(e) => setRepairForm((p) => ({ ...p, line: e.target.value }))}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-              />
-              <datalist id="reqLinesList">
-                {lines.map((ln) => <option key={ln} value={ln} />)}
-              </datalist>
-            </div>
-          </div>
+          <AssetSelector
+            machines={machines}
+            lines={lines}
+            generalAreas={generalAreas}
+            generalCategories={generalCategories}
+            value={repairForm}
+            onChange={setRepairForm}
+            accent="blue"
+            allowGeneral
+            preselectedMachine={preselectedMachine}
+            leftSlot={(
+              <>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">ประเภทงาน *</label>
+                <select
+                  value={repairForm.wo_type}
+                  onChange={(e) => setRepairForm((p) => ({ ...p, wo_type: e.target.value }))}
+                  className="w-full min-h-[44px] px-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
+                >
+                  {WO_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </>
+            )}
+          />
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">อาการเสีย / หัวข้อปัญหา *</label>
@@ -391,9 +436,25 @@ export default function PeRequestPage() {
               required
               value={repairForm.issue_title}
               onChange={(e) => setRepairForm((p) => ({ ...p, issue_title: e.target.value }))}
-              placeholder="เช่น มอเตอร์ไม่หมุน, ลมรั่ว, เซ็นเซอร์ไม่จับ..."
+              placeholder="เลือกอาการด้านล่าง หรือพิมพ์อาการ..."
               className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
             />
+            <div className="flex flex-nowrap gap-1.5 overflow-x-auto pt-2 pb-1">
+              {PE_ISSUE_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setRepairForm((prev) => ({ ...prev, issue_title: p.value }))}
+                  className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                    repairForm.issue_title === p.value
+                      ? 'bg-blue-50 border-blue-400 text-blue-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {p.short}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -476,55 +537,17 @@ export default function PeRequestPage() {
             <div className="text-xs text-red-600/80">บันทึกเวลาหยุดเครื่องเพื่อวิเคราะห์ Loss และสามารถเปิดใบงานซ่อมอัตโนมัติได้</div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">เลือกเครื่องจักร</label>
-            <select
-              value={dtForm.machine_id}
-              onChange={(e) => {
-                const id = e.target.value;
-                const found = machines.find((m) => String(m.machine_id) === id);
-                setDtForm((p) => ({
-                  ...p,
-                  machine_id: id,
-                  machine_name: found ? found.machine_name : p.machine_name,
-                  line: found ? found.line : p.line,
-                }));
-              }}
-              className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-            >
-              <option value="">-- ไม่ระบุ --</option>
-              {machines.map((m) => (
-                <option key={m.machine_id} value={m.machine_id}>{m.line} - {m.machine_code} ({m.machine_name})</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ชื่อเครื่องจักร *</label>
-              <input
-                type="text"
-                required
-                value={dtForm.machine_name}
-                onChange={(e) => setDtForm((p) => ({ ...p, machine_name: e.target.value }))}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ไลน์ผลิต *</label>
-              <input
-                type="text"
-                required
-                list="reqLinesList2"
-                value={dtForm.line}
-                onChange={(e) => setDtForm((p) => ({ ...p, line: e.target.value }))}
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-              />
-              <datalist id="reqLinesList2">
-                {lines.map((ln) => <option key={ln} value={ln} />)}
-              </datalist>
-            </div>
-          </div>
+          <AssetSelector
+            machines={machines}
+            lines={lines}
+            generalAreas={generalAreas}
+            generalCategories={generalCategories}
+            value={dtForm}
+            onChange={setDtForm}
+            accent="red"
+            allowGeneral
+            preselectedMachine={preselectedMachine}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -633,21 +656,17 @@ export default function PeRequestPage() {
             <div className="text-xs text-amber-700">ระบบจะเปิดใบงานฉุกเฉินระดับ Critical เพื่อให้ทีมวิศวกรรมตรวจสอบทันที</div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">รหัสเครื่องจักร (Machine Code) *</label>
-            <input
-              type="text"
-              required
-              list="hazardMachineList"
-              value={hazardForm.machine_code}
-              onChange={(e) => setHazardForm((p) => ({ ...p, machine_code: e.target.value.toUpperCase() }))}
-              placeholder="เช่น ROB-PRS-003"
-              className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm uppercase font-mono"
-            />
-            <datalist id="hazardMachineList">
-              {machines.map((m) => <option key={m.machine_id} value={m.machine_code}>{m.machine_name}</option>)}
-            </datalist>
-          </div>
+          <AssetSelector
+            machines={machines}
+            lines={lines}
+            generalAreas={generalAreas}
+            generalCategories={generalCategories}
+            value={hazardForm}
+            onChange={setHazardForm}
+            accent="amber"
+            allowGeneral
+            preselectedMachine={preselectedMachine}
+          />
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">หัวข้อความเสี่ยง *</label>
@@ -705,31 +724,17 @@ export default function PeRequestPage() {
       {/* Tab 4: Pre-Op Checklist */}
       {activeTab === 'preop' && (
         <form onSubmit={handleSubmitPreop} className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">รหัสเครื่องจักร *</label>
-              <input
-                type="text"
-                required
-                list="preopMachineList"
-                value={preopForm.machine_code}
-                onChange={(e) => setPreopForm((p) => ({ ...p, machine_code: e.target.value.toUpperCase() }))}
-                placeholder="เช่น ROB-PRS-003"
-                className="w-full min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm uppercase font-mono"
-              />
-              <datalist id="preopMachineList">
-                {machines.map((m) => <option key={m.machine_id} value={m.machine_code}>{m.machine_name}</option>)}
-              </datalist>
-            </div>
-            <button
-              type="button"
-              onClick={handleLookupChecklist}
-              disabled={loadingChecklist}
-              className="min-h-[44px] px-4 rounded-xl bg-slate-800 text-white text-xs font-semibold shrink-0"
-            >
-              {loadingChecklist ? 'กำลังโหลด...' : 'โหลดรายการตรวจ'}
-            </button>
-          </div>
+          <AssetSelector
+            machines={machines}
+            lines={lines}
+            generalAreas={generalAreas}
+            generalCategories={generalCategories}
+            value={preopForm}
+            onChange={setPreopForm}
+            accent="emerald"
+            allowGeneral={false}
+            preselectedMachine={preselectedMachine}
+          />
 
           {alreadyAudited && (
             <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-semibold">
