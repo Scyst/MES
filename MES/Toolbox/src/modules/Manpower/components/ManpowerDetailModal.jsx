@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { manpowerOpsApi, manpowerMasterApi } from '../../../shared/services/manpowerApi';
 import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
+import { useAnimatedPresence } from '../../../shared/hooks/useAnimatedPresence';
 import { STATUS_BADGES, formatMoney, offsetIsoDate, exportRowsToExcel } from '../utils/manpowerHelpers';
 
 function checkStillWorkingShift(row) {
@@ -74,6 +75,13 @@ export default function ManpowerDetailModal({
 
   // Employee Quick Profile Modal
   const [profileModal, setProfileModal] = useState({ open: false, loading: false, data: null });
+  const [cachedEditRow, setCachedEditRow] = useState(null);
+
+  const modalPresence = useAnimatedPresence(open);
+  const swapPresence = useAnimatedPresence(swapModalOpen);
+  const editPresence = useAnimatedPresence(Boolean(editRow));
+  const profilePresence = useAnimatedPresence(profileModal.open);
+  const activeEditRow = editRow || cachedEditRow;
 
   useEffect(() => {
     const onDocClick = (e) => {
@@ -170,7 +178,7 @@ export default function ManpowerDetailModal({
     return Array.from(base).filter(Boolean).sort();
   }, [structure, rows]);
 
-  if (!open) return null;
+  if (!modalPresence.rendered) return null;
 
   const allChecked = displayedRows.length > 0 && displayedRows.every((r) => selectedEmpIds.includes(r.emp_id));
   const toggleAll = () => {
@@ -199,6 +207,7 @@ export default function ManpowerDetailModal({
   };
 
   const openEditModal = (row) => {
+    setCachedEditRow(row);
     setEditRow(row);
     setEditForm({
       status: row.status || 'PRESENT',
@@ -390,8 +399,12 @@ export default function ManpowerDetailModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-2 sm:p-4 backdrop-blur-xs">
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+    <div
+      className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-2 sm:p-4 backdrop-blur-xs ${modalPresence.isClosing ? 'mes-modal-backdrop-out pointer-events-none' : 'mes-modal-backdrop-in'}`}
+    >
+      <div
+        className={`flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 ${modalPresence.isClosing ? 'mes-modal-panel-out' : 'mes-modal-panel-in'}`}
+      >
         {/* Modal Header */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -399,7 +412,7 @@ export default function ManpowerDetailModal({
               <button
                 type="button"
                 onClick={() => setHistoryTarget(null)}
-                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-700 transition-all duration-150 hover:bg-slate-100 active:scale-95 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
                 title="กลับรายชื่อประจำวัน"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -427,7 +440,7 @@ export default function ManpowerDetailModal({
               <button
                 type="button"
                 onClick={() => setStatusOverride('ALL')}
-                className="min-h-[34px] rounded-lg border border-amber-300 bg-amber-50 px-2.5 text-[11px] font-bold text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                className="min-h-[34px] rounded-lg border border-amber-300 bg-amber-50 px-2.5 text-[11px] font-bold text-amber-800 transition-all duration-150 hover:bg-amber-100 active:scale-[0.97] dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
               >
                 ดูทุกสถานะ
               </button>
@@ -439,7 +452,7 @@ export default function ManpowerDetailModal({
                   onClose?.();
                   onOpenMaster('');
                 }}
-                className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-bold text-slate-700 transition-all duration-150 hover:bg-slate-50 active:scale-[0.97] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
               >
                 <Settings className="h-3.5 w-3.5 text-indigo-500" />
                 ตั้งค่าพนักงาน
@@ -452,7 +465,7 @@ export default function ManpowerDetailModal({
                   onClose?.();
                   onOpenAttendanceTab(filter.line || 'ALL');
                 }}
-                className="min-h-[34px] inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 text-[11px] font-bold text-white hover:bg-indigo-700"
+                className="min-h-[34px] inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 text-[11px] font-bold text-white transition-all duration-150 hover:bg-indigo-700 active:scale-[0.97]"
               >
                 หน้าลงเวลาเต็ม <ExternalLink className="h-3 w-3" />
               </button>
@@ -461,11 +474,11 @@ export default function ManpowerDetailModal({
               type="button"
               onClick={handleExport}
               disabled={!displayedRows.length}
-              className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 text-[11px] font-bold text-emerald-700 transition-all duration-150 hover:bg-emerald-100 active:scale-[0.97] disabled:opacity-40 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
             >
               <Download className="h-3.5 w-3.5" /> Excel
             </button>
-            <button type="button" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600">
+            <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 active:scale-95 dark:hover:bg-slate-800">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -481,7 +494,7 @@ export default function ManpowerDetailModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="ค้นหาชื่อ, รหัส, สถานะ, หมายเหตุ..."
-                className="min-h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-8 pr-2.5 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                className="min-h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-8 pr-2.5 text-xs transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-white"
               />
             </div>
 
@@ -489,7 +502,7 @@ export default function ManpowerDetailModal({
               <select
                 value={teamFilter}
                 onChange={(e) => setTeamFilter(e.target.value)}
-                className="min-h-[38px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                className="min-h-[38px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-white"
               >
                 <option value="ALL">ทุกทีม (All Teams)</option>
                 {uniqueTeams.map((tm) => (
@@ -501,10 +514,10 @@ export default function ManpowerDetailModal({
             <button
               type="button"
               onClick={fetchList}
-              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-all duration-150 hover:bg-slate-100 active:scale-95 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
               title="โหลดซ้ำ"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-indigo-500' : ''}`} />
             </button>
           </div>
 
@@ -514,14 +527,14 @@ export default function ManpowerDetailModal({
                 type="button"
                 disabled={batchBusy || !isOnline}
                 onClick={() => setBatchOpen((v) => !v)}
-                className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 text-xs font-bold text-indigo-700 transition-all duration-150 hover:bg-indigo-100 active:scale-[0.97] disabled:opacity-50 dark:border-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
               >
                 <CheckSquare className="h-3.5 w-3.5" />
                 จัดการหลายรายการ ({selectedIdsCount(selectedEmpIds)})
-                <ChevronDown className="h-3.5 w-3.5" />
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${batchOpen ? 'rotate-180' : ''}`} />
               </button>
               {batchOpen && (
-                <div className="absolute right-0 mt-1.5 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl z-40 dark:border-slate-700 dark:bg-slate-800 text-xs">
+                <div className="mes-dropdown-in absolute right-0 mt-1.5 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl z-40 dark:border-slate-700 dark:bg-slate-800 text-xs">
                   <div className="px-2.5 py-1 text-[10px] font-bold uppercase text-slate-400">ตั้งสถานะ (Set Status)</div>
                   {[
                     { code: 'PRESENT', label: 'มาทำงาน (PRESENT)' },
@@ -534,7 +547,7 @@ export default function ManpowerDetailModal({
                       key={opt.code}
                       type="button"
                       onClick={() => handleBatchStatus(opt.code)}
-                      className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                      className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
                       {opt.label}
                     </button>
@@ -548,21 +561,21 @@ export default function ManpowerDetailModal({
                       if (!selectedRows.length) return showToast('กรุณาเลือกพนักงานอย่างน้อย 1 คน', 'warning');
                       setSwapModalOpen(true);
                     }}
-                    className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-slate-700"
+                    className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-indigo-600 transition-colors duration-150 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-slate-700"
                   >
                     สลับกะ (Swap Shift / Master)
                   </button>
                   <button
                     type="button"
                     onClick={handleBatchClearTimes}
-                    className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-amber-600 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-slate-700"
+                    className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-amber-600 transition-colors duration-150 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-slate-700"
                   >
                     ล้างเวลาสแกน (ตั้งวันหยุด)
                   </button>
                   <button
                     type="button"
                     onClick={handleBatchReset}
-                    className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-slate-700"
+                    className="block w-full rounded-lg px-2.5 py-1.5 text-left font-semibold text-rose-600 transition-colors duration-150 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-slate-700"
                   >
                     รีเซ็ตข้อมูลที่เลือก (ลบ Log)
                   </button>
@@ -573,7 +586,7 @@ export default function ManpowerDetailModal({
         </div>
 
         {/* Table Body */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto custom-scrollbar scroll-smooth">
           <table className="w-full min-w-[900px] text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-100 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
               <tr>
@@ -595,9 +608,20 @@ export default function ManpowerDetailModal({
                 <th className="px-3 py-2.5 text-right">จัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className={`divide-y divide-slate-100 dark:divide-slate-800 transition-opacity duration-200 ${loading && displayedRows.length > 0 ? 'opacity-55' : 'opacity-100'}`}>
               {loading && displayedRows.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-slate-400">กำลังโหลดรายละเอียดพนักงาน...</td></tr>
+                [0, 1, 2, 3, 4, 5].map((skeletonIdx) => (
+                  <tr key={skeletonIdx}>
+                    <td colSpan={10} className="px-3 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-4 w-4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                        <div className="h-4 w-44 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                        <div className="h-4 w-24 animate-pulse rounded bg-slate-100 dark:bg-slate-700/60" />
+                        <div className="ml-auto h-4 w-32 animate-pulse rounded bg-slate-100 dark:bg-slate-700/60" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : displayedRows.length === 0 ? (
                 <tr><td colSpan={10} className="px-4 py-12 text-center text-slate-400">ไม่พบรายการพนักงานตามเงื่อนไขนี้</td></tr>
               ) : (
@@ -742,23 +766,28 @@ export default function ManpowerDetailModal({
       </div>
 
       {/* Inline Edit Log Modal */}
-      {editRow && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3">
-          <form onSubmit={handleSaveEdit} className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4">
+      {editPresence.rendered && activeEditRow && (
+        <div
+          className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs ${editPresence.isClosing ? 'mes-modal-backdrop-out pointer-events-none' : 'mes-modal-backdrop-in'}`}
+        >
+          <form
+            onSubmit={handleSaveEdit}
+            className={`w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4 ${editPresence.isClosing ? 'mes-modal-panel-out' : 'mes-modal-panel-in'}`}
+          >
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div>
-                <h5 className="text-sm font-bold text-slate-800 dark:text-white">แก้ไขรายการลงเวลา: {editRow.name_th}</h5>
-                <div className="text-[11px] text-slate-500 font-mono">{editRow.emp_id} · วันที่ {editRow.log_date || date}</div>
+                <h5 className="text-sm font-bold text-slate-800 dark:text-white">แก้ไขรายการลงเวลา: {activeEditRow.name_th}</h5>
+                <div className="text-[11px] text-slate-500 font-mono">{activeEditRow.emp_id} · วันที่ {activeEditRow.log_date || date}</div>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => openProfile(editRow.emp_id)}
-                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-100"
+                  onClick={() => openProfile(activeEditRow.emp_id)}
+                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 transition-all duration-150 hover:bg-indigo-100 active:scale-[0.97]"
                 >
                   ดูโปรไฟล์
                 </button>
-                <button type="button" onClick={() => setEditRow(null)} className="p-1 text-slate-400">
+                <button type="button" onClick={() => setEditRow(null)} className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 active:scale-95 dark:hover:bg-slate-800">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -840,13 +869,13 @@ export default function ManpowerDetailModal({
             </div>
 
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setEditRow(null)} className="min-h-[40px] rounded-lg border px-4 text-xs font-semibold dark:border-slate-600">
+              <button type="button" onClick={() => setEditRow(null)} className="min-h-[40px] rounded-lg border px-4 text-xs font-semibold transition-all duration-150 hover:bg-slate-50 active:scale-[0.97] dark:border-slate-600 dark:hover:bg-slate-800">
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={savingEdit || !isOnline}
-                className="min-h-[40px] rounded-lg bg-indigo-600 px-5 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="min-h-[40px] rounded-lg bg-indigo-600 px-5 text-xs font-bold text-white transition-all duration-150 hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-50"
               >
                 {savingEdit ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
               </button>
@@ -856,9 +885,14 @@ export default function ManpowerDetailModal({
       )}
 
       {/* Batch Swap Shift Modal */}
-      {swapModalOpen && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3">
-          <form onSubmit={handleConfirmBatchSwapShift} className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4">
+      {swapPresence.rendered && (
+        <div
+          className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs ${swapPresence.isClosing ? 'mes-modal-backdrop-out pointer-events-none' : 'mes-modal-backdrop-in'}`}
+        >
+          <form
+            onSubmit={handleConfirmBatchSwapShift}
+            className={`w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4 ${swapPresence.isClosing ? 'mes-modal-panel-out' : 'mes-modal-panel-in'}`}
+          >
             <h5 className="text-sm font-bold text-slate-800 dark:text-white">สลับกะพนักงานที่เลือก ({selectedRows.length} คน)</h5>
             <div>
               <label className="mb-1 block text-xs font-semibold">เลือกกะใหม่</label>
@@ -877,8 +911,8 @@ export default function ManpowerDetailModal({
               อัปเดตกะหลักถาวรในวันถัดๆ ไปด้วย (Apply Future)
             </label>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setSwapModalOpen(false)} className="min-h-[40px] rounded-lg border px-4 text-xs font-semibold dark:border-slate-600">ยกเลิก</button>
-              <button type="submit" disabled={batchBusy} className="min-h-[40px] rounded-lg bg-indigo-600 px-4 text-xs font-bold text-white hover:bg-indigo-700">
+              <button type="button" onClick={() => setSwapModalOpen(false)} className="min-h-[40px] rounded-lg border px-4 text-xs font-semibold transition-all duration-150 hover:bg-slate-50 active:scale-[0.97] dark:border-slate-600 dark:hover:bg-slate-800">ยกเลิก</button>
+              <button type="submit" disabled={batchBusy} className="min-h-[40px] rounded-lg bg-indigo-600 px-4 text-xs font-bold text-white transition-all duration-150 hover:bg-indigo-700 active:scale-[0.97]">
                 {batchBusy ? 'กำลังบันทึก...' : 'ยืนยันสลับกะ'}
               </button>
             </div>
@@ -887,23 +921,33 @@ export default function ManpowerDetailModal({
       )}
 
       {/* Employee Quick Profile Overlay */}
-      {profileModal.open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-3 text-xs">
+      {profilePresence.rendered && (
+        <div
+          className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs ${profilePresence.isClosing ? 'mes-modal-backdrop-out pointer-events-none' : 'mes-modal-backdrop-in'}`}
+        >
+          <div
+            className={`w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-3 text-xs ${profilePresence.isClosing ? 'mes-modal-panel-out' : 'mes-modal-panel-in'}`}
+          >
             <div className="flex items-center justify-between border-b pb-2.5 dark:border-slate-700">
               <h5 className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
                 <User className="h-4 w-4 text-indigo-500" /> โปรไฟล์พนักงาน
               </h5>
-              <button type="button" onClick={() => setProfileModal({ open: false, loading: false, data: null })} className="p-1 text-slate-400">
+              <button type="button" onClick={() => setProfileModal((p) => ({ ...p, open: false }))} className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 active:scale-95 dark:hover:bg-slate-800">
                 <X className="h-4 w-4" />
               </button>
             </div>
             {profileModal.loading ? (
-              <div className="py-8 text-center text-slate-400">กำลังโหลด...</div>
+              <div className="space-y-2.5 py-2">
+                <div className="h-14 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="h-12 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-12 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                </div>
+              </div>
             ) : !profileModal.data ? (
               <div className="py-8 text-center text-slate-400">ไม่พบข้อมูล</div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="mes-panel-in space-y-2.5">
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
                   <div className="text-sm font-bold text-slate-900 dark:text-white">{profileModal.data.name_th}</div>
                   <div className="font-mono text-[11px] text-slate-500">{profileModal.data.emp_id} · {profileModal.data.position || '-'}</div>
@@ -927,7 +971,7 @@ export default function ManpowerDetailModal({
                       onClose?.();
                       onOpenMaster(eid);
                     }}
-                    className="w-full min-h-[38px] rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700"
+                    className="w-full min-h-[38px] rounded-lg bg-indigo-600 text-white font-bold transition-all duration-150 hover:bg-indigo-700 active:scale-[0.98]"
                   >
                     แก้ไขข้อมูลพนักงานใน Master Data →
                   </button>

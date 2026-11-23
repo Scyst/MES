@@ -219,4 +219,80 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
   background-size: 24px 24px;
 }
 
+/* ═══ Smooth UI Micro-Interactions (Modals, Dropdowns, Accordions, Tab Panels) ═══ */
+@keyframes mes-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mes-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes mes-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mes-modal-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+@keyframes mes-dropdown-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mes-row-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mes-panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mes-modal-backdrop-in {
+  animation: mes-backdrop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mes-modal-backdrop-out {
+  animation: mes-backdrop-out 0.17s ease-out forwards;
+}
+
+.mes-modal-panel-in {
+  animation: mes-modal-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mes-modal-panel-out {
+  animation: mes-modal-out 0.17s ease-out forwards;
+}
+
+.mes-dropdown-in {
+  transform-origin: top right;
+  animation: mes-dropdown-in 0.17s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mes-row-in {
+  animation: mes-row-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mes-panel-in {
+  animation: mes-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mes-modal-backdrop-in,
+  .mes-modal-backdrop-out,
+  .mes-modal-panel-in,
+  .mes-modal-panel-out,
+  .mes-dropdown-in,
+  .mes-row-in,
+  .mes-panel-in {
+    animation-duration: 0.01ms !important;
+  }
+}
 

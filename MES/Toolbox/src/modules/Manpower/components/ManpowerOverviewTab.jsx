@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { manpowerOpsApi } from '../../../shared/services/manpowerApi';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
+import { useAnimatedPresence } from '../../../shared/hooks/useAnimatedPresence';
 import {
   formatMoney, formatNumber, offsetIsoDate, exportRowsToExcel, exportMultiSheetTrendExcel
 } from '../utils/manpowerHelpers';
@@ -31,6 +32,34 @@ const PIE_SPECS = [
   { key: 'leave', status: 'LEAVE', name: 'ลางาน', color: '#06b6d4' },
   { key: 'waiting', status: 'HOLIDAY_WAITING', name: 'วันหยุด / รอสแกน', color: '#64748b' },
 ];
+
+const CHART_TOOLTIP_PROPS = {
+  cursor: {
+    fill: 'rgba(148, 163, 184, 0.11)',
+    stroke: 'rgba(148, 163, 184, 0.25)',
+    strokeWidth: 1,
+    rx: 6,
+    ry: 6,
+  },
+  allowEscapeViewBox: { x: false, y: false },
+  animationDuration: 160,
+  animationEasing: 'ease-out',
+  wrapperStyle: { pointerEvents: 'none', zIndex: 20 },
+  contentStyle: {
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    border: '1px solid rgba(203, 213, 225, 0.85)',
+    borderRadius: '10px',
+    boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 4px 10px -4px rgba(15, 23, 42, 0.06)',
+    padding: '8px 12px',
+    fontSize: '12px',
+    color: '#0f172a',
+    backdropFilter: 'blur(6px)',
+  },
+  labelStyle: { fontWeight: 700, marginBottom: '4px', color: '#1e293b' },
+};
+
+const BAR_SKELETON_HEIGHTS = [58, 82, 46, 90, 68, 52, 76, 42];
+const MATRIX_SKELETON_ROWS = [0, 1, 2, 3, 4, 5];
 
 function createEmptyStats() {
   return {
@@ -280,6 +309,7 @@ export default function ManpowerOverviewTab({
 
   // Integrated Analysis Modal state
   const [analysisOpen, setAnalysisOpen] = useState(false);
+  const analysisPresence = useAnimatedPresence(analysisOpen);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisSubTab, setAnalysisSubTab] = useState('operations');
   const [analysisRange, setAnalysisRange] = useState(() => ({
@@ -692,7 +722,7 @@ export default function ManpowerOverviewTab({
           <button
             type="button"
             onClick={() => setUseNewFormula((v) => !v)}
-            className={`min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition ${useNewFormula
+            className={`min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] ${useNewFormula
                 ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
                 : 'border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'
               }`}
@@ -710,7 +740,7 @@ export default function ManpowerOverviewTab({
           <button
             type="button"
             onClick={openAnalysisModal}
-            className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-3 text-xs font-semibold text-white shadow-xs hover:opacity-95"
+            className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-3 text-xs font-semibold text-white shadow-xs transition-all duration-200 ease-out hover:opacity-95 hover:shadow-sm active:scale-[0.98]"
           >
             <Sparkles className="h-3.5 w-3.5" />
             วิเคราะห์ขั้นสูง V1/V2
@@ -720,32 +750,32 @@ export default function ManpowerOverviewTab({
             <button
               type="button"
               onClick={() => setExportMenuOpen((v) => !v)}
-              className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition-all duration-200 ease-out hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
             >
               <Download className="h-3.5 w-3.5" />
               ส่งออก Excel
-              <ChevronDown className="h-3.5 w-3.5" />
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${exportMenuOpen ? 'rotate-180' : ''}`} />
             </button>
             {exportMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl z-30 dark:border-slate-700 dark:bg-slate-800">
+              <div className="mes-dropdown-in absolute right-0 mt-1.5 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl z-30 dark:border-slate-700 dark:bg-slate-800">
                 <button
                   type="button"
                   onClick={handleExportSummaryExcel}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   สรุปตามสายผลิต / ต้นทุน (Summary)
                 </button>
                 <button
                   type="button"
                   onClick={handleExportDailyRaw}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   รายชื่อลงเวลาดิบประจำวัน (Daily Raw)
                 </button>
                 <button
                   type="button"
                   onClick={handleExportTrendMultiSheet}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   รายงานแนวโน้ม {trendDays} วัน (Multi-Sheet)
                 </button>
@@ -756,78 +786,90 @@ export default function ManpowerOverviewTab({
       </div>
 
       {/* 6 Clickable KPI Cards (open DetailModal directly!) */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className={`grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 transition-opacity duration-200 ${loading ? 'opacity-65' : 'opacity-100'}`}>
         <button
           type="button"
           onClick={() => openDetailModal({ status: 'ALL', label: `กำลังพลทั้งหมดประจำวันที่ ${date}` })}
-          className="text-left rounded-xl border border-slate-200 bg-white p-3 shadow-2xs transition hover:border-indigo-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
+          className="text-left rounded-xl border border-slate-200 bg-white p-3 shadow-2xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800"
         >
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>กำลังพลรวม (PLAN)</span>
             <Users className="h-4 w-4 text-slate-400" />
           </div>
-          <div className="mt-1 text-2xl font-bold text-slate-800 dark:text-white">{formatNumber(kpis.total_registered)}</div>
+          <div className="mt-1 text-2xl font-bold text-slate-800 dark:text-white">
+            {loading && kpis.total_registered === 0 ? <span className="inline-block h-7 w-14 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700 align-middle" /> : formatNumber(kpis.total_registered)}
+          </div>
           <div className="text-[11px] text-indigo-600 dark:text-indigo-400">คลิกดูรายละเอียด →</div>
         </button>
 
         <button
           type="button"
           onClick={() => openDetailModal({ status: 'PRESENT_AND_LATE', label: `มาทำงาน (ตรงเวลา + สาย)` })}
-          className="text-left rounded-xl border border-emerald-200 bg-white p-3 shadow-2xs transition hover:border-emerald-400 hover:shadow-md dark:border-emerald-800/60 dark:bg-slate-800"
+          className="text-left rounded-xl border border-emerald-200 bg-white p-3 shadow-2xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:border-emerald-800/60 dark:bg-slate-800"
         >
           <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
             <span>มาทำงาน (ACTUAL)</span>
             <UserCheck className="h-4 w-4 text-emerald-500" />
           </div>
-          <div className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(kpis.actual_present)}</div>
+          <div className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {loading && kpis.total_registered === 0 ? <span className="inline-block h-7 w-14 animate-pulse rounded-md bg-emerald-100 dark:bg-emerald-900/50 align-middle" /> : formatNumber(kpis.actual_present)}
+          </div>
           <div className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Attendance: {attendancePct}%</div>
         </button>
 
         <button
           type="button"
           onClick={() => openDetailModal({ status: 'LATE', label: `มาสาย (LATE)` })}
-          className="text-left rounded-xl border border-amber-200 bg-white p-3 shadow-2xs transition hover:border-amber-400 hover:shadow-md dark:border-amber-800/60 dark:bg-slate-800"
+          className="text-left rounded-xl border border-amber-200 bg-white p-3 shadow-2xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:border-amber-800/60 dark:bg-slate-800"
         >
           <div className="flex items-center justify-between text-xs font-semibold text-amber-600 dark:text-amber-400">
             <span>มาสาย (LATE)</span>
             <Clock className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{formatNumber(kpis.count_late)}</div>
+          <div className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
+            {loading && kpis.total_registered === 0 ? <span className="inline-block h-7 w-10 animate-pulse rounded-md bg-amber-100 dark:bg-amber-900/50 align-middle" /> : formatNumber(kpis.count_late)}
+          </div>
           <div className="text-[11px] text-slate-500">ตรงเวลา: {formatNumber(kpis.count_present)} คน</div>
         </button>
 
         <button
           type="button"
           onClick={() => openDetailModal({ status: 'ABSENT', label: `ขาดงาน (ABSENT)` })}
-          className="text-left rounded-xl border border-rose-200 bg-white p-3 shadow-2xs transition hover:border-rose-400 hover:shadow-md dark:border-rose-800/60 dark:bg-slate-800"
+          className="text-left rounded-xl border border-rose-200 bg-white p-3 shadow-2xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-rose-400 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:border-rose-800/60 dark:bg-slate-800"
         >
           <div className="flex items-center justify-between text-xs font-semibold text-rose-600 dark:text-rose-400">
             <span>ขาดงาน (ABSENT)</span>
             <UserX className="h-4 w-4 text-rose-500" />
           </div>
-          <div className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{formatNumber(kpis.count_absent)}</div>
+          <div className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">
+            {loading && kpis.total_registered === 0 ? <span className="inline-block h-7 w-10 animate-pulse rounded-md bg-rose-100 dark:bg-rose-900/50 align-middle" /> : formatNumber(kpis.count_absent)}
+          </div>
           <div className="text-[11px] text-rose-600">คลิกดูรายชื่อติดตาม →</div>
         </button>
 
         <button
           type="button"
           onClick={() => openDetailModal({ status: 'LEAVE', label: `ลางาน (LEAVE)` })}
-          className="text-left rounded-xl border border-sky-200 bg-white p-3 shadow-2xs transition hover:border-sky-400 hover:shadow-md dark:border-sky-800/60 dark:bg-slate-800"
+          className="text-left rounded-xl border border-sky-200 bg-white p-3 shadow-2xs transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-sky-400 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:border-sky-800/60 dark:bg-slate-800"
         >
           <div className="flex items-center justify-between text-xs font-semibold text-sky-600 dark:text-sky-400">
             <span>ลางาน (LEAVE)</span>
             <CalendarOff className="h-4 w-4 text-sky-500" />
           </div>
-          <div className="mt-1 text-2xl font-bold text-sky-600 dark:text-sky-400">{formatNumber(kpis.count_leave)}</div>
+          <div className="mt-1 text-2xl font-bold text-sky-600 dark:text-sky-400">
+            {loading && kpis.total_registered === 0 ? <span className="inline-block h-7 w-10 animate-pulse rounded-md bg-sky-100 dark:bg-sky-900/50 align-middle" /> : formatNumber(kpis.count_leave)}
+          </div>
           <div className="text-[11px] text-slate-500">ป่วย / กิจ / พักร้อน</div>
         </button>
 
-        <div className="rounded-xl border border-indigo-200 bg-white p-3 shadow-2xs dark:border-indigo-800/60 dark:bg-slate-800">
+        <div className="rounded-xl border border-indigo-200 bg-white p-3 shadow-2xs transition-all duration-200 dark:border-indigo-800/60 dark:bg-slate-800">
           <div className="flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
             <span>ประมาณการค่าแรง</span>
             <Coins className="h-4 w-4 text-indigo-500" />
           </div>
-          <div className="mt-1 text-xl font-bold text-indigo-700 dark:text-indigo-300">฿{formatMoney(kpis.total_cost)}</div>
+          <div className="mt-1 text-xl font-bold text-indigo-700 dark:text-indigo-300">
+            {loading && kpis.total_registered === 0 ? <span className="inline-block h-7 w-20 animate-pulse rounded-md bg-indigo-100 dark:bg-indigo-900/50 align-middle" /> : `฿${formatMoney(kpis.total_cost)}`}
+          </div>
           <div className="text-[11px] text-slate-500">
             OT {formatNumber(kpis.total_ot_hours, 1)} ชม. ({kpis.count_ot} คน)
           </div>
@@ -860,8 +902,8 @@ export default function ManpowerOverviewTab({
                       key={dVal}
                       type="button"
                       onClick={() => setTrendDays(dVal)}
-                      className={`rounded-md px-2 py-1 text-[11px] font-bold transition ${trendDays === dVal
-                          ? 'bg-indigo-600 text-white'
+                      className={`rounded-md px-2 py-1 text-[11px] font-bold transition-all duration-200 ease-out active:scale-[0.96] ${trendDays === dVal
+                          ? 'bg-indigo-600 text-white shadow-2xs'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300'
                         }`}
                     >
@@ -871,7 +913,7 @@ export default function ManpowerOverviewTab({
                   <button
                     type="button"
                     onClick={handleExportTrendMultiSheet}
-                    className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                    className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 transition-all duration-200 hover:bg-emerald-100 active:scale-[0.96] dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                     title="ส่งออก Multi-Sheet Excel"
                   >
                     Excel
@@ -882,7 +924,7 @@ export default function ManpowerOverviewTab({
                 <button
                   type="button"
                   onClick={() => setChartView('daily')}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${chartView === 'daily'
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition-all duration-200 ease-out active:scale-[0.97] ${chartView === 'daily'
                       ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
                     }`}
@@ -892,7 +934,7 @@ export default function ManpowerOverviewTab({
                 <button
                   type="button"
                   onClick={() => setChartView('trend')}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${chartView === 'trend'
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition-all duration-200 ease-out active:scale-[0.97] ${chartView === 'trend'
                       ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
                     }`}
@@ -903,17 +945,29 @@ export default function ManpowerOverviewTab({
             </div>
           </div>
 
-          <div className="h-64 w-full min-w-0">
+          <div
+            key={chartView}
+            className={`mes-panel-in h-64 w-full min-w-0 transition-opacity duration-200 ${loading && (chartView === 'daily' ? dailyBarData.length > 0 : trendRows.length > 0) ? 'opacity-60' : 'opacity-100'}`}
+          >
             {chartView === 'daily' ? (
-              dailyBarData.length === 0 ? (
+              loading && dailyBarData.length === 0 ? (
+                <div className="flex h-full items-end gap-4 px-6 pb-8 pt-6">
+                  {BAR_SKELETON_HEIGHTS.map((pct, i) => (
+                    <div key={i} className="flex flex-1 items-end gap-1.5 h-full">
+                      <div style={{ height: `${pct}%` }} className="flex-1 animate-pulse rounded-t-md bg-slate-200 dark:bg-slate-700" />
+                      <div style={{ height: `${Math.max(25, pct - 12)}%` }} className="flex-1 animate-pulse rounded-t-md bg-slate-100 dark:bg-slate-700/60" />
+                    </div>
+                  ))}
+                </div>
+              ) : dailyBarData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลกราฟรายสายผลิต</div>
               ) : (
-                <div className="h-full overflow-x-auto overflow-y-hidden">
-                  <div style={{ minWidth: `${Math.max(520, dailyBarData.length * 56)}px`, height: '100%' }}>
+                <div className="h-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+                  <div style={{ minWidth: `${Math.max(520, dailyBarData.length * 56)}px`, height: '100%' }} className="overflow-x-clip">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart
                         data={dailyBarData}
-                        margin={{ top: 8, right: 12, left: -12, bottom: 0 }}
+                        margin={{ top: 8, right: 16, left: -12, bottom: 0 }}
                         onClick={(state) => {
                           const clicked = state?.activePayload?.[0]?.payload;
                           if (clicked?.originalLine) {
@@ -921,16 +975,17 @@ export default function ManpowerOverviewTab({
                           }
                         }}
                       >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                         <XAxis dataKey="line" tick={{ fontSize: 11, fontWeight: 600 }} />
                         <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v, name) => [`${v} คน`, name]} />
+                        <Tooltip {...CHART_TOOLTIP_PROPS} formatter={(v, name) => [`${v} คน`, name]} />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Bar
                           dataKey="plan"
                           name="Plan (แผน)"
                           fill="#4f46e5"
                           radius={[4, 4, 0, 0]}
+                          animationDuration={350}
                           className="cursor-pointer"
                           onClick={(barData) => {
                             if (barData?.originalLine) {
@@ -942,6 +997,7 @@ export default function ManpowerOverviewTab({
                           dataKey="actual"
                           name="Actual (มาจริง)"
                           radius={[4, 4, 0, 0]}
+                          animationDuration={350}
                           className="cursor-pointer"
                           onClick={(barData) => {
                             if (barData?.originalLine) {
@@ -959,22 +1015,30 @@ export default function ManpowerOverviewTab({
                 </div>
               )
             ) : (
-              trendRows.length === 0 ? (
+              loading && trendRows.length === 0 ? (
+                <div className="flex h-full items-end gap-4 px-6 pb-8 pt-6">
+                  {BAR_SKELETON_HEIGHTS.map((pct, i) => (
+                    <div key={i} style={{ height: `${pct}%` }} className="flex-1 animate-pulse rounded-t-md bg-slate-200 dark:bg-slate-700" />
+                  ))}
+                </div>
+              ) : trendRows.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลแนวโน้มในช่วงวันที่เลือก</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <ComposedChart data={trendRows} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="log_date" tickFormatter={(v) => String(v).slice(5)} tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Bar dataKey="actual_present" name="มาทำงาน" stackId="a" fill="#10b981" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="count_absent" name="ขาดงาน" stackId="a" fill="#ef4444" />
-                    <Bar dataKey="count_leave" name="ลางาน" stackId="a" fill="#06b6d4" />
-                    <Line type="monotone" dataKey="plan_hc" name="กำลังพลแผน (Plan)" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <div className="h-full w-full overflow-x-clip">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <ComposedChart data={trendRows} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="log_date" tickFormatter={(v) => String(v).slice(5)} tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip {...CHART_TOOLTIP_PROPS} />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Bar dataKey="actual_present" name="มาทำงาน" stackId="a" fill="#10b981" radius={[2, 2, 0, 0]} animationDuration={350} />
+                      <Bar dataKey="count_absent" name="ขาดงาน" stackId="a" fill="#ef4444" animationDuration={350} />
+                      <Bar dataKey="count_leave" name="ลางาน" stackId="a" fill="#06b6d4" animationDuration={350} />
+                      <Line type="monotone" dataKey="plan_hc" name="กำลังพลแผน (Plan)" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} animationDuration={350} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               )
             )}
           </div>
@@ -985,11 +1049,20 @@ export default function ManpowerOverviewTab({
             <h3 className="text-sm font-bold text-slate-800 dark:text-white">สัดส่วนสถานะพนักงานวันนี้</h3>
             <p className="text-[11px] text-slate-500">คลิกที่ชิ้นกราฟหรือสถานะเพื่อเปิด Modal กรองรายชื่อเฉพาะสถานะ</p>
           </div>
-          {pieData.length === 0 ? (
+          {loading && pieData.length === 0 ? (
+            <div className="flex flex-1 flex-col sm:flex-row items-center gap-4 min-h-[16rem] px-3">
+              <div className="mx-auto h-44 w-44 animate-pulse rounded-full border-[18px] border-slate-200 dark:border-slate-700" />
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 w-full sm:w-40 shrink-0">
+                {[0, 1, 2].map((idx) => (
+                  <div key={idx} className="h-8 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-700/70" />
+                ))}
+              </div>
+            </div>
+          ) : pieData.length === 0 ? (
             <div className="flex h-64 items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสถานะ</div>
           ) : (
-            <div className="flex flex-1 flex-col sm:flex-row items-center gap-2 min-h-[16rem]">
-              <div className="w-full sm:flex-1 h-56 sm:h-64 min-w-0">
+            <div className={`flex flex-1 flex-col sm:flex-row items-center gap-2 min-h-[16rem] transition-opacity duration-200 ${loading ? 'opacity-60' : 'opacity-100'}`}>
+              <div className="w-full sm:flex-1 h-56 sm:h-64 min-w-0 overflow-x-clip">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
@@ -1001,6 +1074,7 @@ export default function ManpowerOverviewTab({
                       innerRadius="54%"
                       outerRadius="88%"
                       paddingAngle={3}
+                      animationDuration={400}
                       className="cursor-pointer"
                       onClick={(slice) => {
                         if (slice?.status) {
@@ -1012,7 +1086,7 @@ export default function ManpowerOverviewTab({
                         <Cell key={idx} fill={entry.color} className="cursor-pointer" />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v, name) => [`${v} คน`, name]} />
+                    <Tooltip {...CHART_TOOLTIP_PROPS} cursor={false} formatter={(v, name) => [`${v} คน`, name]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -1024,7 +1098,7 @@ export default function ManpowerOverviewTab({
                       key={entry.status}
                       type="button"
                       onClick={() => openDetailModal({ status: entry.status, label: `${entry.name} (${date})` })}
-                      className="flex items-center justify-between gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50/70 px-2.5 py-1.5 text-left text-[11px] font-semibold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+                      className="flex items-center justify-between gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50/70 px-2.5 py-1.5 text-left text-[11px] font-semibold text-slate-700 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50/40 active:translate-y-0 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
                     >
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
@@ -1063,7 +1137,7 @@ export default function ManpowerOverviewTab({
                     key={m.id}
                     type="button"
                     onClick={() => setViewMode(m.id)}
-                    className={`min-h-[32px] rounded-md px-2.5 text-[11px] font-bold transition ${active
+                    className={`min-h-[32px] rounded-md px-2.5 text-[11px] font-bold transition-all duration-200 ease-out active:scale-[0.97] ${active
                         ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                       }`}
@@ -1077,7 +1151,7 @@ export default function ManpowerOverviewTab({
               <button
                 type="button"
                 onClick={toggleExpandAll}
-                className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-[11px] font-bold text-slate-700 transition-all duration-200 ease-out hover:bg-slate-100 active:scale-[0.97] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
               >
                 <ChevronsUpDown className="h-3.5 w-3.5" />
                 {hasAnyExpanded ? 'ยุบทุกชั้น' : 'ขยายทุกชั้น'}
@@ -1087,7 +1161,7 @@ export default function ManpowerOverviewTab({
           </div>
         </div>
 
-        <div className="overflow-x-auto max-h-[600px]">
+        <div className="overflow-x-auto max-h-[600px] custom-scrollbar scroll-smooth">
           <table className="w-full min-w-[820px] text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-100 text-[11px] font-bold uppercase text-slate-700 dark:bg-slate-900 dark:text-slate-300">
               {isPaymentMode ? (
@@ -1119,13 +1193,26 @@ export default function ManpowerOverviewTab({
               )}
             </thead>
 
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
+            <tbody
+              key={viewMode}
+              className={`mes-panel-in divide-y divide-slate-100 dark:divide-slate-700/70 transition-opacity duration-200 ${loading && matrixGroups.length > 0 ? 'opacity-60' : 'opacity-100'}`}
+            >
               {loading && matrixGroups.length === 0 ? (
-                <tr>
-                  <td colSpan={isPaymentMode ? 11 : 9} className="px-4 py-12 text-center text-slate-400">
-                    กำลังโหลดและคำนวณตารางกำลังคน...
-                  </td>
-                </tr>
+                MATRIX_SKELETON_ROWS.map((rowIdx) => (
+                  <tr key={rowIdx}>
+                    <td colSpan={isPaymentMode ? 11 : 9} className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-4 w-44 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                        <div className="ml-auto flex items-center gap-4">
+                          <div className="h-4 w-10 animate-pulse rounded bg-slate-100 dark:bg-slate-700/60" />
+                          <div className="h-4 w-10 animate-pulse rounded bg-slate-100 dark:bg-slate-700/60" />
+                          <div className="h-4 w-10 animate-pulse rounded bg-slate-100 dark:bg-slate-700/60" />
+                          <div className="h-4 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : matrixGroups.length === 0 ? (
                 <tr>
                   <td colSpan={isPaymentMode ? 11 : 9} className="px-4 py-12 text-center text-slate-400">
@@ -1152,11 +1239,11 @@ export default function ManpowerOverviewTab({
                       <React.Fragment key={g.id}>
                         <tr
                           onClick={() => toggleExpand(g.id)}
-                          className="cursor-pointer bg-slate-100/80 font-bold text-slate-900 hover:bg-slate-200/70 dark:bg-slate-800/90 dark:text-white dark:hover:bg-slate-700/70"
+                          className="cursor-pointer bg-slate-100/80 font-bold text-slate-900 transition-colors duration-150 hover:bg-slate-200/70 dark:bg-slate-800/90 dark:text-white dark:hover:bg-slate-700/70"
                         >
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2">
-                              {pOpen ? <ChevronDown className="h-4 w-4 text-indigo-500 shrink-0" /> : <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />}
+                              <ChevronRight className={`h-4 w-4 shrink-0 transition-transform duration-200 ease-out ${pOpen ? 'rotate-90 text-indigo-500' : 'text-slate-400'}`} />
                               <span className="truncate">{g.name}</span>
                               <span className="text-[10px] font-normal text-slate-400">({g.subs.length})</span>
                             </div>
@@ -1171,11 +1258,11 @@ export default function ManpowerOverviewTab({
                             <React.Fragment key={sub.id}>
                               <tr
                                 onClick={() => toggleExpand(sub.id)}
-                                className="cursor-pointer bg-slate-50/70 font-semibold text-slate-700 hover:bg-indigo-50/40 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800/70"
+                                className="mes-row-in cursor-pointer bg-slate-50/70 font-semibold text-slate-700 transition-colors duration-150 hover:bg-indigo-50/40 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800/70"
                               >
                                 <td className="px-4 py-2 pl-9 border-l-4 border-indigo-200 dark:border-indigo-900">
                                   <div className="flex items-center gap-1.5">
-                                    {sOpen ? <ChevronDown className="h-3.5 w-3.5 text-indigo-500 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+                                    <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out ${sOpen ? 'rotate-90 text-indigo-500' : 'text-slate-400'}`} />
                                     <span className="truncate">{sub.name}</span>
                                     <span className="text-[10px] font-normal text-slate-400">({sub.items.length})</span>
                                   </div>
@@ -1187,7 +1274,7 @@ export default function ManpowerOverviewTab({
                               {sOpen && sub.items.map((item) => (
                                 <tr
                                   key={item.id}
-                                  className="bg-white text-slate-600 hover:bg-indigo-50/30 dark:bg-slate-900/20 dark:text-slate-300 dark:hover:bg-slate-800/50"
+                                  className="mes-row-in bg-white text-slate-600 transition-colors duration-150 hover:bg-indigo-50/30 dark:bg-slate-900/20 dark:text-slate-300 dark:hover:bg-slate-800/50"
                                 >
                                   <td className="px-4 py-1.5 pl-16">
                                     <button
@@ -1199,7 +1286,7 @@ export default function ManpowerOverviewTab({
                                         status: 'ALL',
                                         label: `${g.name} · ${sub.name} · ${item.name}`,
                                       })}
-                                      className="text-left text-[11px] font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                                      className="text-left text-[11px] font-medium text-indigo-600 transition-colors duration-150 hover:underline dark:text-indigo-400"
                                     >
                                       • {item.name}
                                     </button>
@@ -1245,9 +1332,13 @@ export default function ManpowerOverviewTab({
       />
 
       {/* Integrated Analysis Modal */}
-      {analysisOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs">
-          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+      {analysisPresence.rendered && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs ${analysisPresence.isClosing ? 'mes-modal-backdrop-out pointer-events-none' : 'mes-modal-backdrop-in'}`}
+        >
+          <div
+            className={`flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 ${analysisPresence.isClosing ? 'mes-modal-panel-out' : 'mes-modal-panel-in'}`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
               <div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white">
@@ -1258,7 +1349,7 @@ export default function ManpowerOverviewTab({
               <button
                 type="button"
                 onClick={() => setAnalysisOpen(false)}
-                className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 active:scale-95 dark:hover:bg-slate-800"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1283,7 +1374,7 @@ export default function ManpowerOverviewTab({
                   type="button"
                   onClick={() => handleLoadAnalysis()}
                   disabled={analysisLoading}
-                  className="min-h-[38px] rounded-lg bg-indigo-600 px-3.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="min-h-[38px] rounded-lg bg-indigo-600 px-3.5 text-xs font-semibold text-white transition-all duration-200 hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-50"
                 >
                   {analysisLoading ? 'กำลังวิเคราะห์...' : 'ประมวลผล'}
                 </button>
@@ -1299,7 +1390,7 @@ export default function ManpowerOverviewTab({
                     key={t.id}
                     type="button"
                     onClick={() => setAnalysisSubTab(t.id)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analysisSubTab === t.id
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.97] ${analysisSubTab === t.id
                         ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-700 dark:text-white'
                         : 'text-slate-600 dark:text-slate-400'
                       }`}
@@ -1310,123 +1401,136 @@ export default function ManpowerOverviewTab({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {analysisData?.summary && (
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-                  <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                    <div className="text-[11px] text-slate-500">Unique Staff</div>
-                    <div className="text-lg font-bold text-slate-800 dark:text-white">{formatNumber(analysisData.summary.Total_Unique_HC)}</div>
-                  </div>
-                  <div className="rounded-xl border border-emerald-200 p-3 dark:border-emerald-800">
-                    <div className="text-[11px] text-emerald-600">Present Man-Days</div>
-                    <div className="text-lg font-bold text-emerald-600">{formatNumber(analysisData.summary.Total_Present_ManDays)}</div>
-                  </div>
-                  <div className="rounded-xl border border-rose-200 p-3 dark:border-rose-800">
-                    <div className="text-[11px] text-rose-600">Absent Man-Days</div>
-                    <div className="text-lg font-bold text-rose-600">{formatNumber(analysisData.summary.Total_Absent_ManDays)}</div>
-                  </div>
-                  <div className="rounded-xl border border-sky-200 p-3 dark:border-sky-800">
-                    <div className="text-[11px] text-sky-600">Leave Man-Days</div>
-                    <div className="text-lg font-bold text-sky-600">{formatNumber(analysisData.summary.Total_Leave_ManDays)}</div>
-                  </div>
-                  <div className="rounded-xl border border-indigo-200 p-3 dark:border-indigo-800">
-                    <div className="text-[11px] text-indigo-600">New Joiners</div>
-                    <div className="text-lg font-bold text-indigo-600">+{formatNumber(analysisData.summary.New_Joiners)}</div>
-                  </div>
-                  <div className="rounded-xl border border-amber-200 p-3 dark:border-amber-800">
-                    <div className="text-[11px] text-amber-600">Resigned</div>
-                    <div className="text-lg font-bold text-amber-600">{formatNumber(analysisData.summary.Resigned)}</div>
-                  </div>
-                </div>
-              )}
-
-              {analysisSubTab === 'operations' && (
-                <div className="h-72 w-full min-w-0 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <ComposedChart data={analysisData?.trend || []}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="log_date" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Act_Present" name="Present" fill="#10b981" />
-                      <Bar dataKey="Act_Absent" name="Absent" fill="#ef4444" />
-                      <Bar dataKey="Act_Leave" name="Leave" fill="#06b6d4" />
-                      <Line type="monotone" dataKey="Daily_HC" name="Total HC" stroke="#6366f1" strokeWidth={2} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {analysisSubTab === 'financials' && (
+            <div className={`flex-1 overflow-y-auto p-5 space-y-5 transition-opacity duration-200 ${analysisLoading && analysisData ? 'opacity-60' : 'opacity-100'}`}>
+              {analysisLoading && !analysisData ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div className="rounded-xl bg-slate-100 p-3.5 dark:bg-slate-800">
-                      <div className="text-xs text-slate-500">ต้นทุนรวมสูตรเดิม (V1)</div>
-                      <div className="text-xl font-bold text-slate-800 dark:text-white">฿{formatMoney(compareTotals.old)}</div>
-                    </div>
-                    <div className="rounded-xl bg-indigo-50 p-3.5 dark:bg-indigo-950/40">
-                      <div className="text-xs text-indigo-600 dark:text-indigo-300">ต้นทุนรวมสูตรใหม่ (V2)</div>
-                      <div className="text-xl font-bold text-indigo-700 dark:text-indigo-200">฿{formatMoney(compareTotals.newTotal)}</div>
-                    </div>
-                    <div className="rounded-xl bg-amber-50 p-3.5 dark:bg-amber-950/40">
-                      <div className="text-xs text-amber-700 dark:text-amber-300">ผลต่างรวม (New - Old)</div>
-                      <div className="text-xl font-bold text-amber-700 dark:text-amber-200">
-                        {compareTotals.diff >= 0 ? '+' : ''}฿{formatMoney(compareTotals.diff)}
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+                    {MATRIX_SKELETON_ROWS.map((idx) => (
+                      <div key={idx} className="h-16 animate-pulse rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800" />
+                    ))}
+                  </div>
+                  <div className="h-72 animate-pulse rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800" />
+                </div>
+              ) : (
+                <>
+                  {analysisData?.summary && (
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+                      <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                        <div className="text-[11px] text-slate-500">Unique Staff</div>
+                        <div className="text-lg font-bold text-slate-800 dark:text-white">{formatNumber(analysisData.summary.Total_Unique_HC)}</div>
+                      </div>
+                      <div className="rounded-xl border border-emerald-200 p-3 dark:border-emerald-800">
+                        <div className="text-[11px] text-emerald-600">Present Man-Days</div>
+                        <div className="text-lg font-bold text-emerald-600">{formatNumber(analysisData.summary.Total_Present_ManDays)}</div>
+                      </div>
+                      <div className="rounded-xl border border-rose-200 p-3 dark:border-rose-800">
+                        <div className="text-[11px] text-rose-600">Absent Man-Days</div>
+                        <div className="text-lg font-bold text-rose-600">{formatNumber(analysisData.summary.Total_Absent_ManDays)}</div>
+                      </div>
+                      <div className="rounded-xl border border-sky-200 p-3 dark:border-sky-800">
+                        <div className="text-[11px] text-sky-600">Leave Man-Days</div>
+                        <div className="text-lg font-bold text-sky-600">{formatNumber(analysisData.summary.Total_Leave_ManDays)}</div>
+                      </div>
+                      <div className="rounded-xl border border-indigo-200 p-3 dark:border-indigo-800">
+                        <div className="text-[11px] text-indigo-600">New Joiners</div>
+                        <div className="text-lg font-bold text-indigo-600">+{formatNumber(analysisData.summary.New_Joiners)}</div>
+                      </div>
+                      <div className="rounded-xl border border-amber-200 p-3 dark:border-amber-800">
+                        <div className="text-[11px] text-amber-600">Resigned</div>
+                        <div className="text-lg font-bold text-amber-600">{formatNumber(analysisData.summary.Resigned)}</div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 font-bold dark:bg-slate-800">
-                        <tr>
-                          <th className="px-3 py-2.5">สายการผลิต</th>
-                          <th className="px-3 py-2.5 text-right">V1 Total (฿)</th>
-                          <th className="px-3 py-2.5 text-right">V2 Total (฿)</th>
-                          <th className="px-3 py-2.5 text-right">ส่วนต่าง (฿)</th>
-                          <th className="px-3 py-2.5 text-right">วันคำนวณ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                        {costCompareRows.map((c, idx) => (
-                          <tr key={idx}>
-                            <td className="px-3 py-2 font-semibold">{c.line_name}</td>
-                            <td className="px-3 py-2 text-right font-mono">{formatMoney(c.old_total)}</td>
-                            <td className="px-3 py-2 text-right font-mono">{formatMoney(c.new_total)}</td>
-                            <td className={`px-3 py-2 text-right font-mono font-bold ${Number(c.diff_amount) >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                              {Number(c.diff_amount) >= 0 ? '+' : ''}{formatMoney(c.diff_amount)}
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono">{c.days_calculated}</td>
+                  {analysisSubTab === 'operations' && (
+                    <div key="operations" className="mes-panel-in h-72 w-full min-w-0 overflow-x-clip rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <ComposedChart data={analysisData?.trend || []}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                          <XAxis dataKey="log_date" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip {...CHART_TOOLTIP_PROPS} />
+                          <Legend />
+                          <Bar dataKey="Act_Present" name="Present" fill="#10b981" animationDuration={350} />
+                          <Bar dataKey="Act_Absent" name="Absent" fill="#ef4444" animationDuration={350} />
+                          <Bar dataKey="Act_Leave" name="Leave" fill="#06b6d4" animationDuration={350} />
+                          <Line type="monotone" dataKey="Daily_HC" name="Total HC" stroke="#6366f1" strokeWidth={2} animationDuration={350} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  {analysisSubTab === 'financials' && (
+                    <div key="financials" className="mes-panel-in space-y-4">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div className="rounded-xl bg-slate-100 p-3.5 dark:bg-slate-800">
+                          <div className="text-xs text-slate-500">ต้นทุนรวมสูตรเดิม (V1)</div>
+                          <div className="text-xl font-bold text-slate-800 dark:text-white">฿{formatMoney(compareTotals.old)}</div>
+                        </div>
+                        <div className="rounded-xl bg-indigo-50 p-3.5 dark:bg-indigo-950/40">
+                          <div className="text-xs text-indigo-600 dark:text-indigo-300">ต้นทุนรวมสูตรใหม่ (V2)</div>
+                          <div className="text-xl font-bold text-indigo-700 dark:text-indigo-200">฿{formatMoney(compareTotals.newTotal)}</div>
+                        </div>
+                        <div className="rounded-xl bg-amber-50 p-3.5 dark:bg-amber-950/40">
+                          <div className="text-xs text-amber-700 dark:text-amber-300">ผลต่างรวม (New - Old)</div>
+                          <div className="text-xl font-bold text-amber-700 dark:text-amber-200">
+                            {compareTotals.diff >= 0 ? '+' : ''}฿{formatMoney(compareTotals.diff)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 font-bold dark:bg-slate-800">
+                            <tr>
+                              <th className="px-3 py-2.5">สายการผลิต</th>
+                              <th className="px-3 py-2.5 text-right">V1 Total (฿)</th>
+                              <th className="px-3 py-2.5 text-right">V2 Total (฿)</th>
+                              <th className="px-3 py-2.5 text-right">ส่วนต่าง (฿)</th>
+                              <th className="px-3 py-2.5 text-right">วันคำนวณ</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            {costCompareRows.map((c, idx) => (
+                              <tr key={idx} className="transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                <td className="px-3 py-2 font-semibold">{c.line_name}</td>
+                                <td className="px-3 py-2 text-right font-mono">{formatMoney(c.old_total)}</td>
+                                <td className="px-3 py-2 text-right font-mono">{formatMoney(c.new_total)}</td>
+                                <td className={`px-3 py-2 text-right font-mono font-bold ${Number(c.diff_amount) >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                  {Number(c.diff_amount) >= 0 ? '+' : ''}{formatMoney(c.diff_amount)}
+                                </td>
+                                <td className="px-3 py-2 text-right font-mono">{c.days_calculated}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {analysisSubTab === 'distribution' && (
+                    <div key="distribution" className="mes-panel-in overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 font-bold dark:bg-slate-800">
+                          <tr>
+                            <th className="px-4 py-2.5">กลุ่มประเภทพนักงาน</th>
+                            <th className="px-4 py-2.5 text-right">จำนวนคน (Headcount)</th>
+                            <th className="px-4 py-2.5 text-right">วันทำงานรวม (Work Days)</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {analysisSubTab === 'distribution' && (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 font-bold dark:bg-slate-800">
-                      <tr>
-                        <th className="px-4 py-2.5">กลุ่มประเภทพนักงาน</th>
-                        <th className="px-4 py-2.5 text-right">จำนวนคน (Headcount)</th>
-                        <th className="px-4 py-2.5 text-right">วันทำงานรวม (Work Days)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {(analysisData?.distribution || []).map((d, idx) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-2 font-semibold">{d.category}</td>
-                          <td className="px-4 py-2 text-right font-mono">{formatNumber(d.head_count)}</td>
-                          <td className="px-4 py-2 text-right font-mono">{formatNumber(d.work_days)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                          {(analysisData?.distribution || []).map((d, idx) => (
+                            <tr key={idx} className="transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                              <td className="px-4 py-2 font-semibold">{d.category}</td>
+                              <td className="px-4 py-2 text-right font-mono">{formatNumber(d.head_count)}</td>
+                              <td className="px-4 py-2 text-right font-mono">{formatNumber(d.work_days)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

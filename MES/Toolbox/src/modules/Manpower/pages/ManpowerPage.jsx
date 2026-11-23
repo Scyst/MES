@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
+import { useAnimatedPresence } from '../../../shared/hooks/useAnimatedPresence';
 import { manpowerMasterApi, manpowerSyncApi } from '../../../shared/services/manpowerApi';
 import { getTodayIso, offsetIsoDate } from '../utils/manpowerHelpers';
 
@@ -64,6 +65,7 @@ export default function ManpowerPage({ section = 'operations' }) {
   const [masterSearch, setMasterSearch] = useState('');
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const syncPresence = useAnimatedPresence(syncModalOpen);
   const [syncStart, setSyncStart] = useState(() => offsetIsoDate(getTodayIso(), -1));
   const [syncEnd, setSyncEnd] = useState(getTodayIso);
   const [syncing, setSyncing] = useState(false);
@@ -177,7 +179,7 @@ export default function ManpowerPage({ section = 'operations' }) {
                     key={t.id}
                     type="button"
                     onClick={() => switchOpsTab(t.id)}
-                    className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-md px-3 text-xs font-bold transition ${
+                    className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-md px-3 text-xs font-bold transition-all duration-200 ease-out active:scale-[0.97] ${
                       active
                         ? 'bg-white text-emerald-700 shadow-2xs dark:bg-slate-800 dark:text-emerald-300'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
@@ -198,12 +200,12 @@ export default function ManpowerPage({ section = 'operations' }) {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                 />
                 <select
                   value={hcGroup}
                   onChange={(e) => setHcGroup(e.target.value)}
-                  className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 transition-colors dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                 >
                   {uniqueHcOptions.map((grp) => (
                     <option key={grp} value={grp}>กลุ่ม: {grp}</option>
@@ -216,7 +218,7 @@ export default function ManpowerPage({ section = 'operations' }) {
                 type="button"
                 disabled={!isOnline}
                 onClick={() => setSyncModalOpen(true)}
-                className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-xs font-bold text-white hover:bg-teal-700 disabled:opacity-50"
+                className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-xs font-bold text-white transition-all duration-200 ease-out hover:bg-teal-700 active:scale-[0.97] disabled:opacity-50"
               >
                 <CloudDownload className="h-3.5 w-3.5" />
                 ซิงค์เครื่องสแกน
@@ -225,7 +227,7 @@ export default function ManpowerPage({ section = 'operations' }) {
             <button
               type="button"
               onClick={() => setRefreshSignal((s) => s + 1)}
-              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition-all duration-200 ease-out hover:bg-slate-50 active:scale-[0.95] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
               title="รีเฟรชข้อมูลล่าสุด"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -235,7 +237,19 @@ export default function ManpowerPage({ section = 'operations' }) {
       )}
 
       {/* Main Content */}
-      <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800">กำลังโหลดหน้าจอ...</div>}>
+      <Suspense
+        fallback={(
+          <div className="space-y-3 mes-panel-in">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-24 animate-pulse rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" />
+              ))}
+            </div>
+            <div className="h-72 animate-pulse rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800" />
+          </div>
+        )}
+      >
+        <div key={`${section}-${opsTab}-${gradingView}`} className="mes-panel-in">
         {section === 'operations' && opsTab === 'overview' && (
           <ManpowerOverviewTab
             date={selectedDate}
@@ -308,14 +322,14 @@ export default function ManpowerPage({ section = 'operations' }) {
                       <button
                         type="button"
                         onClick={() => switchGradingView('grading')}
-                        className="min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                        className="min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold text-slate-600 transition-all duration-200 ease-out hover:text-slate-900 active:scale-[0.97] dark:text-slate-300"
                       >
                         <Star className="h-3.5 w-3.5" /> ตารางเกรด
                       </button>
                       <button
                         type="button"
                         onClick={() => switchGradingView('trends')}
-                        className={`min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold ${
+                        className={`min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold transition-all duration-200 ease-out active:scale-[0.97] ${
                           gradingView === 'trends'
                             ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                             : 'text-slate-600 hover:text-slate-900 dark:text-slate-300'
@@ -328,7 +342,7 @@ export default function ManpowerPage({ section = 'operations' }) {
                   <button
                     type="button"
                     onClick={() => switchGradingView('skills')}
-                    className={`min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold ${
+                    className={`min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold transition-all duration-200 ease-out active:scale-[0.97] ${
                       gradingView === 'skills'
                         ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-300'
@@ -374,21 +388,24 @@ export default function ManpowerPage({ section = 'operations' }) {
             )}
           </div>
         )}
+        </div>
       </Suspense>
 
       {/* Cloud Punch Sync Modal */}
-      {syncModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs">
+      {syncPresence.rendered && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs ${syncPresence.isClosing ? 'mes-modal-backdrop-out pointer-events-none' : 'mes-modal-backdrop-in'}`}
+        >
           <form
             onSubmit={handleRunSync}
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4"
+            className={`w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4 ${syncPresence.isClosing ? 'mes-modal-panel-out' : 'mes-modal-panel-in'}`}
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
               <h4 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-white">
                 <CloudDownload className="h-5 w-5 text-teal-600" />
                 ซิงค์เวลาเข้า-ออกจากเครื่องสแกนกลาง
               </h4>
-              <button type="button" onClick={() => setSyncModalOpen(false)} className="p-1 text-slate-400">
+              <button type="button" onClick={() => setSyncModalOpen(false)} className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 active:scale-95 dark:hover:bg-slate-800">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -418,13 +435,13 @@ export default function ManpowerPage({ section = 'operations' }) {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setSyncModalOpen(false)} className="min-h-[44px] rounded-lg border px-4 text-sm font-semibold dark:border-slate-600">
+              <button type="button" onClick={() => setSyncModalOpen(false)} className="min-h-[44px] rounded-lg border px-4 text-sm font-semibold transition-all duration-150 hover:bg-slate-50 active:scale-[0.97] dark:border-slate-600 dark:hover:bg-slate-800">
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={syncing || !isOnline}
-                className="min-h-[44px] rounded-lg bg-teal-600 px-5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                className="min-h-[44px] rounded-lg bg-teal-600 px-5 text-sm font-semibold text-white transition-all duration-150 hover:bg-teal-700 active:scale-[0.97] disabled:opacity-50"
               >
                 {syncing ? 'กำลังซิงค์ข้อมูล...' : 'เริ่มซิงค์ทันที'}
               </button>
