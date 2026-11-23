@@ -1,9 +1,9 @@
-# Root Agent Entry Point (`C:\Users\USER\Desktop\Project\MES` / `E:\MES\MES`)
+# Root Agent Entry Point (`E:\MES\MES`)
 
-Whenever an agent is opened at the repository root instead of `MES/`, it MUST read and strictly follow:
-1. `@[Master Rules](MES/.agents/AGENTS.md)`
-2. `@[Sync Board Template](MES/.agents/sync_board/README.md)`
-3. `@[Current Handoff](MES/.agents/sync_board/handoff.md)`
+When opened at the repository root instead of `MES/`, follow:
+1. [Master Rules](MES/.agents/AGENTS.md)
+2. [Sync Board Template](MES/.agents/sync_board/README.md)
+3. [Current Handoff](MES/.agents/sync_board/handoff.md) (read on-demand when resuming handoff work)
 
-All production application code lives inside `MES/` (while `MES_TEST/` is the test/staging mirror).
+All production application code lives inside `MES/`.
 

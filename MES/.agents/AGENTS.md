@@ -1,56 +1,43 @@
 # FILE DELETION SAFETY PROTOCOL (CRITICAL)
-
-- **DRY-RUN BEFORE DELETION:** Whenever an agent is instructed to (or decides to) delete files or directories on the server (whether through bash commands, scripts, FTP, or other tools), the agent **MUST** perform a verification check first.
-- **SELECT BEFORE DELETE:** Just like running a `SELECT` statement before a `DELETE` in SQL, the agent must run a non-destructive listing command (e.g., `ls`, `find`, or equivalent MCP tools like `list_directory`) using the EXACT same pattern/conditions it plans to use for the deletion.
-- **NEVER DELETE BLINDLY:** Do not run recursive delete commands (like `rm -rf`) or wildcard deletes (like `rm *.js`) without first verifying and printing out exactly what will be destroyed. If the scope of deletion is unexpectedly large, the agent MUST stop and ask for user confirmation.
+- **DRY-RUN & SELECT BEFORE DELETE:** Before deleting any local or FTP files/directories, ALWAYS run a non-destructive listing (`Get-ChildItem`, `ls`, `list_directory`, `ftp_list_files`) using the exact target pattern first.
+- **NEVER DELETE BLINDLY:** Never run recursive or wildcard deletes (`rm -rf`, `rm *.js`) without first printing and verifying the exact list of targets. Ask for user confirmation if the scope is large.
 
 # UI LAYOUT GUIDELINES
-- **FLUID_LAYOUTS:** Use full-width fluid layouts (`w-full`) for Dashboards and Data Grids. EXCEPTIONS: Forms, Auth pages, and Settings panels MUST use centered max-width constraints (e.g., `max-w-md` or `max-w-lg mx-auto`) to prevent stretching on large factory displays.
-- **TRUE_RESPONSIVENESS:** The application is used across mobile, tablets, and large factory displays. When expanding to full width, ensure the UI adapts gracefully (e.g., use `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`) rather than just stretching a single column to look unnaturally wide. Maximize screen real estate usage.
+- **FLUID_LAYOUTS:** Use full-width fluid layouts (`w-full`) for Dashboards and Data Grids. Forms, Auth pages, and Settings panels MUST use centered max-width constraints (`max-w-md` or `max-w-lg mx-auto`).
+- **TRUE_RESPONSIVENESS:** Support mobile (375px+), tablets, and large factory displays using responsive grids (`grid-cols-1 md:grid-cols-2 lg:grid-cols-4`) and touch targets >= 44x44px.
 
 # TRACKING FILE DISCIPLINE
-- **TRACKER OVERWRITE PROTECTION:** Use `write_to_file` ONLY to initialize missing or 0-byte tracking files like `task.md`, `ROADMAP.md`, or `audit_remaining_work.md`. 
-- **NON-DESTRUCTIVE EDITS ONLY:** Otherwise, STRICTLY use `replace_file_content` or `multi_replace_file_content` to check off `[x]` tasks, append new tasks, or update statuses. Overwriting destroys the historical backlog and breaks the continuity of multi-agent tasks.
+- **OVERWRITE PROTECTION:** Use `write_file` ONLY to initialize missing or 0-byte tracking files (`task.md`, `ROADMAP.md`, `sync_board/<YYYY-MM-DD>.md`).
+- **NON-DESTRUCTIVE EDITS:** Strictly use `edit_file` to check off `[x]` tasks, append entries, or update statuses without destroying historical logs.
 
 # AGENT BEHAVIOR GUIDELINES
-- **NO YAPPING (CONCISENESS):** For minor code changes, simple bug fixes, or direct commands, minimize explanations. Avoid filler words, polite fluff, and unnecessary restatements. Go straight to the point or execute via tools directly.
-- **ANTI YES-MAN (CRITICAL PUSHBACK):** Do not blindly execute requests that violate security protocols (e.g., storing sensitive data in localStorage), introduce performance bottlenecks, or contradict established architecture. If a user's request is flawed or risky, you MUST push back, explain the risk clearly, and propose a safer alternative.
-- **FAIL FAST & LOUD:** If you encounter an error on an isolated module, log the error to `error_log.md` and proceed with independent tasks. If the error is a core blocker (e.g., DB connection, build failure) or ambiguous requirement, halt execution immediately, report the exact error, and ask the user for clarification.
-- **DOC-FIRST (THINK BEFORE CODE):** Apply DOC-FIRST **ONLY** when creating new modules, APIs, or changing core architecture (e.g., JSDoc, module README, ROADMAP.md). Skip this requirement for minor bug fixes or small feature additions to conserve tokens.
-- **BOY SCOUT RULE (LEAVE IT BETTER):** Apply this rule ONLY to **local variables** within the function scope you are actively editing. NEVER rename public/exported variables or functions to prevent side-effects. Do not add `// TODO` comments as they create technical debt.
-- **FORMAL TONE (INDUSTRIAL GRADE):** All user-facing text, UI elements, confirmation dialogs, and notifications MUST use formal, professional Thai/English terminology appropriate for an industrial or factory software environment. Do not use playful, casual, or slang terminology (e.g. use "ทั้งหมด" instead of "รวดเดียว", "กรุณายืนยัน" instead of "เอาเลยไหม").
-- **ASSUME PRODUCTION:** Unless explicitly instructed that this is a prototype, write all code to production standards. Always include robust error handling (try-catch), input validation, proper typing, and pagination/limits on queries.
+- **NO YAPPING (CONCISENESS):** Minimize explanations and filler for minor changes, bug fixes, or direct commands. Execute directly.
+- **ANTI YES-MAN (CRITICAL PUSHBACK):** Push back on requests that violate security (e.g., sensitive data in `localStorage`), degrade performance, or break architecture. Explain the risk and propose a safer alternative.
+- **FAIL FAST & LOUD:** Log isolated module errors to `error_log.md` and proceed with independent tasks. Halt immediately on core blockers (DB connection, build failure, ambiguous requirements) and ask for clarification.
+- **DOC-FIRST:** Document first ONLY when creating new modules, APIs, or changing core architecture (`ROADMAP.md`, `ARCHITECTURE.md`, module `.md`). Skip for minor fixes to save tokens.
+- **BOY SCOUT RULE:** Clean up ONLY local variables inside the function actively being edited. Never rename public/exported symbols or leave `// TODO` comments.
+- **FORMAL TONE (INDUSTRIAL GRADE):** All UI text, dialogs, and notifications MUST use formal Thai/English suitable for industrial environments (e.g., use "ทั้งหมด" instead of "รวดเดียว", "กรุณายืนยัน" instead of "เอาเลยไหม").
+- **ASSUME PRODUCTION:** Write all code to production standards with `try-catch`, server-side input validation, proper typing, and query pagination/limits.
 
 # GIT WORKFLOW (MULTI-AGENT PARALLEL)
-- **WORK DIRECTLY ON MAIN:** All agents commit directly to `main`. Do NOT create feature branches or switch branches. This project has no CI/CD auto-deploy โ€” `git push` does NOT affect production. Production updates only happen via explicit FTP upload through MCP tools.
-- **NEVER SWITCH BRANCHES:** NEVER run `git checkout <branch>` or `git switch <branch>` to change the active branch. Doing so changes files on disk for ALL agents running in parallel. Branch management (merge, cleanup) is handled by the Manager Agent only when explicitly requested.
-- **SMALL & SPECIFIC COMMITS:** Every commit MUST cover one logical change only. Never bundle multiple unrelated fixes into one commit. This enables clean `git revert <hash>` if a specific feature needs to be rolled back without affecting others.
-  - โ… `fix: prevent QA schedule from overwriting sales order confirmation status`
-  - โ `update stuff` / `fixes` / `various changes`
-- **PULL BEFORE PUSH:** ALWAYS run `git pull origin main --rebase` before pushing to avoid conflicts with other agents' work.
-- **SHARED STATE AWARENESS (DB & ENV):** Global resources require strict coordination across all agents. (1) **Database:** Any schema alterations MUST be documented in a root `db_changes.md` file. (2) **Environment:** Any new key added to `.env` MUST be simultaneously added to `.env.example` with a dummy value.
+- **WORK DIRECTLY ON MAIN:** Commit directly to `main`. Do NOT create or switch branches (`git checkout`/`git switch`), as switching branches alters files on disk for all parallel agents. Production deploys happen only via explicit MCP FTP upload.
+- **SMALL & SPECIFIC COMMITS:** Stage and commit only the specific files modified for one logical change (`git commit -m "msg" file1 file2`).
+  - ✅ `fix: prevent QA schedule from overwriting sales order confirmation status 14:00 - 14:30 17/08/26`
+  - ❌ `update stuff` / `fixes`
+- **TIME-AWARE COMMITS:** Always append working duration and date to commit messages: `<Commit Message> <HH:MM> - <HH:MM> <DD/MM/YY>`.
+- **PULL BEFORE PUSH:** Always run `git pull origin main --rebase` before pushing.
+- **SHARED STATE AWARENESS:** Document any DB schema changes in root `db_changes.md`. Add dummy values to `.env.example` whenever adding keys to `.env`.
 
 # FTP OPERATION PROTOCOL
-- **READ BEFORE UPLOAD:** Before uploading any files to the FTP server, agents MUST read `.agents/ftp_structure.md` to understand the existing folder structure and verify paths. Do not upload blindly into unknown paths.
-- **MAINTAIN FTP STRUCTURE RECORD:** If an agent creates, deletes, or renames a folder on the FTP server, it MUST update `.agents/ftp_structure.md` to keep the centralized structure record accurate for other agents.
-
-- **TIME_AWARE_COMMITS:** ALWAYS include the exact start and end time (working duration) along with the date in your git commit messages whenever you finish a task.
-  - Format: <Commit Message> <HH:MM> - <HH:MM> <DD/MM/YY>
-  - Example: "Create Agent API for Auto schedules timeline success 14:00 - 17:05 17/08/26"
+- **READ BEFORE UPLOAD:** Always read `.agents/ftp_structure.md` to verify remote paths before uploading via `mes-custom-mcp/ftp_upload_file` or `ftp_upload_directory`.
+- **MAINTAIN RECORD:** Update `.agents/ftp_structure.md` whenever creating, deleting, or renaming remote FTP folders.
 
 # SYNC BOARD PROTOCOL (MANDATORY)
-- **LOG BEFORE LEAVING:** Whenever an agent completes a task, hits a blocker, or finishes a session, it MUST log its work in E:\MES\MES\MES\.agents\sync_board\<YYYY-MM-DD>.md.
-- **TEMPLATE COMPLIANCE:** Follow the template provided in E:\MES\MES\MES\.agents\sync_board\README.md.
-- **NO SILENT WORK:** Do not perform work and terminate without updating the sync board. This is critical for multi-agent handoffs and syncing to the MES Team Planner.
+- **LOG BEFORE LEAVING:** Log every completed task, blocker, or session in `.agents/sync_board/<YYYY-MM-DD>.md` using the `.agents/sync_board/README.md` template (Thai preferred, focusing on business value, Why/What/Result, and Files Modified).
 
 # PLANNER ZERO-GAP PROTOCOL (SEAMLESS TIMELINE)
-- **FULL LIFECYCLE DURATION:** When registering or updating tasks in Team Planner (`TeamPlanner_Tasks`), NEVER log only the isolated 5-10 minutes of AI execution. Real tasks encompass user problem formulation, prompting, AI execution, and user testing/UAT.
-- **CHAIN-TO-PREVIOUS-TASK:** Ensure task times fit together without artificial gaps. Inspect the previous task's `EndTime` for the day and set `StartTime = previousTask.EndTime` (respecting standard lunch break 12:00-13:00 and fixed company events).
-- **CONSOLIDATE MICRO-TASKS:** Group consecutive small iterations into structured Milestone Blocks (e.g. 1.5 - 3 hours) and list granular changes under `Subtasks` rather than polluting the board with fragmented 5-minute entries.
-- **CROSS-MODULE PARALLELISM VS SAME-MODULE CHAINING:**
-  - **Cross-Module Concurrent Tasks:** If developing separate modules simultaneously (e.g. IQS + Learning Hub), tasks MAY overlap in time (maximum 2-3 concurrent lanes). The Team Planner Gantt chart will automatically stack them into sub-lanes.
-  - **Same-Module Sequential Chaining:** If tasks belong to the same module/feature, they MUST NOT overlap. Chain them sequentially (`StartTime = previousTask.EndTime`) or merge them into a single milestone block with subtasks.
+- **FULL LIFECYCLE & CHAINING:** When logging tasks in `TeamPlanner_Tasks`, include full lifecycle duration (formulation, execution, UAT). Chain sequential tasks (`StartTime = previousTask.EndTime`, respecting 12:00-13:00 lunch).
+- **CONSOLIDATE & PARALLELIZE:** Group micro-iterations into 1.5-3h Milestone Blocks with `Subtasks`. Cross-module tasks may overlap (max 2-3 lanes); same-module tasks must chain sequentially.
 
 # POWERSHELL & SCRIPTING HAZARDS (CRITICAL)
-- **SINGLE-QUOTED HERE-STRINGS (`@' '@`):** When generating Python/Node.js scripts or writing files via PowerShell, ALWAYS use single-quoted here-strings (`@' '@`).
-- **AVOID DOUBLE-QUOTED HERE-STRINGS (`@" "@`):** NEVER use double-quoted here-strings unless explicit variable expansion is required. PowerShell aggressively evaluates `$variables` and interprets backticks (`` ` ``) as escape characters (e.g., `` `t `` becomes a TAB, `` `a `` becomes a BELL). This WILL silently destroy file contents (like PHP variables or Markdown backticks) and cause syntax errors.
+- **SINGLE-QUOTED HERE-STRINGS (`@' '@`):** Always use single-quoted here-strings (`@' '@`) in PowerShell. NEVER use double-quoted here-strings (`@" "@`) unless variable expansion is explicitly needed, as PowerShell expands `$variables` and backticks (` `` `) and corrupts PHP/Markdown files.
