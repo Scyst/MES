@@ -488,6 +488,13 @@ export default function EmployeeGradingTab({
               >
                 <TrendingUp className="h-3.5 w-3.5" /> แนวโน้ม
               </button>
+              <button
+                type="button"
+                onClick={() => onChangeGradingView('skills')}
+                className="min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300"
+              >
+                <Award className="h-3.5 w-3.5" /> Skill Matrix
+              </button>
             </div>
           )}
 

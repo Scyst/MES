@@ -313,29 +313,11 @@ export default function App() {
                 </ErrorBoundary>
               } />
 
-              <Route path="manpower/holidays" element={
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดปฏิทินวันหยุด...</div>}>
-                    <ManpowerPage section="holidays" />
-                  </Suspense>
-                </ErrorBoundary>
-              } />
+              <Route path="manpower/holidays" element={<Navigate to="/system-settings?tab=holidays" replace />} />
 
-              <Route path="manpower/skills" element={
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลด Skill Matrix...</div>}>
-                    <ManpowerPage section="skills" />
-                  </Suspense>
-                </ErrorBoundary>
-              } />
+              <Route path="manpower/skills" element={<Navigate to="/manpower/grading?view=skills" replace />} />
 
-              <Route path="manpower/master" element={
-                <ErrorBoundary>
-                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดข้อมูลหลักพนักงาน...</div>}>
-                    <ManpowerPage section="master" />
-                  </Suspense>
-                </ErrorBoundary>
-              } />
+              <Route path="manpower/master" element={<Navigate to="/manpower?tab=master" replace />} />
 
               <Route path="audit-5s" element={
                 <ErrorBoundary>

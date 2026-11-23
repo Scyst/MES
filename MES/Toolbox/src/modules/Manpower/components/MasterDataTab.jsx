@@ -13,7 +13,7 @@ const SUB_TABS = [
   { id: 'settings', label: 'กลุ่มกำลังคน (HC Group)', icon: Layers },
 ];
 
-export default function MasterDataTab({ structure, canEdit, isOnline, onStructureUpdated }) {
+export default function MasterDataTab({ structure, canEdit, isOnline, onStructureUpdated, initialSearch = '' }) {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
 
@@ -21,10 +21,17 @@ export default function MasterDataTab({ structure, canEdit, isOnline, onStructur
   const [loading, setLoading] = useState(false);
 
   // Staff Directory state
-  const [empSearch, setEmpSearch] = useState('');
+  const [empSearch, setEmpSearch] = useState(initialSearch || '');
   const [empLine, setEmpLine] = useState('ALL');
   const [empStatus, setEmpStatus] = useState('1');
   const [employees, setEmployees] = useState([]);
+
+  useEffect(() => {
+    if (initialSearch) {
+      setSubTab('employees');
+      setEmpSearch(initialSearch);
+    }
+  }, [initialSearch]);
 
   // Create / Edit Employee Modal
   const [empModal, setEmpModal] = useState(null);

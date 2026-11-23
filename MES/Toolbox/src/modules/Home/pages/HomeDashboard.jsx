@@ -230,31 +230,29 @@ export default function HomeDashboard() {
 
   const qualityServices = useMemo(() => [
     { title: 'iQMS Dashboard', desc: 'ระบบจัดการคุณภาพ (NCR/CAR)', icon: ShieldAlert, colorClass: 'bg-red-100 text-red-600', to: '/qms', roles: ['admin', 'creator', 'manager', 'supervisor', 'qa', 'qc'] },
-    { title: '5S Audit (ตรวจประเมิน 5ส)', desc: 'ตรวจหน้างาน แนบรูปภาพ และให้คะแนนกรรมการ 5ส', icon: CheckCircle2, colorClass: 'bg-emerald-100 text-emerald-600', to: '/audit-5s', checkAccess: () => ['creator', 'admin', 'manager', 'supervisor'].includes(role) || is5sCommittee },
     { title: 'Accessories Inspection', desc: 'ระบบตรวจเช็คชิ้นส่วนประกอบ (AI Vision)', icon: ShieldCheck, colorClass: 'bg-red-100 text-red-600', to: '/accessories-inspection' },
     { title: 'PE Enterprise', desc: 'ศูนย์กลางจัดการเครื่องจักรและซ่อมบำรุง', icon: Wrench, colorClass: 'bg-red-100 text-red-600', to: '/pe', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'PE Tech (Mobile)', desc: 'ระบบรับงานและจัดการซ่อมสำหรับช่าง', icon: Smartphone, colorClass: 'bg-red-100 text-red-600', to: '/pe/tech' },
     { title: 'Digital Twin', desc: 'ระบบ 3D Monitoring ของโรงงาน', icon: Cuboid, colorClass: 'bg-red-100 text-red-600', to: '/iot-toolbox/sandbox-b9/MES/MES/page/digitalTwin/digitalTwin.html' },
-  ], [role, is5sCommittee]);
+  ], []);
 
   const executiveServices = useMemo(() => [
     { title: 'Management Dashboard', desc: 'แดชบอร์ดผู้บริหารและวางแผนผลิต', icon: LineChart, colorClass: 'bg-emerald-100 text-emerald-600', to: '/management', roles: ['admin', 'creator', 'manager', 'planner', 'supervisor'] },
     { title: 'Daily Command Center', desc: 'ศูนย์สั่งการและติดตามสถานะ', icon: ListOrdered, colorClass: 'bg-emerald-100 text-emerald-600', to: '/planning', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Manpower', desc: 'จัดการกำลังคนและลงเวลาประจำวัน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Employee Grading 4D', desc: 'ประเมินเกรด 4 มิติและรายได้ต่อหัว', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower/grading', roles: ['admin', 'creator', 'manager'] },
-    { title: 'Skill Matrix', desc: 'ตารางทักษะพนักงานรายบุคคล', icon: Award, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower/skills', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Holiday Calendar', desc: 'ปฏิทินวันหยุดและตัวคูณค่าแรง OT', icon: CalendarDays, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower/holidays', roles: ['admin', 'creator', 'manager', 'supervisor'] },
-    { title: 'Manpower Master', desc: 'ข้อมูลหลักพนักงาน กะสายผลิต และกลุ่ม HC', icon: Settings, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower/master', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Manpower', desc: 'จัดการกำลังคน ลงเวลา และข้อมูลหลักพนักงาน', icon: Users, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: 'Grading 4D & Skill Matrix', desc: 'ประเมินเกรด 4 มิติ แนวโน้ม และตารางทักษะ', icon: Star, colorClass: 'bg-emerald-100 text-emerald-600', to: '/manpower/grading', roles: ['admin', 'creator', 'manager', 'supervisor'] },
+    { title: '5S Audit (ตรวจประเมิน 5ส)', desc: 'ตรวจหน้างาน แนบรูปภาพ และให้คะแนนกรรมการ 5ส', icon: CheckCircle2, colorClass: 'bg-emerald-100 text-emerald-600', to: '/audit-5s', checkAccess: () => ['creator', 'admin', 'manager', 'supervisor'].includes(role) || is5sCommittee },
     { title: 'Mood Insight Report', desc: 'รายงานวิเคราะห์ภาพรวมความรู้สึก', icon: HeartPulse, colorClass: 'bg-emerald-100 text-emerald-600', to: '/mood-report', roles: ['admin', 'creator', 'manager', 'supervisor'] },
     { title: 'Daily P&L', desc: 'บันทึกและวิเคราะห์งบกำไรขาดทุน', icon: DollarSign, colorClass: 'bg-emerald-100 text-emerald-600', to: '/daily-pl', roles: ['admin', 'creator', 'manager'] },
     { title: 'Invoice Management', desc: 'ระบบออกบิลและจัดการเวอร์ชัน', icon: FileText, colorClass: 'bg-emerald-100 text-emerald-600', to: '/auto-invoice', roles: ['admin', 'creator', 'manager', 'planner'] },
     { title: 'Sales Tracking', desc: 'ติดตามสถานะ PO', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales', roles: ['admin', 'creator', 'manager', 'planner', 'customer'] },
     { title: 'Shipping Loading', desc: 'ติดตามการจัดส่งและโหลดตู้', icon: Truck, colorClass: 'bg-emerald-100 text-emerald-600', to: '/sales?tab=shipping', roles: ['admin', 'creator', 'manager', 'planner', 'customer'] },
     { title: 'Utility & Energy', desc: 'ติดตามพลังงานและค่าไฟ TOU & LPG', icon: Zap, colorClass: 'bg-emerald-100 text-emerald-600', to: '/utility', roles: ['admin', 'creator', 'manager', 'engineer', 'supervisor'] },
-  ], []);
+  ], [role, is5sCommittee]);
 
   const systemAdminServices = useMemo(() => [
     { title: 'System Settings', desc: 'ตั้งค่าระบบและข้อมูลหลัก (Master Data)', icon: Settings, colorClass: 'bg-slate-100 text-slate-700', to: '/system-settings', roles: ['admin', 'creator', 'supervisor'] },
+    { title: 'Holiday Calendar', desc: 'ปฏิทินวันหยุดและตัวคูณค่าแรง OT', icon: CalendarDays, colorClass: 'bg-amber-100 text-amber-700', to: '/system-settings?tab=holidays', roles: ['admin', 'creator'] },
     { title: 'User Manager', desc: 'จัดการผู้ใช้งานและสิทธิ์ (PBAC Matrix)', icon: Users, colorClass: 'bg-slate-100 text-slate-700', to: '/admin/users', roles: ['admin', 'creator'] },
     { title: 'System Blueprint', desc: 'พิมพ์เขียวสถาปัตยกรรมและผังระบบโรงงาน', icon: Network, colorClass: 'bg-indigo-100 text-indigo-700', to: '/blueprint', roles: ['admin', 'creator', 'manager', 'supervisor', 'executive'] },
   ], []);

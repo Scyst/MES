@@ -8,8 +8,8 @@ description: Enterprise MES High-Density Slim Workspace UI/UX Standards (Option 
 Apply these rules whenever designing, refactoring, or auditing ANY module in `Toolbox/src/modules/*` or `page/*`.
 
 ## 1. Anti-Tab-Bloat & Route Splitting (1 Module = Dedicated Routes)
-- **Maximum 2–3 closely coupled tabs per page.** NEVER cram dashboards, daily operations tables, executive grading/analytics, calendars, skill matrices, and master CRUD into 5–8 horizontal tabs under one giant hub page.
-- Split distinct operational roles and workflows into **direct Sidebar/Home routes** (e.g. `/manpower`, `/manpower/grading`, `/audit-5s`, `/manpower/holidays`, `/manpower/skills`, `/manpower/master`).
+- **Maximum 2–3 closely coupled tabs per page.** Keep tightly linked workflows in the same workspace (e.g., `/manpower` = `Overview` + `Daily Attendance` + `Employee Master` with in-page quick shortcuts; `/manpower/grading` = `Grading 4D` + `Grading Trends` + `Skill Matrix`), rather than cramming 6–8 unrelated pages or splitting inseparable workflows.
+- Move Admin-only plant-wide calendars/config into `SYSTEM ADMIN` (`/system-settings?tab=holidays`), and group management/workforce evaluation modules logically under `MANAGEMENT` (`/manpower`, `/manpower/grading`, `/audit-5s`) — NEVER leave 5S or HR workflows stranded under unrelated sections such as Quality/Maintenance.
 - **Role-Focused Field Entry**: Field workers, inspectors, technicians, and committee auditors (e.g. `/pe/tech`, `/audit-5s`, `/scan-barcode`) MUST have a dedicated, clutter-free direct route without Admin tabs or unrelated settings.
 
 ## 2. Vertical Chrome Budget & Single-Row Slim Toolbar

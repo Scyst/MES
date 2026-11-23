@@ -98,3 +98,83 @@ export function exportRowsToExcel(rows, sheetName, fileName) {
   XLSX.writeFile(wb, fileName);
   return true;
 }
+
+export function exportMultiSheetTrendExcel(rawData, fileName) {
+  if (!Array.isArray(rawData) || rawData.length === 0) return false;
+  const wb = XLSX.utils.book_new();
+  const autoFit = (arr, ws) => {
+    if (!arr.length) return;
+    const keys = Object.keys(arr[0]);
+    ws['!cols'] = keys.map((k) => {
+      let maxLen = k.length + 5;
+      for (const r of arr) {
+        const len = String(r[k] ?? '').length + 5;
+        if (len > maxLen) maxLen = len;
+      }
+      return { wch: Math.min(40, maxLen) };
+    });
+  };
+
+  const summaryMap = new Map();
+  for (const row of rawData) {
+    const d = row.Date;
+    if (!summaryMap.has(d)) {
+      summaryMap.set(d, {
+        Date: d,
+        'Plan (Total)': 0,
+        Present: 0,
+        Late: 0,
+        'Actual (Total)': 0,
+        Absent: 0,
+        Leave: 0,
+        Diff: 0,
+        'Est. Cost (THB)': 0,
+      });
+    }
+    const item = summaryMap.get(d);
+    item['Plan (Total)'] += Number(row['Plan (HC)'] || 0);
+    item.Present += Number(row.Present || 0);
+    item.Late += Number(row.Late || 0);
+    item['Actual (Total)'] += Number(row['Actual (Present+Late)'] || 0);
+    item.Absent += Number(row.Absent || 0);
+    item.Leave += Number(row.Leave || 0);
+    item['Est. Cost (THB)'] += Number(row.Est_Cost || 0);
+  }
+  const summaryRows = Array.from(summaryMap.values())
+    .map((d) => ({ ...d, Diff: d['Actual (Total)'] - d['Plan (Total)'], 'Est. Cost (THB)': Number(d['Est. Cost (THB)'].toFixed(2)) }))
+    .sort((a, b) => String(b.Date).localeCompare(String(a.Date)));
+
+  const wsSum = XLSX.utils.json_to_sheet(summaryRows);
+  autoFit(summaryRows, wsSum);
+  XLSX.utils.book_append_sheet(wb, wsSum, 'Factory_Summary');
+
+  const dayRows = rawData.filter((r) => String(r.Shift || '').toUpperCase().includes('DAY'));
+  if (dayRows.length) {
+    const wsDay = XLSX.utils.json_to_sheet(dayRows);
+    autoFit(dayRows, wsDay);
+    XLSX.utils.book_append_sheet(wb, wsDay, 'Only_Day');
+  }
+
+  const nightRows = rawData.filter((r) => String(r.Shift || '').toUpperCase().includes('NIGHT'));
+  if (nightRows.length) {
+    const wsNight = XLSX.utils.json_to_sheet(nightRows);
+    autoFit(nightRows, wsNight);
+    XLSX.utils.book_append_sheet(wb, wsNight, 'Only_Night');
+  }
+
+  const lines = Array.from(new Set(rawData.map((r) => r.Line).filter(Boolean))).sort();
+  for (const ln of lines.slice(0, 20)) {
+    const lineRows = rawData.filter((r) => r.Line === ln);
+    if (lineRows.length) {
+      const safeName = String(ln).replace(/[\\/?*[\]]/g, '_').slice(0, 31) || 'Line';
+      if (!wb.SheetNames.includes(safeName)) {
+        const wsLine = XLSX.utils.json_to_sheet(lineRows);
+        autoFit(lineRows, wsLine);
+        XLSX.utils.book_append_sheet(wb, wsLine, safeName);
+      }
+    }
+  }
+
+  XLSX.writeFile(wb, fileName);
+  return true;
+}

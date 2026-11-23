@@ -60,19 +60,27 @@ try {
         case 'read_daily':
             requireMpAccess(false);
             $date = parseMpDate($input['date'] ?? null, date('Y-m-d'), 'วันที่');
+            $startDate = parseMpDate($input['startDate'] ?? null, $date, 'วันเริ่มต้น');
+            $endDate = parseMpDate($input['endDate'] ?? null, $startDate, 'วันสิ้นสุด');
             $line = trim((string)($input['line'] ?? 'ALL'));
             $hcGroup = trim((string)($input['hcGroup'] ?? 'TEAM 1'));
             $shift = trim((string)($input['shift'] ?? 'ALL'));
             $type = trim((string)($input['type'] ?? 'ALL'));
             $status = strtoupper(trim((string)($input['status'] ?? 'ALL')));
+            $empIdFilter = trim((string)($input['emp_id'] ?? ''));
 
             $where = [
                 '(E.is_active = 1 OR L.log_id IS NOT NULL)',
                 '(L.log_id IS NOT NULL OR (E.created_at IS NULL OR CAST(E.created_at AS DATE) <= ?))',
             ];
-            $params = [$date, $date, $date];
+            $params = [$startDate];
 
-            if ($line !== 'ALL' && $line !== '') {
+            if ($empIdFilter !== '') {
+                $where[] = 'E.emp_id = ?';
+                $params[] = $empIdFilter;
+                $where[] = 'L.log_id IS NOT NULL';
+            }
+            if ($line !== 'ALL' && $line !== '' && $line !== 'undefined' && $line !== 'null') {
                 $where[] = 'ISNULL(L.actual_line, E.line) = ?';
                 $params[] = $line;
             }
@@ -80,8 +88,9 @@ try {
                 $where[] = "COALESCE(L.actual_hc_group, TS.hc_group, 'UNASSIGNED') = ?";
                 $params[] = $hcGroup;
             }
-            if ($shift !== 'ALL' && $shift !== '') {
-                $where[] = "ISNULL(S.shift_name, ISNULL(S_Master.shift_name, '')) = ?";
+            if ($shift !== 'ALL' && $shift !== '' && $shift !== 'undefined' && $shift !== 'null') {
+                $where[] = "(CAST(ISNULL(L.shift_id, E.default_shift_id) AS VARCHAR(10)) = ? OR ISNULL(S.shift_name, ISNULL(S_Master.shift_name, '')) = ?)";
+                $params[] = $shift;
                 $params[] = $shift;
             }
             $computedStatusExpr = "
@@ -92,18 +101,45 @@ try {
                     ELSE 'WAITING'
                 END
             ";
-            if ($status !== 'ALL' && $status !== '') {
-                $where[] = "({$computedStatusExpr}) = ?";
-                $params[] = $date;
-                $params[] = $date;
-                $params[] = $status;
+            if ($status !== 'ALL' && $status !== '' && $status !== 'UNDEFINED') {
+                if ($status === 'PRESENT_AND_LATE') {
+                    $where[] = "({$computedStatusExpr}) IN ('PRESENT', 'LATE')";
+                    $params[] = $startDate;
+                    $params[] = $startDate;
+                } elseif ($status === 'LEAVE') {
+                    $where[] = "({$computedStatusExpr}) IN ('SICK', 'BUSINESS', 'VACATION', 'LEAVE')";
+                    $params[] = $startDate;
+                    $params[] = $startDate;
+                } elseif ($status === 'HOLIDAY_WAITING') {
+                    $where[] = "({$computedStatusExpr}) IN ('HOLIDAY', 'WAITING', 'GHOST')";
+                    $params[] = $startDate;
+                    $params[] = $startDate;
+                } else {
+                    $where[] = "({$computedStatusExpr}) = ?";
+                    $params[] = $startDate;
+                    $params[] = $startDate;
+                    $params[] = $status;
+                }
             }
-            if ($type !== 'ALL' && $type !== '') {
-                $where[] = "COALESCE(L.actual_emp_type, CM.category_name, E.position, 'Other') = ?";
-                $params[] = $type;
+            if ($type !== 'ALL' && $type !== '' && $type !== 'undefined' && $type !== 'null') {
+                if (strpos($type, 'RATE:') === 0) {
+                    $rateFilter = strtoupper(substr($type, 5));
+                    if ($rateFilter === 'MONTHLY') {
+                        $where[] = "CM.rate_type LIKE 'MONTHLY%'";
+                    } else {
+                        $where[] = "ISNULL(CM.rate_type, 'DAILY') NOT LIKE 'MONTHLY%'";
+                    }
+                } else {
+                    $where[] = "COALESCE(L.actual_emp_type, CM.category_name, E.position, 'Other') = ?";
+                    $params[] = $type;
+                }
             }
 
             $whereSql = implode(' AND ', $where);
+            $orderBy = $empIdFilter !== ''
+                ? 'L.log_date DESC, E.emp_id ASC'
+                : 'ISNULL(L.actual_line, E.line) ASC, ISNULL(S.shift_id, E.default_shift_id) ASC, E.emp_id ASC';
+
             $sql = "
                 SELECT TOP (1000)
                     ISNULL(L.log_id, 0) AS log_id,
@@ -113,14 +149,21 @@ try {
                     E.position,
                     ISNULL(L.actual_line, E.line) AS line,
                     ISNULL(L.actual_team, E.team_group) AS team_group,
+                    L.actual_line,
+                    L.actual_team,
+                    E.line AS master_line,
+                    E.team_group AS master_team,
                     ISNULL(L.actual_hc_group, ISNULL(TS.hc_group, 'UNASSIGNED')) AS hc_group,
                     COALESCE(L.actual_emp_type, CM.category_name, E.position, 'Other') AS emp_type,
                     ISNULL(CM.rate_type, 'DAILY') AS rate_type,
                     ISNULL(L.shift_id, E.default_shift_id) AS shift_id,
+                    E.default_shift_id,
                     ISNULL(S.shift_name, ISNULL(S_Master.shift_name, 'Day')) AS shift_name,
                     CONVERT(VARCHAR(5), COALESCE(S.start_time, S_Master.start_time), 108) AS shift_start,
                     CONVERT(VARCHAR(8), L.scan_in_time, 108) AS scan_in_time,
                     CONVERT(VARCHAR(8), L.scan_out_time, 108) AS scan_out_time,
+                    CONVERT(VARCHAR(5), L.scan_in_time, 108) AS in_time,
+                    CONVERT(VARCHAR(5), L.scan_out_time, 108) AS out_time,
                     L.scan_in_time AS scan_in_raw,
                     L.scan_out_time AS scan_out_raw,
                     {$computedStatusExpr} AS status,
@@ -134,28 +177,70 @@ try {
                         WHEN L.scan_in_time IS NOT NULL AND L.scan_out_time IS NULL AND L.log_date < CAST(GETDATE() AS DATE) THEN 1
                         ELSE ISNULL(L.is_forgot_out, 0)
                     END AS is_forgot_out,
-                    CASE
-                        WHEN L.scan_out_time IS NOT NULL AND COALESCE(S.start_time, S_Master.start_time) IS NOT NULL AND L.status IN ('PRESENT', 'LATE')
-                             AND DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), COALESCE(S.start_time, S_Master.start_time), 108)) AS DATETIME), L.scan_out_time) > 570
-                        THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), COALESCE(S.start_time, S_Master.start_time), 108)) AS DATETIME), L.scan_out_time) - 570) / 30.0) * 0.5
-                        ELSE 0
-                    END AS ot_hours
+                    ISNULL(FinalOT.ot_hours, 0) AS ot_hours,
+                    CAST(
+                        CASE
+                            WHEN CM.rate_type LIKE 'MONTHLY%' THEN
+                                CASE WHEN DayCheck.DayOfWeek IN (6, 0) OR Cal.day_type = 'HOLIDAY' THEN 0
+                                WHEN L.status IN ('PRESENT', 'LATE', 'SICK', 'VACATION', 'BUSINESS', 'LEAVE') THEN (ISNULL(CM.hourly_rate, 0) / MonthCalc.Divisor)
+                                ELSE 0 END
+                            WHEN ISNULL(CM.rate_type, 'DAILY') = 'DAILY' AND L.status IN ('PRESENT', 'LATE') THEN
+                                CASE WHEN Cal.day_type IN ('SUNDAY', 'HOLIDAY') THEN 0 ELSE ISNULL(CM.hourly_rate, 0) END
+                            WHEN ISNULL(CM.rate_type, 'DAILY') = 'DAILY' AND L.status IN ('SICK', 'VACATION') THEN
+                                ISNULL(CM.hourly_rate, 0)
+                            ELSE 0
+                        END
+                    AS DECIMAL(10,2)) AS normal_cost,
+                    CAST(
+                        CASE
+                            WHEN CM.rate_type LIKE 'MONTHLY%' AND L.status IN ('PRESENT', 'LATE') THEN
+                                (CASE WHEN Cal.day_type IN ('SUNDAY', 'HOLIDAY') THEN (Rate.Hourly_Base * 8.0 * (ISNULL(Cal.work_rate_holiday, 1.0) - 1.0)) ELSE 0 END)
+                                + (ISNULL(FinalOT.ot_hours, 0) * Rate.Hourly_Base * ISNULL(Cal.ot_rate_holiday, 1.5))
+                            WHEN ISNULL(CM.rate_type, 'DAILY') = 'DAILY' AND L.status IN ('PRESENT', 'LATE') THEN
+                                (ISNULL(CM.hourly_rate, 0) * (ISNULL(Cal.work_rate_holiday, 1.0) - CASE WHEN Cal.day_type IN ('SUNDAY', 'HOLIDAY') THEN 0 ELSE 1 END))
+                                + (ISNULL(FinalOT.ot_hours, 0) * Rate.Hourly_Base * Rate.OT_Multiplier)
+                            ELSE 0
+                        END
+                    AS DECIMAL(10,2)) AS ot_cost
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
                 LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
                 LEFT JOIN dbo.MANPOWER_SHIFTS S_Master WITH (NOLOCK) ON E.default_shift_id = S_Master.shift_id
-                LEFT JOIN dbo.MANPOWER_DAILY_LOGS L WITH (NOLOCK) ON E.emp_id = L.emp_id AND L.log_date = ?
+                LEFT JOIN dbo.MANPOWER_DAILY_LOGS L WITH (NOLOCK) ON E.emp_id = L.emp_id AND L.log_date BETWEEN ? AND ?
                 LEFT JOIN dbo.MANPOWER_SHIFTS S WITH (NOLOCK) ON ISNULL(L.shift_id, E.default_shift_id) = S.shift_id
-                LEFT JOIN dbo.MANPOWER_CALENDAR Cal WITH (NOLOCK) ON Cal.calendar_date = ?
+                LEFT JOIN dbo.MANPOWER_CALENDAR Cal WITH (NOLOCK) ON Cal.calendar_date = ISNULL(L.log_date, ?)
                 OUTER APPLY (
                     SELECT TOP 1 category_name, rate_type, hourly_rate
                     FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK)
                     WHERE E.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS
                     ORDER BY LEN(keyword) DESC
                 ) CM
+                CROSS APPLY (SELECT (DATEPART(dw, ISNULL(L.log_date, ?)) + @@DATEFIRST - 1) % 7 AS DayOfWeek) AS DayCheck
+                CROSS APPLY (
+                    SELECT TOP 1 CASE WHEN (COUNT(*) - 1) < 20 THEN 20.0 ELSE CAST((COUNT(*) - 1) AS DECIMAL(18,2)) END AS Divisor
+                    FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30)) AS N(n)
+                    CROSS APPLY (SELECT DATEADD(DAY, N.n, DATEFROMPARTS(YEAR(ISNULL(L.log_date, ?)), MONTH(ISNULL(L.log_date, ?)), 1)) AS D) AS DL
+                    WHERE MONTH(DL.D) = MONTH(ISNULL(L.log_date, ?)) AND ((DATEPART(dw, DL.D) + @@DATEFIRST - 1) % 7) NOT IN (0, 6)
+                ) AS MonthCalc
+                CROSS APPLY (
+                    SELECT
+                        CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (ISNULL(CM.hourly_rate, 0) / 30.0) / 8.0
+                             WHEN ISNULL(CM.rate_type, 'DAILY') = 'DAILY' THEN ISNULL(CM.hourly_rate, 0) / 8.0
+                             ELSE ISNULL(CM.hourly_rate, 0) END AS Hourly_Base,
+                        CASE WHEN CM.rate_type = 'MONTHLY_NO_OT' THEN 0.0
+                             WHEN Cal.calendar_date IS NOT NULL THEN ISNULL(Cal.ot_rate_holiday, 3.0)
+                             ELSE 1.5 END AS OT_Multiplier
+                ) AS Rate
+                CROSS APPLY (
+                    SELECT
+                        CASE WHEN L.log_date IS NOT NULL AND L.scan_out_time IS NOT NULL AND COALESCE(S.start_time, S_Master.start_time) IS NOT NULL AND L.status IN ('PRESENT', 'LATE')
+                             AND DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), COALESCE(S.start_time, S_Master.start_time), 108)) AS DATETIME), L.scan_out_time) > 570
+                        THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), L.log_date, 120), ' ', CONVERT(VARCHAR(8), COALESCE(S.start_time, S_Master.start_time), 108)) AS DATETIME), L.scan_out_time) - 570) / 30.0) * 0.5
+                        ELSE 0 END AS ot_hours
+                ) AS FinalOT
                 WHERE {$whereSql}
-                ORDER BY ISNULL(L.actual_line, E.line) ASC, ISNULL(S.shift_id, E.default_shift_id) ASC, E.emp_id ASC
+                ORDER BY {$orderBy}
             ";
-            $execParams = array_merge([$date, $date, $date, $date, $date], $params);
+            $execParams = array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $startDate, $startDate, $startDate, $startDate, $startDate], $params);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($execParams);
             mpJsonSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));

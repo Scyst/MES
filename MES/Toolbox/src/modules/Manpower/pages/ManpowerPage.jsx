@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import {
-  Users, ClipboardList, Star, TrendingUp, Award, CalendarDays, Settings,
+  Users, ClipboardList, Star, TrendingUp, Award, Settings,
   RefreshCw, WifiOff, CloudDownload, X
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
@@ -14,21 +14,20 @@ const DailyAttendanceTab = lazy(() => import('../components/DailyAttendanceTab')
 const EmployeeGradingTab = lazy(() => import('../components/EmployeeGradingTab'));
 const GradingTrendTab = lazy(() => import('../components/GradingTrendTab'));
 const SkillMatrixTab = lazy(() => import('../components/SkillMatrixTab'));
-const HolidayCalendarTab = lazy(() => import('../components/HolidayCalendarTab'));
 const MasterDataTab = lazy(() => import('../components/MasterDataTab'));
 
 const LEGACY_TAB_REDIRECTS = {
   grading: '/manpower/grading',
   trends: '/manpower/grading?view=trends',
+  skills: '/manpower/grading?view=skills',
   audit5s: '/audit-5s',
-  holidays: '/manpower/holidays',
-  skills: '/manpower/skills',
-  master: '/manpower/master',
+  holidays: '/system-settings?tab=holidays',
 };
 
-const OPS_TABS = [
+const BASE_OPS_TABS = [
   { id: 'overview', label: 'ภาพรวม & ต้นทุน', icon: Users },
   { id: 'attendance', label: 'ลงเวลาประจำวัน', icon: ClipboardList },
+  { id: 'master', label: 'ข้อมูลพนักงาน', icon: Settings, requiresEdit: true },
 ];
 
 export default function ManpowerPage({ section = 'operations' }) {
@@ -41,8 +40,20 @@ export default function ManpowerPage({ section = 'operations' }) {
   const canEdit = ['creator', 'admin', 'manager', 'supervisor'].includes(role);
 
   const requestedTab = searchParams.get('tab');
-  const gradingView = searchParams.get('view') === 'trends' ? 'trends' : 'grading';
-  const opsTab = requestedTab === 'attendance' ? 'attendance' : 'overview';
+  const requestedView = searchParams.get('view');
+
+  const gradingView = (() => {
+    if (!canAccessGrading) return 'skills';
+    if (requestedView === 'trends') return 'trends';
+    if (requestedView === 'skills') return 'skills';
+    return 'grading';
+  })();
+
+  const opsTab = (() => {
+    if (requestedTab === 'attendance') return 'attendance';
+    if (requestedTab === 'master' && canEdit) return 'master';
+    return 'overview';
+  })();
 
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [selectedDate, setSelectedDate] = useState(getTodayIso);
@@ -50,6 +61,7 @@ export default function ManpowerPage({ section = 'operations' }) {
   const [structure, setStructure] = useState({ lines: [], teams: [], shifts: [], hc_groups: ['TEAM 1', 'EXCLUDE'] });
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [attendanceDrillLine, setAttendanceDrillLine] = useState('ALL');
+  const [masterSearch, setMasterSearch] = useState('');
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [syncStart, setSyncStart] = useState(() => offsetIsoDate(getTodayIso(), -1));
@@ -86,7 +98,7 @@ export default function ManpowerPage({ section = 'operations' }) {
     return <Navigate to={LEGACY_TAB_REDIRECTS[requestedTab]} replace />;
   }
 
-  if (section === 'grading' && !canAccessGrading) {
+  if (section === 'grading' && !canAccessGrading && !canEdit) {
     return <Navigate to="/manpower" replace />;
   }
 
@@ -105,6 +117,11 @@ export default function ManpowerPage({ section = 'operations' }) {
   const handleDrillLine = (lineName) => {
     setAttendanceDrillLine(lineName || 'ALL');
     switchOpsTab('attendance');
+  };
+
+  const handleOpenMaster = (empId = '') => {
+    setMasterSearch(empId || '');
+    switchOpsTab('master');
   };
 
   const handleRunSync = async (e) => {
@@ -129,11 +146,7 @@ export default function ManpowerPage({ section = 'operations' }) {
     ...(Array.isArray(structure?.hc_groups) && structure.hc_groups.length ? structure.hc_groups : ['EXCLUDE']),
   ]));
 
-  const sectionMeta = {
-    holidays: { title: 'ปฏิทินวันหยุด & ตัวคูณค่าแรง', icon: CalendarDays },
-    skills: { title: 'Skill Matrix (ตารางทักษะพนักงาน)', icon: Award },
-    master: { title: 'ข้อมูลหลักพนักงาน & กะสายผลิต', icon: Settings },
-  }[section];
+  const visibleOpsTabs = BASE_OPS_TABS.filter((t) => !t.requiresEdit || canEdit);
 
   return (
     <div className="w-full space-y-3">
@@ -144,7 +157,7 @@ export default function ManpowerPage({ section = 'operations' }) {
         </div>
       )}
 
-      {/* Slim Single-Row Header for Operations, Holidays, Skills, Master (Grading has its own all-in-one slim bar) */}
+      {/* Slim 3-Tab Header for Manpower Daily Operations & Master */}
       {section === 'operations' && (
         <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
           <div className="flex flex-wrap items-center gap-2">
@@ -156,7 +169,7 @@ export default function ManpowerPage({ section = 'operations' }) {
             </div>
 
             <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900">
-              {OPS_TABS.map((t) => {
+              {visibleOpsTabs.map((t) => {
                 const Icon = t.icon;
                 const active = opsTab === t.id;
                 return (
@@ -179,22 +192,26 @@ export default function ManpowerPage({ section = 'operations' }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-            />
-            <select
-              value={hcGroup}
-              onChange={(e) => setHcGroup(e.target.value)}
-              className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-            >
-              {uniqueHcOptions.map((grp) => (
-                <option key={grp} value={grp}>กลุ่ม: {grp}</option>
-              ))}
-            </select>
-            {canEdit && (
+            {opsTab !== 'master' && (
+              <>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                />
+                <select
+                  value={hcGroup}
+                  onChange={(e) => setHcGroup(e.target.value)}
+                  className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  {uniqueHcOptions.map((grp) => (
+                    <option key={grp} value={grp}>กลุ่ม: {grp}</option>
+                  ))}
+                </select>
+              </>
+            )}
+            {canEdit && opsTab !== 'master' && (
               <button
                 type="button"
                 disabled={!isOnline}
@@ -217,47 +234,20 @@ export default function ManpowerPage({ section = 'operations' }) {
         </div>
       )}
 
-      {(section === 'holidays' || section === 'skills' || section === 'master') && sectionMeta && (
-        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
-              <sectionMeta.icon className="h-4 w-4" />
-            </div>
-            <h1 className="text-sm font-extrabold text-slate-800 dark:text-white">{sectionMeta.title}</h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {section === 'skills' && (
-              <select
-                value={hcGroup}
-                onChange={(e) => setHcGroup(e.target.value)}
-                className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-              >
-                {uniqueHcOptions.map((grp) => (
-                  <option key={grp} value={grp}>กลุ่ม: {grp}</option>
-                ))}
-              </select>
-            )}
-            <button
-              type="button"
-              onClick={() => setRefreshSignal((s) => s + 1)}
-              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-              title="รีเฟรชข้อมูลล่าสุด"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800">กำลังโหลดหน้าจอ...</div>}>
         {section === 'operations' && opsTab === 'overview' && (
           <ManpowerOverviewTab
             date={selectedDate}
             hcGroup={hcGroup}
+            structure={structure}
+            canEdit={canEdit}
+            isAdmin={['creator', 'admin'].includes(role)}
+            isOnline={isOnline}
             refreshSignal={refreshSignal}
             onDrillLine={handleDrillLine}
+            onOpenMaster={handleOpenMaster}
+            onMutated={() => setRefreshSignal((s) => s + 1)}
           />
         )}
         {section === 'operations' && opsTab === 'attendance' && (
@@ -270,10 +260,25 @@ export default function ManpowerPage({ section = 'operations' }) {
             isOnline={isOnline}
             refreshSignal={refreshSignal}
             onMutated={() => setRefreshSignal((s) => s + 1)}
+            onOpenMaster={handleOpenMaster}
+          />
+        )}
+        {section === 'operations' && opsTab === 'master' && canEdit && (
+          <MasterDataTab
+            structure={structure}
+            canEdit={canEdit}
+            isOnline={isOnline}
+            initialSearch={masterSearch}
+            onStructureUpdated={() => {
+              loadStructure();
+              setRefreshSignal((s) => s + 1);
+            }}
+            key={`mst-${refreshSignal}`}
           />
         )}
 
-        {section === 'grading' && gradingView === 'grading' && (
+        {/* Unified 3-View Grading & Skill Matrix Workspace */}
+        {section === 'grading' && gradingView === 'grading' && canAccessGrading && (
           <EmployeeGradingTab
             hcGroup={hcGroup}
             onChangeHcGroup={setHcGroup}
@@ -286,72 +291,88 @@ export default function ManpowerPage({ section = 'operations' }) {
             onRefresh={() => setRefreshSignal((s) => s + 1)}
           />
         )}
-        {section === 'grading' && gradingView === 'trends' && (
+
+        {section === 'grading' && (gradingView === 'trends' || gradingView === 'skills') && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
-                  <TrendingUp className="h-4 w-4" />
+                  {gradingView === 'skills' ? <Award className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
                 </div>
-                <span className="text-sm font-extrabold text-slate-800 dark:text-white">ประเมินเกรด 4 มิติ</span>
+                <span className="text-sm font-extrabold text-slate-800 dark:text-white">
+                  {canAccessGrading ? 'ประเมินเกรด 4D & Skill Matrix' : 'Skill Matrix (ทักษะพนักงาน)'}
+                </span>
                 <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900">
+                  {canAccessGrading && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => switchGradingView('grading')}
+                        className="min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                      >
+                        <Star className="h-3.5 w-3.5" /> ตารางเกรด
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchGradingView('trends')}
+                        className={`min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold ${
+                          gradingView === 'trends'
+                            ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
+                            : 'text-slate-600 hover:text-slate-900 dark:text-slate-300'
+                        }`}
+                      >
+                        <TrendingUp className="h-3.5 w-3.5" /> แนวโน้ม
+                      </button>
+                    </>
+                  )}
                   <button
                     type="button"
-                    onClick={() => switchGradingView('grading')}
-                    className="min-h-[34px] inline-flex items-center gap-1.5 rounded-md px-3 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                    onClick={() => switchGradingView('skills')}
+                    className={`min-h-[34px] inline-flex items-center gap-1 rounded-md px-2.5 text-xs font-bold ${
+                      gradingView === 'skills'
+                        ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-300'
+                    }`}
                   >
-                    <Star className="h-3.5 w-3.5" /> ตารางเกรด 4D
-                  </button>
-                  <button
-                    type="button"
-                    className="min-h-[34px] inline-flex items-center gap-1.5 rounded-md bg-white px-3 text-xs font-bold text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300"
-                  >
-                    <TrendingUp className="h-3.5 w-3.5" /> แนวโน้มเกรด
+                    <Award className="h-3.5 w-3.5" /> Skill Matrix
                   </button>
                 </div>
               </div>
-              <select
-                value={hcGroup}
-                onChange={(e) => setHcGroup(e.target.value)}
-                className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-              >
-                {uniqueHcOptions.map((grp) => (
-                  <option key={grp} value={grp}>กลุ่ม: {grp}</option>
-                ))}
-              </select>
-            </div>
-            <GradingTrendTab hcGroup={hcGroup} structure={structure} />
-          </div>
-        )}
 
-        {section === 'holidays' && (
-          <HolidayCalendarTab
-            canEdit={canEdit}
-            isOnline={isOnline}
-            onMutated={() => setRefreshSignal((s) => s + 1)}
-            key={`hol-${refreshSignal}`}
-          />
-        )}
-        {section === 'skills' && (
-          <SkillMatrixTab
-            hcGroup={hcGroup}
-            structure={structure}
-            canEdit={canEdit}
-            isOnline={isOnline}
-            key={`skl-${refreshSignal}`}
-          />
-        )}
-        {section === 'master' && (
-          <MasterDataTab
-            structure={structure}
-            canEdit={canEdit}
-            isOnline={isOnline}
-            onStructureUpdated={() => {
-              loadStructure();
-              setRefreshSignal((s) => s + 1);
-            }}
-            key={`mst-${refreshSignal}`}
-          />
+              <div className="flex items-center gap-2">
+                <select
+                  value={hcGroup}
+                  onChange={(e) => setHcGroup(e.target.value)}
+                  className="min-h-[36px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  {uniqueHcOptions.map((grp) => (
+                    <option key={grp} value={grp}>กลุ่ม: {grp}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setRefreshSignal((s) => s + 1)}
+                  className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                  title="รีเฟรช"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {gradingView === 'trends' && canAccessGrading && (
+              <GradingTrendTab hcGroup={hcGroup} structure={structure} key={`trd-${refreshSignal}`} />
+            )}
+            {gradingView === 'skills' && (
+              <SkillMatrixTab
+                hcGroup={hcGroup}
+                structure={structure}
+                canEdit={canEdit}
+                isOnline={isOnline}
+                key={`skl-${refreshSignal}`}
+              />
+            )}
+          </div>
         )}
       </Suspense>
 

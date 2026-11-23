@@ -62,7 +62,6 @@ export const MENU_DATA = [
     sectionIcon: ShieldCheck,
     items: [
       { name: 'iQMS (Quality)', icon: ShieldCheck, to: '/qms' },
-      { name: 'ตรวจประเมิน 5ส (5S Audit)', icon: CheckCircle2, to: '/audit-5s', checkAccess: (u, ctx) => ctx?.is5sEligible },
       { name: 'Accessories Inspection', icon: Camera, to: '/accessories-inspection' },
       { name: 'PE Enterprise (ซ่อมบำรุง)', icon: Wrench, to: '/pe' },
       { name: 'PE Stop Request (แจ้งซ่อม)', icon: Activity, to: '/pe/request' },
@@ -75,11 +74,9 @@ export const MENU_DATA = [
     items: [
       { name: 'Management Dashboard', icon: Activity, to: '/management' },
       { name: 'Daily P&L (งบกำไรขาดทุน)', icon: BarChart3, to: '/daily-pl' },
-      { name: 'Manpower (กำลังคนประจำวัน)', icon: Users, to: '/manpower', roles: ['creator', 'admin', 'manager', 'supervisor'] },
-      { name: 'Employee Grading 4D (ประเมินเกรด)', icon: Activity, to: '/manpower/grading', roles: ['creator', 'admin', 'manager'] },
-      { name: 'Skill Matrix (ทักษะพนักงาน)', icon: Award, to: '/manpower/skills', roles: ['creator', 'admin', 'manager', 'supervisor'] },
-      { name: 'Holiday Calendar (ปฏิทินวันหยุด)', icon: CalendarDays, to: '/manpower/holidays', roles: ['creator', 'admin', 'manager', 'supervisor'] },
-      { name: 'Manpower Master (ข้อมูลหลัก)', icon: Settings, to: '/manpower/master', roles: ['creator', 'admin', 'manager', 'supervisor'] },
+      { name: 'Manpower (กำลังคน & พนักงาน)', icon: Users, to: '/manpower', roles: ['creator', 'admin', 'manager', 'supervisor'] },
+      { name: 'Grading 4D & Skill Matrix', icon: Award, to: '/manpower/grading', roles: ['creator', 'admin', 'manager', 'supervisor'] },
+      { name: 'ตรวจประเมิน 5ส (5S Audit)', icon: CheckCircle2, to: '/audit-5s', checkAccess: (u, ctx) => ctx?.is5sEligible },
       { name: 'Daily Command Center (ประชุมแผน)', icon: ListOrdered, to: '/planning' },
       { name: 'Utility & Energy (พลังงาน)', icon: Zap, to: '/utility' },
       { name: 'Mood Insight Report', icon: Heart, to: '/mood-report' },
@@ -93,6 +90,7 @@ export const MENU_DATA = [
     sectionIcon: Settings,
     items: [
       { name: 'System Settings', icon: Settings, to: '/system-settings' },
+      { name: 'Holiday Calendar (ปฏิทินวันหยุด & OT)', icon: CalendarDays, to: '/system-settings?tab=holidays' },
       { name: 'User Manager', icon: Users, to: '/admin/users' },
       { name: 'System Blueprint (ผังระบบ)', icon: Network, to: '/blueprint' },
     ]

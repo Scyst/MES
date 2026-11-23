@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search, Edit3, Trash2, AlertTriangle, CheckCircle2, ArrowLeftRight,
-  Fingerprint, Award, RefreshCw, X, CheckSquare, CalendarX, Eraser, User
+  Fingerprint, Award, RefreshCw, X, CheckSquare, CalendarX, Eraser, User, Settings
 } from 'lucide-react';
 import { manpowerOpsApi, manpowerMasterApi } from '../../../shared/services/manpowerApi';
 import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
@@ -26,6 +26,7 @@ export default function DailyAttendanceTab({
   isOnline,
   refreshSignal,
   onMutated,
+  onOpenMaster,
 }) {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -468,6 +469,18 @@ export default function DailyAttendanceTab({
             <Award className="h-4 w-4" />
             สถิติรายคน (YTD)
           </button>
+
+          {canEdit && onOpenMaster && (
+            <button
+              type="button"
+              onClick={() => onOpenMaster('')}
+              className="min-h-[44px] inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              title="ทางลัดไปจัดการรายชื่อ/กะ/ค่าจ้างพนักงาน"
+            >
+              <Settings className="h-4 w-4 text-indigo-500" />
+              ข้อมูลพนักงาน
+            </button>
+          )}
 
           {canEdit && (
             <button
@@ -1138,6 +1151,19 @@ export default function DailyAttendanceTab({
                       {profileModal.data.emergency_contact_name} ({profileModal.data.emergency_contact_relation || '-'}) · {profileModal.data.emergency_contact_phone || '-'}
                     </div>
                   </div>
+                )}
+                {canEdit && onOpenMaster && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const eid = profileModal.data.emp_id;
+                      setProfileModal({ open: false, loading: false, data: null });
+                      onOpenMaster(eid);
+                    }}
+                    className="w-full min-h-[40px] rounded-lg bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700"
+                  >
+                    แก้ไขข้อมูลพนักงานใน Master Data →
+                  </button>
                 )}
               </div>
             )}
