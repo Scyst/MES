@@ -271,12 +271,13 @@ function exportLedgerToExcel() {
     const startDate = document.getElementById('filterStartDate')?.value || '';
     const endDate = document.getElementById('filterEndDate')?.value || '';
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
+    const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
     const typeFilter = document.getElementById('typeFilter')?.value || 'ALL';
     const materialType = document.getElementById('materialTypeFilter')?.value || 'ALL';
     const category = document.getElementById('categoryFilter')?.value || 'ALL';
     const searchStr = encodeURIComponent(document.getElementById('filterSearch')?.value.trim() || '');
 
-    const exportUrl = `api/api_store.php?action=get_stock_ledger&start_date=${startDate}&end_date=${endDate}&location_id=${locId}&type_filter=${typeFilter}&material_type=${materialType}&category=${category}&search=${searchStr}&export=true`;
+    const exportUrl = `api/api_store.php?action=get_stock_ledger&start_date=${startDate}&end_date=${endDate}&location_id=${locId}&location_type=${locType}&type_filter=${typeFilter}&material_type=${materialType}&category=${category}&search=${searchStr}&export=true`;
     
     Swal.fire({
         title: 'กำลังเตรียมไฟล์ Excel...',

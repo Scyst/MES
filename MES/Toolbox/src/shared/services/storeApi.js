@@ -1,4 +1,4 @@
-import { apiGet, apiPost, request } from './apiClient';
+import { apiGet, apiPost } from './apiClient';
 
 const BASE_URL = 'api/store/storeApi.php';
 
@@ -168,21 +168,34 @@ export const storeApi = {
    */
   getStockLedger: async ({
     page = 1,
-    limit = 50,
+    limit = 100,
     search = '',
     transactionType = 'ALL',
+    locationType = 'ALL',
+    locationId = 'ALL',
+    materialType = 'ALL',
+    category = 'ALL',
     startDate = '',
-    endDate = ''
+    endDate = '',
+    exportData = false
   } = {}) => {
-    return await apiGet(BASE_URL, {
+    const params = {
       action: 'get_stock_ledger',
       page,
       limit,
       search,
-      tx_type: transactionType,
+      type_filter: transactionType,
+      location_type: locationType,
+      location_id: locationId,
+      material_type: materialType,
+      category,
       start_date: startDate,
       end_date: endDate
-    });
+    };
+    if (exportData) {
+      params.export = 'true';
+    }
+    return await apiGet(BASE_URL, params);
   },
 
   /**

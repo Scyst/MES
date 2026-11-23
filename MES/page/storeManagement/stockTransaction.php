@@ -278,7 +278,8 @@ $pageHeaderSubtitle = "ตรวจสอบประวัติความเ
     </div>
 </div>
 
+    <script src="../../utils/libs/xlsx.full.min.js"></script>
     <script src="script/storeCommon.js?v=<?php echo filemtime(__DIR__ . '/script/storeCommon.js'); ?>"></script>
-    <script src="script/stockLedger.js?v=<?php echo time(); ?>" defer></script>
+    <script src="script/stockLedger.js?v=<?php echo filemtime(__DIR__ . '/script/stockLedger.js'); ?>" defer></script>
 </body>
 </html>

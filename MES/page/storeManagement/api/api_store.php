@@ -1068,14 +1068,14 @@ try {
             break;
 
         case 'get_stock_ledger':
-            $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
-            $endDate = $_GET['end_date'] ?? date('Y-m-d');
+            $startDate = (!empty($_GET['start_date'])) ? $_GET['start_date'] : date('Y-m-d', strtotime('-7 days'));
+            $endDate = (!empty($_GET['end_date'])) ? $_GET['end_date'] : date('Y-m-d');
             $search = $_GET['search'] ?? '';
-            $locationId = $_GET['location_id'] ?? 'ALL';
-            $locationType = $_GET['location_type'] ?? 'ALL';
-            $typeFilter = $_GET['type_filter'] ?? 'ALL';
-            $materialType = $_GET['material_type'] ?? 'ALL';
-            $category = $_GET['category'] ?? 'ALL';
+            $locationId = (!empty($_GET['location_id'])) ? $_GET['location_id'] : 'ALL';
+            $locationType = (!empty($_GET['location_type'])) ? $_GET['location_type'] : 'ALL';
+            $typeFilter = (!empty($_GET['type_filter'])) ? $_GET['type_filter'] : ((!empty($_GET['tx_type'])) ? $_GET['tx_type'] : 'ALL');
+            $materialType = (!empty($_GET['material_type'])) ? $_GET['material_type'] : 'ALL';
+            $category = (!empty($_GET['category'])) ? $_GET['category'] : 'ALL';
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = max(10, (int)($_GET['limit'] ?? 100));
             $offset = ($page - 1) * $limit;
@@ -1099,10 +1099,12 @@ try {
             }
 
             if ($typeFilter !== 'ALL') {
-                if ($typeFilter === 'RECEIPT') {
-                    $conditions[] = "t.transaction_type LIKE '%RECEIPT%'";
-                } elseif ($typeFilter === 'INTERNAL_TRANSFER') {
+                if ($typeFilter === 'RECEIPT' || $typeFilter === 'IN') {
+                    $conditions[] = "(t.transaction_type LIKE '%RECEIPT%' OR t.transaction_type LIKE '%RECEIVE%')";
+                } elseif ($typeFilter === 'INTERNAL_TRANSFER' || $typeFilter === 'TRF') {
                     $conditions[] = "t.transaction_type LIKE '%TRANSFER%'";
+                } elseif ($typeFilter === 'ADJUSTMENT') {
+                    $conditions[] = "t.transaction_type LIKE '%ADJUST%'";
                 } else {
                     $conditions[] = "t.transaction_type = ?";
                     $params[] = $typeFilter;
