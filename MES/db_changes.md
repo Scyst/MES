@@ -699,6 +699,29 @@ ALTER TABLE dbo.LOCATIONS ADD zone_name NVARCHAR(50) NULL;
 | `rule_id` | INT NULL | รหัสกฎ `LEARNING_CURRICULUM_RULES` ที่ใช้รอบนั้น |
 | `expires_at` | DATE NULL | วันหมดอายุของรอบทบทวน (`NULL` สำหรับถาวร) |
 
+---
+
+## 2026-11-23: 5S Persistent Default Committee Roster & Unlimited Auditors
+
+### `dbo.AUDIT_5S_ROUNDS` (Alter Constraint)
+- **Dropped Constraint:** `CK_AUDIT_5S_ROUNDS_REQ` (`required_auditors BETWEEN 3 AND 5`)
+- **Added Constraint:** `CK_AUDIT_5S_ROUNDS_REQ_V2` (`required_auditors >= 1`) — ยกเลิกข้อจำกัดสูงสุด 5 คน รองรับคณะกรรมการตรวจ 5ส ทั้งแผนก/ออฟฟิศ (10+ คน) โดยยังคงคำนวณคะแนนหารเท่า (`1/N`) จากจำนวนผู้ส่งผลจริง
+
+### `dbo.AUDIT_5S_DEFAULT_COMMITTEE` (New Table)
+ตารางเก็บรายชื่อคณะกรรมการ 5ส ประจำถาวร (Persistent Default Roster — ตั้งค่าครั้งเดียวใช้ต่อเนื่องทุกรอบจนกว่า Admin จะเปลี่ยนแปลง)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INT IDENTITY(1,1) PRIMARY KEY | รหัสลำดับ |
+| `auditor_emp_id` | VARCHAR(50) NOT NULL UNIQUE | รหัสพนักงานกรรมการ (`UQ_AUDIT_5S_DEFAULT_EMP`) |
+| `auditor_name` | NVARCHAR(200) NOT NULL | ชื่อ-สกุลกรรมการ |
+| `assigned_role` | NVARCHAR(50) NOT NULL DEFAULT 'AUDITOR' | บทบาท (`CHAIR` / `AUDITOR`) |
+| `assigned_lines` | NVARCHAR(MAX) NOT NULL DEFAULT 'ALL' | `'ALL'` (ตรวจได้ทุกสายเป็นค่าเริ่มต้น) หรือ JSON Array ของสายที่รับผิดชอบเฉพาะจุด |
+| `is_active` | BIT NOT NULL DEFAULT 1 | สถานะใช้งาน |
+| `created_by` | VARCHAR(50) NULL | ผู้บันทึก |
+| `created_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+| `updated_at` | DATETIME NOT NULL DEFAULT GETDATE() | |
+
+
 
 
 

@@ -1,8 +1,8 @@
 <?php
 /**
- * Multi-Auditor 5S Committee Round & Photo Evidence API (3-5 Equal-Weight Auditors + Blind Audit).
- * - Admins/Managers create 5S audit rounds with 3-5 committee members & inspect all photos/scores.
- * - Appointed committee members view their own assigned rounds, upload evidence photos (outside page/),
+ * Multi-Auditor 5S Committee Round & Photo Evidence API (Unlimited 1..N Equal-Weight Auditors + Persistent Default Roster + Blind Audit).
+ * - Admins/Managers configure a persistent Default 5S Committee Roster (1..N unlimited members, all lines by default or scoped per line).
+ * - Default Committee members view assigned/eligible lines on dedicated #/audit-5s page, upload evidence photos (outside page/),
  *   and submit blind scores (peer scores stay hidden until the round is completed).
  */
 
@@ -76,23 +76,35 @@ try {
 
     switch ($action) {
         case 'get_my_5s_assignments':
-            $period = trim((string)($input['eval_period'] ?? ''));
-            $where = ['1=1'];
-            $params = [];
-            if ($period !== '' && preg_match('/^\d{4}-\d{2}$/', $period)) {
-                $where[] = 'R.eval_period = ?';
-                $params[] = $period;
-            }
-            if (!$isManager) {
-                if ($selfEmpId === '') {
-                    mpJsonSuccess(['rounds' => [], 'is_committee_member' => false, 'is_manager' => false]);
+            $periodRaw = trim((string)($input['eval_period'] ?? ''));
+            $targetPeriod = ($periodRaw !== '' && preg_match('/^\d{4}-\d{2}$/', $periodRaw)) ? $periodRaw : date('Y-m');
+            $where = ['R.eval_period = ?'];
+            $params = [$targetPeriod];
+
+            $defaultRoster = fetchDefault5sCommittee($pdo, true);
+            $selfDefault = null;
+            foreach ($defaultRoster as $dm) {
+                if ($selfEmpId !== '' && trim((string)$dm['auditor_emp_id']) === $selfEmpId) {
+                    $selfDefault = $dm;
+                    break;
                 }
-                $where[] = 'C.auditor_emp_id = ?';
-                $params[] = $selfEmpId;
             }
-            $whereSql = implode(' AND ', $where);
+            $isDefaultMember = ($selfDefault !== null);
+            $myDefaultScope = $selfDefault ? ($selfDefault['assigned_lines_list'] ?? parse5sAssignedLines($selfDefault['assigned_lines'] ?? 'ALL')) : [];
+
+            if (!$isManager && !$isDefaultMember) {
+                if ($selfEmpId === '') {
+                    mpJsonSuccess([
+                        'rounds' => [],
+                        'is_committee_member' => false,
+                        'is_manager' => false,
+                        'default_committee_count' => count($defaultRoster),
+                        'my_scope_lines' => [],
+                    ]);
+                }
+            }
             $stmt = $pdo->prepare("
-                SELECT TOP (200)
+                SELECT TOP (250)
                     R.round_id, R.eval_period, R.line, R.round_name,
                     CONVERT(VARCHAR(10), R.audit_date, 120) AS audit_date,
                     R.required_auditors, R.submitted_count, R.status,
@@ -102,29 +114,146 @@ try {
                 FROM dbo.AUDIT_5S_ROUNDS R WITH (NOLOCK)
                 LEFT JOIN dbo.AUDIT_5S_COMMITTEE C WITH (NOLOCK)
                     ON C.round_id = R.round_id AND C.auditor_emp_id = ?
-                WHERE {$whereSql}
-                  AND (? = 1 OR C.id IS NOT NULL)
+                WHERE R.eval_period = ?
                 ORDER BY R.audit_date DESC, R.round_id DESC
             ");
-            $stmt->execute(array_merge([$selfEmpId], $params, [$isManager ? 1 : 0]));
-            $rounds = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->execute([$selfEmpId, $targetPeriod]);
+            $allRounds = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $rounds = [];
+            $existingLinesMap = [];
+            foreach ($allRounds as $r) {
+                $ln = trim((string)$r['line']);
+                $existingLinesMap[$ln] = true;
+                $canViewByDefault = $isDefaultMember && isLineCoveredBy5sScope($ln, $myDefaultScope);
+                if ($isManager || !empty($r['committee_id']) || $canViewByDefault) {
+                    $r['is_virtual_default'] = false;
+                    $r['can_audit'] = !empty($r['committee_id']) || $canViewByDefault;
+                    $rounds[] = $r;
+                }
+            }
+
+            if (preg_match('/^\d{4}-\d{2}$/', $targetPeriod) && !empty($defaultRoster)) {
+                $activeLines = $pdo->query("
+                    SELECT DISTINCT line
+                    FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
+                    WHERE is_active = 1 AND line IS NOT NULL AND line != ''
+                    ORDER BY line ASC
+                ")->fetchAll(PDO::FETCH_COLUMN);
+
+                foreach ($activeLines as $lnRaw) {
+                    $ln = trim((string)$lnRaw);
+                    if ($ln === '' || isset($existingLinesMap[$ln])) {
+                        continue;
+                    }
+                    $eligibleForLine = resolveDefaultCommitteeForLine($defaultRoster, $ln);
+                    if (empty($eligibleForLine)) {
+                        continue;
+                    }
+                    $canAuditLine = $isDefaultMember && isLineCoveredBy5sScope($ln, $myDefaultScope);
+                    if (!$isManager && !$canAuditLine) {
+                        continue;
+                    }
+                    $rounds[] = [
+                        'round_id' => 0,
+                        'is_virtual_default' => true,
+                        'eval_period' => $targetPeriod,
+                        'line' => $ln,
+                        'round_name' => "ตรวจ 5ส ประจำเดือน {$targetPeriod} ({$ln})",
+                        'audit_date' => date('Y-m-d'),
+                        'required_auditors' => count($eligibleForLine),
+                        'submitted_count' => 0,
+                        'status' => 'READY',
+                        'weighted_score' => null,
+                        'final_grade' => null,
+                        'notes' => 'สร้างอัตโนมัติจากชุดคณะกรรมการประจำ (Default Roster)',
+                        'created_at' => null,
+                        'committee_id' => $canAuditLine ? 0 : null,
+                        'assigned_role' => $selfDefault['assigned_role'] ?? 'AUDITOR',
+                        'my_is_completed' => 0,
+                        'my_audit_id' => null,
+                        'my_submitted_at' => null,
+                        'can_audit' => $canAuditLine,
+                    ];
+                }
+            }
 
             $stmtCnt = $pdo->prepare('SELECT COUNT(*) FROM dbo.AUDIT_5S_COMMITTEE WITH (NOLOCK) WHERE auditor_emp_id = ?');
             $stmtCnt->execute([$selfEmpId]);
-            $isCommittee = ((int)$stmtCnt->fetchColumn() > 0);
+            $isCommittee = $isDefaultMember || ((int)$stmtCnt->fetchColumn() > 0);
 
             mpJsonSuccess([
                 'rounds' => $rounds,
                 'is_committee_member' => $isCommittee,
                 'is_manager' => $isManager,
                 'self_emp_id' => $selfEmpId,
+                'default_committee_count' => count($defaultRoster),
+                'my_scope_lines' => $myDefaultScope,
             ]);
 
         case 'get_5s_round_detail':
             $roundId = (int)($input['round_id'] ?? 0);
+            $virtualLine = trim((string)($input['line'] ?? ''));
+            $virtualPeriod = trim((string)($input['eval_period'] ?? date('Y-m')));
+
             if ($roundId <= 0) {
-                throw new InvalidArgumentException('ไม่พบรหัสรอบตรวจ 5ส');
+                if ($virtualLine === '' || !preg_match('/^\d{4}-\d{2}$/', $virtualPeriod)) {
+                    throw new InvalidArgumentException('ไม่พบรหัสรอบหรือสายผลิตที่ต้องการดูรายละเอียด');
+                }
+                $defaultRoster = fetchDefault5sCommittee($pdo, true);
+                $eligible = resolveDefaultCommitteeForLine($defaultRoster, $virtualLine);
+                $isAssignedVirtual = false;
+                $virtualMembers = [];
+                foreach ($eligible as $idx => $m) {
+                    $isOwn = ($selfEmpId !== '' && trim((string)$m['auditor_emp_id']) === $selfEmpId);
+                    if ($isOwn) {
+                        $isAssignedVirtual = true;
+                    }
+                    $virtualMembers[] = [
+                        'id' => -($idx + 1),
+                        'auditor_emp_id' => $m['auditor_emp_id'],
+                        'auditor_name' => $m['auditor_name'],
+                        'assigned_role' => $m['assigned_role'],
+                        'weight_pct' => $m['weight_pct'],
+                        'is_completed' => 0,
+                        'audit_id' => null,
+                        'submitted_at' => null,
+                        'score_seiri' => null,
+                        'score_seiton' => null,
+                        'score_seiso' => null,
+                        'score_seiketsu' => null,
+                        'score_shitsuke' => null,
+                        'total_score' => null,
+                        'grade' => null,
+                        'remarks' => null,
+                        'is_self' => $isOwn,
+                        'photos' => [],
+                        'blind_masked' => false,
+                    ];
+                }
+                if (!$isManager && !$isAssignedVirtual) {
+                    mpJsonError('คุณไม่ได้รับสิทธิ์เข้าถึงสายการผลิตนี้', 403);
+                }
+                mpJsonSuccess([
+                    'round' => [
+                        'round_id' => 0,
+                        'is_virtual_default' => true,
+                        'eval_period' => $virtualPeriod,
+                        'line' => $virtualLine,
+                        'round_name' => "ตรวจ 5ส ประจำเดือน {$virtualPeriod} ({$virtualLine})",
+                        'audit_date' => date('Y-m-d'),
+                        'required_auditors' => count($virtualMembers),
+                        'submitted_count' => 0,
+                        'status' => 'READY',
+                        'weighted_score' => null,
+                        'final_grade' => null,
+                        'notes' => 'ใช้รายชื่อกรรมการประจำ (Default Roster) — เมื่อส่งผลแรก ระบบจะเปิดรอบเดือนนี้ให้อัตโนมัติ',
+                    ],
+                    'committee' => $virtualMembers,
+                    'blind_mode' => !$isManager,
+                ]);
             }
+
             $stmtR = $pdo->prepare("
                 SELECT round_id, eval_period, line, round_name,
                        CONVERT(VARCHAR(10), audit_date, 120) AS audit_date,
@@ -159,6 +288,15 @@ try {
                     break;
                 }
             }
+            if (!$isAssigned && $selfEmpId !== '') {
+                $defRoster = fetchDefault5sCommittee($pdo, true);
+                foreach ($defRoster as $dm) {
+                    if (trim((string)$dm['auditor_emp_id']) === $selfEmpId && isLineCoveredBy5sScope((string)$round['line'], $dm['assigned_lines_list'] ?? ['ALL'])) {
+                        $isAssigned = true;
+                        break;
+                    }
+                }
+            }
             if (!$isManager && !$isAssigned) {
                 mpJsonError('คุณไม่ได้รับสิทธิ์เข้าถึงรอบตรวจ 5ส นี้', 403);
             }
@@ -189,11 +327,125 @@ try {
             }
             unset($m);
 
+            $round['is_virtual_default'] = false;
             mpJsonSuccess([
                 'round' => $round,
                 'committee' => $members,
                 'blind_mode' => !$canRevealPeers,
             ]);
+
+        case 'get_default_5s_committee':
+            $roster = fetchDefault5sCommittee($pdo, true);
+            $lines = $pdo->query("
+                SELECT DISTINCT line
+                FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
+                WHERE is_active = 1 AND line IS NOT NULL AND line != ''
+                ORDER BY line ASC
+            ")->fetchAll(PDO::FETCH_COLUMN);
+            if (!$isManager) {
+                $selfEntry = null;
+                foreach ($roster as $r) {
+                    if ($selfEmpId !== '' && trim((string)$r['auditor_emp_id']) === $selfEmpId) {
+                        $selfEntry = $r;
+                        break;
+                    }
+                }
+                mpJsonSuccess([
+                    'members' => $selfEntry ? [$selfEntry] : [],
+                    'total_count' => count($roster),
+                    'active_lines' => $lines,
+                    'is_manager' => false,
+                ]);
+            }
+            mpJsonSuccess([
+                'members' => $roster,
+                'total_count' => count($roster),
+                'active_lines' => $lines,
+                'is_manager' => true,
+            ]);
+
+        case 'save_default_5s_committee':
+            if (!$isManager) {
+                mpJsonError('สงวนสิทธิ์เฉพาะผู้ดูแลระบบในการตั้งค่าคณะกรรมการ 5ส ประจำ', 403);
+            }
+            $membersRaw = $input['members'] ?? [];
+            if (is_string($membersRaw)) {
+                $membersRaw = json_decode($membersRaw, true) ?? [];
+            }
+            if (!is_array($membersRaw) || empty($membersRaw)) {
+                throw new InvalidArgumentException('กรุณาเลือกคณะกรรมการ 5ส ประจำอย่างน้อย 1 คน');
+            }
+
+            $uniqueMembers = [];
+            foreach ($membersRaw as $m) {
+                $eid = trim((string)($m['auditor_emp_id'] ?? $m['emp_id'] ?? ''));
+                if ($eid === '' || isset($uniqueMembers[$eid])) {
+                    continue;
+                }
+                $uniqueMembers[$eid] = [
+                    'auditor_emp_id' => $eid,
+                    'auditor_name' => mb_substr(trim((string)($m['auditor_name'] ?? $m['name_th'] ?? $eid)), 0, 200, 'UTF-8'),
+                    'assigned_role' => strtoupper(trim((string)($m['assigned_role'] ?? 'AUDITOR'))) === 'CHAIR' ? 'CHAIR' : 'AUDITOR',
+                    'assigned_lines' => serialize5sAssignedLines($m['assigned_lines'] ?? $m['assigned_lines_list'] ?? 'ALL'),
+                ];
+            }
+            if (empty($uniqueMembers)) {
+                throw new InvalidArgumentException('ไม่พบข้อมูลรหัสพนักงานที่ถูกต้องในรายชื่อคณะกรรมการ');
+            }
+
+            $oldRoster = fetchDefault5sCommittee($pdo, false);
+            $pdo->beginTransaction();
+            $pdo->exec('DELETE FROM dbo.AUDIT_5S_DEFAULT_COMMITTEE');
+            $ins = $pdo->prepare('
+                INSERT INTO dbo.AUDIT_5S_DEFAULT_COMMITTEE
+                (auditor_emp_id, auditor_name, assigned_role, assigned_lines, is_active, created_by, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 1, ?, GETDATE(), GETDATE())
+            ');
+            foreach ($uniqueMembers as $um) {
+                $ins->execute([$um['auditor_emp_id'], $um['auditor_name'], $um['assigned_role'], $um['assigned_lines'], $selfEmpId]);
+            }
+            writeLog($pdo, 'UPDATE', 'AUDIT_5S_DEFAULT_COMMITTEE', 'DEFAULT_ROSTER', $oldRoster, array_values($uniqueMembers), 'Updated persistent Default 5S Committee Roster (' . count($uniqueMembers) . ' members)');
+            $pdo->commit();
+            mpJsonSuccess(['count' => count($uniqueMembers)], 'บันทึกคณะกรรมการตรวจ 5ส ประจำ (' . count($uniqueMembers) . ' คน) เรียบร้อยแล้ว');
+
+        case 'sync_period_5s_rounds':
+            if (!$isManager) {
+                mpJsonError('สงวนสิทธิ์เฉพาะผู้ดูแลระบบในการเปิดรอบตรวจ 5ส', 403);
+            }
+            $evalPeriod = trim((string)($input['eval_period'] ?? date('Y-m')));
+            $auditDate = parseMpDate($input['audit_date'] ?? null, date('Y-m-d'), 'วันที่ตรวจ 5ส');
+            if (!preg_match('/^\d{4}-\d{2}$/', $evalPeriod)) {
+                throw new InvalidArgumentException('รูปแบบงวดเดือนไม่ถูกต้อง (YYYY-MM)');
+            }
+            $roster = fetchDefault5sCommittee($pdo, true);
+            if (empty($roster)) {
+                throw new InvalidArgumentException('กรุณาตั้งค่า "คณะกรรมการ 5ส ประจำ (Default Roster)" ก่อนเปิดรอบอัตโนมัติ');
+            }
+            $activeLines = $pdo->query("
+                SELECT DISTINCT line
+                FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
+                WHERE is_active = 1 AND line IS NOT NULL AND line != ''
+                ORDER BY line ASC
+            ")->fetchAll(PDO::FETCH_COLUMN);
+
+            $created = 0;
+            $synced = 0;
+            $pdo->beginTransaction();
+            foreach ($activeLines as $ln) {
+                $eligible = resolveDefaultCommitteeForLine($roster, (string)$ln);
+                if (empty($eligible)) {
+                    continue;
+                }
+                $res = ensure5sRoundFromDefault($pdo, $evalPeriod, (string)$ln, $selfEmpId, $auditDate);
+                if (!empty($res['created'])) {
+                    $created++;
+                } else {
+                    $synced++;
+                }
+            }
+            writeLog($pdo, 'CREATE', 'AUDIT_5S_ROUND_SYNC', $evalPeriod, null, ['created' => $created, 'synced' => $synced, 'roster_count' => count($roster)], "Auto-synced 5S rounds from Default Roster for {$evalPeriod}");
+            $pdo->commit();
+            mpJsonSuccess(['created' => $created, 'synced' => $synced], "ซิงค์รอบตรวจ 5ส งวด {$evalPeriod} สำเร็จ (สร้างใหม่ {$created} สาย · อัปเดต {$synced} สาย)");
 
         case 'get_auditor_candidates':
             if (!$isManager) {
@@ -209,7 +461,7 @@ try {
             }
             $whereSql = implode(' AND ', $where);
             $stmt = $pdo->prepare("
-                SELECT TOP (120) E.emp_id, E.name_th, E.position, E.line, E.department_api,
+                SELECT TOP (300) E.emp_id, E.name_th, E.position, E.line, E.department_api,
                        MAX(U.username) AS username, MAX(U.role) AS sys_role
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
                 LEFT JOIN dbo.USERS U WITH (NOLOCK) ON U.emp_id = E.emp_id COLLATE Thai_CI_AS AND U.is_active = 1
@@ -257,8 +509,8 @@ try {
             }
 
             $reqCount = count($uniqueCommittee);
-            if ($reqCount < 3 || $reqCount > 5) {
-                throw new InvalidArgumentException('คณะกรรมการตรวจ 5ส ต้องมีจำนวนตั้งแต่ 3 ถึง 5 คนเพื่อป้องกันอคติ');
+            if ($reqCount < 1) {
+                throw new InvalidArgumentException('กรุณาเลือกคณะกรรมการตรวจ 5ส อย่างน้อย 1 คน');
             }
             $equalWeight = round(100.0 / $reqCount, 2);
 
@@ -323,31 +575,15 @@ try {
 
         case 'submit_5s_audit':
             $roundId = (int)($input['round_id'] ?? 0);
-            if ($roundId <= 0) {
-                throw new InvalidArgumentException('ไม่พบรหัสรอบตรวจ 5ส');
-            }
-            $stmtRound = $pdo->prepare('SELECT * FROM dbo.AUDIT_5S_ROUNDS WHERE round_id = ?');
-            $stmtRound->execute([$roundId]);
-            $round = $stmtRound->fetch(PDO::FETCH_ASSOC);
-            if (!$round) {
-                throw new InvalidArgumentException('ไม่พบรอบตรวจ 5ส ที่ระบุ');
-            }
-            if ($round['status'] === 'LOCKED') {
-                throw new InvalidArgumentException('รอบตรวจ 5ส นี้ถูกล็อกปิดผลแล้ว ไม่สามารถแก้ไขคะแนนได้');
-            }
+            $auditLineInput = trim((string)($input['line'] ?? ''));
+            $evalPeriodInput = trim((string)($input['eval_period'] ?? date('Y-m')));
+            $auditDateInput = parseMpDate($input['audit_date'] ?? null, date('Y-m-d'), 'วันที่ตรวจ 5ส');
 
             $auditorEmpId = $isManager && !empty($input['auditor_emp_id'])
                 ? trim((string)$input['auditor_emp_id'])
                 : $selfEmpId;
             if ($auditorEmpId === '') {
                 throw new InvalidArgumentException('บัญชีผู้ใช้งานนี้ยังไม่มีรหัสพนักงานสำหรับบันทึกผลตรวจ');
-            }
-
-            $stmtMember = $pdo->prepare('SELECT * FROM dbo.AUDIT_5S_COMMITTEE WHERE round_id = ? AND auditor_emp_id = ?');
-            $stmtMember->execute([$roundId, $auditorEmpId]);
-            $member = $stmtMember->fetch(PDO::FETCH_ASSOC);
-            if (!$member) {
-                mpJsonError('คุณไม่ได้อยู่ในรายชื่อคณะกรรมการของรอบตรวจ 5ส นี้', 403);
             }
 
             $s1 = max(0, min(20, (int)($input['score_seiri'] ?? 0)));
@@ -363,6 +599,45 @@ try {
             if (!is_array($captions)) $captions = [$captions];
 
             $pdo->beginTransaction();
+            if ($roundId <= 0) {
+                if ($auditLineInput === '' || !preg_match('/^\d{4}-\d{2}$/', $evalPeriodInput)) {
+                    throw new InvalidArgumentException('กรุณาระบุสายการผลิตและงวดเดือน (YYYY-MM) ให้ถูกต้อง');
+                }
+                $mat = ensure5sRoundFromDefault($pdo, $evalPeriodInput, $auditLineInput, $selfEmpId ?: $auditorEmpId, $auditDateInput);
+                $roundId = (int)$mat['round_id'];
+            }
+
+            $stmtRound = $pdo->prepare('SELECT * FROM dbo.AUDIT_5S_ROUNDS WHERE round_id = ?');
+            $stmtRound->execute([$roundId]);
+            $round = $stmtRound->fetch(PDO::FETCH_ASSOC);
+            if (!$round) {
+                throw new InvalidArgumentException('ไม่พบรอบตรวจ 5ส ที่ระบุ');
+            }
+            if ($round['status'] === 'LOCKED') {
+                throw new InvalidArgumentException('รอบตรวจ 5ส นี้ถูกล็อกปิดผลแล้ว ไม่สามารถแก้ไขคะแนนได้');
+            }
+
+            $stmtMember = $pdo->prepare('SELECT * FROM dbo.AUDIT_5S_COMMITTEE WHERE round_id = ? AND auditor_emp_id = ?');
+            $stmtMember->execute([$roundId, $auditorEmpId]);
+            $member = $stmtMember->fetch(PDO::FETCH_ASSOC);
+
+            if (!$member) {
+                $defRoster = fetchDefault5sCommittee($pdo, true);
+                foreach ($defRoster as $dm) {
+                    if (trim((string)$dm['auditor_emp_id']) === $auditorEmpId && isLineCoveredBy5sScope((string)$round['line'], $dm['assigned_lines_list'] ?? ['ALL'])) {
+                        ensure5sRoundFromDefault($pdo, (string)$round['eval_period'], (string)$round['line'], $selfEmpId ?: $auditorEmpId);
+                        $stmtMember->execute([$roundId, $auditorEmpId]);
+                        $member = $stmtMember->fetch(PDO::FETCH_ASSOC);
+                        break;
+                    }
+                }
+            }
+            if (!$member) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                mpJsonError('คุณไม่ได้อยู่ในรายชื่อคณะกรรมการของรอบตรวจ 5ส นี้', 403);
+            }
             $existingAuditId = (int)($member['audit_id'] ?? 0);
             $oldAudit = null;
 
@@ -419,6 +694,7 @@ try {
 
             $pdo->commit();
             mpJsonSuccess([
+                'round_id' => $roundId,
                 'audit_id' => $auditId,
                 'total_score' => $newTotal,
                 'grade' => scoreTo5sGrade($newTotal),

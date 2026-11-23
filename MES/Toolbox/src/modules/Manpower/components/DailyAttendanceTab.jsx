@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search, Edit3, Trash2, AlertTriangle, CheckCircle2, ArrowLeftRight,
-  Fingerprint, Award, RefreshCw, X, CheckSquare, CalendarX, Eraser
+  Fingerprint, Award, RefreshCw, X, CheckSquare, CalendarX, Eraser, User
 } from 'lucide-react';
-import { manpowerOpsApi } from '../../../shared/services/manpowerApi';
+import { manpowerOpsApi, manpowerMasterApi } from '../../../shared/services/manpowerApi';
 import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
 import { STATUS_BADGES, formatNumber, offsetIsoDate, exportRowsToExcel } from '../utils/manpowerHelpers';
 
@@ -61,6 +61,17 @@ export default function DailyAttendanceTab({
   const [rawScans, setRawScans] = useState([]);
   const [rawLoading, setRawLoading] = useState(false);
   const [rawSearch, setRawSearch] = useState('');
+  const [rawRange, setRawRange] = useState(() => ({
+    startDate: date,
+    endDate: offsetIsoDate(date, 1),
+  }));
+
+  // Reset Day Choice Modal (Soft vs Hard Reset)
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // Employee Profile Quick-View Modal
+  const [profileModal, setProfileModal] = useState({ open: false, loading: false, data: null });
 
   // YTD KPI Modal
   const [kpiModalOpen, setKpiModalOpen] = useState(false);
@@ -203,22 +214,36 @@ export default function DailyAttendanceTab({
     }
   };
 
-  const handleClearDay = async () => {
+  const handleClearDay = () => {
     if (!canEdit || !isOnline) return;
-    const ok = await confirm({
-      title: 'ล้างเวลาสแกนประจำวัน (Reset Day)',
-      message: `ระบบจะล้างเวลาสแกนเข้า-ออกของรายการที่ยังไม่ถูก Verify ในวันที่ ${date} เพื่อเตรียมรับสแกนใหม่ ดำเนินการต่อหรือไม่?`,
-      confirmText: 'ยืนยันล้างข้อมูล',
-      variant: 'danger',
-    });
-    if (!ok) return;
+    setResetModalOpen(true);
+  };
+
+  const executeClearDay = async (hardReset) => {
+    if (!canEdit || !isOnline) return;
+    setResetting(true);
     try {
-      const res = await manpowerOpsApi.clearDay(date, false);
+      const res = await manpowerOpsApi.clearDay(date, hardReset);
       showToast(res?.message || 'ล้างข้อมูลเรียบร้อยแล้ว', 'success');
+      setResetModalOpen(false);
       fetchLogs();
       onMutated?.();
     } catch (err) {
       showToast(err.message || 'ไม่สามารถล้างข้อมูลประจำวันได้', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const openEmployeeProfile = async (empId) => {
+    if (!empId) return;
+    setProfileModal({ open: true, loading: true, data: null });
+    try {
+      const res = await manpowerMasterApi.readSingleEmployee(empId);
+      setProfileModal({ open: true, loading: false, data: res?.data || null });
+    } catch (err) {
+      showToast(err.message || 'ไม่สามารถโหลดข้อมูลโปรไฟล์พนักงานได้', 'error');
+      setProfileModal((p) => ({ ...p, loading: false }));
     }
   };
 
@@ -292,13 +317,13 @@ export default function DailyAttendanceTab({
     }
   };
 
-  const handleOpenRawScans = async () => {
-    setRawModalOpen(true);
+  const fetchRawCentralData = async (customRange) => {
+    const r = customRange || rawRange;
     setRawLoading(true);
     try {
       const res = await manpowerOpsApi.fetchRawCentralScans({
-        start_date: date,
-        end_date: offsetIsoDate(date, 1),
+        start_date: r.startDate,
+        end_date: r.endDate,
       });
       setRawScans(Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
@@ -306,6 +331,14 @@ export default function DailyAttendanceTab({
     } finally {
       setRawLoading(false);
     }
+  };
+
+  const handleOpenRawScans = async () => {
+    const nextRange = { startDate: date, endDate: offsetIsoDate(date, 1) };
+    setRawRange(nextRange);
+    setRawSearch('');
+    setRawModalOpen(true);
+    await fetchRawCentralData(nextRange);
   };
 
   const handleLoadKpi = async (customRange) => {
@@ -347,7 +380,9 @@ export default function DailyAttendanceTab({
     if (!q) return rawScans.slice(0, 300);
     return rawScans.filter((r) =>
       String(r.EMPID || '').toLowerCase().includes(q)
-      || String(r.EMPNAME || '').toLowerCase().includes(q)
+      || String(r.NAME || r.EMPNAME || '').toLowerCase().includes(q)
+      || String(r.POSITION || '').toLowerCase().includes(q)
+      || String(r.DEPARTMENT || '').toLowerCase().includes(q)
       || String(r.TIMEINOUT || '').toLowerCase().includes(q)
     ).slice(0, 300);
   }, [rawScans, rawSearch]);
@@ -748,6 +783,14 @@ export default function DailyAttendanceTab({
                           <div className="inline-flex items-center gap-1">
                             <button
                               type="button"
+                              onClick={() => openEmployeeProfile(row.emp_id)}
+                              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-200 text-indigo-600 hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-700 cursor-pointer"
+                              title="ดูโปรไฟล์พนักงาน"
+                            >
+                              <User className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
                               disabled={!isOnline}
                               onClick={() => openEdit(row)}
                               className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
@@ -790,9 +833,18 @@ export default function DailyAttendanceTab({
                 <h4 className="text-base font-bold text-slate-800 dark:text-white">แก้ไขเวลาเข้า-ออกงาน</h4>
                 <p className="text-xs text-slate-500">{editRow.emp_id} — {editRow.name_th} ({editRow.log_date})</p>
               </div>
-              <button type="button" onClick={() => setEditRow(null)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => openEmployeeProfile(editRow.emp_id)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                >
+                  <User className="h-3.5 w-3.5" /> ดูโปรไฟล์
+                </button>
+                <button type="button" onClick={() => setEditRow(null)} className="p-1 text-slate-400 hover:text-slate-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -900,24 +952,47 @@ export default function DailyAttendanceTab({
       {/* Raw Central Scans Modal */}
       {rawModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs">
-          <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5 dark:border-slate-700">
+          <div className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3.5 dark:border-slate-700">
               <div>
-                <h4 className="text-base font-bold text-slate-800 dark:text-white">ข้อมูลดิบจากเครื่องสแกนกลาง (Central Scanner)</h4>
-                <p className="text-xs text-slate-500">ช่วงวันที่ {date} ถึง {offsetIsoDate(date, 1)}</p>
+                <h4 className="text-base font-bold text-slate-800 dark:text-white">ข้อมูลดิบจากเครื่องสแกนกลาง (Central Raw Scans)</h4>
+                <p className="text-xs text-slate-500">ตรวจสอบประวัติสแกนหน้าตรงจากระบบส่วนกลาง · แสดง {filteredRawScans.length} รายการ</p>
               </div>
               <button type="button" onClick={() => setRawModalOpen(false)} className="p-1.5 text-slate-500">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="border-b border-slate-200 p-3 dark:border-slate-700">
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
               <input
                 type="text"
                 value={rawSearch}
                 onChange={(e) => setRawSearch(e.target.value)}
-                placeholder="ค้นหารหัสพนักงาน หรือเวลา..."
-                className="min-h-[40px] w-full rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                placeholder="ค้นหารหัส, ชื่อ-สกุล, ตำแหน่ง หรือแผนก..."
+                className="min-h-[40px] flex-1 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-white"
               />
+              <span className="text-xs font-semibold text-slate-500">จาก</span>
+              <input
+                type="date"
+                value={rawRange.startDate}
+                onChange={(e) => setRawRange((r) => ({ ...r, startDate: e.target.value }))}
+                className="min-h-[40px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              />
+              <span className="text-xs font-semibold text-slate-500">ถึง</span>
+              <input
+                type="date"
+                value={rawRange.endDate}
+                onChange={(e) => setRawRange((r) => ({ ...r, endDate: e.target.value }))}
+                className="min-h-[40px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              />
+              <button
+                type="button"
+                disabled={rawLoading}
+                onClick={() => fetchRawCentralData()}
+                className="min-h-[40px] inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${rawLoading ? 'animate-spin' : ''}`} />
+                ดึงข้อมูล (Fetch)
+              </button>
             </div>
             <div className="flex-1 overflow-auto p-3">
               {rawLoading ? (
@@ -926,27 +1001,146 @@ export default function DailyAttendanceTab({
                 <div className="py-12 text-center text-sm text-slate-400">ไม่พบข้อมูลการสแกนในช่วงเวลานี้</div>
               ) : (
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 font-bold dark:bg-slate-800">
+                  <thead className="sticky top-0 bg-slate-50 font-bold dark:bg-slate-800">
                     <tr>
-                      <th className="px-3 py-2">EMPID</th>
-                      <th className="px-3 py-2">ชื่อ-สกุล</th>
                       <th className="px-3 py-2">เวลาที่สแกน (TIMEINOUT)</th>
-                      <th className="px-3 py-2">รหัสเครื่อง / จุดสแกน</th>
+                      <th className="px-3 py-2">รหัสพนักงาน</th>
+                      <th className="px-3 py-2">ชื่อ-สกุล</th>
+                      <th className="px-3 py-2">ตำแหน่ง</th>
+                      <th className="px-3 py-2">แผนก / หน่วยงาน</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredRawScans.map((s, idx) => (
-                      <tr key={idx}>
-                        <td className="px-3 py-2 font-mono font-semibold">{s.EMPID}</td>
-                        <td className="px-3 py-2">{s.EMPNAME || '-'}</td>
-                        <td className="px-3 py-2 font-mono text-indigo-600 dark:text-indigo-400">{s.TIMEINOUT}</td>
-                        <td className="px-3 py-2">{s.CHECKTYPE || s.SENSORID || s.MACHINE || '-'}</td>
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="px-3 py-2 font-mono font-semibold text-indigo-600 dark:text-indigo-400">{s.TIMEINOUT}</td>
+                        <td className="px-3 py-2 font-mono font-bold">{s.EMPID}</td>
+                        <td className="px-3 py-2 font-semibold text-slate-800 dark:text-white">{s.NAME || s.EMPNAME || '-'}</td>
+                        <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{s.POSITION || '-'}</td>
+                        <td className="px-3 py-2">
+                          <span className="inline-block rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            {s.DEPARTMENT || s.CHECKTYPE || s.SENSORID || s.MACHINE || '-'}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Soft vs Hard Reset Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
+              <h4 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-white">
+                <CalendarX className="h-5 w-5 text-rose-500" />
+                เลือกรูปแบบการรีเซ็ตข้อมูลวันที่ {date}
+              </h4>
+              <button type="button" onClick={() => setResetModalOpen(false)} className="p-1 text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-2.5 text-xs">
+              <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 dark:border-sky-800 dark:bg-sky-950/30">
+                <div className="font-bold text-sky-900 dark:text-sky-200">1. Soft Reset (แนะนำ)</div>
+                <p className="mt-0.5 text-sky-700 dark:text-sky-300">ล้างเฉพาะเวลาสแกนอัตโนมัติ รายการที่ผู้ดูแล Verify หรือแก้ไข Manual แล้วจะไม่สูญหาย</p>
+              </div>
+              <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-800 dark:bg-rose-950/30">
+                <div className="font-bold text-rose-900 dark:text-rose-200">2. Hard Reset (ล้างทั้งหมด)</div>
+                <p className="mt-0.5 text-rose-700 dark:text-rose-300">ลบข้อมูลลงเวลาทั้งหมดของวันที่ {date} ออกเพื่อดึงจากเครื่องสแกนใหม่ทั้งหมด (รายการแก้ไข Manual จะหายด้วย)</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => setResetModalOpen(false)}
+                className="min-h-[40px] rounded-lg border border-slate-300 px-3.5 text-xs font-semibold dark:border-slate-600"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => executeClearDay(false)}
+                className="min-h-[40px] rounded-lg bg-indigo-600 px-4 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Soft Reset
+              </button>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => executeClearDay(true)}
+                className="min-h-[40px] rounded-lg bg-rose-600 px-4 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                Hard Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Quick Profile Modal */}
+      {profileModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
+              <h4 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-white">
+                <User className="h-5 w-5 text-indigo-500" />
+                ข้อมูลพนักงาน (Employee Profile)
+              </h4>
+              <button type="button" onClick={() => setProfileModal({ open: false, loading: false, data: null })} className="p-1 text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {profileModal.loading ? (
+              <div className="py-10 text-center text-xs text-slate-400">กำลังโหลดข้อมูลพนักงาน...</div>
+            ) : !profileModal.data ? (
+              <div className="py-10 text-center text-xs text-slate-400">ไม่พบข้อมูลพนักงาน</div>
+            ) : (
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-lg font-extrabold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                    {String(profileModal.data.name_th || '?').charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{profileModal.data.name_th}</div>
+                    <div className="font-mono text-[11px] text-slate-500">รหัส: {profileModal.data.emp_id} · {profileModal.data.position || '-'}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
+                    <div className="text-[10px] text-slate-400">สายผลิต / ทีม</div>
+                    <div className="font-bold">{profileModal.data.line || '-'} ({profileModal.data.team_group || '-'})</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
+                    <div className="text-[10px] text-slate-400">กลุ่ม HC / แผนก API</div>
+                    <div className="font-bold">{profileModal.data.hc_group || '-'} · {profileModal.data.department_api || '-'}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
+                    <div className="text-[10px] text-slate-400">วันที่เริ่มงาน</div>
+                    <div className="font-mono font-bold">{profileModal.data.start_date || '-'}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
+                    <div className="text-[10px] text-slate-400">เบอร์โทรศัพท์</div>
+                    <div className="font-mono font-bold">{profileModal.data.phone || '-'}</div>
+                  </div>
+                </div>
+                {profileModal.data.emergency_contact_name && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+                    <div className="text-[10px] text-amber-700 dark:text-amber-300">ผู้ติดต่อฉุกเฉิน</div>
+                    <div className="font-semibold">
+                      {profileModal.data.emergency_contact_name} ({profileModal.data.emergency_contact_relation || '-'}) · {profileModal.data.emergency_contact_phone || '-'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

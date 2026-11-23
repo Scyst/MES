@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Home, Activity, ShoppingCart, Truck, Bus, Calendar, FolderOpen,
   ChevronDown, ChevronRight, Package, ListOrdered,
   Printer, ScanLine, Wrench, Store, Box, Warehouse, Inbox,
   Camera, Settings, Users, User, Zap, Heart, Search, FlaskConical,
-  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText, BarChart3, Video
+  Grid, Factory, ShieldCheck, Briefcase, X, GraduationCap, Network, MapPin, Tv, FileText, BarChart3, Video,
+  CheckCircle2, Award, CalendarDays
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { hasCentralWarehouseAccess } from '../utils/storeAccess';
+import { audit5sApi } from '../services/manpowerApi';
 
 export const MENU_DATA = [
   {
@@ -60,6 +62,7 @@ export const MENU_DATA = [
     sectionIcon: ShieldCheck,
     items: [
       { name: 'iQMS (Quality)', icon: ShieldCheck, to: '/qms' },
+      { name: 'ตรวจประเมิน 5ส (5S Audit)', icon: CheckCircle2, to: '/audit-5s', checkAccess: (u, ctx) => ctx?.is5sEligible },
       { name: 'Accessories Inspection', icon: Camera, to: '/accessories-inspection' },
       { name: 'PE Enterprise (ซ่อมบำรุง)', icon: Wrench, to: '/pe' },
       { name: 'PE Stop Request (แจ้งซ่อม)', icon: Activity, to: '/pe/request' },
@@ -72,8 +75,11 @@ export const MENU_DATA = [
     items: [
       { name: 'Management Dashboard', icon: Activity, to: '/management' },
       { name: 'Daily P&L (งบกำไรขาดทุน)', icon: BarChart3, to: '/daily-pl' },
-      { name: 'Manpower (จัดการกำลังคน)', icon: Users, to: '/manpower' },
-      { name: 'Employee Grading 4D (ประเมินเกรด)', icon: Activity, to: '/manpower?tab=grading' },
+      { name: 'Manpower (กำลังคนประจำวัน)', icon: Users, to: '/manpower', roles: ['creator', 'admin', 'manager', 'supervisor'] },
+      { name: 'Employee Grading 4D (ประเมินเกรด)', icon: Activity, to: '/manpower/grading', roles: ['creator', 'admin', 'manager'] },
+      { name: 'Skill Matrix (ทักษะพนักงาน)', icon: Award, to: '/manpower/skills', roles: ['creator', 'admin', 'manager', 'supervisor'] },
+      { name: 'Holiday Calendar (ปฏิทินวันหยุด)', icon: CalendarDays, to: '/manpower/holidays', roles: ['creator', 'admin', 'manager', 'supervisor'] },
+      { name: 'Manpower Master (ข้อมูลหลัก)', icon: Settings, to: '/manpower/master', roles: ['creator', 'admin', 'manager', 'supervisor'] },
       { name: 'Daily Command Center (ประชุมแผน)', icon: ListOrdered, to: '/planning' },
       { name: 'Utility & Energy (พลังงาน)', icon: Zap, to: '/utility' },
       { name: 'Mood Insight Report', icon: Heart, to: '/mood-report' },
@@ -97,7 +103,26 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
   const { user } = useAuth();
   const [expanded, setExpanded] = useState({ GENERAL: true, PRODUCTION: true });
   const [search, setSearch] = useState('');
+  const [is5sCommittee, setIs5sCommittee] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    if (!user?.id) {
+      setIs5sCommittee(false);
+      return;
+    }
+    let cancelled = false;
+    audit5sApi.getMyAssignments('')
+      .then((res) => {
+        if (!cancelled) {
+          setIs5sCommittee(Boolean(res?.data?.is_committee_member));
+        }
+      })
+      .catch(() => { });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.emp_id]);
 
   const toggleSection = (title) => {
     setExpanded((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -106,12 +131,13 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
   const renderMenuSections = (isMobileDrawer = false) => {
     const isTrainee = user?.role === 'trainee' || user?.account_type === 'trainee';
     const isSystemAdmin = user?.role === 'admin' || user?.role === 'creator' || user?.permissions?.includes('manage_users') || user?.permissions?.includes('manage_settings');
+    const userRole = String(user?.role || '').toLowerCase();
+    const is5sEligible = ['creator', 'admin', 'manager', 'supervisor'].includes(userRole) || is5sCommittee;
 
     return MENU_DATA.map((section, sIdx) => {
       if (isTrainee && section.title !== 'GENERAL') return null;
       if (section.title === 'SYSTEM ADMIN' && !isSystemAdmin) return null;
 
-      const userRole = String(user?.role || '').toLowerCase();
       const userPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
 
       const filteredItems = section.items.filter((item) => {
@@ -119,7 +145,7 @@ export default function DesktopSidebar({ isMobileOpen = false, onCloseMobile }) 
           return false;
         }
         if (typeof item.checkAccess === 'function') {
-          if (!item.checkAccess(user)) return false;
+          if (!item.checkAccess(user, { is5sEligible })) return false;
         } else if (item.roles || item.permission) {
           const allowedByRole = item.roles ? item.roles.includes(userRole) : false;
           const allowedByPerm = item.permission ? userPermissions.includes(item.permission) : false;

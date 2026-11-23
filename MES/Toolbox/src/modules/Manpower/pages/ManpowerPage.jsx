@@ -1,53 +1,48 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import {
   Users, ClipboardList, Star, TrendingUp, Award, CalendarDays, Settings,
-  RefreshCw, WifiOff, CloudDownload, X, CheckCircle2
+  RefreshCw, WifiOff, CloudDownload, X
 } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
-import { manpowerMasterApi, manpowerSyncApi, audit5sApi } from '../../../shared/services/manpowerApi';
+import { manpowerMasterApi, manpowerSyncApi } from '../../../shared/services/manpowerApi';
 import { getTodayIso, offsetIsoDate } from '../utils/manpowerHelpers';
 
 const ManpowerOverviewTab = lazy(() => import('../components/ManpowerOverviewTab'));
 const DailyAttendanceTab = lazy(() => import('../components/DailyAttendanceTab'));
 const EmployeeGradingTab = lazy(() => import('../components/EmployeeGradingTab'));
-const Audit5sCommitteePanel = lazy(() => import('../components/Audit5sCommitteePanel'));
 const GradingTrendTab = lazy(() => import('../components/GradingTrendTab'));
 const SkillMatrixTab = lazy(() => import('../components/SkillMatrixTab'));
 const HolidayCalendarTab = lazy(() => import('../components/HolidayCalendarTab'));
 const MasterDataTab = lazy(() => import('../components/MasterDataTab'));
 
-const TABS = [
-  { id: 'overview', label: 'ภาพรวม & ต้นทุน', icon: Users, restricted: false },
-  { id: 'attendance', label: 'ลงเวลาประจำวัน', icon: ClipboardList, restricted: false },
-  { id: 'grading', label: 'ประเมินเกรด 4D', icon: Star, restricted: true },
-  { id: 'audit5s', label: 'ตรวจ 5ส (คณะกรรมการ)', icon: CheckCircle2, auditOnly: true },
-  { id: 'trends', label: 'แนวโน้มเกรด', icon: TrendingUp, restricted: true },
-  { id: 'skills', label: 'Skill Matrix', icon: Award, restricted: false },
-  { id: 'holidays', label: 'ปฏิทินวันหยุด', icon: CalendarDays, restricted: false },
-  { id: 'master', label: 'ข้อมูลหลักพนักงาน', icon: Settings, restricted: false },
+const LEGACY_TAB_REDIRECTS = {
+  grading: '/manpower/grading',
+  trends: '/manpower/grading?view=trends',
+  audit5s: '/audit-5s',
+  holidays: '/manpower/holidays',
+  skills: '/manpower/skills',
+  master: '/manpower/master',
+};
+
+const OPS_TABS = [
+  { id: 'overview', label: 'ภาพรวม & ต้นทุน', icon: Users },
+  { id: 'attendance', label: 'ลงเวลาประจำวัน', icon: ClipboardList },
 ];
 
-export default function ManpowerPage() {
+export default function ManpowerPage({ section = 'operations' }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [is5sCommitteeMember, setIs5sCommitteeMember] = useState(false);
 
   const role = String(user?.role || '').toLowerCase();
   const canAccessGrading = ['creator', 'admin', 'manager'].includes(role);
-  const canAccess5sCommittee = canAccessGrading || is5sCommitteeMember;
   const canEdit = ['creator', 'admin', 'manager', 'supervisor'].includes(role);
 
-  const requestedTab = searchParams.get('tab') || 'overview';
-  const activeTab = TABS.some((t) => (
-    t.id === requestedTab
-    && (!t.restricted || canAccessGrading)
-    && (!t.auditOnly || canAccess5sCommittee)
-  ))
-    ? requestedTab
-    : 'overview';
+  const requestedTab = searchParams.get('tab');
+  const gradingView = searchParams.get('view') === 'trends' ? 'trends' : 'grading';
+  const opsTab = requestedTab === 'attendance' ? 'attendance' : 'overview';
 
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [selectedDate, setSelectedDate] = useState(getTodayIso);
@@ -56,7 +51,6 @@ export default function ManpowerPage() {
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [attendanceDrillLine, setAttendanceDrillLine] = useState('ALL');
 
-  // Sync scans modal
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [syncStart, setSyncStart] = useState(() => offsetIsoDate(getTodayIso(), -1));
   const [syncEnd, setSyncEnd] = useState(getTodayIso);
@@ -88,30 +82,29 @@ export default function ManpowerPage() {
     loadStructure();
   }, [loadStructure]);
 
-  useEffect(() => {
-    if (!user?.emp_id) return;
-    let cancelled = false;
-    audit5sApi.getMyAssignments('')
-      .then((res) => {
-        if (!cancelled && res?.data?.is_committee_member) {
-          setIs5sCommitteeMember(true);
-        }
-      })
-      .catch(() => { });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.emp_id]);
+  if (section === 'operations' && requestedTab && LEGACY_TAB_REDIRECTS[requestedTab]) {
+    return <Navigate to={LEGACY_TAB_REDIRECTS[requestedTab]} replace />;
+  }
 
-  const switchTab = (tabId) => {
+  if (section === 'grading' && !canAccessGrading) {
+    return <Navigate to="/manpower" replace />;
+  }
+
+  const switchOpsTab = (tabId) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', tabId);
     setSearchParams(next, { replace: true });
   };
 
+  const switchGradingView = (nextView) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('view', nextView);
+    setSearchParams(next, { replace: true });
+  };
+
   const handleDrillLine = (lineName) => {
     setAttendanceDrillLine(lineName || 'ALL');
-    switchTab('attendance');
+    switchOpsTab('attendance');
   };
 
   const handleRunSync = async (e) => {
@@ -130,104 +123,136 @@ export default function ManpowerPage() {
     }
   };
 
-  const hcOptions = ['TEAM 1', 'ALL', ...(Array.isArray(structure?.hc_groups) && structure.hc_groups.length ? structure.hc_groups : ['EXCLUDE'])];
-  const uniqueHcOptions = Array.from(new Set(hcOptions));
+  const uniqueHcOptions = Array.from(new Set([
+    'TEAM 1',
+    'ALL',
+    ...(Array.isArray(structure?.hc_groups) && structure.hc_groups.length ? structure.hc_groups : ['EXCLUDE']),
+  ]));
+
+  const sectionMeta = {
+    holidays: { title: 'ปฏิทินวันหยุด & ตัวคูณค่าแรง', icon: CalendarDays },
+    skills: { title: 'Skill Matrix (ตารางทักษะพนักงาน)', icon: Award },
+    master: { title: 'ข้อมูลหลักพนักงาน & กะสายผลิต', icon: Settings },
+  }[section];
 
   return (
-    <div className="w-full space-y-4">
-      {/* Offline Warning Banner */}
+    <div className="w-full space-y-3">
       {!isOnline && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
-          <WifiOff className="h-5 w-5 shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
+          <WifiOff className="h-4 w-4 shrink-0" />
           ไม่สามารถเชื่อมต่อเครือข่าย (Offline Mode) — ระบบปิดการบันทึกและแก้ไขข้อมูลชั่วคราวเพื่อป้องกันข้อมูลสูญหาย
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
-            <Users className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-xl">
-                Manpower &amp; Workforce Analytics Center
-              </h1>
+      {/* Slim Single-Row Header for Operations, Holidays, Skills, Master (Grading has its own all-in-one slim bar) */}
+      {section === 'operations' && (
+        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 pr-2 border-r border-slate-200 dark:border-slate-700">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                <Users className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-extrabold text-slate-800 dark:text-white">กำลังคนประจำวัน</span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              จัดการกำลังคนประจำวัน ต้นทุนค่าแรง (V1/V2) สลับกะ 4D Grading และ Skill Matrix ครบวงจร
-            </p>
+
+            <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900">
+              {OPS_TABS.map((t) => {
+                const Icon = t.icon;
+                const active = opsTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => switchOpsTab(t.id)}
+                    className={`min-h-[36px] inline-flex items-center gap-1.5 rounded-md px-3 text-xs font-bold transition ${
+                      active
+                        ? 'bg-white text-emerald-700 shadow-2xs dark:bg-slate-800 dark:text-emerald-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+            />
+            <select
+              value={hcGroup}
+              onChange={(e) => setHcGroup(e.target.value)}
+              className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+            >
+              {uniqueHcOptions.map((grp) => (
+                <option key={grp} value={grp}>กลุ่ม: {grp}</option>
+              ))}
+            </select>
+            {canEdit && (
+              <button
+                type="button"
+                disabled={!isOnline}
+                onClick={() => setSyncModalOpen(true)}
+                className="min-h-[38px] inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-xs font-bold text-white hover:bg-teal-700 disabled:opacity-50"
+              >
+                <CloudDownload className="h-3.5 w-3.5" />
+                ซิงค์เครื่องสแกน
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setRefreshSignal((s) => s + 1)}
+              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              title="รีเฟรชข้อมูลล่าสุด"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
+      )}
 
-        {/* Global Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="min-h-[44px] rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-          />
+      {(section === 'holidays' || section === 'skills' || section === 'master') && sectionMeta && (
+        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+              <sectionMeta.icon className="h-4 w-4" />
+            </div>
+            <h1 className="text-sm font-extrabold text-slate-800 dark:text-white">{sectionMeta.title}</h1>
+          </div>
 
-          <select
-            value={hcGroup}
-            onChange={(e) => setHcGroup(e.target.value)}
-            className="min-h-[44px] rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-          >
-            {uniqueHcOptions.map((grp) => (
-              <option key={grp} value={grp}>กลุ่มกำลังคน: {grp}</option>
-            ))}
-          </select>
-
-          {canEdit && (
+          <div className="flex items-center gap-2">
+            {section === 'skills' && (
+              <select
+                value={hcGroup}
+                onChange={(e) => setHcGroup(e.target.value)}
+                className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              >
+                {uniqueHcOptions.map((grp) => (
+                  <option key={grp} value={grp}>กลุ่ม: {grp}</option>
+                ))}
+              </select>
+            )}
             <button
               type="button"
-              disabled={!isOnline}
-              onClick={() => setSyncModalOpen(true)}
-              className="min-h-[44px] inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3.5 text-xs font-semibold text-white shadow-2xs hover:bg-teal-700 disabled:opacity-50"
+              onClick={() => setRefreshSignal((s) => s + 1)}
+              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              title="รีเฟรชข้อมูลล่าสุด"
             >
-              <CloudDownload className="h-4 w-4" />
-              ซิงค์เครื่องสแกน
+              <RefreshCw className="h-3.5 w-3.5" />
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setRefreshSignal((s) => s + 1)}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-            title="รีเฟรชข้อมูลล่าสุด"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Main Navigation Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-        {TABS.filter((t) => (!t.restricted || canAccessGrading) && (!t.auditOnly || canAccess5sCommittee)).map((t) => {
-          const Icon = t.icon;
-          const active = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => switchTab(t.id)}
-              className={`min-h-[44px] shrink-0 inline-flex items-center gap-2 rounded-lg px-4 text-xs font-bold transition ${active
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-                }`}
-            >
-              <Icon className="h-4 w-4" />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab Content */}
+      {/* Main Content */}
       <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800">กำลังโหลดหน้าจอ...</div>}>
-        {activeTab === 'overview' && (
+        {section === 'operations' && opsTab === 'overview' && (
           <ManpowerOverviewTab
             date={selectedDate}
             hcGroup={hcGroup}
@@ -235,7 +260,7 @@ export default function ManpowerPage() {
             onDrillLine={handleDrillLine}
           />
         )}
-        {activeTab === 'attendance' && (
+        {section === 'operations' && opsTab === 'attendance' && (
           <DailyAttendanceTab
             date={selectedDate}
             hcGroup={hcGroup}
@@ -247,43 +272,76 @@ export default function ManpowerPage() {
             onMutated={() => setRefreshSignal((s) => s + 1)}
           />
         )}
-        {activeTab === 'grading' && canAccessGrading && (
+
+        {section === 'grading' && gradingView === 'grading' && (
           <EmployeeGradingTab
             hcGroup={hcGroup}
+            onChangeHcGroup={setHcGroup}
+            hcOptions={uniqueHcOptions}
             structure={structure}
             isOnline={isOnline}
-            onOpenCommitteeTab={() => switchTab('audit5s')}
+            gradingView={gradingView}
+            onChangeGradingView={switchGradingView}
+            refreshSignal={refreshSignal}
+            onRefresh={() => setRefreshSignal((s) => s + 1)}
           />
         )}
-        {activeTab === 'audit5s' && canAccess5sCommittee && (
-          <Audit5sCommitteePanel
-            structure={structure}
+        {section === 'grading' && gradingView === 'trends' && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <span className="text-sm font-extrabold text-slate-800 dark:text-white">ประเมินเกรด 4 มิติ</span>
+                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900">
+                  <button
+                    type="button"
+                    onClick={() => switchGradingView('grading')}
+                    className="min-h-[34px] inline-flex items-center gap-1.5 rounded-md px-3 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300"
+                  >
+                    <Star className="h-3.5 w-3.5" /> ตารางเกรด 4D
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-[34px] inline-flex items-center gap-1.5 rounded-md bg-white px-3 text-xs font-bold text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300"
+                  >
+                    <TrendingUp className="h-3.5 w-3.5" /> แนวโน้มเกรด
+                  </button>
+                </div>
+              </div>
+              <select
+                value={hcGroup}
+                onChange={(e) => setHcGroup(e.target.value)}
+                className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              >
+                {uniqueHcOptions.map((grp) => (
+                  <option key={grp} value={grp}>กลุ่ม: {grp}</option>
+                ))}
+              </select>
+            </div>
+            <GradingTrendTab hcGroup={hcGroup} structure={structure} />
+          </div>
+        )}
+
+        {section === 'holidays' && (
+          <HolidayCalendarTab
+            canEdit={canEdit}
             isOnline={isOnline}
-            onRoundUpdated={() => setRefreshSignal((s) => s + 1)}
+            onMutated={() => setRefreshSignal((s) => s + 1)}
+            key={`hol-${refreshSignal}`}
           />
         )}
-        {activeTab === 'trends' && canAccessGrading && (
-          <GradingTrendTab
-            hcGroup={hcGroup}
-            structure={structure}
-          />
-        )}
-        {activeTab === 'skills' && (
+        {section === 'skills' && (
           <SkillMatrixTab
             hcGroup={hcGroup}
             structure={structure}
             canEdit={canEdit}
             isOnline={isOnline}
+            key={`skl-${refreshSignal}`}
           />
         )}
-        {activeTab === 'holidays' && (
-          <HolidayCalendarTab
-            canEdit={canEdit}
-            isOnline={isOnline}
-            onMutated={() => setRefreshSignal((s) => s + 1)}
-          />
-        )}
-        {activeTab === 'master' && (
+        {section === 'master' && (
           <MasterDataTab
             structure={structure}
             canEdit={canEdit}
@@ -292,6 +350,7 @@ export default function ManpowerPage() {
               loadStructure();
               setRefreshSignal((s) => s + 1);
             }}
+            key={`mst-${refreshSignal}`}
           />
         )}
       </Suspense>

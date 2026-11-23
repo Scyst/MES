@@ -22,6 +22,8 @@ try {
             $period = $parsed['period'];
             $startDate = $parsed['start_date'];
             $endDate = $parsed['end_date'];
+            $incStartDt = $startDate . ' 08:00:00';
+            $incEndDt = $endDate . ' 08:00:00';
             $line = trim((string)($input['line'] ?? 'ALL'));
             $hcGroup = trim((string)($input['hcGroup'] ?? 'ALL'));
 
@@ -45,6 +47,26 @@ try {
                     ISNULL(TS.weight_attendance, 25) AS weight_attendance,
                     ISNULL(TS.weight_learning, 25) AS weight_learning
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                INNER JOIN (
+                    SELECT
+                        ml.emp_id,
+                        SUM(CASE WHEN ml.status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) AS present_days,
+                        SUM(CASE WHEN ml.status = 'LATE' THEN 1 ELSE 0 END) AS late_days,
+                        SUM(CASE WHEN ml.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_days,
+                        SUM(
+                            CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL AND ml.status IN ('PRESENT', 'LATE')
+                            THEN
+                                CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), ml.log_date, 120), ' ', CONVERT(VARCHAR(8), ms.start_time, 108)) AS DATETIME), ml.scan_out_time) > 570
+                                THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), ml.log_date, 120), ' ', CONVERT(VARCHAR(8), ms.start_time, 108)) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5
+                                ELSE 0 END
+                            ELSE 0 END
+                        ) AS ot_hours
+                    FROM dbo.MANPOWER_DAILY_LOGS ml WITH (NOLOCK)
+                    LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
+                    LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
+                    WHERE ml.log_date >= ? AND ml.log_date < ?
+                    GROUP BY ml.emp_id
+                ) LOGS ON LOGS.emp_id = E.emp_id
                 LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
                 OUTER APPLY (
                     SELECT TOP 1 role AS sys_role
@@ -52,76 +74,46 @@ try {
                     WHERE emp_id = E.emp_id COLLATE Thai_CI_AS
                     ORDER BY is_active DESC, id ASC
                 ) U
-                INNER JOIN (
-                    SELECT DISTINCT emp_id
-                    FROM dbo.MANPOWER_DAILY_LOGS WITH (NOLOCK)
-                    WHERE log_date >= ? AND log_date < ?
-                ) L ON L.emp_id = E.emp_id
-                LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) ON E.emp_id = G.emp_id AND G.evaluation_period = ?
-                LEFT JOIN (
+                OUTER APPLY (
+                    SELECT TOP 1 hourly_rate, rate_type FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK)
+                    WHERE E.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS
+                    ORDER BY display_order DESC
+                ) CM
+                CROSS APPLY (
                     SELECT
-                        stu.emp_id,
-                        SUM(
-                            stu.head_count_ratio * (t.quantity * (
-                                ISNULL(t.std_cost_dl_snapshot, ISNULL(i.Cost_DL, 0)) +
-                                ISNULL(t.std_cost_oh_snapshot, (ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)))
-                            ))
-                        ) AS income_per_head
-                    FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
-                    INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
-                    LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
-                    WHERE t.transaction_timestamp >= DATEADD(HOUR, 8, CAST(? AS DATETIME))
-                      AND t.transaction_timestamp < DATEADD(HOUR, 8, CAST(? AS DATETIME))
-                      AND t.transaction_type LIKE 'PRODUCTION_%'
-                    GROUP BY stu.emp_id
-                ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
-                LEFT JOIN (
+                        COALESCE(CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN CM.hourly_rate / 30.0 ELSE CM.hourly_rate END, 350.0) AS daily_rate,
+                        COALESCE(CASE WHEN CM.rate_type LIKE 'MONTHLY%' THEN (CM.hourly_rate / 30.0) / 8.0 ELSE CM.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5 AS ot_rate
+                ) RATES
+                CROSS APPLY (
                     SELECT
-                        LOGS.emp_id,
                         LOGS.present_days * RATES.daily_rate AS dl_wage,
                         LOGS.ot_hours * RATES.ot_rate AS ot_wage,
                         (LOGS.present_days * RATES.daily_rate) + (LOGS.ot_hours * RATES.ot_rate) AS total_wage,
                         LOGS.ot_hours,
                         LOGS.late_days,
                         LOGS.absent_days
-                    FROM (
-                        SELECT
-                            ml.emp_id,
-                            SUM(CASE WHEN ml.status IN ('PRESENT', 'LATE') THEN 1 ELSE 0 END) AS present_days,
-                            SUM(CASE WHEN ml.status = 'LATE' THEN 1 ELSE 0 END) AS late_days,
-                            SUM(CASE WHEN ml.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_days,
-                            SUM(
-                                CASE WHEN ml.scan_out_time IS NOT NULL AND ms.start_time IS NOT NULL AND ml.status IN ('PRESENT', 'LATE')
-                                THEN
-                                    CASE WHEN DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), ml.log_date, 120), ' ', CONVERT(VARCHAR(8), ms.start_time, 108)) AS DATETIME), ml.scan_out_time) > 570
-                                    THEN FLOOR((DATEDIFF(MINUTE, CAST(CONCAT(CONVERT(VARCHAR(10), ml.log_date, 120), ' ', CONVERT(VARCHAR(8), ms.start_time, 108)) AS DATETIME), ml.scan_out_time) - 570) / 30.0) * 0.5
-                                    ELSE 0 END
-                                ELSE 0 END
-                            ) AS ot_hours
-                        FROM dbo.MANPOWER_DAILY_LOGS ml WITH (NOLOCK)
-                        LEFT JOIN dbo.MANPOWER_EMPLOYEES emp WITH (NOLOCK) ON ml.emp_id = emp.emp_id COLLATE Thai_CI_AS
-                        LEFT JOIN dbo.MANPOWER_SHIFTS ms WITH (NOLOCK) ON ms.shift_id = ISNULL(ml.shift_id, emp.default_shift_id)
-                        WHERE ml.log_date >= ? AND ml.log_date < ?
-                        GROUP BY ml.emp_id
-                    ) LOGS
-                    LEFT JOIN (
-                        SELECT
-                            e.emp_id,
-                            COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN cm.hourly_rate / 30.0 ELSE cm.hourly_rate END, 350.0) AS daily_rate,
-                            COALESCE(CASE WHEN cm.rate_type LIKE 'MONTHLY%' THEN (cm.hourly_rate / 30.0) / 8.0 ELSE cm.hourly_rate / 8.0 END, 350.0 / 8.0) * 1.5 AS ot_rate
-                        FROM dbo.MANPOWER_EMPLOYEES e WITH (NOLOCK)
-                        OUTER APPLY (
-                            SELECT TOP 1 hourly_rate, rate_type FROM dbo.MANPOWER_CATEGORY_MAPPING WITH (NOLOCK)
-                            WHERE e.position LIKE '%' + keyword + '%' COLLATE Thai_CI_AS
-                            ORDER BY display_order DESC
-                        ) cm
-                    ) RATES ON RATES.emp_id = LOGS.emp_id COLLATE Thai_CI_AS
-                ) WAGE ON WAGE.emp_id = E.emp_id COLLATE Thai_CI_AS
+                ) WAGE
+                LEFT JOIN dbo.EMPLOYEE_GRADES G WITH (NOLOCK) ON E.emp_id = G.emp_id AND G.evaluation_period = ?
+                LEFT JOIN (
+                    SELECT
+                        stu.emp_id,
+                        SUM(stu.head_count_ratio * (t.quantity * (
+                            ISNULL(t.std_cost_dl_snapshot, ISNULL(i.Cost_DL, 0)) +
+                            ISNULL(t.std_cost_oh_snapshot, (ISNULL(i.Cost_OH_Machine, 0) + ISNULL(i.Cost_OH_Utilities, 0) + ISNULL(i.Cost_OH_Indirect, 0) + ISNULL(i.Cost_OH_Staff, 0) + ISNULL(i.Cost_OH_Accessory, 0) + ISNULL(i.Cost_OH_Others, 0)))
+                        ))) AS income_per_head
+                    FROM dbo.STOCK_TRANSACTION_USERS stu WITH (NOLOCK)
+                    INNER JOIN dbo.STOCK_TRANSACTIONS t WITH (NOLOCK) ON stu.transaction_id = t.transaction_id
+                    LEFT JOIN dbo.ITEMS i WITH (NOLOCK) ON t.parameter_id = i.item_id
+                    WHERE t.transaction_timestamp >= ?
+                      AND t.transaction_timestamp < ?
+                      AND t.transaction_type LIKE 'PRODUCTION_%'
+                    GROUP BY stu.emp_id
+                ) INC ON INC.emp_id = E.emp_id COLLATE Thai_CI_AS
                 LEFT JOIN dbo.EMPLOYEE_GRADING_CRITERIA C WITH (NOLOCK) ON C.line = E.line
                 WHERE E.is_active = 1
             ";
 
-            $params = [$startDate, $endDate, $period, $startDate, $endDate, $startDate, $endDate];
+            $params = [$startDate, $endDate, $period, $incStartDt, $incEndDt];
             if ($line !== 'ALL' && $line !== '') {
                 $sql .= ' AND E.line = ?';
                 $params[] = $line;

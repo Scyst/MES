@@ -103,8 +103,11 @@ export const planningApi = {
 
 export const audit5sApi = {
   getMyAssignments: (evalPeriod = '') => apiGet(AUDIT5S_ENDPOINT, { action: 'get_my_5s_assignments', eval_period: evalPeriod }),
-  getRoundDetail: (roundId) => apiGet(AUDIT5S_ENDPOINT, { action: 'get_5s_round_detail', round_id: roundId }),
+  getRoundDetail: (roundId, extra = {}) => apiGet(AUDIT5S_ENDPOINT, { action: 'get_5s_round_detail', round_id: roundId, ...extra }),
   getAuditorCandidates: (q = '') => apiGet(AUDIT5S_ENDPOINT, { action: 'get_auditor_candidates', q }),
+  getDefaultCommittee: () => apiGet(AUDIT5S_ENDPOINT, { action: 'get_default_5s_committee' }),
+  saveDefaultCommittee: (members) => apiPost(AUDIT5S_ENDPOINT, { action: 'save_default_5s_committee', members }),
+  syncPeriodRounds: (evalPeriod, auditDate) => apiPost(AUDIT5S_ENDPOINT, { action: 'sync_period_5s_rounds', eval_period: evalPeriod, audit_date: auditDate }),
   saveRound: (payload) => apiPost(AUDIT5S_ENDPOINT, { action: 'save_5s_round', ...payload }),
   toggleRoundLock: (roundId, lock) => apiPost(AUDIT5S_ENDPOINT, { action: 'toggle_5s_round_lock', round_id: roundId, lock: lock ? 1 : 0 }),
   submitAudit: (formData) => request({

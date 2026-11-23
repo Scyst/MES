@@ -33,6 +33,7 @@ const PeRequestPage = lazy(() => import('../modules/PE/pages/PeRequestPage'));
 const PeTechMobilePage = lazy(() => import('../modules/PE/pages/PeTechMobilePage'));
 const QmsPage = lazy(() => import('../modules/QMS/pages/QmsPage'));
 const ManpowerPage = lazy(() => import('../modules/Manpower/pages/ManpowerPage'));
+const Audit5sPage = lazy(() => import('../modules/Manpower/pages/Audit5sPage'));
 const DailyPlanningPage = lazy(() => import('../modules/Planning/pages/DailyPlanningPage'));
 const SalesPage = lazy(() => import('../modules/Sales/pages/SalesPage'));
 const LoadingReportPage = lazy(() => import('../modules/LoadingReport/pages/LoadingReportPage'));
@@ -299,7 +300,47 @@ export default function App() {
               <Route path="manpower" element={
                 <ErrorBoundary>
                   <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบบริหารจัดการกำลังคน (Manpower)...</div>}>
-                    <ManpowerPage />
+                    <ManpowerPage section="operations" />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="manpower/grading" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบประเมินเกรดพนักงาน 4 มิติ...</div>}>
+                    <ManpowerPage section="grading" />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="manpower/holidays" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดปฏิทินวันหยุด...</div>}>
+                    <ManpowerPage section="holidays" />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="manpower/skills" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลด Skill Matrix...</div>}>
+                    <ManpowerPage section="skills" />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="manpower/master" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดข้อมูลหลักพนักงาน...</div>}>
+                    <ManpowerPage section="master" />
+                  </Suspense>
+                </ErrorBoundary>
+              } />
+
+              <Route path="audit-5s" element={
+                <ErrorBoundary>
+                  <Suspense fallback={<div className="p-8 text-gray-500">กำลังโหลดระบบตรวจประเมินกิจกรรม 5ส...</div>}>
+                    <Audit5sPage />
                   </Suspense>
                 </ErrorBoundary>
               } />

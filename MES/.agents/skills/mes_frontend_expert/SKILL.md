@@ -48,6 +48,7 @@ description: Senior MES Architect & Developer (Offline/Air-gapped Industrial App
 3. **Frontend (React/Vite)**:
    - Use TailwindCSS for all styling. Avoid vanilla CSS files unless defining global design system variables.
    - Use `react-router-dom` for navigation in SPA architectures.
+   - Follow `.agents/skills/mes_ui_ux_standards/SKILL.md` strictly for ALL Toolbox UI work: split distinct workflows into direct Sidebar routes (no 5–8 tab hubs), consolidate filters/actions into a single-row Slim Toolbar with `Settings ⚙ ▾` / `Export ▾` dropdowns, keep Floating Save FABs clear of Copilot (`right-24`), show explicit loading skeletons (never `"0 items"` while loading), and maintain full feature parity when porting `/page/*`.
    - Disable submit buttons instantly upon click (prevent double-submit) and show loading states.
    - Enforce strict JS client-validation before payloads.
    - **Hardware Integration (Barcode Scanners)**: Input fields designated for Barcode Scanners MUST include debounce logic, auto-submit functionality, and strict prevention of rapid multi-scans (double-submit).

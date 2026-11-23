@@ -400,7 +400,7 @@ function scoreTo5sGrade(float $score): string {
 }
 
 /**
- * Computes Equal-Weight (1/N) average score & final grade across 3-5 committee submissions.
+ * Computes Equal-Weight (1/N) average score & final grade across all submitted committee audits (1..N).
  */
 function compute5sRoundConsensus(array $submittedAudits): array {
     $scores = [];
@@ -649,16 +649,20 @@ function recompute5sRoundSummary(PDO $pdo, int $roundId): array {
     $audits = $stmtAudits->fetchAll(PDO::FETCH_ASSOC);
 
     $consensus = compute5sRoundConsensus($audits);
-    $reqCount = max(3, min(5, (int)$round['required_auditors']));
+    $stmtCnt = $pdo->prepare('SELECT COUNT(*) FROM dbo.AUDIT_5S_COMMITTEE WHERE round_id = ?');
+    $stmtCnt->execute([$roundId]);
+    $committeeCnt = (int)$stmtCnt->fetchColumn();
+    $reqCount = max(1, $committeeCnt > 0 ? $committeeCnt : (int)$round['required_auditors']);
     $newStatus = $round['status'] === 'LOCKED'
         ? 'LOCKED'
         : ($consensus['submitted_count'] >= $reqCount ? 'COMPLETED' : 'OPEN');
 
     $pdo->prepare('
         UPDATE dbo.AUDIT_5S_ROUNDS
-        SET submitted_count = ?, weighted_score = ?, final_grade = ?, status = ?, updated_at = GETDATE()
+        SET required_auditors = ?, submitted_count = ?, weighted_score = ?, final_grade = ?, status = ?, updated_at = GETDATE()
         WHERE round_id = ?
     ')->execute([
+        $reqCount,
         $consensus['submitted_count'],
         $consensus['weighted_score'],
         $consensus['final_grade'],
@@ -671,6 +675,175 @@ function recompute5sRoundSummary(PDO $pdo, int $roundId): array {
         'required_auditors' => $reqCount,
         'status' => $newStatus,
     ]);
+}
+
+/**
+ * Parses assigned_lines column ('ALL' or JSON array or CSV) into normalized array.
+ */
+function parse5sAssignedLines($raw): array {
+    if (is_array($raw)) {
+        $items = $raw;
+    } else {
+        $str = trim((string)$raw);
+        if ($str === '' || strtoupper($str) === 'ALL') {
+            return ['ALL'];
+        }
+        $decoded = json_decode($str, true);
+        $items = is_array($decoded) ? $decoded : explode(',', $str);
+    }
+    $clean = [];
+    foreach ($items as $item) {
+        $v = trim((string)$item);
+        if ($v === '') {
+            continue;
+        }
+        if (strtoupper($v) === 'ALL') {
+            return ['ALL'];
+        }
+        $clean[] = $v;
+    }
+    return empty($clean) ? ['ALL'] : array_values(array_unique($clean));
+}
+
+/**
+ * Serializes assigned_lines cleanly for DB storage ('ALL' or JSON array).
+ */
+function serialize5sAssignedLines($raw): string {
+    $list = parse5sAssignedLines($raw);
+    if ($list === ['ALL']) {
+        return 'ALL';
+    }
+    return json_encode($list, JSON_UNESCAPED_UNICODE);
+}
+
+/**
+ * Checks if a line is covered by an auditor's assigned scope ('ALL' covers every line).
+ */
+function isLineCoveredBy5sScope(string $line, array $scopeLines): bool {
+    if (in_array('ALL', $scopeLines, true)) {
+        return true;
+    }
+    $target = mb_strtoupper(trim($line), 'UTF-8');
+    foreach ($scopeLines as $sc) {
+        if (mb_strtoupper(trim((string)$sc), 'UTF-8') === $target) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Loads persistent Default 5S Committee Roster (unlimited auditors).
+ */
+function fetchDefault5sCommittee(PDO $pdo, bool $activeOnly = true): array {
+    try {
+        $where = $activeOnly ? 'WHERE is_active = 1' : 'WHERE 1=1';
+        $rows = $pdo->query("
+            SELECT id, auditor_emp_id, auditor_name, assigned_role, assigned_lines, is_active, created_by, updated_at
+            FROM dbo.AUDIT_5S_DEFAULT_COMMITTEE WITH (NOLOCK)
+            {$where}
+            ORDER BY CASE WHEN assigned_role = 'CHAIR' THEN 0 ELSE 1 END, id ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$r) {
+            $r['assigned_lines_list'] = parse5sAssignedLines($r['assigned_lines'] ?? 'ALL');
+        }
+        unset($r);
+        return $rows;
+    } catch (Throwable $ignore) {
+        return [];
+    }
+}
+
+/**
+ * Resolves eligible Default Committee members for a given production line with 1/N equal weight.
+ */
+function resolveDefaultCommitteeForLine(array $defaultRoster, string $line): array {
+    $matched = [];
+    foreach ($defaultRoster as $m) {
+        $scope = $m['assigned_lines_list'] ?? parse5sAssignedLines($m['assigned_lines'] ?? 'ALL');
+        if (isLineCoveredBy5sScope($line, $scope)) {
+            $matched[] = [
+                'auditor_emp_id' => trim((string)$m['auditor_emp_id']),
+                'auditor_name' => trim((string)$m['auditor_name']),
+                'assigned_role' => strtoupper(trim((string)($m['assigned_role'] ?? 'AUDITOR'))) === 'CHAIR' ? 'CHAIR' : 'AUDITOR',
+            ];
+        }
+    }
+    $cnt = count($matched);
+    if ($cnt === 0) {
+        return [];
+    }
+    $w = round(100.0 / $cnt, 2);
+    foreach ($matched as &$item) {
+        $item['weight_pct'] = $w;
+    }
+    unset($item);
+    return $matched;
+}
+
+/**
+ * Ensures a 5S round exists for (eval_period, line) initialized from the persistent Default Roster.
+ * Must be called inside an active DB transaction.
+ */
+function ensure5sRoundFromDefault(PDO $pdo, string $evalPeriod, string $line, string $actorEmpId, ?string $auditDate = null): array {
+    $stmtEx = $pdo->prepare("
+        SELECT TOP 1 round_id, eval_period, line, round_name, CONVERT(VARCHAR(10), audit_date, 120) AS audit_date, status
+        FROM dbo.AUDIT_5S_ROUNDS
+        WHERE eval_period = ? AND line = ?
+        ORDER BY round_id DESC
+    ");
+    $stmtEx->execute([$evalPeriod, $line]);
+    $existing = $stmtEx->fetch(PDO::FETCH_ASSOC);
+
+    $defaultRoster = fetchDefault5sCommittee($pdo, true);
+    $eligible = resolveDefaultCommitteeForLine($defaultRoster, $line);
+
+    if ($existing) {
+        $roundId = (int)$existing['round_id'];
+        if ($existing['status'] !== 'LOCKED' && !empty($eligible)) {
+            // Sync any newly added default committee members for this line without disturbing submitted scores
+            $stmtCur = $pdo->prepare('SELECT auditor_emp_id FROM dbo.AUDIT_5S_COMMITTEE WHERE round_id = ?');
+            $stmtCur->execute([$roundId]);
+            $curMap = array_flip($stmtCur->fetchAll(PDO::FETCH_COLUMN));
+            $insC = $pdo->prepare('INSERT INTO dbo.AUDIT_5S_COMMITTEE (round_id, auditor_emp_id, auditor_name, assigned_role, weight_pct, assigned_by) VALUES (?, ?, ?, ?, ?, ?)');
+            $added = false;
+            foreach ($eligible as $m) {
+                if (!isset($curMap[$m['auditor_emp_id']])) {
+                    $insC->execute([$roundId, $m['auditor_emp_id'], $m['auditor_name'], $m['assigned_role'], $m['weight_pct'], $actorEmpId]);
+                    $added = true;
+                }
+            }
+            if ($added) {
+                $stmtAll = $pdo->prepare('SELECT COUNT(*) FROM dbo.AUDIT_5S_COMMITTEE WHERE round_id = ?');
+                $stmtAll->execute([$roundId]);
+                $tot = max(1, (int)$stmtAll->fetchColumn());
+                $eqW = round(100.0 / $tot, 2);
+                $pdo->prepare('UPDATE dbo.AUDIT_5S_COMMITTEE SET weight_pct = ? WHERE round_id = ?')->execute([$eqW, $roundId]);
+                recompute5sRoundSummary($pdo, $roundId);
+            }
+        }
+        return ['round_id' => $roundId, 'created' => false, 'status' => $existing['status']];
+    }
+
+    if (empty($eligible)) {
+        throw new InvalidArgumentException("ยังไม่มีรายชื่อคณะกรรมการ 5ส ประจำสำหรับสาย {$line} กรุณาตั้งค่าคณะกรรมการประจำ (Default Roster) ก่อน");
+    }
+
+    $dateVal = $auditDate ?: date('Y-m-d');
+    $roundName = "ตรวจ 5ส ประจำเดือน {$evalPeriod} ({$line})";
+    $reqCount = count($eligible);
+    $pdo->prepare('
+        INSERT INTO dbo.AUDIT_5S_ROUNDS (eval_period, line, round_name, audit_date, required_auditors, notes, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ')->execute([$evalPeriod, $line, $roundName, $dateVal, $reqCount, 'Auto-created from Default 5S Committee Roster', $actorEmpId]);
+    $roundId = (int)$pdo->lastInsertId();
+
+    $insC = $pdo->prepare('INSERT INTO dbo.AUDIT_5S_COMMITTEE (round_id, auditor_emp_id, auditor_name, assigned_role, weight_pct, assigned_by) VALUES (?, ?, ?, ?, ?, ?)');
+    foreach ($eligible as $m) {
+        $insC->execute([$roundId, $m['auditor_emp_id'], $m['auditor_name'], $m['assigned_role'], $m['weight_pct'], $actorEmpId]);
+    }
+    recompute5sRoundSummary($pdo, $roundId);
+    return ['round_id' => $roundId, 'created' => true, 'status' => 'OPEN'];
 }
 
 /**

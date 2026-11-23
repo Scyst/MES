@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Users, UserCheck, Clock, UserX, CalendarOff, Coins,
-  BarChart3, Download, Sparkles, CalendarDays, ArrowRightLeft, RefreshCw, X
+  BarChart3, Download, Sparkles, CalendarDays, ArrowRightLeft, RefreshCw, X, ChevronDown, ExternalLink
 } from 'lucide-react';
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import { manpowerOpsApi } from '../../../shared/services/manpowerApi';
 import { useToast } from '../../../shared/contexts/FeedbackContext';
-import { formatMoney, formatNumber, offsetIsoDate, exportRowsToExcel } from '../utils/manpowerHelpers';
+import { STATUS_BADGES, formatMoney, formatNumber, offsetIsoDate, exportRowsToExcel } from '../utils/manpowerHelpers';
 
 const VIEW_MODES = [
   { id: 'LINE', label: 'รายสายผลิต (By Line)' },
@@ -105,6 +105,12 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
   });
   const [dayInfo, setDayInfo] = useState(null);
   const [trendRows, setTrendRows] = useState([]);
+  const [trendDays, setTrendDays] = useState(7);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
+
+  // KPI Drilldown Detail Modal
+  const [kpiDetailModal, setKpiDetailModal] = useState({ open: false, title: '', statusType: 'ALL', loading: false, rows: [] });
 
   // Integrated Analysis Modal state
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -117,10 +123,20 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
   const [analysisData, setAnalysisData] = useState(null);
   const [costCompareRows, setCostCompareRows] = useState([]);
 
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const start7 = offsetIsoDate(date, -6);
+      const startRange = offsetIsoDate(date, -(trendDays - 1));
       const [sumRes, trRes] = await Promise.all([
         manpowerOpsApi.readSummary({
           date,
@@ -128,7 +144,7 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
           use_new_formula: useNewFormula ? '1' : '0',
         }),
         manpowerOpsApi.readTrend({
-          startDate: start7,
+          startDate: startRange,
           endDate: date,
           hcGroup,
         }),
@@ -143,7 +159,7 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
     } finally {
       setLoading(false);
     }
-  }, [date, hcGroup, useNewFormula, showToast]);
+  }, [date, hcGroup, useNewFormula, trendDays, showToast]);
 
   useEffect(() => {
     fetchOverview();
@@ -217,6 +233,70 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
     }));
     exportRowsToExcel(exportData, `Manpower_${viewMode}`, `Manpower_Summary_${date}_${viewMode}.xlsx`);
     showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
+    setExportMenuOpen(false);
+  };
+
+  const handleExportDailyRaw = async () => {
+    setExportMenuOpen(false);
+    try {
+      const res = await manpowerOpsApi.readDaily({ date, hcGroup });
+      const raw = Array.isArray(res?.data) ? res.data : [];
+      if (!raw.length) {
+        showToast('ไม่มีข้อมูลลงเวลารายบุคคลในวันที่เลือก', 'warning');
+        return;
+      }
+      const rows = raw.map((r) => ({
+        Date: r.log_date || date,
+        'Emp ID': r.emp_id,
+        Name: r.name_th,
+        Position: r.position,
+        Line: r.line,
+        Team: r.team_group || '-',
+        'HC Group': r.hc_group,
+        Shift: r.shift_name,
+        Status: r.status,
+        'Scan In': r.scan_in_time || '-',
+        'Scan Out': r.scan_out_time || '-',
+        'OT Hours': Number(r.ot_hours || 0),
+        Verified: Number(r.is_verified) === 1 ? 'Yes' : 'No',
+        Remark: r.remark || '',
+      }));
+      exportRowsToExcel(rows, 'Daily_Raw', `Manpower_Daily_Raw_${date}.xlsx`);
+      showToast(`ส่งออกข้อมูลลงเวลาดิบ ${rows.length} รายการสำเร็จ`, 'success');
+    } catch (err) {
+      showToast(err.message || 'ส่งออกข้อมูลลงเวลาดิบไม่สำเร็จ', 'error');
+    }
+  };
+
+  const handleExportTrend = () => {
+    setExportMenuOpen(false);
+    if (!trendRows.length) {
+      showToast('ไม่มีข้อมูลแนวโน้มสำหรับส่งออก', 'warning');
+      return;
+    }
+    exportRowsToExcel(trendRows, `Trend_${trendDays}d`, `Manpower_Trend_${trendDays}d_${date}.xlsx`);
+    showToast('ส่งออกกราฟแนวโน้มสำเร็จ', 'success');
+  };
+
+  const openKpiDrilldown = async (statusType, title) => {
+    setKpiDetailModal({ open: true, title, statusType, loading: true, rows: [] });
+    try {
+      const res = await manpowerOpsApi.readDaily({ date, hcGroup });
+      const all = Array.isArray(res?.data) ? res.data : [];
+      const filtered = all.filter((r) => {
+        const st = String(r.status || '').toUpperCase();
+        if (statusType === 'ALL') return true;
+        if (statusType === 'PRESENT_AND_LATE') return st === 'PRESENT' || st === 'LATE';
+        if (statusType === 'LATE') return st === 'LATE';
+        if (statusType === 'ABSENT') return st === 'ABSENT';
+        if (statusType === 'LEAVE') return ['SICK', 'BUSINESS', 'VACATION', 'LEAVE'].includes(st);
+        return true;
+      });
+      setKpiDetailModal({ open: true, title, statusType, loading: false, rows: filtered });
+    } catch (err) {
+      showToast(err.message || 'ไม่สามารถโหลดรายชื่อพนักงานได้', 'error');
+      setKpiDetailModal((p) => ({ ...p, loading: false }));
+    }
   };
 
   const attendancePct = kpis.total_registered > 0
@@ -287,76 +367,125 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
           <button
             type="button"
             onClick={openAnalysisModal}
-            className="min-h-[44px] inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-95"
+            className="min-h-[40px] inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 text-xs font-semibold text-white shadow-xs hover:opacity-95"
           >
             <Sparkles className="h-4 w-4" />
             วิเคราะห์ขั้นสูง & เปรียบเทียบ V1/V2
           </button>
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="min-h-[44px] inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-          >
-            <Download className="h-4 w-4" />
-            Export Excel
-          </button>
+
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen((v) => !v)}
+              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+            >
+              <Download className="h-4 w-4" />
+              ส่งออก Excel
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl z-30 dark:border-slate-700 dark:bg-slate-800">
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                >
+                  สรุปตามสายผลิต / ต้นทุน (Summary)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportDailyRaw}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                >
+                  รายชื่อลงเวลาดิบประจำวัน (Daily Raw)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportTrend}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                >
+                  แนวโน้มย้อนหลัง ({trendDays} วัน)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 6 KPI Cards */}
+      {/* 6 Clickable KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+        <button
+          type="button"
+          onClick={() => openKpiDrilldown('ALL', `กำลังพลทั้งหมดประจำวันที่ ${date}`)}
+          className="text-left rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs transition hover:border-indigo-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
+        >
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>กำลังพลรวม (PLAN)</span>
             <Users className="h-4 w-4 text-slate-400" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-800 dark:text-white">{formatNumber(kpis.total_registered)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">กลุ่ม: {hcGroup}</div>
-        </div>
+          <div className="mt-1.5 text-2xl font-bold text-slate-800 dark:text-white">{formatNumber(kpis.total_registered)}</div>
+          <div className="mt-0.5 text-[11px] text-indigo-600 dark:text-indigo-400">คลิกดูรายชื่อทั้งหมด →</div>
+        </button>
 
-        <div className="rounded-xl border border-emerald-200 bg-white p-4 shadow-2xs dark:border-emerald-800/60 dark:bg-slate-800">
+        <button
+          type="button"
+          onClick={() => openKpiDrilldown('PRESENT_AND_LATE', `พนักงานที่มาทำงาน (ตรงเวลา + สาย) วันที่ ${date}`)}
+          className="text-left rounded-xl border border-emerald-200 bg-white p-3.5 shadow-2xs transition hover:border-emerald-400 hover:shadow-md dark:border-emerald-800/60 dark:bg-slate-800"
+        >
           <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
             <span>มาทำงาน (ACTUAL)</span>
             <UserCheck className="h-4 w-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(kpis.actual_present)}</div>
-          <div className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Attendance: {attendancePct}%</div>
-        </div>
+          <div className="mt-1.5 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(kpis.actual_present)}</div>
+          <div className="mt-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Attendance: {attendancePct}%</div>
+        </button>
 
-        <div className="rounded-xl border border-amber-200 bg-white p-4 shadow-2xs dark:border-amber-800/60 dark:bg-slate-800">
+        <button
+          type="button"
+          onClick={() => openKpiDrilldown('LATE', `พนักงานที่มาสาย (LATE) วันที่ ${date}`)}
+          className="text-left rounded-xl border border-amber-200 bg-white p-3.5 shadow-2xs transition hover:border-amber-400 hover:shadow-md dark:border-amber-800/60 dark:bg-slate-800"
+        >
           <div className="flex items-center justify-between text-xs font-semibold text-amber-600 dark:text-amber-400">
             <span>มาสาย (LATE)</span>
             <Clock className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{formatNumber(kpis.count_late)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">ตรงเวลา: {formatNumber(kpis.count_present)} คน</div>
-        </div>
+          <div className="mt-1.5 text-2xl font-bold text-amber-600 dark:text-amber-400">{formatNumber(kpis.count_late)}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">ตรงเวลา: {formatNumber(kpis.count_present)} คน</div>
+        </button>
 
-        <div className="rounded-xl border border-rose-200 bg-white p-4 shadow-2xs dark:border-rose-800/60 dark:bg-slate-800">
+        <button
+          type="button"
+          onClick={() => openKpiDrilldown('ABSENT', `พนักงานที่ขาดงาน (ABSENT) วันที่ ${date}`)}
+          className="text-left rounded-xl border border-rose-200 bg-white p-3.5 shadow-2xs transition hover:border-rose-400 hover:shadow-md dark:border-rose-800/60 dark:bg-slate-800"
+        >
           <div className="flex items-center justify-between text-xs font-semibold text-rose-600 dark:text-rose-400">
             <span>ขาดงาน (ABSENT)</span>
             <UserX className="h-4 w-4 text-rose-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">{formatNumber(kpis.count_absent)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">ต้องติดตามตรวจสอบ</div>
-        </div>
+          <div className="mt-1.5 text-2xl font-bold text-rose-600 dark:text-rose-400">{formatNumber(kpis.count_absent)}</div>
+          <div className="mt-0.5 text-[11px] text-rose-600">คลิกดูรายชื่อติดตาม →</div>
+        </button>
 
-        <div className="rounded-xl border border-sky-200 bg-white p-4 shadow-2xs dark:border-sky-800/60 dark:bg-slate-800">
+        <button
+          type="button"
+          onClick={() => openKpiDrilldown('LEAVE', `พนักงานที่ลางาน (LEAVE) วันที่ ${date}`)}
+          className="text-left rounded-xl border border-sky-200 bg-white p-3.5 shadow-2xs transition hover:border-sky-400 hover:shadow-md dark:border-sky-800/60 dark:bg-slate-800"
+        >
           <div className="flex items-center justify-between text-xs font-semibold text-sky-600 dark:text-sky-400">
             <span>ลางาน (LEAVE)</span>
             <CalendarOff className="h-4 w-4 text-sky-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-sky-600 dark:text-sky-400">{formatNumber(kpis.count_leave)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">ป่วย / กิจ / พักร้อน</div>
-        </div>
+          <div className="mt-1.5 text-2xl font-bold text-sky-600 dark:text-sky-400">{formatNumber(kpis.count_leave)}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">ป่วย / กิจ / พักร้อน</div>
+        </button>
 
-        <div className="rounded-xl border border-indigo-200 bg-white p-4 shadow-2xs dark:border-indigo-800/60 dark:bg-slate-800">
+        <div className="rounded-xl border border-indigo-200 bg-white p-3.5 shadow-2xs dark:border-indigo-800/60 dark:bg-slate-800">
           <div className="flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
             <span>ประมาณการค่าแรง</span>
             <Coins className="h-4 w-4 text-indigo-500" />
           </div>
-          <div className="mt-2 text-xl font-bold text-indigo-700 dark:text-indigo-300">฿{formatMoney(kpis.total_cost)}</div>
-          <div className="mt-1 text-[11px] text-slate-500">
+          <div className="mt-1.5 text-xl font-bold text-indigo-700 dark:text-indigo-300">฿{formatMoney(kpis.total_cost)}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">
             OT {formatNumber(kpis.total_ot_hours, 1)} ชม. ({kpis.count_ot} คน)
           </div>
         </div>
@@ -365,12 +494,35 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs lg:col-span-2 dark:border-slate-700 dark:bg-slate-800">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-white">
               <BarChart3 className="h-4 w-4 text-indigo-500" />
-              แนวโน้มกำลังคน 7 วันย้อนหลัง (Daily Attendance Trend)
+              แนวโน้มกำลังคน {trendDays} วันย้อนหลัง (Daily Attendance Trend)
             </h3>
-            <span className="text-xs text-slate-500">{offsetIsoDate(date, -6)} ถึง {date}</span>
+            <div className="flex items-center gap-1.5">
+              {[7, 14, 30].map((dVal) => (
+                <button
+                  key={dVal}
+                  type="button"
+                  onClick={() => setTrendDays(dVal)}
+                  className={`rounded-md px-2 py-1 text-[11px] font-bold transition ${
+                    trendDays === dVal
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300'
+                  }`}
+                >
+                  {dVal} วัน
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={handleExportTrend}
+                className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                title="ส่งออกแนวโน้มเป็น Excel"
+              >
+                Excel
+              </button>
+            </div>
           </div>
           <div className="h-64 w-full min-w-0">
             {trendRows.length === 0 ? (
@@ -502,6 +654,88 @@ export default function ManpowerOverviewTab({ date, hcGroup, refreshSignal, onDr
           </table>
         </div>
       </div>
+
+      {/* KPI Detail Drilldown Modal */}
+      {kpiDetailModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-xs">
+          <div className="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3.5 dark:border-slate-700">
+              <div>
+                <h4 className="text-base font-bold text-slate-800 dark:text-white">{kpiDetailModal.title}</h4>
+                <p className="text-xs text-slate-500">กลุ่ม: {hcGroup} · พบ {kpiDetailModal.rows.length} คน</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {kpiDetailModal.rows.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => exportRowsToExcel(kpiDetailModal.rows, 'KPI_Detail', `Manpower_${kpiDetailModal.statusType}_${date}.xlsx`)}
+                    className="min-h-[36px] rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                  >
+                    Excel
+                  </button>
+                )}
+                {onDrillLine && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKpiDetailModal((p) => ({ ...p, open: false }));
+                      onDrillLine('ALL');
+                    }}
+                    className="min-h-[36px] inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 text-xs font-bold text-white hover:bg-indigo-700"
+                  >
+                    จัดการลงเวลา <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <button type="button" onClick={() => setKpiDetailModal((p) => ({ ...p, open: false }))} className="p-1.5 text-slate-400">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-3">
+              {kpiDetailModal.loading ? (
+                <div className="py-12 text-center text-sm text-slate-400">กำลังโหลดรายชื่อ...</div>
+              ) : kpiDetailModal.rows.length === 0 ? (
+                <div className="py-12 text-center text-sm text-slate-400">ไม่พบรายชื่อในสถานะนี้</div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-slate-50 font-bold dark:bg-slate-800">
+                    <tr>
+                      <th className="px-3 py-2">รหัส</th>
+                      <th className="px-3 py-2">ชื่อ-สกุล / ตำแหน่ง</th>
+                      <th className="px-3 py-2">สายผลิต / กะ</th>
+                      <th className="px-3 py-2">เข้า - ออก</th>
+                      <th className="px-3 py-2">สถานะ</th>
+                      <th className="px-3 py-2">หมายเหตุ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {kpiDetailModal.rows.map((r) => {
+                      const badge = STATUS_BADGES[r.status] || STATUS_BADGES.WAITING;
+                      return (
+                        <tr key={`${r.emp_id}-${r.log_id || 0}`}>
+                          <td className="px-3 py-2 font-mono font-semibold">{r.emp_id}</td>
+                          <td className="px-3 py-2">
+                            <div className="font-semibold text-slate-800 dark:text-white">{r.name_th}</div>
+                            <div className="text-[11px] text-slate-400">{r.position}</div>
+                          </td>
+                          <td className="px-3 py-2">{r.line} · {r.shift_name}</td>
+                          <td className="px-3 py-2 font-mono">
+                            {r.scan_in_time ? String(r.scan_in_time).slice(0, 5) : '--:--'} - {r.scan_out_time ? String(r.scan_out_time).slice(0, 5) : '--:--'}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-block rounded border px-2 py-0.5 text-[11px] font-bold ${badge.cls}`}>{badge.label}</span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-500">{r.remark || '-'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Integrated Analysis Modal */}
       {analysisOpen && (
