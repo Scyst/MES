@@ -3,6 +3,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../components/init.php';
+require_once __DIR__ . '/_asset_validation.php';
 
 
 requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
@@ -108,7 +109,11 @@ try {
             break;
 
         case 'add_downtime':
-            $machineId = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
+            $resolvedAsset = resolveValidatedAsset($pdo, $input);
+            $machineId = $resolvedAsset['machine_id'];
+            $machineName = $resolvedAsset['machine_name'];
+            $line = $resolvedAsset['line'];
+
             $logDate = $input['log_date'] ?? '';
             $startTime = $input['start_time'] ?? '';
             $endTime = $input['end_time'] ?? '';
@@ -133,19 +138,6 @@ try {
                     if ($endTs < $startTs) {
                         $endDt = date('Y-m-d', strtotime($logDate . ' +1 day')) . ' ' . $endTime;
                     }
-                }
-            }
-
-            // Get machine info
-            $machineName = $input['machine_name'] ?? '';
-            $line = $input['line'] ?? '';
-            if ($machineId) {
-                $mStmt = $pdo->prepare("SELECT machine_name, line FROM " . PE_MACHINES_TABLE . " WHERE machine_id = ?");
-                $mStmt->execute([$machineId]);
-                $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
-                if ($mData) {
-                    $machineName = $mData['machine_name'];
-                    if (empty($line)) $line = $mData['line'];
                 }
             }
 

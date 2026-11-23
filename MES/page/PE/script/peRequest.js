@@ -26,49 +26,242 @@ document.addEventListener('DOMContentLoaded', () => {
         histEndDate.value = todayStr;
     }
 
-    // Handle Machine Selection Auto-fill
-    const reqMachineSelect = document.getElementById('req_machine_id');
-    if (reqMachineSelect) {
-        reqMachineSelect.addEventListener('change', function() {
-            const selected = this.options[this.selectedIndex];
-            const nameInput = document.getElementById('req_machine_name');
-            const lineInput = document.getElementById('req_line');
-            
-            if (this.value !== "") {
-                nameInput.value = selected.dataset.name || '';
-                lineInput.value = selected.dataset.line || '';
-            } else {
-                nameInput.value = '';
-                lineInput.value = '';
+    // Cascading Line -> Search -> Machine Selector + General Equipment Mode
+    const assetControllers = {};
+
+    function initAssetSelector(prefix, activeBtnClass) {
+        const modeInput = document.getElementById(`${prefix}_asset_mode`);
+        const machineBox = document.getElementById(`${prefix}_mode_machine`);
+        const generalBox = document.getElementById(`${prefix}_mode_general`);
+        const filterLineEl = document.getElementById(`${prefix}_filter_line`);
+        const searchEl = document.getElementById(`${prefix}_machine_search`);
+        const countEl = document.getElementById(`${prefix}_machine_count`);
+        const machineSelectEl = document.getElementById(`${prefix}_machine_id`);
+        const machineNameEl = document.getElementById(`${prefix}_machine_name`);
+        const lineEl = document.getElementById(`${prefix}_line`);
+        const genLineEl = document.getElementById(`${prefix}_general_line`);
+        const genCatEl = document.getElementById(`${prefix}_general_category`);
+        const genNameEl = document.getElementById(`${prefix}_general_name`);
+        const switchBtns = document.querySelectorAll(`[data-asset-switch="${prefix}"]`);
+
+        if (!modeInput || !machineSelectEl) return null;
+
+        function populateMachineOptions(preserveId = null) {
+            const targetLine = (filterLineEl?.value || '').trim();
+            const query = (searchEl?.value || '').trim().toLowerCase();
+            const currentVal = preserveId !== null ? String(preserveId) : String(machineSelectEl.value || '');
+
+            const filtered = (typeof MACHINES_DATA !== 'undefined' ? MACHINES_DATA : []).filter(m => {
+                if (targetLine && String(m.line || '').trim() !== targetLine) return false;
+                if (query) {
+                    const haystack = `${m.machine_code || ''} ${m.machine_name || ''} ${m.line || ''} ${m.area || ''}`.toLowerCase();
+                    if (!haystack.includes(query)) return false;
+                }
+                return true;
+            });
+
+            machineSelectEl.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = filtered.length > 0 ? '-- กรุณาเลือกเครื่องจักร --' : '-- ไม่พบเครื่องจักรที่ค้นหา --';
+            machineSelectEl.appendChild(defaultOpt);
+
+            let matchedInFiltered = false;
+            filtered.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.machine_id;
+                opt.dataset.line = m.line || '';
+                opt.dataset.name = m.machine_name || '';
+                opt.dataset.code = m.machine_code || '';
+                opt.textContent = targetLine
+                    ? `${m.machine_code} — ${m.machine_name}`
+                    : `${m.line} | ${m.machine_code} — ${m.machine_name}`;
+                if (currentVal && String(m.machine_id) === currentVal) {
+                    opt.selected = true;
+                    matchedInFiltered = true;
+                }
+                machineSelectEl.appendChild(opt);
+            });
+
+            // Auto-select if search narrows down to exactly 1 machine
+            if (!matchedInFiltered && query && filtered.length === 1) {
+                machineSelectEl.value = String(filtered[0].machine_id);
             }
-        });
-        
-        // Trigger change to auto-fill if pre-selected
-        if(reqMachineSelect.value !== "") {
-            reqMachineSelect.dispatchEvent(new Event('change'));
+
+            if (countEl) {
+                countEl.textContent = `พบ ${filtered.length} รายการ`;
+            }
+            syncSelectedMachineFields();
         }
+
+        function syncSelectedMachineFields() {
+            const selectedId = String(machineSelectEl.value || '');
+            const found = (typeof MACHINES_DATA !== 'undefined' ? MACHINES_DATA : []).find(
+                m => String(m.machine_id) === selectedId
+            );
+            if (found) {
+                if (machineNameEl) machineNameEl.value = found.machine_name || '';
+                if (lineEl) lineEl.value = found.line || '';
+            } else {
+                if (machineNameEl) machineNameEl.value = '';
+                if (lineEl) lineEl.value = '';
+            }
+        }
+
+        function setMode(mode) {
+            const nextMode = (mode === 'general') ? 'general' : 'machine';
+            modeInput.value = nextMode;
+
+            switchBtns.forEach(btn => {
+                btn.classList.remove('active-primary', 'active-danger');
+                if (btn.dataset.mode === nextMode) {
+                    btn.classList.add(activeBtnClass);
+                }
+            });
+
+            if (nextMode === 'machine') {
+                if (machineBox) machineBox.style.display = '';
+                if (generalBox) generalBox.style.display = 'none';
+                machineSelectEl.required = true;
+                if (machineNameEl) machineNameEl.required = true;
+                if (lineEl) lineEl.required = true;
+                if (genLineEl) genLineEl.required = false;
+                if (genCatEl) genCatEl.required = false;
+                if (genNameEl) genNameEl.required = false;
+            } else {
+                if (machineBox) machineBox.style.display = 'none';
+                if (generalBox) generalBox.style.display = '';
+                machineSelectEl.required = false;
+                if (machineNameEl) machineNameEl.required = false;
+                if (lineEl) lineEl.required = false;
+                if (genLineEl) genLineEl.required = true;
+                if (genCatEl) genCatEl.required = true;
+                if (genNameEl) genNameEl.required = true;
+            }
+        }
+
+        function applyPreselected() {
+            if (typeof PRESELECTED_MACHINE !== 'undefined' && PRESELECTED_MACHINE && PRESELECTED_MACHINE.machine_id) {
+                setMode('machine');
+                if (filterLineEl) filterLineEl.value = PRESELECTED_MACHINE.line || '';
+                if (searchEl) searchEl.value = '';
+                populateMachineOptions(PRESELECTED_MACHINE.machine_id);
+                machineSelectEl.style.pointerEvents = 'none';
+                machineSelectEl.style.backgroundColor = '#f8fafc';
+            } else {
+                setMode('machine');
+                populateMachineOptions('');
+            }
+        }
+
+        function reset() {
+            if (typeof PRESELECTED_MACHINE !== 'undefined' && PRESELECTED_MACHINE && PRESELECTED_MACHINE.machine_id) {
+                applyPreselected();
+                return;
+            }
+            if (filterLineEl) filterLineEl.value = '';
+            if (searchEl) searchEl.value = '';
+            if (genLineEl) genLineEl.value = '';
+            if (genCatEl) genCatEl.value = '';
+            if (genNameEl) genNameEl.value = '';
+            setMode('machine');
+            populateMachineOptions('');
+        }
+
+        switchBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                setMode(btn.dataset.mode);
+            });
+        });
+
+        if (filterLineEl) {
+            filterLineEl.addEventListener('change', () => populateMachineOptions(''));
+        }
+        if (searchEl) {
+            searchEl.addEventListener('input', () => populateMachineOptions());
+        }
+        machineSelectEl.addEventListener('change', syncSelectedMachineFields);
+
+        applyPreselected();
+
+        return { setMode, populateMachineOptions, reset, unlockQr: () => {
+            if (filterLineEl) filterLineEl.disabled = false;
+            if (searchEl) {
+                searchEl.readOnly = false;
+                searchEl.value = '';
+            }
+            machineSelectEl.style.pointerEvents = '';
+            machineSelectEl.style.backgroundColor = '';
+            switchBtns.forEach(b => { b.disabled = false; b.removeAttribute('title'); });
+            if (filterLineEl) filterLineEl.value = '';
+            populateMachineOptions('');
+        }};
     }
 
-    const dtMachineSelect = document.getElementById('dt_machine_id');
-    if (dtMachineSelect) {
-        dtMachineSelect.addEventListener('change', function() {
-            const selected = this.options[this.selectedIndex];
-            const nameInput = document.getElementById('dt_machine_name');
-            const lineInput = document.getElementById('dt_line');
-            
-            if (this.value !== "") {
-                nameInput.value = selected.dataset.name || '';
-                lineInput.value = selected.dataset.line || '';
-            } else {
-                nameInput.value = '';
-                lineInput.value = '';
+    assetControllers.req = initAssetSelector('req', 'active-primary');
+    assetControllers.dt = initAssetSelector('dt', 'active-danger');
+
+    window.unlockQrMachine = function(prefix) {
+        assetControllers[prefix]?.unlockQr();
+    };
+
+    // Quick issue presets for Repair form
+    const reqIssueInput = document.getElementById('req_issue_title');
+    const issuePresetBtns = document.querySelectorAll('#req_issue_presets .issue-chip');
+    issuePresetBtns.forEach(chip => {
+        chip.addEventListener('click', () => {
+            issuePresetBtns.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            if (reqIssueInput) {
+                reqIssueInput.value = chip.dataset.preset || '';
+                reqIssueInput.focus();
             }
         });
-        
-        // Trigger change to auto-fill if pre-selected
-        if(dtMachineSelect.value !== "") {
-            dtMachineSelect.dispatchEvent(new Event('change'));
+    });
+
+    function prepareAssetFormData(prefix, formData) {
+        const mode = formData.get(`${'asset_mode'}`) || 'machine';
+        if (mode === 'machine') {
+            const machineId = String(formData.get('machine_id') || '').trim();
+            if (!machineId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'กรุณาเลือกเครื่องจักร',
+                    text: 'กรุณาเลือกเครื่องจักรจากรายการในระบบ หรือสลับเป็นโหมด "อุปกรณ์ทั่วไป / นอกอาคาร"'
+                });
+                return false;
+            }
+            const found = (typeof MACHINES_DATA !== 'undefined' ? MACHINES_DATA : []).find(
+                m => String(m.machine_id) === machineId
+            );
+            if (!found) {
+                Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูลเครื่องจักร', text: 'กรุณาเลือกเครื่องจักรใหม่อีกครั้ง' });
+                return false;
+            }
+            formData.set('machine_name', found.machine_name || '');
+            formData.set('line', found.line || '');
+            return true;
         }
+
+        // General / Non-line / Outdoor mode
+        const genLine = String(formData.get('general_line') || '').trim();
+        const genCat = String(formData.get('general_category') || '').trim();
+        const genName = String(formData.get('general_name') || '').trim();
+
+        if (!genLine || !genCat || !genName) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ข้อมูลไม่ครบถ้วน',
+                text: 'กรุณาเลือกพื้นที่ หมวดหมู่อุปกรณ์ และระบุชื่ออุปกรณ์/จุดที่พบปัญหา'
+            });
+            return false;
+        }
+
+        formData.set('machine_id', '');
+        formData.set('line', genLine);
+        formData.set('machine_name', `[${genCat}] ${genName}`);
+        return true;
     }
 
     // Image Compression & Cropper Logic
@@ -297,24 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Remove raw uncompressed photo from form data to prevent exceeding max upload limits
         formData.delete('photo');
-        const inputLine = formData.get('line');
+        formData.delete('image');
 
-        if (inputLine && VALID_LINES && !VALID_LINES.includes(inputLine)) {
-            const confirm = await Swal.fire({
-                title: 'ไม่พบไลน์ผลิตนี้ในระบบ',
-                text: `คุณระบุไลน์ผลิต/แผนกเป็น "${inputLine}" ซึ่งไม่มีในฐานข้อมูล คุณต้องการที่จะแจ้งซ่อมพื้นที่นี้จริงๆใช่ไหม?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#0d6efd',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'ใช่, ยืนยัน',
-                cancelButtonText: 'กลับไปแก้ไข'
-            });
-
-            if (!confirm.isConfirmed) {
-                document.getElementById('req_line').focus();
-                return;
-            }
+        if (!prepareAssetFormData('req', formData)) {
+            return;
         }
 
         try {
@@ -362,9 +541,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 // Reset form & preview
                 formWO.reset();
+                assetControllers.req?.reset();
+                issuePresetBtns.forEach(c => c.classList.remove('active'));
                 if (previewContainer) previewContainer.style.display = 'none';
                 compressedImageBlob = null;
-                const reqDisplay = document.getElementById('req_display_time');
                 if (reqDisplay) {
                     reqDisplay.textContent = new Date().toLocaleString('th-TH');
                 }
@@ -395,24 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         const formData = new FormData(formDT);
-        const inputLine = formData.get('line');
-
-        if (inputLine && VALID_LINES && !VALID_LINES.includes(inputLine)) {
-            const confirm = await Swal.fire({
-                title: 'ไม่พบไลน์ผลิตนี้ในระบบ',
-                text: `คุณระบุไลน์ผลิต/แผนกเป็น "${inputLine}" ซึ่งไม่มีในฐานข้อมูล ยืนยันที่จะบันทึกใช่ไหม?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'ใช่, ยืนยัน',
-                cancelButtonText: 'กลับไปแก้ไข'
-            });
-
-            if (!confirm.isConfirmed) {
-                document.getElementById('dt_line').focus();
-                return;
-            }
+        if (!prepareAssetFormData('dt', formData)) {
+            return;
         }
 
         try {
@@ -438,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 // Reset partly
                 document.getElementById('dt_cause_detail').value = '';
+                assetControllers.dt?.reset();
             } else {
                 throw new Error(data.message || 'เกิดข้อผิดพลาด');
             }

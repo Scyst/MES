@@ -3,6 +3,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../components/init.php';
+require_once __DIR__ . '/_asset_validation.php';
 
 
 requirePermission(['view_maintenance', 'view_production', 'view_dashboard']);
@@ -109,25 +110,15 @@ try {
             break;
 
         case 'create_wo':
-            $machineId = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
             $title = trim($input['issue_title'] ?? '');
-
             if (empty($title)) throw new Exception("Issue title is required");
 
-            $woNumber = generateWONumber($pdo);
+            $resolvedAsset = resolveValidatedAsset($pdo, $input);
+            $machineId = $resolvedAsset['machine_id'];
+            $machineName = $resolvedAsset['machine_name'];
+            $line = $resolvedAsset['line'];
 
-            // Get machine info if selected
-            $machineName = $input['machine_name'] ?? '';
-            $line = $input['line'] ?? '';
-            if ($machineId) {
-                $mStmt = $pdo->prepare("SELECT machine_name, line FROM " . PE_MACHINES_TABLE . " WHERE machine_id = ?");
-                $mStmt->execute([$machineId]);
-                $mData = $mStmt->fetch(PDO::FETCH_ASSOC);
-                if ($mData) {
-                    $machineName = $mData['machine_name'];
-                    if (empty($line)) $line = $mData['line'];
-                }
-            }
+            $woNumber = generateWONumber($pdo);
 
             $requestedAt = !empty($input['requested_at']) ? str_replace('T', ' ', $input['requested_at']) : date('Y-m-d H:i:s');
 
