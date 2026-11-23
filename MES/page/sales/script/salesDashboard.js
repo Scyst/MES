@@ -19,7 +19,9 @@ let isManualSortMode = true;
 
 // RM Forecast globals
 let rmForecastData = null;
+let rmForecastSummary = [];
 let rmForecastModal = null;
+let lastForecastQueryKey = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Init Modals
@@ -136,32 +138,48 @@ async function fetchExchangeRate() {
         if (data && data.rates && data.rates.THB) {
             const thbRate = data.rates.THB;
             if (rateInput) rateInput.value = thbRate.toFixed(2);
-            currentExchangeRate = thbRate;
-            renderTable(document.getElementById('universalSearch').value);
+            if (Math.abs(currentExchangeRate - thbRate) > 0.001) {
+                currentExchangeRate = thbRate;
+                if (allData.length > 0) {
+                    renderTable(document.getElementById('universalSearch')?.value || '');
+                }
+            }
         }
     } catch (err) { console.error("Failed to fetch rate:", err); }
 }
 
-async function loadData() {
+async function loadData(forceForecast = false) {
     showSpinner();
     try {
         const startDate = document.getElementById('filterStartDate')?.value || '';
         const endDate = document.getElementById('filterEndDate')?.value || '';
         const dateType = document.getElementById('filterDateType')?.value || 'loading_date';
+        const forecastKey = `${startDate}|${endDate}|${dateType}`;
 
         const res = await fetch(`${API_URL}?action=read&status=${currentStatusFilter}&start_date=${startDate}&end_date=${endDate}&date_type=${dateType}`);
         const json = await res.json();
 
         if (json.success) {
-            allData = json.data;
+            allData = (json.data || []).map(item => {
+                item._search = [
+                    item.po_number, item.sku, item.description, item.color,
+                    item.dc_location, item.loading_week, item.shipping_week,
+                    item.team, item.ticket_number, item.remark,
+                    item.production_date, item.production_end_date,
+                    item.loading_date, item.inspection_date
+                ].filter(Boolean).join(' ').toLowerCase();
+                return item;
+            });
             updateKPI(json.summary);
             sortState = [];
             currentPage = 1;
             updateSortUI();
             renderTable(document.getElementById('universalSearch').value);
             
-            // Auto-run forecast silently without opening modal
-            runRMForecast(false);
+            // Only fetch RM forecast in background when date filter changed or cache is empty
+            if (currentStatusFilter !== 'PROD_DONE' && (forceForecast || !rmForecastData || lastForecastQueryKey !== forecastKey)) {
+                runRMForecast(false);
+            }
         }
     } catch (err) { console.error(err); showToast('Error loading data', '#dc3545'); } finally { hideSpinner(); }
 }
@@ -192,11 +210,12 @@ function renderTable(searchTerm) {
 
     // 1. Filtering
     const keywords = searchTerm ? searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0) : [];
-    filteredData = allData.filter(item => {
-        if (keywords.length === 0) return true;
-        const text = Object.values(item).join(' ').toLowerCase();
-        return keywords.every(k => text.includes(k));
-    });
+    filteredData = keywords.length === 0
+        ? allData.slice()
+        : allData.filter(item => {
+            const text = item._search || '';
+            return keywords.every(k => text.includes(k));
+        });
 
     // 2. Sorting
     if (sortState.length > 0) {
@@ -290,12 +309,21 @@ function renderTable(searchTerm) {
         if (rmForecastData && rmForecastData[item.id]) {
             const fData = rmForecastData[item.id];
             if (fData.status === 'SHORTAGE') {
-                let missingList = fData.shortages.filter(s => s.shortage > 0 || s.is_missing_bom).map(s => s.is_missing_bom ? `No BOM found` : `${s.sap_no} (ขาด ${s.shortage.toLocaleString()})`).join('<br>');
-                forecastIcon = `<i class="fas fa-exclamation-circle text-danger ms-2" title="${missingList}" data-bs-toggle="tooltip" data-bs-html="true" style="cursor:help; font-size: 1.1em;"></i>`;
+                const activeShortages = (fData.shortages || []).filter(s => s.shortage > 0 || s.is_missing_bom);
+                const maxTooltipItems = 10;
+                let missingList = activeShortages
+                    .slice(0, maxTooltipItems)
+                    .map(s => s.is_missing_bom ? 'No BOM found' : `${s.sap_no} (ขาด ${Number(s.shortage || 0).toLocaleString()})`)
+                    .join('\n');
+                if (activeShortages.length > maxTooltipItems) {
+                    missingList += `\n...และอีก ${activeShortages.length - maxTooltipItems} รายการ`;
+                }
+                const safeTitle = missingList.replace(/"/g, '&quot;');
+                forecastIcon = `<i class="fas fa-exclamation-circle text-danger ms-2" title="${safeTitle}" style="cursor:help; font-size: 1.1em;"></i>`;
                 rowLeftBorder = 'box-shadow: inset 4px 0 0 #dc3545;'; // Red left border
                 poColBg = 'bg-danger bg-opacity-10'; // Light red background for PO column
             } else if (fData.status === 'READY') {
-                forecastIcon = `<i class="fas fa-check-circle text-success ms-2 opacity-50" title="RM Ready" data-bs-toggle="tooltip"></i>`;
+                forecastIcon = `<i class="fas fa-check-circle text-success ms-2 opacity-50" title="RM Ready"></i>`;
                 rowLeftBorder = 'box-shadow: inset 4px 0 0 #198754;'; // Green left border
             }
         }
@@ -641,7 +669,7 @@ async function submitCreateOrder() {
         if (json.success) {
             showToast('Created successfully', '#198754');
             createOrderModal.hide();
-            loadData();
+            loadData(true);
         } else { alert('Error: ' + json.message); }
     } catch (err) { 
         alert('Failed to create order'); 
@@ -655,6 +683,98 @@ async function submitCreateOrder() {
 }
 
 // --- RM Forecast ---
+function renderRMForecastModalTables() {
+    const tbody = document.getElementById('rmForecastTableBody');
+    const tbodyAffected = document.getElementById('rmAffectedTableBody');
+    const tbodyReady = document.getElementById('rmReadyTableBody');
+    const tbodyNoBom = document.getElementById('rmNoBomTableBody');
+    if (!tbody) return;
+
+    if (!rmForecastSummary || rmForecastSummary.length === 0) {
+        tbody.innerHTML = '';
+        if (tbodyAffected) tbodyAffected.innerHTML = '';
+        if (tbodyReady) tbodyReady.innerHTML = '';
+        if (tbodyNoBom) tbodyNoBom.innerHTML = '';
+        return;
+    }
+
+    const sortedSummary = rmForecastSummary.slice().sort((a, b) => b.total_shortage - a.total_shortage);
+    tbody.innerHTML = sortedSummary.map(item => `
+        <tr>
+            <td class="fw-bold text-danger ps-4">${item.sap_no}</td>
+            <td class="text-dark">${item.part_description}</td>
+            <td class="text-end fw-bold text-primary">${(item.available_in_store || 0).toLocaleString()}</td>
+            <td class="text-end fw-bold text-danger pe-4">${item.total_shortage.toLocaleString()}</td>
+        </tr>
+    `).join('');
+
+    const affectedRows = [];
+    const readyRows = [];
+    const noBomRows = [];
+    let countAffected = 0, countReady = 0, countNoBom = 0;
+    const maxBadgesPerRow = 10;
+
+    allData.forEach(item => {
+        const fData = rmForecastData ? rmForecastData[item.id] : null;
+        if (!fData) return;
+
+        if (fData.status === 'SHORTAGE') {
+            const isNoBom = (fData.shortages || []).some(s => s.is_missing_bom);
+            if (isNoBom) {
+                countNoBom++;
+                noBomRows.push(`
+                    <tr>
+                        <td class="fw-bold ps-4 text-secondary">${item.po_number}</td>
+                        <td>${item.sku} - ${item.description || ''}</td>
+                    </tr>
+                `);
+            } else {
+                countAffected++;
+                const activeShortages = (fData.shortages || []).filter(s => s.shortage > 0);
+                let missingListHTML = activeShortages
+                    .slice(0, maxBadgesPerRow)
+                    .map(s => `<span class="badge bg-danger me-1 mb-1 shadow-sm px-2 py-1"><i class="fas fa-exclamation-circle me-1"></i>${s.sap_no} (ขาด ${Number(s.shortage || 0).toLocaleString()})</span>`)
+                    .join(' ');
+                if (activeShortages.length > maxBadgesPerRow) {
+                    const restTooltip = activeShortages
+                        .slice(maxBadgesPerRow)
+                        .map(s => `${s.sap_no} (ขาด ${Number(s.shortage || 0).toLocaleString()})`)
+                        .join(', ')
+                        .replace(/"/g, '&quot;');
+                    missingListHTML += ` <span class="badge bg-secondary me-1 mb-1 px-2 py-1" title="${restTooltip}" style="cursor:help;">+ อีก ${activeShortages.length - maxBadgesPerRow} รายการ</span>`;
+                }
+                affectedRows.push(`
+                    <tr>
+                        <td class="fw-bold ps-4 text-danger">${item.po_number}</td>
+                        <td>${missingListHTML}</td>
+                    </tr>
+                `);
+            }
+        } else if (fData.status === 'READY') {
+            countReady++;
+            const dStr = item.loading_date ? new Date(item.loading_date).toLocaleDateString('th-TH') : '-';
+            readyRows.push(`
+                <tr>
+                    <td class="fw-bold ps-4 text-success">${item.po_number}</td>
+                    <td>${item.sku} - ${item.description || ''}</td>
+                    <td>${dStr}</td>
+                </tr>
+            `);
+        }
+    });
+
+    if (tbodyAffected) tbodyAffected.innerHTML = affectedRows.join('');
+    if (tbodyReady) tbodyReady.innerHTML = readyRows.join('');
+    if (tbodyNoBom) tbodyNoBom.innerHTML = noBomRows.join('');
+
+    const tabA = document.getElementById('tab-affected');
+    const tabR = document.getElementById('tab-ready');
+    const tabN = document.getElementById('tab-nobom');
+    if (tabA) tabA.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> Affected POs <span class="badge bg-danger ms-1 rounded-pill">${countAffected}</span>`;
+    if (tabR) tabR.innerHTML = `<i class="fas fa-check-circle me-1"></i> Ready <span class="badge bg-success ms-1 rounded-pill">${countReady}</span>`;
+    if (tabN) tabN.innerHTML = `<i class="fas fa-question-circle me-1"></i> Missing BOM <span class="badge bg-secondary ms-1 rounded-pill">${countNoBom}</span>`;
+}
+
 async function runRMForecast(showModal = true) {
     const btnIcon = document.getElementById('iconRMForecast');
     const btnSpinner = document.getElementById('spinnerRMForecast');
@@ -669,108 +789,26 @@ async function runRMForecast(showModal = true) {
         const startDate = document.getElementById('filterStartDate')?.value || '';
         const endDate = document.getElementById('filterEndDate')?.value || '';
         const dateType = document.getElementById('filterDateType')?.value || 'loading_date';
+        const forecastKey = `${startDate}|${endDate}|${dateType}`;
 
         const res = await fetch(`api/forecast_rm.php?start_date=${startDate}&end_date=${endDate}&date_type=${dateType}`);
         const json = await res.json();
         
         if (json.success) {
-            rmForecastData = json.data;
-            
-            const tbody = document.getElementById('rmForecastTableBody');
-            tbody.innerHTML = '';
-            
-            if (json.summary && json.summary.length > 0) {
-                json.summary.sort((a,b) => b.total_shortage - a.total_shortage);
-                
-                json.summary.forEach(item => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="fw-bold text-danger ps-4">${item.sap_no}</td>
-                        <td class="text-dark">${item.part_description}</td>
-                        <td class="text-end fw-bold text-primary">${(item.available_in_store || 0).toLocaleString()}</td>
-                        <td class="text-end fw-bold text-danger pe-4">${item.total_shortage.toLocaleString()}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-                
-                // Populate Tab 2, 3, 4
-                const tbodyAffected = document.getElementById('rmAffectedTableBody');
-                const tbodyReady = document.getElementById('rmReadyTableBody');
-                const tbodyNoBom = document.getElementById('rmNoBomTableBody');
-                if (tbodyAffected) tbodyAffected.innerHTML = '';
-                if (tbodyReady) tbodyReady.innerHTML = '';
-                if (tbodyNoBom) tbodyNoBom.innerHTML = '';
+            rmForecastData = json.data || {};
+            rmForecastSummary = json.summary || [];
+            lastForecastQueryKey = forecastKey;
 
-                let countAffected = 0, countReady = 0, countNoBom = 0;
-
-                allData.forEach(item => {
-                    const fData = rmForecastData[item.id];
-                    if (!fData) return;
-
-                    if (fData.status === 'SHORTAGE') {
-                        const isNoBom = fData.shortages.some(s => s.is_missing_bom);
-                        if (isNoBom) {
-                            countNoBom++;
-                            if(tbodyNoBom) tbodyNoBom.innerHTML += `
-                                <tr>
-                                    <td class="fw-bold ps-4 text-secondary">${item.po_number}</td>
-                                    <td>${item.sku} - ${item.description || ''}</td>
-                                </tr>
-                            `;
-                        } else {
-                            countAffected++;
-                            const missingListHTML = fData.shortages.filter(s => s.shortage > 0).map(s => `<span class="badge bg-danger me-1 mb-1 shadow-sm px-2 py-1"><i class="fas fa-exclamation-circle me-1"></i>${s.sap_no} (ขาด ${s.shortage.toLocaleString()})</span>`).join(' ');
-                            if(tbodyAffected) tbodyAffected.innerHTML += `
-                                <tr>
-                                    <td class="fw-bold ps-4 text-danger">${item.po_number}</td>
-                                    <td>${missingListHTML}</td>
-                                </tr>
-                            `;
-                        }
-                    } else if (fData.status === 'READY') {
-                        countReady++;
-                        const dStr = item.loading_date ? new Date(item.loading_date).toLocaleDateString('th-TH') : '-';
-                        if(tbodyReady) tbodyReady.innerHTML += `
-                            <tr>
-                                <td class="fw-bold ps-4 text-success">${item.po_number}</td>
-                                <td>${item.sku} - ${item.description || ''}</td>
-                                <td>${dStr}</td>
-                            </tr>
-                        `;
-                    }
-                });
-
-                // Update tab labels with counts
-                const tabA = document.getElementById('tab-affected');
-                const tabR = document.getElementById('tab-ready');
-                const tabN = document.getElementById('tab-nobom');
-                if (tabA) tabA.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> Affected POs <span class="badge bg-danger ms-1 rounded-pill">${countAffected}</span>`;
-                if (tabR) tabR.innerHTML = `<i class="fas fa-check-circle me-1"></i> Ready <span class="badge bg-success ms-1 rounded-pill">${countReady}</span>`;
-                if (tabN) tabN.innerHTML = `<i class="fas fa-question-circle me-1"></i> Missing BOM <span class="badge bg-secondary ms-1 rounded-pill">${countNoBom}</span>`;
-
-                // Add visual click effect for tabs
-                document.querySelectorAll('#rmForecastTabs .nav-link').forEach(tab => {
-                    tab.addEventListener('click', (e) => {
-                        document.querySelectorAll('#rmForecastTabs .nav-link').forEach(t => t.style.opacity = '0.8');
-                        e.currentTarget.style.opacity = '1';
-                    });
-                });
-
-                if(showModal && rmForecastModal) rmForecastModal.show();
-            } else {
-                if (showModal) showToast('✅ วัตถุดิบเพียงพอสำหรับทุก PO ที่ยังไม่เสร็จ', '#198754');
-            }
-            
             renderTable(document.getElementById('universalSearch').value);
-            
-            // Re-init tooltips for newly added badges
-            setTimeout(() => {
-                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl);
-                });
-            }, 500);
 
+            if (showModal) {
+                if (rmForecastSummary.length > 0) {
+                    renderRMForecastModalTables();
+                    if (rmForecastModal) rmForecastModal.show();
+                } else {
+                    showToast('✅ วัตถุดิบเพียงพอสำหรับทุก PO ที่ยังไม่เสร็จ', '#198754');
+                }
+            }
         } else {
             if (showModal) alert('Error running forecast: ' + json.message);
         }
@@ -846,7 +884,7 @@ async function deleteOrder(id, poNum) {
 
         if (json.success) {
             showToast('Order deleted successfully', '#198754');
-            loadData(); 
+            loadData(true); 
         } else {
             alert('Error: ' + json.message);
         }
@@ -952,7 +990,7 @@ async function sendFileToBackend(formData) {
 
 function renderPreviewTable() {
     const tbody = document.getElementById('previewTableBody');
-    tbody.innerHTML = '';
+    if (!tbody) return;
     let errorCount = 0;
     previewImportData.forEach(r => {
         errorCount += Object.keys(r.warnings || {}).length;
@@ -960,23 +998,26 @@ function renderPreviewTable() {
     
     const searchVal = (document.getElementById('previewSearchInput') ? document.getElementById('previewSearchInput').value.toLowerCase() : '');
     const errOnly = (document.getElementById('previewErrorFilter') ? document.getElementById('previewErrorFilter').checked : false);
-    
-    previewImportData.forEach((row, idx) => {
+    const maxPreviewRows = 300;
+    const rowsHtml = [];
+    let matchedCount = 0;
+
+    for (let idx = 0; idx < previewImportData.length; idx++) {
+        const row = previewImportData[idx];
         const hasWarning = Object.keys(row.warnings || {}).length > 0;
         
-        // Filter logic
-        if (errOnly && !hasWarning) return;
+        if (errOnly && !hasWarning) continue;
         
         if (searchVal) {
             const rowText = `${row.po_number || ''} ${row.sku || ''} ${row.description || ''}`.toLowerCase();
-            if (!rowText.includes(searchVal)) return;
+            if (!rowText.includes(searchVal)) continue;
         }
 
-        const tr = document.createElement('tr');
-        
+        matchedCount++;
+        if (!hasWarning && rowsHtml.length >= maxPreviewRows) continue;
+
         const makeDateCell = (key, val) => {
             const isWarn = row.warnings && row.warnings[key];
-            
             const displayVal = formatDate(val).replace(/<[^>]+>/g, '') === '-' ? '' : formatDate(val);
             
             return `<td class="${isWarn ? 'bg-danger bg-opacity-10 border-danger border-2' : ''}">
@@ -988,7 +1029,7 @@ function renderPreviewTable() {
             </td>`;
         };
 
-        tr.innerHTML = `
+        rowsHtml.push(`<tr>
             <td class="text-muted text-center">${row.row_index}</td>
             <td class="fw-bold">${row.po_number || '-'}</td>
             <td>${row.sku || '-'}</td>
@@ -997,12 +1038,20 @@ function renderPreviewTable() {
             ${makeDateCell('production_end_date', row.production_end_date)}
             ${makeDateCell('loading_date', row.loading_date)}
             ${makeDateCell('inspection_date', row.inspection_date)}
-        `;
-        tbody.appendChild(tr);
-    });
-    
+        </tr>`);
+    }
+
+    if (matchedCount > rowsHtml.length) {
+        rowsHtml.push(`<tr><td colspan="8" class="text-center text-muted py-2 bg-light">แสดง ${rowsHtml.length.toLocaleString()} จากทั้งหมด ${matchedCount.toLocaleString()} รายการ (ใช้ช่องค้นหาด้านบนเพื่อกรองรายการเพิ่มเติม)</td></tr>`);
+    }
+    tbody.innerHTML = rowsHtml.join('');
     document.getElementById('previewErrorCount').innerText = errorCount;
 }
+
+window.debouncedRenderPreviewTable = function() {
+    clearTimeout(window.previewSearchTimer);
+    window.previewSearchTimer = setTimeout(renderPreviewTable, 250);
+};
 
 window.updatePreviewData = function(index, key, value, event) {
     let ymd = null;
@@ -1091,7 +1140,7 @@ window.confirmImport = async function() {
         
         if (json.success) { 
             showImportResultModal(json); 
-            loadData(); 
+            loadData(true); 
         } else { 
             alert('Import Error: ' + json.message); 
         }

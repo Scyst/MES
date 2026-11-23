@@ -13,6 +13,8 @@ export default function RmForecastModal({ startDate, endDate, dateType, onClose 
   const [tab, setTab] = useState('summary');
   const [orders, setOrders] = useState([]);
   const [summary, setSummary] = useState([]);
+  const [expandedPoIds, setExpandedPoIds] = useState(() => new Set());
+  const [visibleShortagePos, setVisibleShortagePos] = useState(30);
 
   const fetchForecast = useCallback(async () => {
     setLoading(true);
@@ -182,42 +184,76 @@ export default function RmForecastModal({ startDate, endDate, dateType, onClose 
                   <p className="py-12 text-center text-sm text-slate-500">ไม่มี PO ที่วัตถุดิบขาดแคลน</p>
                 ) : (
                   <div className="space-y-3">
-                    {shortageOrders.map((po) => (
-                      <div key={po.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-800/60 dark:bg-amber-950/20">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-amber-600" />
-                            <span className="font-bold text-slate-900 dark:text-white">PO: {po.po_number}</span>
-                            <span className="rounded bg-slate-200 px-2 py-0.5 font-mono text-xs dark:bg-slate-700">{po.sku}</span>
+                    {shortageOrders.slice(0, visibleShortagePos).map((po) => {
+                      const allShortages = po.shortages || [];
+                      const isExpanded = expandedPoIds.has(po.id);
+                      const shownShortages = isExpanded ? allShortages : allShortages.slice(0, 10);
+                      return (
+                        <div key={po.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-800/60 dark:bg-amber-950/20">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 text-amber-600" />
+                              <span className="font-bold text-slate-900 dark:text-white">PO: {po.po_number}</span>
+                              <span className="rounded bg-slate-200 px-2 py-0.5 font-mono text-xs dark:bg-slate-700">{po.sku}</span>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                              Qty: {formatInt(po.quantity)} • ขาด {allShortages.length} รายการ
+                            </span>
                           </div>
-                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Qty: {formatInt(po.quantity)}</span>
-                        </div>
-                        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                          <table className="min-w-full divide-y divide-slate-200 text-xs dark:divide-slate-700">
-                            <thead className="bg-slate-50 dark:bg-slate-800">
-                              <tr>
-                                <th className="px-3 py-2 text-left">SAP</th>
-                                <th className="px-3 py-2 text-left">รายการ</th>
-                                <th className="px-3 py-2 text-right">ต้องใช้</th>
-                                <th className="px-3 py-2 text-right">คงเหลือ</th>
-                                <th className="px-3 py-2 text-right text-red-600">ขาด</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                              {(po.shortages || []).map((s, idx) => (
-                                <tr key={idx}>
-                                  <td className="px-3 py-1.5 font-mono font-semibold">{s.sap_no}</td>
-                                  <td className="px-3 py-1.5">{s.part_description}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono">{s.required}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono">{s.available}</td>
-                                  <td className="px-3 py-1.5 text-right font-mono font-bold text-red-600">{s.shortage}</td>
+                          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                            <table className="min-w-full divide-y divide-slate-200 text-xs dark:divide-slate-700">
+                              <thead className="bg-slate-50 dark:bg-slate-800">
+                                <tr>
+                                  <th className="px-3 py-2 text-left">SAP</th>
+                                  <th className="px-3 py-2 text-left">รายการ</th>
+                                  <th className="px-3 py-2 text-right">ต้องใช้</th>
+                                  <th className="px-3 py-2 text-right">คงเหลือ</th>
+                                  <th className="px-3 py-2 text-right text-red-600">ขาด</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {shownShortages.map((s, idx) => (
+                                  <tr key={idx}>
+                                    <td className="px-3 py-1.5 font-mono font-semibold">{s.sap_no}</td>
+                                    <td className="px-3 py-1.5">{s.part_description}</td>
+                                    <td className="px-3 py-1.5 text-right font-mono">{s.required}</td>
+                                    <td className="px-3 py-1.5 text-right font-mono">{s.available}</td>
+                                    <td className="px-3 py-1.5 text-right font-mono font-bold text-red-600">{s.shortage}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {allShortages.length > 10 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedPoIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(po.id)) next.delete(po.id);
+                                  else next.add(po.id);
+                                  return next;
+                                });
+                              }}
+                              className="mt-2 text-xs font-semibold text-amber-700 hover:underline dark:text-amber-300"
+                            >
+                              {isExpanded ? 'ย่อรายการวัตถุดิบ' : `ดูเพิ่มอีก ${allShortages.length - 10} รายการ`}
+                            </button>
+                          )}
                         </div>
+                      );
+                    })}
+                    {shortageOrders.length > visibleShortagePos && (
+                      <div className="pt-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setVisibleShortagePos((v) => v + 30)}
+                          className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                          แสดงเพิ่ม ({visibleShortagePos} / {shortageOrders.length} PO)
+                        </button>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )
               )}

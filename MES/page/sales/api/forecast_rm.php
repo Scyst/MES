@@ -25,7 +25,7 @@ try {
     $endDate = $_GET['end_date'] ?? '';
     $dateType = $_GET['date_type'] ?? 'loading_date';
     
-    $allowedDateCols = ['loading_date', 'production_start', 'production_end', 'inspection_date'];
+    $allowedDateCols = ['loading_date', 'production_date', 'production_end_date', 'production_start', 'production_end', 'inspection_date'];
     if (!in_array($dateType, $allowedDateCols)) {
         $dateType = 'loading_date';
     }

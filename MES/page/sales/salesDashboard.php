@@ -326,7 +326,7 @@ $pageHelpId = "helpModal";
                     <div class="bg-white p-2 border-bottom d-flex gap-3 align-items-center">
                         <div class="input-group input-group-sm" style="max-width: 300px;">
                             <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control" id="previewSearchInput" placeholder="ค้นหา PO, SKU..." onkeyup="renderPreviewTable()">
+                            <input type="text" class="form-control" id="previewSearchInput" placeholder="ค้นหา PO, SKU..." oninput="debouncedRenderPreviewTable()">
                         </div>
                         <div class="form-check form-switch ms-auto">
                             <input class="form-check-input" type="checkbox" id="previewErrorFilter" onchange="renderPreviewTable()">
