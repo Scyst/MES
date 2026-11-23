@@ -452,7 +452,7 @@ export default function AppLayout() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 h-full overflow-auto relative z-0">
+        <main className="flex-1 h-full overflow-auto relative">
           <div className="p-2.5 sm:p-3.5 lg:p-4 h-full">
             <Outlet />
           </div>

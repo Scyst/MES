@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Search, Download, Edit3, History, Trash2, ArrowLeft, CheckSquare,
   ChevronDown, Sun, Moon, AlertTriangle, Settings, User, RefreshCw, ExternalLink
@@ -388,8 +389,8 @@ export default function ManpowerDetailModal({
     showToast('ส่งออกข้อมูลรายละเอียดเป็น Excel สำเร็จ', 'success');
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-2 sm:p-4 backdrop-blur-xs">
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-2 sm:p-4 backdrop-blur-xs">
       <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
         {/* Modal Header */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
@@ -742,7 +743,7 @@ export default function ManpowerDetailModal({
 
       {/* Inline Edit Log Modal */}
       {editRow && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3">
           <form onSubmit={handleSaveEdit} className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4">
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div>
@@ -856,7 +857,7 @@ export default function ManpowerDetailModal({
 
       {/* Batch Swap Shift Modal */}
       {swapModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3">
           <form onSubmit={handleConfirmBatchSwapShift} className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-4">
             <h5 className="text-sm font-bold text-slate-800 dark:text-white">สลับกะพนักงานที่เลือก ({selectedRows.length} คน)</h5>
             <div>
@@ -887,7 +888,7 @@ export default function ManpowerDetailModal({
 
       {/* Employee Quick Profile Overlay */}
       {profileModal.open && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 space-y-3 text-xs">
             <div className="flex items-center justify-between border-b pb-2.5 dark:border-slate-700">
               <h5 className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
@@ -936,7 +937,8 @@ export default function ManpowerDetailModal({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 

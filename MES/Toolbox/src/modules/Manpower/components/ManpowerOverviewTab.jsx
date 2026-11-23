@@ -17,11 +17,11 @@ import {
 import ManpowerDetailModal from './ManpowerDetailModal';
 
 const VIEW_MODES = [
-  { id: 'LINE', label: 'รายสายผลิต (By Line)' },
-  { id: 'SHIFT', label: 'แยกกะ (By Shift)' },
-  { id: 'TYPE', label: 'กลุ่มจ้าง (Wage Type)' },
-  { id: 'PAYMENT_LINE', label: 'การจ่ายเงิน × สายผลิต' },
-  { id: 'PAYMENT', label: 'ประเภทการจ่าย (Rate Type)' },
+  { id: 'LINE', label: 'รายสายผลิต (By Line)', shortLabel: 'รายสายผลิต' },
+  { id: 'SHIFT', label: 'แยกกะ (By Shift)', shortLabel: 'แยกกะ' },
+  { id: 'TYPE', label: 'กลุ่มจ้าง (Wage Type)', shortLabel: 'กลุ่มจ้าง' },
+  { id: 'PAYMENT_LINE', label: 'การจ่ายเงิน × สายผลิต', shortLabel: 'จ่ายเงิน × ไลน์' },
+  { id: 'PAYMENT', label: 'ประเภทการจ่าย (Rate Type)', shortLabel: 'รายเดือน / วัน' },
 ];
 
 const PIE_SPECS = [
@@ -685,19 +685,8 @@ export default function ManpowerOverviewTab({
       )}
 
       {/* Compact Control Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">มุมมองตาราง:</span>
-          <select
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-            className="min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-3 text-xs font-bold text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-          >
-            {VIEW_MODES.map((m) => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </select>
-
           <button
             type="button"
             onClick={() => setUseNewFormula((v) => !v)}
@@ -711,6 +700,9 @@ export default function ManpowerOverviewTab({
             <ArrowRightLeft className="h-3.5 w-3.5" />
             สูตรต้นทุน: {useNewFormula ? 'V2 (Improved)' : 'V1 (Legacy)'}
           </button>
+          <span className="hidden sm:inline text-[11px] text-slate-400">
+            คลิก KPI, แท่งกราฟ, Pie หรือตัวเลขในตารางเพื่อเจาะดูรายชื่อพนักงานได้ทันที
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -995,48 +987,58 @@ export default function ManpowerOverviewTab({
             <h3 className="text-sm font-bold text-slate-800 dark:text-white">สัดส่วนสถานะพนักงานวันนี้</h3>
             <p className="text-[11px] text-slate-500">คลิกที่ชิ้นกราฟหรือสถานะเพื่อเปิด Modal กรองรายชื่อเฉพาะสถานะ</p>
           </div>
-          <div className="h-52 w-full min-w-0 flex-1">
-            {pieData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสถานะ</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={44}
-                    outerRadius={74}
-                    paddingAngle={3}
-                    className="cursor-pointer"
-                    onClick={(slice) => {
-                      if (slice?.status) {
-                        openDetailModal({ status: slice.status, label: `${slice.name} (${date})` });
-                      }
-                    }}
-                  >
-                    {pieData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} className="cursor-pointer" />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} คน`, name]} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          {pieData.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-700">
-              {pieData.map((entry) => (
-                <button
-                  key={entry.status}
-                  type="button"
-                  onClick={() => openDetailModal({ status: entry.status, label: `${entry.name} (${date})` })}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                >
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                  {entry.name} ({entry.value})
-                </button>
-              ))}
+          {pieData.length === 0 ? (
+            <div className="flex h-64 items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสถานะ</div>
+          ) : (
+            <div className="flex flex-1 flex-col sm:flex-row items-center gap-2 min-h-[16rem]">
+              <div className="w-full sm:flex-1 h-56 sm:h-64 min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="54%"
+                      outerRadius="88%"
+                      paddingAngle={3}
+                      className="cursor-pointer"
+                      onClick={(slice) => {
+                        if (slice?.status) {
+                          openDetailModal({ status: slice.status, label: `${slice.name} (${date})` });
+                        }
+                      }}
+                    >
+                      {pieData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.color} className="cursor-pointer" />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v, name) => [`${v} คน`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-1.5 w-full sm:w-44 shrink-0">
+                {pieData.map((entry) => {
+                  const pct = kpis.total_registered > 0 ? ((entry.value / kpis.total_registered) * 100).toFixed(0) : 0;
+                  return (
+                    <button
+                      key={entry.status}
+                      type="button"
+                      onClick={() => openDetailModal({ status: entry.status, label: `${entry.name} (${date})` })}
+                      className="flex items-center justify-between gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50/70 px-2.5 py-1.5 text-left text-[11px] font-semibold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+                    >
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                        <span className="truncate">{entry.name}</span>
+                      </span>
+                      <span className="font-mono font-bold shrink-0">
+                        {entry.value} <span className="text-[10px] font-normal text-slate-400">({pct}%)</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -1044,7 +1046,7 @@ export default function ManpowerOverviewTab({
 
       {/* Legacy 3-Level Hierarchical Expandable Matrix Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
               <Layers className="h-4 w-4 text-indigo-500" />
@@ -1054,7 +1056,26 @@ export default function ManpowerOverviewTab({
               คลิกหัวแถว (▸) เพื่อเจาะดูชั้นย่อย 3 ระดับ (กลุ่ม/ไลน์ → กะ/ทีม → ตำแหน่ง) · คลิกตัวเลขในตารางเพื่อเปิด Modal เฉพาะส่วนนั้น
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex flex-wrap rounded-lg bg-slate-100 p-0.5 dark:bg-slate-900">
+              {VIEW_MODES.map((m) => {
+                const active = viewMode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setViewMode(m.id)}
+                    className={`min-h-[32px] rounded-md px-2.5 text-[11px] font-bold transition ${
+                      active
+                        ? 'bg-white text-indigo-700 shadow-2xs dark:bg-slate-800 dark:text-indigo-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    {m.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
             {matrixGroups.length > 0 && (
               <button
                 type="button"
