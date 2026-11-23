@@ -320,6 +320,15 @@ function exportLedgerToExcel() {
                 });
 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const minColWidths = [19, 12, 14, 32, 14, 14, 16, 10, 10, 16, 20, 36];
+                ws['!cols'] = wsData[0].map((_, colIdx) => {
+                    const maxLen = wsData.reduce((max, row) => {
+                        const cellText = String(row[colIdx] ?? '').replace(/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g, '');
+                        return Math.max(max, cellText.length);
+                    }, 0);
+                    return { wch: Math.min(Math.max(maxLen + 4, minColWidths[colIdx] || 12), 65) };
+                });
+
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Stock_Ledger");
                 XLSX.writeFile(wb, `Stock_Ledger_${startDate}_to_${endDate}.xlsx`);
