@@ -1,30 +1,34 @@
 ---
 name: anti-ai-slop
-description: Eliminates AI Slop across 3 dimensions — UI/Frontend Design (frontend-design), Code Engineering (karpathy-guidelines), and Thai/English Prose (humanizer). Activate whenever building or redesigning UI components, writing or refactoring code, or drafting documentation, reports, and user-facing copy.
+description: Eliminates AI Slop across 3 dimensions — UI/Frontend Design & Screen Redesign (frontend-design + taste), Code Engineering (karpathy-guidelines), and Thai/English Prose (humanizer + plain-writing). Activate whenever building, redesigning, or restyling UI screens/components, writing or refactoring code, or drafting documentation, reports, and user-facing copy.
 ---
 
-# Anti-AI Slop Guardrails (UI · Code · Writing)
+# Anti-AI Slop Guardrails (UI Redesign · Code · Writing)
 
 Apply these three pillars to eliminate machine-generated clichés, bloated abstractions, and filler prose.
 
 ---
 
-## Pillar 1: Anti-UI & Frontend Slop (`frontend-design`)
+## Pillar 1: Anti-UI & Screen Redesign Slop (`frontend-design` + `taste`)
 
-Prevent generic "AI-generated template" aesthetics when creating or modifying web pages, dashboards, and components:
+When building a new screen or redesigning an existing one (from code, a screenshot, or a reference image), enforce real-product design discipline:
 
-1. **Ban AI Visual Clichés:**
-   - Do **not** default to neon purple/indigo gradients (`from-indigo-500 to-purple-600`) or glowing rainbow borders unless explicitly part of an AI Copilot badge.
-   - Do **not** scatter `Sparkles` (✨), `Rocket` (🚀), or decorative icons on standard CRUD buttons and section headers.
-   - Do **not** wrap every element in heavy nested cards (`rounded-3xl shadow-2xl backdrop-blur-xl`) or meaningless Bento grids that waste screen real estate.
-2. **Information Density & Viewport Discipline:**
-   - Keep header chrome compact so **70–80% of the viewport** displays actionable data above the fold.
-   - Never stack redundant bars (`Hero Banner` + `Subtitle` + `Filter Strip` + `Tab Bar` + `10-Button Action Row`). Merge title, primary filters, and primary actions into a single slim toolbar; group secondary actions into `ตั้งค่า ⚙ ▾` or `ส่งออก ▾` menus.
-3. **Typography, Alignment & Honest States:**
-   - Use `tabular-nums` (`font-mono` or `tabular-nums`) for financial figures, quantities, timestamps, and KPIs so columns align vertically.
-   - Establish hierarchy through font weight, size contrast, and whitespace rhythm rather than loud background colors.
-   - **Honest Loading & Empty States:** Never display `"ไม่พบข้อมูล (0 รายการ)"` while a fetch is still in flight; render an explicit skeleton or loading state until data resolves.
-   - Respect the project's existing design tokens, dark-mode classes (`dark:bg-slate-800`, `dark:border-slate-700`), and `44x44px` minimum mobile touch targets (`375px` baseline).
+### A. Screen Redesign Workflow (No Paywall / Works with Any Reference)
+1. **Walk the Job First (6 Checks):** Define in one line who arrives, what they came to do, and what "done" looks like. Check the screen against:
+   - *The path leads:* The eye lands on step 1, one primary control finishes the job, and nothing off-path competes.
+   - *Decision info sits beside the control:* Never hide critical context a scroll or modal tap away.
+   - *Every label and value is true:* Values shown twice match; totals match their line items.
+   - *Honest states:* Loading, empty, error, disabled, and narrow mobile (`375px`) states let the job finish or state clearly why not. Never display `"ไม่พบข้อมูล (0 รายการ)"` while a fetch is still loading.
+2. **Freeze the Baseline (Preserve List):** Keep the domain, existing design system/tokens, dark-mode classes (`dark:bg-slate-800`, `dark:border-slate-700`), working features, and everything outside the target component untouched. When the user provides a reference image, take its **structural layout decision**, never its brand colors, fonts, or copy.
+3. **Rearrange Before You Restyle:** Fix workflow bottlenecks by moving or grouping controls before inventing new visual styles.
+
+### B. Visual Taste & Dealbreakers (Ban AI Visual Clichés)
+1. **Don't Add for the Sake of Adding:** Empty space is not a problem. Add no decorative icon, pill badge, divider, shadow, hover-lift, or background panel unless it solves a specific usability problem.
+2. **Don't Add Text the Job Doesn't Need:** No subtitle that merely restates the heading, no helper text under a self-explanatory control.
+3. **Ban Generic AI Gradients & Sparkles:** Do **not** use neon purple/indigo gradients (`from-indigo-500 to-purple-600`) or scatter `Sparkles` (✨) / `Rocket` (🚀) icons on standard buttons and headers. Use gradients only where an existing design token already does; otherwise use the flat color role of the nearest sibling.
+4. **Copy the Nearest Sibling:** Any new or modified element must copy the component, size, font weight, color role, and spacing of the closest existing element doing a similar job on the screen. If a reader can tell which part was added by AI just by how it looks, this rule was broken.
+5. **One Thing Leads & Existing Grid Lines Hold:** A new element never outranks the primary action of the screen and must align to existing edges and spacing steps.
+6. **High-Density Viewport & Tabular Numbers:** Keep header chrome compact so **70–80% of the viewport** shows actionable data above the fold (merge title, filters, and primary actions into one slim toolbar; group secondary modals into `ตั้งค่า ⚙ ▾` and exports into `ส่งออก ▾`). Always use `tabular-nums` (`font-mono` or `tabular-nums`) for quantities, currency, timestamps, and KPIs.
 
 ---
 
@@ -47,20 +51,22 @@ Enforce disciplined, minimal, high-signal software engineering:
 
 ---
 
-## Pillar 3: Anti-Writing & Prose Slop (`humanizer`)
+## Pillar 3: Anti-Writing & Prose Slop (`humanizer` + `plain-writing`)
 
-Write like a senior engineer or designer speaking directly to a teammate (Thai & English):
+Write like a senior engineer or designer leaving clear notes for a teammate (Thai & English):
 
-1. **Answer-First (No Chatbot Ceremony):**
-   - Lead with the conclusion, root cause, or result in the first sentence.
+1. **Answer-First & Zero Chatbot Ceremony:**
+   - Lead with the answer, root cause, or result in the first sentence.
    - Strip theatrical openers (*"แน่นอนครับ! นี่คือคำถามที่ยอดเยี่ยมมาก..."*, *"Great question! Let's delve into..."*) and hollow sign-offs (*"หวังว่าข้อมูลนี้จะเป็นประโยชน์ไม่มากก็น้อย"*, *"I hope this helps!"*).
-2. **Ban AI Buzzwords & Marketing Puffery:**
+2. **Ban AI Buzzwords, Puffery & Vague Authorities:**
    - **Thai Tells to Remove:** *"ยกระดับอย่างก้าวกระโดด"*, *"ไร้รอยต่อ (Seamless)"*, *"ตอกย้ำความสำคัญ"*, *"ทรงพลัง"*, *"มิติใหม่"*, *"อย่างแท้จริง"*, *"ครบวงจรอย่างสมบูรณ์แบบ"*
-   - **English Tells to Remove:** *delve, seamless, cutting-edge, testament, tapestry, pivotal, underscore, foster, game-changer, robust, sleek, intuitive, user-centric, landscape, vital*
-3. **Concrete Facts Over Vague Abstractions:**
-   - Name the exact file, function, SQL column, button label, or pixel/token metric instead of vague praise.
-   - ❌ *"ปรับปรุงโครงสร้างหน้าจอเพื่อยกระดับประสบการณ์ผู้ใช้ให้ดียิ่งขึ้น"*
-   - ✅ *"ยุบแถบตัวกรองและปุ่ม Export รวมเข้ากับ Toolbar แถวเดียว ช่วยประหยัดพื้นที่แนวตั้ง 64px"*
-4. **Say Each Fact Once (No Summary Echo):**
-   - One point per bullet or sentence. Never append a closing paragraph that simply repeats the bullets above (`"โดยสรุปแล้ว การแก้ไขข้างต้นจะช่วยให้..."` / `"In short, these changes ensure..."`).
-   - Never invent unverified numbers, percentages, or behavioral outcomes. State unconfirmed items plainly as `"ยังไม่ยืนยัน:"` / `"Not confirmed:"`.
+   - **English Tells to Remove:** *delve, seamless, cutting-edge, testament, tapestry, pivotal, underscore, foster, game-changer, robust, sleek, intuitive, frictionless, cohesive, user-centric, landscape, vital*
+   - **No Vague Authorities:** Never write *"research shows"*, *"industry standard"*, or *"most leading apps"* without naming the exact source or file.
+   - **Avoid Em-Dash Abuse in Prose:** Do not pepper prose sentences with `—` clauses (a primary tell of LLM writing); use plain periods, commas, or parentheses instead.
+3. **Concrete Facts Over Abstractions:**
+   - Name the exact part on screen, file path, function, SQL column, or pixel/token metric instead of describing a feeling.
+   - ❌ *"ปรับปรุงโครงสร้างหน้าจอเพื่อยกระดับประสบการณ์ผู้ใช้และสร้าง Visual Hierarchy ที่ดีขึ้น"*
+   - ✅ *"ย้ายตัวกรองวันที่ขึ้นไปรวมกับ Toolbar ด้านบน ช่วยลดความสูง Header ลง 64px"*
+4. **Say Each Fact Once (No Rule-of-Three Padding or Summary Echo):**
+   - One sentence per point. Never pad lists to groups of three just for rhythm, and never append a closing paragraph that repeats the bullets above (`"โดยสรุปแล้ว..."` / `"In short..."`).
+   - Invent nothing: never guess unverified numbers, percentages, or behavioral outcomes. State unconfirmed items plainly as `"ยังไม่ยืนยัน:"` / `"Not confirmed:"`.
