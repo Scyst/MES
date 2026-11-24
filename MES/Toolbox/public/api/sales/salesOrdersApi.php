@@ -254,6 +254,65 @@ function handleImportSalesJson(PDO $pdo, array $input): void {
     ], "นำเข้าสำเร็จ {$count} รายการ");
 }
 
+/**
+ * Auto-deducts FG stock from INVENTORY_ONHAND and logs SHIPPED transaction when a Sales Order is marked loaded.
+ * Idempotent: guarded by SALES_ORDERS.is_stock_deducted = 0. Gracefully skips unmapped SKUs without blocking loading.
+ */
+function deductFgStockOnLoadingDone(PDO $pdo, array $orderRow, int $userId): array {
+    $qty = (int)($orderRow['quantity'] ?? 0);
+    $sku = trim((string)($orderRow['sku'] ?? ''));
+    $soId = (int)$orderRow['id'];
+    $poNo = trim((string)($orderRow['po_number'] ?? ''));
+
+    if (!empty($orderRow['is_stock_deducted']) || $qty <= 0 || $sku === '') {
+        return ['deducted' => false, 'reason' => 'already_deducted_or_zero'];
+    }
+
+    $stmtItem = $pdo->prepare(
+        "SELECT TOP 1 item_id, sap_no, part_no, ISNULL(Cost_Total, 0) AS cost_total
+         FROM dbo.ITEMS WITH (NOLOCK)
+         WHERE LTRIM(RTRIM(sku)) = LTRIM(RTRIM(?)) AND ISNULL(sku, '') != ''"
+    );
+    $stmtItem->execute([$sku]);
+    $item = $stmtItem->fetch(PDO::FETCH_ASSOC);
+    if (!$item) {
+        return ['deducted' => false, 'warning' => "SKU {$sku} ยังไม่ได้ผูกในตาราง ITEMS"];
+    }
+
+    $itemId = (int)$item['item_id'];
+    $stmtLoc = $pdo->prepare(
+        "SELECT TOP 1 location_id FROM dbo.INVENTORY_ONHAND WITH (UPDLOCK)
+         WHERE parameter_id = ? ORDER BY quantity DESC, location_id ASC"
+    );
+    $stmtLoc->execute([$itemId]);
+    $locId = (int)($stmtLoc->fetchColumn() ?: 1); // Fallback: Assembly B9 (location_id = 1)
+
+    $stmtUpd = $pdo->prepare(
+        "UPDATE dbo.INVENTORY_ONHAND SET quantity = quantity - ?, last_updated = GETDATE()
+         WHERE parameter_id = ? AND location_id = ?"
+    );
+    $stmtUpd->execute([$qty, $itemId, $locId]);
+    if ($stmtUpd->rowCount() === 0) {
+        $pdo->prepare(
+            "INSERT INTO dbo.INVENTORY_ONHAND (parameter_id, location_id, quantity, last_updated)
+             VALUES (?, ?, ?, GETDATE())"
+        )->execute([$itemId, $locId, -$qty]);
+    }
+
+    $totalCost = round($qty * (float)$item['cost_total'], 2);
+    $notes = "Auto-SHIPPED on Loading Done (SO#{$soId}, PO: {$poNo}, SKU: {$sku})";
+    $pdo->prepare(
+        "INSERT INTO dbo.STOCK_TRANSACTIONS
+            (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, reference_id, created_by_user_id, notes, total_cost_value)
+         VALUES (?, ?, 'SHIPPED', GETDATE(), ?, ?, ?, ?, ?)"
+    )->execute([$itemId, -$qty, $locId, "SO-{$soId}", $userId > 0 ? $userId : null, $notes, $totalCost]);
+
+    $pdo->prepare('UPDATE ' . SO_TABLE . ' SET is_stock_deducted = 1, stock_deducted_at = GETDATE() WHERE id = ?')
+        ->execute([$soId]);
+
+    return ['deducted' => true, 'item_id' => $itemId, 'sap_no' => $item['sap_no'], 'location_id' => $locId, 'qty' => $qty];
+}
+
 /** Updates production/inspection/loading/confirmed checkbox flags with QA FAIL guard. */
 function handleToggleCheck(PDO $pdo, array $input): void {
     requireSalesAccess(true);
@@ -265,7 +324,7 @@ function handleToggleCheck(PDO $pdo, array $input): void {
         salesJsonError('รหัสคำสั่งซื้อไม่ถูกต้อง', 400);
     }
 
-    $stmtOld = $pdo->prepare('SELECT id, po_number, inspection_date, inspection_status, inspection_result, is_production_done, is_loading_done, is_confirmed FROM ' . SO_TABLE . ' WITH (NOLOCK) WHERE id = ?');
+    $stmtOld = $pdo->prepare('SELECT id, po_number, sku, quantity, inspection_date, inspection_status, inspection_result, is_production_done, is_loading_done, is_confirmed, is_stock_deducted FROM ' . SO_TABLE . ' WITH (NOLOCK) WHERE id = ?');
     $stmtOld->execute([$id]);
     $oldRow = $stmtOld->fetch(PDO::FETCH_ASSOC);
     if (!$oldRow) {
@@ -300,16 +359,21 @@ function handleToggleCheck(PDO $pdo, array $input): void {
         salesJsonError('ฟิลด์สถานะไม่ถูกต้อง', 400);
     }
 
+    $deductInfo = null;
     if ($col === 'is_loading_done' && $checked === 1) {
+        $userId = (int)($_SESSION['user']['id'] ?? $_SESSION['user']['user_id'] ?? 0);
+        $pdo->beginTransaction();
         $pdo->prepare('UPDATE ' . SO_TABLE . ' SET is_loading_done = 1, loading_date = COALESCE(loading_date, GETDATE()), updated_at = GETDATE() WHERE id = ?')->execute([$id]);
+        $deductInfo = deductFgStockOnLoadingDone($pdo, $oldRow, $userId);
+        $pdo->commit();
     } elseif ($col === 'is_production_done' && $checked === 1) {
         $pdo->prepare('UPDATE ' . SO_TABLE . ' SET is_production_done = 1, production_end_date = COALESCE(production_end_date, GETDATE()), updated_at = GETDATE() WHERE id = ?')->execute([$id]);
     } else {
         $pdo->prepare("UPDATE " . SO_TABLE . " SET {$col} = ?, updated_at = GETDATE() WHERE id = ?")->execute([$checked, $id]);
     }
 
-    writeLog($pdo, 'UPDATE', 'SALES_ORDER', $id, [$col => $oldRow[$col] ?? null], [$col => $checked], "Updated {$col} on PO {$oldRow['po_number']}");
-    salesJsonSuccess(['id' => $id], 'อัปเดตสถานะเรียบร้อย');
+    writeLog($pdo, 'UPDATE', 'SALES_ORDER', $id, [$col => $oldRow[$col] ?? null], [$col => $checked, 'auto_shipped' => $deductInfo], "Updated {$col} on PO {$oldRow['po_number']}");
+    salesJsonSuccess(['id' => $id, 'stock_deduction' => $deductInfo], 'อัปเดตสถานะเรียบร้อย');
 }
 
 /** Updates a whitelisted Sales Order cell with QA DONE/FAIL schedule lock protection. */

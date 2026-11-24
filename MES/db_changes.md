@@ -4,6 +4,22 @@ All schema changes to the production database must be documented here.
 
 ---
 
+## 2026-11-24 — Sales Orders Auto-SHIPPED FG Stock Deduction Guard (`SALES_ORDERS`)
+
+**Agent:** Antigravity  
+**Feature:** เพิ่มคอลัมน์ป้องกันการตัดสต็อกซ้ำ (`is_stock_deducted`, `stock_deducted_at`) ในตาราง `dbo.SALES_ORDERS` เพื่อให้เมื่อปิดโหลดตู้ (`is_loading_done = 1`) ใน `Toolbox/public/api/sales/salesOrdersApi.php` ระบบตัดยอด `SHIPPED` ออกจาก `dbo.INVENTORY_ONHAND` และบันทึกลง `dbo.STOCK_TRANSACTIONS` อัตโนมัติ (จับคู่ผ่าน `ITEMS.sku`)
+
+### Schema Alterations
+```sql
+ALTER TABLE dbo.SALES_ORDERS ADD is_stock_deducted BIT NOT NULL CONSTRAINT DF_SALES_ORDERS_STOCK_DEDUCTED DEFAULT 0;
+ALTER TABLE dbo.SALES_ORDERS ADD stock_deducted_at DATETIME NULL;
+
+-- Backfill legacy already-loaded orders (1,594 rows) to prevent retroactive over-deduction
+UPDATE dbo.SALES_ORDERS SET is_stock_deducted = 1 WHERE is_loading_done = 1 AND is_stock_deducted = 0;
+```
+
+---
+
 ## 2026-11-14 — QMS Multi-Round PO Inspection History & Data Recovery (`QMS_PO_INSPECTION_HISTORY`)
 
 **Agent:** Antigravity  
