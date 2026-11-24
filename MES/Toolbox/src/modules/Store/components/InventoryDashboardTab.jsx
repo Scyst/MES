@@ -9,6 +9,7 @@ import { storeApi } from '../../../shared/services/storeApi';
 import SecurityWatermark from '../../../shared/components/SecurityWatermark';
 import ItemDetailsModal from './ItemDetailsModal';
 import QuickScannerModal from './QuickScannerModal';
+import SapReconcileModal from './SapReconcileModal';
 
 const getQtyFontSize = (val) => {
   const str = typeof val === 'number' ? val.toLocaleString() : String(val ?? '');
@@ -35,6 +36,7 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
   // Modals
   const [selectedModalItem, setSelectedModalItem] = useState(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isSapReconcileOpen, setIsSapReconcileOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -271,6 +273,17 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
             />
             <span>ซ่อนยอดศูนย์</span>
           </label>
+
+          {/* Compare MES vs SAP Button */}
+          <button
+            type="button"
+            onClick={() => setIsSapReconcileOpen(true)}
+            title="เทียบยอดสต็อก MES กับ SAP และนำเข้าไฟล์ MB52"
+            className="flex items-center gap-1.5 px-3 py-1 h-8 rounded-lg text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer flex-shrink-0"
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+            <span>เทียบยอด SAP</span>
+          </button>
 
           {/* Export to Excel Button */}
           <button
@@ -590,6 +603,13 @@ export default function InventoryDashboardTab({ onNavigateTab }) {
           setSearch(code);
           setPage(1);
         }}
+      />
+
+      {/* MES vs SAP Reconciliation Modal */}
+      <SapReconcileModal
+        isOpen={isSapReconcileOpen}
+        onClose={() => setIsSapReconcileOpen(false)}
+        onReconciled={fetchData}
       />
     </div>
   );
