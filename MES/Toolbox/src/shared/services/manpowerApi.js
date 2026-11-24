@@ -109,6 +109,8 @@ export const audit5sApi = {
   saveDefaultCommittee: (members) => apiPost(AUDIT5S_ENDPOINT, { action: 'save_default_5s_committee', members }),
   syncPeriodRounds: (evalPeriod, auditDate) => apiPost(AUDIT5S_ENDPOINT, { action: 'sync_period_5s_rounds', eval_period: evalPeriod, audit_date: auditDate }),
   saveRound: (payload) => apiPost(AUDIT5S_ENDPOINT, { action: 'save_5s_round', ...payload }),
+  deleteRound: (roundId) => apiPost(AUDIT5S_ENDPOINT, { action: 'delete_5s_round', round_id: roundId }),
+  deletePhoto: (photoId) => apiPost(AUDIT5S_ENDPOINT, { action: 'delete_5s_photo', photo_id: photoId }),
   toggleRoundLock: (roundId, lock) => apiPost(AUDIT5S_ENDPOINT, { action: 'toggle_5s_round_lock', round_id: roundId, lock: lock ? 1 : 0 }),
   submitAudit: (formData) => request({
     method: 'post',

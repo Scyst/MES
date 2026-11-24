@@ -733,6 +733,35 @@ function isLineCoveredBy5sScope(string $line, array $scopeLines): bool {
 }
 
 /**
+ * Loads distinct active production lines belonging to active HC groups (excluding 'EXCLUDE').
+ */
+function fetchActive5sLines(PDO $pdo): array {
+    try {
+        $rows = $pdo->query("
+            SELECT DISTINCT E.line
+            FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+            INNER JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
+            WHERE E.is_active = 1
+              AND E.line IS NOT NULL AND E.line != ''
+              AND ISNULL(TS.hc_group, '') NOT IN ('', 'EXCLUDE')
+            ORDER BY E.line ASC
+        ")->fetchAll(PDO::FETCH_COLUMN);
+        if (!empty($rows)) {
+            return array_values(array_filter(array_map('trim', $rows)));
+        }
+    } catch (Throwable $ignore) {
+        // Fallback if MANPOWER_TEAM_SETTINGS is unavailable
+    }
+    $fallback = $pdo->query("
+        SELECT DISTINCT line
+        FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
+        WHERE is_active = 1 AND line IS NOT NULL AND line != ''
+        ORDER BY line ASC
+    ")->fetchAll(PDO::FETCH_COLUMN);
+    return array_values(array_filter(array_map('trim', $fallback)));
+}
+
+/**
  * Loads persistent Default 5S Committee Roster (unlimited auditors).
  */
 function fetchDefault5sCommittee(PDO $pdo, bool $activeOnly = true): array {

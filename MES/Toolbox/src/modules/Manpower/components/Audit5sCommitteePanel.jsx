@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Camera, CheckCircle2, Clock, Lock, Unlock, Plus, Users, X,
-  Search, Shield, Image as ImageIcon, Eye, RefreshCw, Settings, Sparkles
+  Search, Shield, Image as ImageIcon, Eye, RefreshCw, Settings, Sparkles,
+  Edit3, Trash2, Minus, ClipboardCheck
 } from 'lucide-react';
-import { audit5sApi, manpowerMasterApi } from '../../../shared/services/manpowerApi';
-import { useToast } from '../../../shared/contexts/FeedbackContext';
+import { audit5sApi } from '../../../shared/services/manpowerApi';
+import { useToast, useConfirm } from '../../../shared/contexts/FeedbackContext';
 import { GRADE_BADGE_MAP, getMonthIso, getTodayIso } from '../utils/manpowerHelpers';
 
 const CAT_OPTIONS = [
@@ -17,11 +18,43 @@ const CAT_OPTIONS = [
 ];
 
 const SCORE_FIELDS = [
-  { key: 'score_seiri', label: 'ส.1 สะสาง', max: 20 },
-  { key: 'score_seiton', label: 'ส.2 สะดวก', max: 20 },
-  { key: 'score_seiso', label: 'ส.3 สะอาด', max: 20 },
-  { key: 'score_seiketsu', label: 'ส.4 สุขลักษณะ', max: 20 },
-  { key: 'score_shitsuke', label: 'ส.5 สร้างนิสัย', max: 20 },
+  {
+    key: 'score_seiri',
+    label: 'ส.1 สะสาง (Seiri)',
+    hint: 'แยกของจำเป็น/ไม่จำเป็น ไม่มีของค้างหรือไร้ป้ายชี้บ่ง',
+    max: 20,
+  },
+  {
+    key: 'score_seiton',
+    label: 'ส.2 สะดวก (Seiton)',
+    hint: 'จัดวางเป็นระเบียบ มีเส้นตีกรอบและป้ายระบุตำแหน่งชัดเจน',
+    max: 20,
+  },
+  {
+    key: 'score_seiso',
+    label: 'ส.3 สะอาด (Seiso)',
+    hint: 'พื้น เครื่องจักร และโต๊ะงานสะอาด ไม่มีคราบน้ำมันหรือเศษชิ้นงาน',
+    max: 20,
+  },
+  {
+    key: 'score_seiketsu',
+    label: 'ส.4 สุขลักษณะ (Seiketsu)',
+    hint: 'มาตรฐาน 3ส แรกสม่ำเสมอ แสงสว่าง ป้าย 5ส และสภาพแวดล้อมปลอดภัย',
+    max: 20,
+  },
+  {
+    key: 'score_shitsuke',
+    label: 'ส.5 สร้างนิสัย (Shitsuke)',
+    hint: 'แต่งกายและสวม PPE ครบถ้วน ปฏิบัติตามระเบียบหน้างานต่อเนื่อง',
+    max: 20,
+  },
+];
+
+const SCORE_PRESETS = [
+  { label: 'ปรับปรุง (10)', val: 10, min: 0, max: 10, activeCls: 'bg-rose-600 text-white border-rose-600' },
+  { label: 'พอใช้ (13)', val: 13, min: 11, max: 13, activeCls: 'bg-amber-500 text-white border-amber-500' },
+  { label: 'ดี (16)', val: 16, min: 14, max: 17, activeCls: 'bg-sky-600 text-white border-sky-600' },
+  { label: 'ดีเยี่ยม (19)', val: 19, min: 18, max: 20, activeCls: 'bg-emerald-600 text-white border-emerald-600' },
 ];
 
 function scoreToGrade(total) {
@@ -33,6 +66,7 @@ function scoreToGrade(total) {
 
 export default function Audit5sCommitteePanel({ structure: propStructure, isOnline = true, standaloneHeader = false, onRoundUpdated }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [evalPeriod, setEvalPeriod] = useState(getMonthIso);
   const [loading, setLoading] = useState(false);
   const [rounds, setRounds] = useState([]);
@@ -43,6 +77,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
 
   const [lineSearch, setLineSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL | PENDING | DONE
+  const [mobileSection, setMobileSection] = useState('form'); // 'form' | 'committee'
 
   const [selectedKey, setSelectedKey] = useState(null); // `r:${round_id}` or `v:${line}`
   const [detail, setDetail] = useState(null);
@@ -88,20 +123,11 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
   const [editingLineScopeEmpId, setEditingLineScopeEmpId] = useState(null);
 
   const linesPool = useMemo(() => {
-    const src = propStructure?.lines?.length ? propStructure.lines : localLines;
-    return src.length ? src : defaultActiveLines;
-  }, [propStructure, localLines, defaultActiveLines]);
-
-  useEffect(() => {
-    if (propStructure?.lines?.length) return;
-    manpowerMasterApi.readStructure()
-      .then((res) => {
-        if (Array.isArray(res?.data?.lines)) {
-          setLocalLines(res.data.lines);
-        }
-      })
-      .catch(() => { });
-  }, [propStructure]);
+    if (localLines.length) return localLines;
+    if (defaultActiveLines.length) return defaultActiveLines;
+    if (propStructure?.lines?.length) return propStructure.lines;
+    return ['ASSEMBLY', 'BEND', 'MT/PE', 'OFFICE', 'PAINT', 'PRESS', 'QA/QC', 'SPOT', 'ST/WH'];
+  }, [localLines, defaultActiveLines, propStructure]);
 
   const itemKey = (r) => (Number(r.round_id) > 0 ? `r:${r.round_id}` : `v:${r.line}`);
 
@@ -114,6 +140,9 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
       setIsManager(Boolean(res?.data?.is_manager));
       setSelfEmpId(res?.data?.self_emp_id || '');
       setDefaultCount(Number(res?.data?.default_committee_count || 0));
+      if (Array.isArray(res?.data?.active_lines) && res.data.active_lines.length > 0) {
+        setLocalLines(res.data.active_lines);
+      }
 
       if (list.length > 0) {
         const hasSel = selectedKey && list.some((r) => itemKey(r) === selectedKey);
@@ -165,6 +194,11 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
           remarks: '',
         });
       }
+      if (!own || payload?.round?.status === 'LOCKED') {
+        setMobileSection('committee');
+      } else {
+        setMobileSection('form');
+      }
       setPendingPhotos([]);
     } catch (err) {
       showToast(err.message || 'โหลดรายละเอียดรอบตรวจไม่สำเร็จ', 'error');
@@ -215,7 +249,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
         assigned_role: m.assigned_role || 'AUDITOR',
         assigned_lines: Array.isArray(m.assigned_lines_list) ? m.assigned_lines_list : ['ALL'],
       })));
-      if (Array.isArray(res?.data?.active_lines)) {
+      if (Array.isArray(res?.data?.active_lines) && res.data.active_lines.length > 0) {
         setDefaultActiveLines(res.data.active_lines);
       }
     } catch (err) {
@@ -303,8 +337,8 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     }
   };
 
-  const openNewRoundModal = async () => {
-    const defaultLine = linesPool[0] || 'ASSEMBLY';
+  const openNewRoundModal = async (preselectLine = '') => {
+    const defaultLine = preselectLine || linesPool[0] || 'ASSEMBLY';
     let seedCommittee = [];
     try {
       const res = await audit5sApi.getDefaultCommittee();
@@ -335,16 +369,18 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     setRoundModalOpen(true);
   };
 
-  const openEditRoundModal = () => {
-    if (!detail?.round) return;
+  const openEditRoundModal = (targetRound = null, targetCommittee = null) => {
+    const rObj = targetRound || detail?.round;
+    const cList = targetCommittee || detail?.committee || [];
+    if (!rObj) return;
     setRoundForm({
-      round_id: detail.round.round_id || 0,
-      eval_period: detail.round.eval_period,
-      line: detail.round.line,
-      round_name: detail.round.round_name,
-      audit_date: detail.round.audit_date,
-      notes: detail.round.notes || '',
-      committee: (detail.committee || []).map((m) => ({
+      round_id: Number(rObj.round_id || 0),
+      eval_period: rObj.eval_period || evalPeriod,
+      line: rObj.line || linesPool[0] || 'ASSEMBLY',
+      round_name: rObj.round_name || `ตรวจ 5ส ประจำเดือน ${evalPeriod} (${rObj.line})`,
+      audit_date: rObj.audit_date || getTodayIso(),
+      notes: rObj.notes || '',
+      committee: cList.map((m) => ({
         auditor_emp_id: m.auditor_emp_id,
         auditor_name: m.auditor_name,
         assigned_role: m.assigned_role || 'AUDITOR',
@@ -352,6 +388,55 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     });
     setCandSearch('');
     setRoundModalOpen(true);
+  };
+
+  const handleDeleteRound = async (roundObj = null) => {
+    const r = roundObj || detail?.round;
+    const rId = Number(r?.round_id || 0);
+    if (!isManager || rId <= 0) return;
+    if (r.status === 'LOCKED') {
+      showToast('กรุณาปลดล็อกรอบตรวจก่อนทำการลบ', 'warning');
+      return;
+    }
+    const ok = await confirm({
+      title: 'ยืนยันการลบรอบตรวจ 5ส',
+      message: `ต้องการลบรอบตรวจ "${r.round_name || r.line}" (${r.eval_period}) หรือไม่? คะแนนและรูปถ่ายที่ส่งในรอบนี้จะถูกลบทั้งหมด`,
+      confirmText: 'ยืนยันลบรอบ',
+      cancelText: 'ยกเลิก',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    try {
+      const res = await audit5sApi.deleteRound(rId);
+      showToast(res?.message || 'ลบรอบตรวจ 5ส เรียบร้อยแล้ว', 'success');
+      setSelectedKey(null);
+      await loadRounds();
+      onRoundUpdated?.();
+    } catch (err) {
+      showToast(err.message || 'ไม่สามารถลบรอบตรวจได้', 'error');
+    }
+  };
+
+  const handleDeleteSavedPhoto = async (photoId) => {
+    if (!photoId) return;
+    const ok = await confirm({
+      title: 'ยืนยันการลบรูปภาพ',
+      message: 'ต้องการลบรูปภาพหลักฐาน 5ส รูปนี้หรือไม่?',
+      confirmText: 'ลบรูปภาพ',
+      cancelText: 'ยกเลิก',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await audit5sApi.deletePhoto(photoId);
+      showToast(res?.message || 'ลบรูปภาพเรียบร้อยแล้ว', 'success');
+      if (selectedKey) {
+        await loadSelectedDetail(selectedKey);
+      }
+    } catch (err) {
+      showToast(err.message || 'ไม่สามารถลบรูปภาพได้', 'error');
+    }
   };
 
   const toggleCandidate = (cand) => {
@@ -461,9 +546,17 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
       showToast(res?.message || 'อัปเดตสถานะรอบตรวจแล้ว', 'success');
       await loadRounds();
       await loadSelectedDetail(`r:${detail.round.round_id}`);
+      onRoundUpdated?.();
     } catch (err) {
       showToast(err.message || 'ไม่สามารถเปลี่ยนสถานะล็อกได้', 'error');
     }
+  };
+
+  const adjustScoreField = (key, delta) => {
+    setScores((prev) => ({
+      ...prev,
+      [key]: Math.max(0, Math.min(20, Number(prev[key] || 0) + delta)),
+    }));
   };
 
   const filteredRounds = useMemo(() => {
@@ -481,78 +574,158 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
   const previewGrade = scoreToGrade(totalPreview);
   const selfCommitteeRow = (detail?.committee || []).find((m) => m.is_self);
   const canSubmitHere = Boolean(selfCommitteeRow) && detail?.round?.status !== 'LOCKED';
+  const savedRoundId = Number(detail?.round?.round_id || 0);
 
   return (
-    <div className="space-y-3">
-      {/* Slim Header Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300`}>
-              <CheckCircle2 className="h-5 w-5" />
+    <div className="space-y-2.5 sm:space-y-3">
+      {/* Slim Responsive Header Toolbar */}
+      <div className="rounded-xl border border-slate-200 bg-white p-2.5 sm:px-3.5 sm:py-2.5 shadow-2xs dark:border-slate-700 dark:bg-slate-800 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <h2 className="text-sm font-extrabold text-slate-800 dark:text-white leading-tight">
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white leading-tight truncate">
                 {standaloneHeader ? 'ระบบตรวจประเมินกิจกรรม 5ส หน้างาน' : 'คณะกรรมการตรวจ 5ส (หารเท่า 1/N)'}
               </h2>
-              <p className="text-[11px] text-slate-500">
-                ชุดกรรมการประจำ {defaultCount} คน · เลือกสายผลิตเพื่อตรวจและแนบรูปภาพได้ทันที
+              <p className="text-[11px] text-slate-500 truncate">
+                กรรมการประจำ {defaultCount} คน · เฉลี่ยตามผู้ส่งผลจริง (1/N)
               </p>
             </div>
           </div>
 
-          <input
-            type="month"
-            value={evalPeriod}
-            onChange={(e) => setEvalPeriod(e.target.value)}
-            className="min-h-[40px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-bold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-          />
-          <button
-            type="button"
-            onClick={loadRounds}
-            className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-            title="รีเฟรชรายการ"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="month"
+              value={evalPeriod}
+              onChange={(e) => setEvalPeriod(e.target.value)}
+              className="min-h-[36px] sm:min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs font-bold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+            />
+            <button
+              type="button"
+              onClick={loadRounds}
+              className="min-h-[36px] min-w-[36px] sm:min-h-[38px] sm:min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              title="รีเฟรชรายการ"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {isManager && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/70">
             <button
               type="button"
               onClick={openDefaultModal}
-              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              className="min-h-[36px] inline-flex items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 sm:px-3 text-[11px] sm:text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
             >
-              <Settings className="h-4 w-4" />
-              ตั้งค่ากรรมการประจำ ({defaultCount} คน)
+              <Settings className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">กรรมการประจำ ({defaultCount})</span>
             </button>
             <button
               type="button"
               disabled={!isOnline || syncingRounds || defaultCount === 0}
               onClick={handleSyncAllLines}
               title="สร้าง/อัปเดตรอบตรวจทุกสายผลิตในเดือนนี้จากรายชื่อกรรมการประจำ"
-              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-xs font-bold text-white hover:bg-teal-700 disabled:opacity-50"
+              className="min-h-[36px] inline-flex items-center justify-center gap-1 rounded-lg bg-teal-600 px-2 sm:px-3 text-[11px] sm:text-xs font-bold text-white hover:bg-teal-700 disabled:opacity-50"
             >
-              <Sparkles className="h-4 w-4" />
-              {syncingRounds ? 'กำลังซิงค์...' : 'เปิดรอบทุกสายจาก Default'}
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{syncingRounds ? 'กำลังซิงค์...' : 'เปิดรอบทุกสาย'}</span>
             </button>
             <button
               type="button"
-              onClick={openNewRoundModal}
-              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              onClick={() => openNewRoundModal()}
+              className="min-h-[36px] inline-flex items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2 sm:px-3 text-[11px] sm:text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
             >
-              <Plus className="h-4 w-4" />
-              เปิดรอบเฉพาะสาย
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">เปิดรอบเฉพาะสาย</span>
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* MOBILE (< lg): Compact Search + Horizontal Scrollable Line Pill Bar */}
+      <div className="lg:hidden space-y-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex items-center gap-1.5">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={lineSearch}
+              onChange={(e) => setLineSearch(e.target.value)}
+              placeholder="ค้นหาสายผลิต..."
+              className="min-h-[34px] w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-2.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            />
+          </div>
+          <div className="flex gap-1 shrink-0">
+            {[
+              { id: 'ALL', label: 'ทั้งหมด' },
+              { id: 'PENDING', label: 'รอตรวจ' },
+              { id: 'DONE', label: 'ส่งแล้ว' },
+            ].map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setStatusFilter(st.id)}
+                className={`min-h-[34px] rounded-lg px-2 text-[11px] font-bold transition ${
+                  statusFilter === st.id
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300'
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-3 text-center text-xs text-slate-400">กำลังโหลดสายการผลิต...</div>
+        ) : filteredRounds.length === 0 ? (
+          <div className="py-3 text-center text-xs text-slate-400">ไม่พบสายการผลิตในตัวกรองนี้</div>
+        ) : (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+            {filteredRounds.map((r) => {
+              const k = itemKey(r);
+              const active = k === selectedKey;
+              const isDone = Number(r.my_is_completed) === 1;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setSelectedKey(k)}
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-left transition ${
+                    active
+                      ? 'border-emerald-600 bg-emerald-600 text-white shadow-xs'
+                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={`h-2 w-2 rounded-full ${isDone ? (active ? 'bg-white' : 'bg-emerald-500') : 'bg-amber-400'}`} />
+                    <span className="text-xs font-extrabold whitespace-nowrap">{r.line}</span>
+                    {r.final_grade && (
+                      <span className={`rounded px-1.5 py-0.2 text-[10px] font-mono font-extrabold ${
+                        active ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      }`}>
+                        {r.final_grade}
+                      </span>
+                    )}
+                  </div>
+                  <div className={`mt-0.5 text-[10px] whitespace-nowrap ${active ? 'text-emerald-100' : 'text-slate-500'}`}>
+                    {isDone ? '✓ ส่งแล้ว' : 'รอตรวจ'} · {r.submitted_count}/{r.required_auditors} คน
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* Main Split Layout */}
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12">
-        {/* Left: Line / Round Selector */}
-        <div className="lg:col-span-4 space-y-2.5">
+        {/* Desktop Left Sidebar: Line / Round Selector */}
+        <div className="hidden lg:block lg:col-span-4 space-y-2.5">
           <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
             <div className="relative flex-1 min-w-[130px]">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -586,7 +759,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
             </div>
           </div>
 
-          <div className="max-h-[calc(100vh-240px)] overflow-y-auto space-y-2 pr-0.5">
+          <div className="max-h-[calc(100vh-240px)] overflow-y-auto space-y-2 pr-0.5 custom-scrollbar">
             {loading ? (
               <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800">
                 กำลังโหลดรายชื่อสายผลิตและรอบตรวจ 5ส...
@@ -597,7 +770,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                 <p>ไม่พบรายการตรวจ 5ส ในงวดเดือน {evalPeriod}</p>
                 {isManager && defaultCount === 0 && (
                   <p className="text-[11px] text-amber-600 font-semibold">
-                    กรุณากด "ตั้งค่ากรรมการประจำ" เพื่อกำหนดรายชื่อกรรมการถาวร
+                    กรุณากด "กรรมการประจำ" เพื่อกำหนดรายชื่อกรรมการถาวร
                   </p>
                 )}
               </div>
@@ -606,12 +779,15 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                 const k = itemKey(r);
                 const active = k === selectedKey;
                 const gBadge = GRADE_BADGE_MAP[r.final_grade] || 'bg-slate-100 text-slate-500 border-slate-200';
+                const hasSavedRound = Number(r.round_id) > 0;
                 return (
-                  <button
+                  <div
                     key={k}
-                    type="button"
                     onClick={() => setSelectedKey(k)}
-                    className={`w-full text-left rounded-xl border p-3 transition ${
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedKey(k); }}
+                    className={`w-full cursor-pointer text-left rounded-xl border p-3 transition ${
                       active
                         ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500/40 dark:bg-emerald-950/30 dark:border-emerald-700'
                         : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750'
@@ -623,9 +799,13 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                           <span className="inline-block rounded bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200">
                             {r.line}
                           </span>
-                          {r.is_virtual_default && (
+                          {r.is_virtual_default ? (
                             <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[9px] font-bold text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
                               ชุดประจำ
+                            </span>
+                          ) : (
+                            <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                              เปิดรอบแล้ว
                             </span>
                           )}
                         </div>
@@ -645,15 +825,28 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                         </div>
                       </div>
                     </div>
-                    {(r.can_audit || r.committee_id !== null) && (
-                      <div className="mt-1.5 flex items-center justify-between text-[10px]">
-                        <span className={`font-bold ${Number(r.my_is_completed) ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {Number(r.my_is_completed) ? '✓ คุณส่งคะแนนแล้ว' : '● รอคุณตรวจ & แนบรูป'}
-                        </span>
+                    <div className="mt-2 flex items-center justify-between text-[10px]">
+                      <span className={`font-bold ${Number(r.my_is_completed) ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {Number(r.my_is_completed) ? '✓ คุณส่งคะแนนแล้ว' : '● รอคุณตรวจ & แนบรูป'}
+                      </span>
+                      <div className="flex items-center gap-1.5">
                         <span className="text-slate-400 uppercase">{r.status}</span>
+                        {isManager && hasSavedRound && r.status !== 'LOCKED' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRound(r);
+                            }}
+                            title="ลบรอบตรวจนี้"
+                            className="rounded p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </button>
+                    </div>
+                  </div>
                 );
               })
             )}
@@ -663,92 +856,399 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
         {/* Right: Selected Round Detail & Mobile Audit Form */}
         <div className="lg:col-span-8">
           {detailLoading || !detail?.round ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800">
-              {detailLoading ? 'กำลังโหลดข้อมูลรอบตรวจ...' : 'เลือกสายผลิตจากด้านซ้ายเพื่อตรวจประเมินและแนบภาพถ่าย'}
+            <div className="rounded-xl border border-slate-200 bg-white p-8 sm:p-12 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800">
+              {detailLoading ? 'กำลังโหลดข้อมูลรอบตรวจ...' : 'เลือกสายผลิตเพื่อตรวจประเมินและแนบภาพถ่าย'}
             </div>
           ) : (
-            <div className="space-y-3.5">
-              {/* Consensus Header Card */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-700 dark:bg-slate-800 space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+            <div className="space-y-3">
+              {/* Compact Line Summary & Manager CRUD Bar */}
+              <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-2xs dark:border-slate-700 dark:bg-slate-800 space-y-2.5">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-extrabold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                         {detail.round.line}
                       </span>
                       <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                        สถานะ: {detail.round.status}
+                        {detail.round.status}
                       </span>
-                      <span className="text-xs text-slate-500 font-mono">{detail.round.audit_date}</span>
+                      <span className="text-[11px] text-slate-500 font-mono">{detail.round.audit_date}</span>
                     </div>
-                    <h4 className="mt-1.5 text-base font-bold text-slate-800 dark:text-white">
+                    <h4 className="mt-1 text-sm sm:text-base font-bold text-slate-800 dark:text-white leading-snug">
                       {detail.round.round_name}
                     </h4>
                   </div>
 
                   {isManager && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {detail.round.status !== 'LOCKED' && (
                         <button
                           type="button"
-                          onClick={openEditRoundModal}
-                          className="min-h-[38px] rounded-lg border border-slate-300 px-3 text-xs font-semibold hover:bg-slate-50 dark:border-slate-600"
+                          onClick={() => openEditRoundModal()}
+                          className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         >
-                          ปรับรายชื่อเฉพาะรอบ ({detail.round.required_auditors} คน)
+                          <Edit3 className="h-3.5 w-3.5 text-indigo-600" />
+                          <span>{savedRoundId > 0 ? 'แก้ไขรอบ/กรรมการ' : 'ปรับกรรมการสายนี้'}</span>
                         </button>
                       )}
-                      {Number(detail.round.round_id) > 0 && (
+                      {savedRoundId > 0 && (
                         <button
                           type="button"
                           onClick={handleToggleLock}
-                          className={`min-h-[38px] inline-flex items-center gap-1.5 rounded-lg px-3 text-xs font-bold ${
+                          className={`min-h-[34px] inline-flex items-center gap-1 rounded-lg px-2.5 text-[11px] font-bold ${
                             detail.round.status === 'LOCKED'
                               ? 'bg-amber-600 text-white hover:bg-amber-700'
-                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200'
+                              : 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                           }`}
                         >
                           {detail.round.status === 'LOCKED' ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-                          {detail.round.status === 'LOCKED' ? 'ปลดล็อกรอบ' : 'ล็อกปิดผล'}
+                          <span>{detail.round.status === 'LOCKED' ? 'ปลดล็อก' : 'ล็อกปิดผล'}</span>
+                        </button>
+                      )}
+                      {savedRoundId > 0 && detail.round.status !== 'LOCKED' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRound(detail.round)}
+                          className="min-h-[34px] inline-flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-50 px-2.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                          title="ลบรอบตรวจ 5ส นี้"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>ลบรอบ</span>
                         </button>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Consensus Summary */}
-                <div className="grid grid-cols-3 gap-2.5 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+                {/* 3 Compact Consensus KPI Boxes */}
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-900/60">
                   <div>
-                    <div className="text-[11px] text-slate-500">กรรมการผู้ส่งผล</div>
-                    <div className="text-sm font-extrabold text-slate-800 dark:text-white">
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">ผู้ส่งผลตรวจ</div>
+                    <div className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white">
                       {detail.round.submitted_count} / {detail.round.required_auditors} คน
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-slate-500">คะแนนเฉลี่ย (หารเท่า 1/N)</div>
-                    <div className="text-sm font-extrabold font-mono text-emerald-600">
-                      {detail.round.weighted_score !== null ? `${Number(detail.round.weighted_score).toFixed(2)} / 100` : 'รอครบผล'}
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">เฉลี่ยผู้ส่งจริง (1/N)</div>
+                    <div className="text-xs sm:text-sm font-extrabold font-mono text-emerald-600">
+                      {detail.round.weighted_score !== null ? `${Number(detail.round.weighted_score).toFixed(1)} / 100` : 'ยังไม่มีผู้ส่ง'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-slate-500">เกรดสรุป 5ส</div>
-                    <div className="text-sm font-extrabold font-mono text-indigo-600">
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">เกรดสรุป 5ส</div>
+                    <div className="text-xs sm:text-sm font-extrabold font-mono text-indigo-600">
                       {detail.round.final_grade || '-'}
                     </div>
                   </div>
                 </div>
 
-                {detail.blind_mode && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                    <Shield className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>
-                      <strong>Blind Peer Audit:</strong> เพื่อความยุติธรรม ระบบซ่อนคะแนนและรูปถ่ายของกรรมการท่านอื่นจนกว่ารอบตรวจจะส่งครบ
-                    </span>
+                {/* Mobile 2-Tab View Switcher (Form First vs Committee Status) */}
+                {canSubmitHere && (
+                  <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100 p-1 lg:hidden dark:bg-slate-900">
+                    <button
+                      type="button"
+                      onClick={() => setMobileSection('form')}
+                      className={`min-h-[38px] inline-flex items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-extrabold transition ${
+                        mobileSection === 'form'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-300'
+                      }`}
+                    >
+                      <ClipboardCheck className="h-4 w-4 shrink-0" />
+                      <span className="truncate">ให้คะแนน ({totalPreview}/100)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileSection('committee')}
+                      className={`min-h-[38px] inline-flex items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-extrabold transition ${
+                        mobileSection === 'committee'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-300'
+                      }`}
+                    >
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="truncate">สถานะกรรมการ ({detail.round.submitted_count}/{detail.round.required_auditors})</span>
+                    </button>
                   </div>
                 )}
+              </div>
 
-                {/* Committee Member Table */}
-                <div className="max-h-64 overflow-auto">
-                  <table className="w-full text-left text-xs">
+              {/* SECTION A: Committee Member Scoring & Camera Photo Upload Form (Shown FIRST on Mobile!) */}
+              {canSubmitHere && (
+                <form
+                  onSubmit={handleSubmitAudit}
+                  className={`${mobileSection === 'committee' ? 'hidden lg:block' : 'block'} rounded-xl border border-emerald-200 bg-white p-3.5 sm:p-4 shadow-2xs dark:border-emerald-800 dark:bg-slate-800 space-y-3.5`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-700">
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white">
+                        แบบฟอร์มบันทึกคะแนน 5ส & แนบรูปภาพ ({selfEmpId})
+                      </h5>
+                      <p className="text-[11px] text-slate-500">
+                        แตะเลือกเกณฑ์มาตรฐาน หรือกดปุ่ม - / + เพื่อปรับคะแนนแต่ละหมวด (0–20 คะแนน)
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 px-3 py-1 text-right dark:bg-emerald-950/50">
+                      <span className="text-[10px] text-slate-500 block">คะแนนรวมของคุณ</span>
+                      <span className="font-mono text-sm sm:text-base font-extrabold text-emerald-600">
+                        {totalPreview}/100 (เกรด {previewGrade})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Standardized 5S Rubric Cards with Quick-Tap Chips & +/- Steppers */}
+                  <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                    {SCORE_FIELDS.map((sf) => {
+                      const curVal = Number(scores[sf.key] ?? 16);
+                      return (
+                        <div
+                          key={sf.key}
+                          className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5 sm:p-3 dark:border-slate-700 dark:bg-slate-900/40 space-y-2"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-xs font-extrabold text-slate-800 dark:text-white">
+                                {sf.label}
+                              </div>
+                              <p className="text-[10px] text-slate-500 leading-snug mt-0.5">
+                                {sf.hint}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-lg bg-white border border-slate-200 px-2 py-0.5 font-mono text-xs font-extrabold text-emerald-700 dark:bg-slate-800 dark:border-slate-700 dark:text-emerald-300">
+                              {curVal} / {sf.max}
+                            </span>
+                          </div>
+
+                          {/* 4 Quick Rubric Level Chips */}
+                          <div className="grid grid-cols-4 gap-1">
+                            {SCORE_PRESETS.map((pr) => {
+                              const isSelected = curVal >= pr.min && curVal <= pr.max;
+                              return (
+                                <button
+                                  key={pr.label}
+                                  type="button"
+                                  onClick={() => setScores((prev) => ({ ...prev, [sf.key]: pr.val }))}
+                                  className={`min-h-[32px] rounded-lg border px-1.5 text-[10px] font-bold transition ${
+                                    isSelected
+                                      ? pr.activeCls
+                                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  }`}
+                                >
+                                  {pr.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Fine Stepper (-1 / Number Input / +1) */}
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => adjustScoreField(sf.key, -1)}
+                              className="min-h-[36px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                              aria-label="ลด 1 คะแนน"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              max={sf.max}
+                              required
+                              value={scores[sf.key]}
+                              onChange={(e) => setScores((prev) => ({ ...prev, [sf.key]: Math.max(0, Math.min(20, Number(e.target.value))) }))}
+                              className="min-h-[36px] flex-1 rounded-lg border border-slate-300 bg-white px-2 text-center font-mono text-sm font-extrabold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => adjustScoreField(sf.key, 1)}
+                              className="min-h-[36px] min-w-[38px] inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                              aria-label="เพิ่ม 1 คะแนน"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* High-Contrast Camera & Gallery Photo Upload Box (Fixes theme-light invisible bg-slate-800 bug) */}
+                  <div className="rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 p-3 dark:border-emerald-800 dark:bg-slate-900/40 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <ImageIcon className="h-4 w-4 text-emerald-600" />
+                        <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                          แนบรูปถ่ายหน้างาน 5ส (สูงสุด 10 รูป · 5MB/รูป)
+                        </span>
+                      </div>
+                      <select
+                        value={photoCategory}
+                        onChange={(e) => setPhotoCategory(e.target.value)}
+                        className="min-h-[36px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold dark:border-slate-600 dark:bg-slate-800"
+                      >
+                        {CAT_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="min-h-[42px] flex-1 sm:flex-initial inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-700">
+                        <Camera className="h-4 w-4 shrink-0" />
+                        <span>ถ่ายรูปจากกล้อง ({pendingPhotos.length})</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handlePhotoFiles}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <label className="min-h-[42px] flex-1 sm:flex-initial inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-4 text-xs font-extrabold text-emerald-700 hover:bg-emerald-50 dark:bg-slate-800 dark:text-emerald-300">
+                        <ImageIcon className="h-4 w-4 shrink-0" />
+                        <span>เลือกรูปจากอัลบั้ม</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handlePhotoFiles}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    {pendingPhotos.length > 0 && (
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {pendingPhotos.map((p, idx) => (
+                          <div key={idx} className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
+                            <img src={p.previewUrl} alt="preview" className="h-12 w-12 rounded object-cover shrink-0" />
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="text-[10px] font-bold text-emerald-600 truncate">{p.category} · {p.file.name}</div>
+                              <input
+                                type="text"
+                                value={p.caption}
+                                onChange={(e) => setPendingPhotos((prev) => prev.map((x, i) => i === idx ? { ...x, caption: e.target.value } : x))}
+                                placeholder="หมายเหตุรูปภาพ..."
+                                className="w-full rounded border border-slate-200 px-2 py-1 text-[11px] dark:border-slate-600 dark:bg-slate-900"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setPendingPhotos((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 rounded"
+                              title="นำรูปนี้ออก"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <input
+                      type="text"
+                      value={scores.remarks}
+                      onChange={(e) => setScores((prev) => ({ ...prev, remarks: e.target.value }))}
+                      placeholder="ข้อเสนอแนะเพิ่มเติมสำหรับสายการผลิต..."
+                      className="min-h-[42px] flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!isOnline || submitting}
+                      className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-xs font-extrabold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {submitting ? 'กำลังบันทึก...' : (selfCommitteeRow?.is_completed ? 'อัปเดตผลตรวจ 5ส ของฉัน' : 'ยืนยันส่งผลตรวจ 5ส')}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* SECTION B: Committee Member Status & Evidence List (Responsive Mobile Cards + Desktop Table) */}
+              <div className={`${canSubmitHere && mobileSection === 'form' ? 'hidden lg:block' : 'block'} rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs dark:border-slate-700 dark:bg-slate-800 space-y-3`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h5 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white">
+                    สถานะคณะกรรมการตรวจประเมิน ({detail.committee.length} คน)
+                  </h5>
+                  {detail.blind_mode && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                      <Shield className="h-3.5 w-3.5 shrink-0" />
+                      ซ่อนคะแนนผู้อื่นจนกว่าจะปิดรอบ
+                    </span>
+                  )}
+                </div>
+
+                {/* Mobile View (< sm): Clean Stacked Member Cards (No Horizontal Text Crushing) */}
+                <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-700">
+                  {detail.committee.map((m) => (
+                    <div key={m.auditor_emp_id || m.id} className="py-2.5 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-800 dark:text-white">
+                            {m.auditor_name || m.auditor_emp_id}
+                            {m.is_self && <span className="ml-1 text-[10px] font-extrabold text-emerald-600">(คุณ)</span>}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {m.auditor_emp_id} · {m.assigned_role === 'CHAIR' ? 'ประธาน' : 'กรรมการ'} · สัดส่วน {Number(m.weight_pct || 0).toFixed(1)}%
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {Number(m.is_completed) ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                              <CheckCircle2 className="h-3 w-3" /> ส่งแล้ว
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                              <Clock className="h-3 w-3" /> รอตรวจ
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                          คะแนน: {m.blind_masked ? <span className="text-slate-400">ซ่อน (Blind)</span> : (m.total_score !== null ? `${m.total_score}/100 (เกรด ${m.grade || '-'})` : '-')}
+                        </div>
+                        {!m.blind_masked && (m.photos || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {m.photos.map((ph) => (
+                              <span
+                                key={ph.photo_id}
+                                className="inline-flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => setLightboxUrl(audit5sApi.getPhotoUrl(ph.file_name))}
+                                  className="inline-flex items-center gap-1"
+                                >
+                                  <Eye className="h-3 w-3" /> {ph.category_5s}
+                                </button>
+                                {(m.is_self || isManager) && detail.round.status !== 'LOCKED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSavedPhoto(ph.photo_id)}
+                                    className="ml-0.5 text-rose-500 hover:text-rose-700"
+                                    title="ลบรูปภาพนี้"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tablet / Desktop View (sm+): Clean Whitespace-Safe Table */}
+                <div className="hidden sm:block max-h-72 overflow-auto custom-scrollbar">
+                  <table className="w-full text-left text-xs whitespace-nowrap">
                     <thead className="sticky top-0 bg-slate-50 font-bold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
                       <tr>
                         <th className="px-3 py-2">กรรมการ ({detail.committee.length} คน)</th>
@@ -797,18 +1297,32 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                           </td>
                           <td className="px-3 py-2">
                             {m.blind_masked ? (
-                              <span className="text-slate-400 text-[11px]">รอครบองค์ประชุม</span>
+                              <span className="text-slate-400 text-[11px]">รอปิดรอบ</span>
                             ) : (m.photos || []).length > 0 ? (
                               <div className="flex flex-wrap gap-1.5">
                                 {m.photos.map((ph) => (
-                                  <button
+                                  <span
                                     key={ph.photo_id}
-                                    type="button"
-                                    onClick={() => setLightboxUrl(audit5sApi.getPhotoUrl(ph.file_name))}
                                     className="inline-flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300"
                                   >
-                                    <Eye className="h-3 w-3" /> {ph.category_5s}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setLightboxUrl(audit5sApi.getPhotoUrl(ph.file_name))}
+                                      className="inline-flex items-center gap-1"
+                                    >
+                                      <Eye className="h-3 w-3" /> {ph.category_5s}
+                                    </button>
+                                    {(m.is_self || isManager) && detail.round.status !== 'LOCKED' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteSavedPhoto(ph.photo_id)}
+                                        className="ml-0.5 text-rose-500 hover:text-rose-700"
+                                        title="ลบรูปภาพนี้"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    )}
+                                  </span>
                                 ))}
                               </div>
                             ) : (
@@ -821,128 +1335,6 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                   </table>
                 </div>
               </div>
-
-              {/* Committee Member Scoring & Camera Photo Upload Form */}
-              {canSubmitHere && (
-                <form
-                  onSubmit={handleSubmitAudit}
-                  className="rounded-xl border border-emerald-200 bg-white p-4 shadow-2xs dark:border-emerald-800 dark:bg-slate-800 space-y-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-700">
-                    <div>
-                      <h5 className="text-sm font-bold text-slate-800 dark:text-white">
-                        แบบฟอร์มบันทึกคะแนน & แนบรูปภาพ ({selfEmpId})
-                      </h5>
-                      <p className="text-[11px] text-slate-500">
-                        ให้คะแนนแต่ละหมวด 0–20 คะแนน พร้อมถ่ายรูปหลักฐานแนบได้ทันทีจากมือถือ
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-emerald-50 px-3 py-1.5 text-center dark:bg-emerald-950/50">
-                      <span className="text-[10px] text-slate-500 block">คะแนนรวมของคุณ</span>
-                      <span className="font-mono text-base font-extrabold text-emerald-600">
-                        {totalPreview}/100 ({previewGrade})
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    {SCORE_FIELDS.map((sf) => (
-                      <div key={sf.key} className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
-                        <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-200">
-                          {sf.label}
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max={sf.max}
-                          required
-                          value={scores[sf.key]}
-                          onChange={(e) => setScores((prev) => ({ ...prev, [sf.key]: Math.max(0, Math.min(20, Number(e.target.value))) }))}
-                          className="min-h-[44px] w-full rounded-lg border border-slate-300 bg-slate-50 px-2 text-center font-mono text-base font-bold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3.5 dark:border-slate-600 dark:bg-slate-900/40 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="h-4 w-4 text-emerald-600" />
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                          แนบรูปภาพหน้างาน 5ส (สูงสุด 5MB/รูป)
-                        </span>
-                      </div>
-                      <select
-                        value={photoCategory}
-                        onChange={(e) => setPhotoCategory(e.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold dark:border-slate-600 dark:bg-slate-800"
-                      >
-                        {CAT_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <label className="min-h-[44px] inline-flex cursor-pointer items-center gap-2 rounded-lg bg-slate-800 px-4 text-xs font-bold text-white hover:bg-slate-900 dark:bg-slate-700">
-                      <Camera className="h-4 w-4" />
-                      ถ่ายรูป / เลือกรูปภาพ ({pendingPhotos.length} รูป)
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        multiple
-                        onChange={handlePhotoFiles}
-                        className="hidden"
-                      />
-                    </label>
-
-                    {pendingPhotos.length > 0 && (
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {pendingPhotos.map((p, idx) => (
-                          <div key={idx} className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
-                            <img src={p.previewUrl} alt="preview" className="h-12 w-12 rounded object-cover shrink-0" />
-                            <div className="flex-1 min-w-0 space-y-1">
-                              <div className="text-[10px] font-bold text-emerald-600">{p.category} · {p.file.name}</div>
-                              <input
-                                type="text"
-                                value={p.caption}
-                                onChange={(e) => setPendingPhotos((prev) => prev.map((x, i) => i === idx ? { ...x, caption: e.target.value } : x))}
-                                placeholder="หมายเหตุรูปภาพ..."
-                                className="w-full rounded border border-slate-200 px-2 py-1 text-[11px] dark:border-slate-600 dark:bg-slate-900"
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setPendingPhotos((prev) => prev.filter((_, i) => i !== idx))}
-                              className="p-1.5 text-rose-500 hover:bg-rose-50 rounded"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <input
-                      type="text"
-                      value={scores.remarks}
-                      onChange={(e) => setScores((prev) => ({ ...prev, remarks: e.target.value }))}
-                      placeholder="ข้อเสนอแนะเพิ่มเติมสำหรับสายการผลิต..."
-                      className="min-h-[44px] flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!isOnline || submitting}
-                      className="min-h-[44px] inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      {submitting ? 'กำลังบันทึก...' : (selfCommitteeRow?.is_completed ? 'อัปเดตผลตรวจ 5ส ของฉัน' : 'ยืนยันส่งผลตรวจ 5ส')}
-                    </button>
-                  </div>
-                </form>
-              )}
             </div>
           )}
         </div>
@@ -1077,7 +1469,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                       type="text"
                       value={defCandSearch}
                       onChange={(e) => setDefCandSearch(e.target.value)}
-                      placeholder="ค้นหารหัส, ชื่อ หรือแผนก (เช่น ADMIN, OFFICE, QA, QC)..."
+                      placeholder="ค้นหารหัส, ชื่อ หรือแผนก (เช่น OFFICE, QA/QC, MT/PE)..."
                       className="min-h-[42px] w-full rounded-lg border border-slate-300 bg-slate-50 pl-9 pr-3 text-xs dark:border-slate-600 dark:bg-slate-800"
                     />
                   </div>
@@ -1143,7 +1535,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
           >
             <div className="flex items-center justify-between border-b px-5 py-3.5 dark:border-slate-700">
               <h4 className="text-base font-bold text-slate-800 dark:text-white">
-                {roundForm.round_id ? 'ปรับรายชื่อกรรมการเฉพาะรอบ' : 'เปิดรอบตรวจ 5ส เฉพาะสาย (ดึงจาก Default)'}
+                {roundForm.round_id ? 'แก้ไขรอบตรวจ / ปรับรายชื่อกรรมการเฉพาะรอบ' : 'เปิดรอบตรวจ 5ส เฉพาะสาย (ดึงจาก Default)'}
               </h4>
               <button type="button" onClick={() => setRoundModalOpen(false)} className="p-1 text-slate-400"><X className="h-5 w-5" /></button>
             </div>
@@ -1172,7 +1564,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                     }))}
                     className="min-h-[44px] w-full rounded-lg border border-slate-300 px-3 text-xs dark:border-slate-600 dark:bg-slate-800"
                   >
-                    {(linesPool.length ? linesPool : ['ASSEMBLY', 'BEND', 'PAINT', 'PRESS']).map((ln) => (
+                    {linesPool.map((ln) => (
                       <option key={ln} value={ln}>{ln}</option>
                     ))}
                   </select>
@@ -1265,17 +1657,34 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 border-t px-5 py-3 dark:border-slate-700">
-              <button type="button" onClick={() => setRoundModalOpen(false)} className="min-h-[44px] rounded-lg border px-4 text-xs font-semibold dark:border-slate-600">
-                ยกเลิก
-              </button>
-              <button
-                type="submit"
-                disabled={savingRound || roundForm.committee.length < 1}
-                className="min-h-[44px] rounded-lg bg-emerald-600 px-5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {savingRound ? 'กำลังบันทึก...' : 'บันทึกรอบตรวจ 5ส'}
-              </button>
+            <div className="flex items-center justify-between gap-2 border-t px-5 py-3 dark:border-slate-700">
+              <div>
+                {Number(roundForm.round_id) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoundModalOpen(false);
+                      handleDeleteRound(roundForm);
+                    }}
+                    className="min-h-[40px] inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    ลบรอบนี้
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setRoundModalOpen(false)} className="min-h-[44px] rounded-lg border px-4 text-xs font-semibold dark:border-slate-600">
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRound || roundForm.committee.length < 1}
+                  className="min-h-[44px] rounded-lg bg-emerald-600 px-5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {savingRound ? 'กำลังบันทึก...' : 'บันทึกรอบตรวจ 5ส'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

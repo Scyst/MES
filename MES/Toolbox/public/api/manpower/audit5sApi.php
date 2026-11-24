@@ -133,14 +133,8 @@ try {
                 }
             }
 
+            $activeLines = fetchActive5sLines($pdo);
             if (preg_match('/^\d{4}-\d{2}$/', $targetPeriod) && !empty($defaultRoster)) {
-                $activeLines = $pdo->query("
-                    SELECT DISTINCT line
-                    FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
-                    WHERE is_active = 1 AND line IS NOT NULL AND line != ''
-                    ORDER BY line ASC
-                ")->fetchAll(PDO::FETCH_COLUMN);
-
                 foreach ($activeLines as $lnRaw) {
                     $ln = trim((string)$lnRaw);
                     if ($ln === '' || isset($existingLinesMap[$ln])) {
@@ -184,6 +178,7 @@ try {
 
             mpJsonSuccess([
                 'rounds' => $rounds,
+                'active_lines' => $activeLines,
                 'is_committee_member' => $isCommittee,
                 'is_manager' => $isManager,
                 'self_emp_id' => $selfEmpId,
@@ -336,12 +331,7 @@ try {
 
         case 'get_default_5s_committee':
             $roster = fetchDefault5sCommittee($pdo, true);
-            $lines = $pdo->query("
-                SELECT DISTINCT line
-                FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
-                WHERE is_active = 1 AND line IS NOT NULL AND line != ''
-                ORDER BY line ASC
-            ")->fetchAll(PDO::FETCH_COLUMN);
+            $lines = fetchActive5sLines($pdo);
             if (!$isManager) {
                 $selfEntry = null;
                 foreach ($roster as $r) {
@@ -421,12 +411,7 @@ try {
             if (empty($roster)) {
                 throw new InvalidArgumentException('กรุณาตั้งค่า "คณะกรรมการ 5ส ประจำ (Default Roster)" ก่อนเปิดรอบอัตโนมัติ');
             }
-            $activeLines = $pdo->query("
-                SELECT DISTINCT line
-                FROM dbo.MANPOWER_EMPLOYEES WITH (NOLOCK)
-                WHERE is_active = 1 AND line IS NOT NULL AND line != ''
-                ORDER BY line ASC
-            ")->fetchAll(PDO::FETCH_COLUMN);
+            $activeLines = fetchActive5sLines($pdo);
 
             $created = 0;
             $synced = 0;
@@ -452,7 +437,7 @@ try {
                 mpJsonError('สงวนสิทธิ์เฉพาะผู้ดูแลระบบในการแต่งตั้งคณะกรรมการ 5ส', 403);
             }
             $q = trim((string)($input['q'] ?? ''));
-            $where = ['E.is_active = 1'];
+            $where = ['E.is_active = 1', "ISNULL(TS.hc_group, 'TEAM 1') <> 'EXCLUDE'"];
             $params = [];
             if ($q !== '') {
                 $where[] = '(E.emp_id LIKE ? OR E.name_th LIKE ? OR E.line LIKE ? OR E.position LIKE ?)';
@@ -464,6 +449,7 @@ try {
                 SELECT TOP (300) E.emp_id, E.name_th, E.position, E.line, E.department_api,
                        MAX(U.username) AS username, MAX(U.role) AS sys_role
                 FROM dbo.MANPOWER_EMPLOYEES E WITH (NOLOCK)
+                LEFT JOIN dbo.MANPOWER_TEAM_SETTINGS TS WITH (NOLOCK) ON E.department_api = TS.department_api
                 LEFT JOIN dbo.USERS U WITH (NOLOCK) ON U.emp_id = E.emp_id COLLATE Thai_CI_AS AND U.is_active = 1
                 WHERE {$whereSql}
                 GROUP BY E.emp_id, E.name_th, E.position, E.line, E.department_api
@@ -718,6 +704,87 @@ try {
             $pdo->prepare('UPDATE dbo.AUDIT_5S_ROUNDS SET status = ?, updated_at = GETDATE() WHERE round_id = ?')->execute([$nextStatus, $roundId]);
             writeLog($pdo, 'UPDATE', 'AUDIT_5S_ROUND_LOCK', (string)$roundId, ['status' => $r['status']], ['status' => $nextStatus], "Set 5S round #{$roundId} status to {$nextStatus}");
             mpJsonSuccess(['round_id' => $roundId, 'status' => $nextStatus], $lock ? 'ล็อกปิดผลรอบตรวจ 5ส แล้ว' : 'ปลดล็อกรอบตรวจ 5ส แล้ว');
+
+        case 'delete_5s_round':
+            if (!$isManager) {
+                mpJsonError('สงวนสิทธิ์เฉพาะผู้ดูแลระบบในการลบรอบตรวจ 5ส', 403);
+            }
+            $roundId = (int)($input['round_id'] ?? 0);
+            if ($roundId <= 0) {
+                throw new InvalidArgumentException('กรุณาระบุรหัสรอบตรวจ 5ส ที่ต้องการลบ');
+            }
+            $stmtR = $pdo->prepare('SELECT * FROM dbo.AUDIT_5S_ROUNDS WHERE round_id = ?');
+            $stmtR->execute([$roundId]);
+            $oldRound = $stmtR->fetch(PDO::FETCH_ASSOC);
+            if (!$oldRound) {
+                throw new InvalidArgumentException('ไม่พบรอบตรวจ 5ส ที่ต้องการลบ');
+            }
+            if ($oldRound['status'] === 'LOCKED') {
+                throw new InvalidArgumentException('รอบตรวจนี้ถูกล็อกปิดผลแล้ว กรุณาปลดล็อกก่อนลบรอบตรวจ');
+            }
+
+            $stmtPh = $pdo->prepare('SELECT file_name FROM dbo.AUDIT_5S_PHOTOS WHERE round_id = ?');
+            $stmtPh->execute([$roundId]);
+            $photoFiles = $stmtPh->fetchAll(PDO::FETCH_COLUMN);
+
+            $pdo->beginTransaction();
+            $pdo->prepare('DELETE FROM dbo.AUDIT_5S_PHOTOS WHERE round_id = ?')->execute([$roundId]);
+            $pdo->prepare('DELETE FROM dbo.AUDIT_5S_COMMITTEE WHERE round_id = ?')->execute([$roundId]);
+            $pdo->prepare('DELETE FROM dbo.AUDIT_5S WHERE round_id = ?')->execute([$roundId]);
+            $pdo->prepare('DELETE FROM dbo.AUDIT_5S_ROUNDS WHERE round_id = ?')->execute([$roundId]);
+            writeLog($pdo, 'DELETE', 'AUDIT_5S_ROUND', (string)$roundId, $oldRound, null, "Deleted 5S round #{$roundId} ({$oldRound['line']} - {$oldRound['eval_period']})");
+            $pdo->commit();
+
+            foreach ($photoFiles as $fn) {
+                $cleanFn = basename((string)$fn);
+                foreach (resolve5sUploadSearchDirs() as $baseDir) {
+                    $p = $baseDir . DIRECTORY_SEPARATOR . '5s_audits' . DIRECTORY_SEPARATOR . $cleanFn;
+                    if (is_file($p)) {
+                        @unlink($p);
+                    }
+                }
+            }
+            mpJsonSuccess(['round_id' => $roundId], "ลบรอบตรวจ 5ส ({$oldRound['line']}) เรียบร้อยแล้ว");
+
+        case 'delete_5s_photo':
+            $photoId = (int)($input['photo_id'] ?? 0);
+            if ($photoId <= 0) {
+                throw new InvalidArgumentException('กรุณาระบุรหัสรูปภาพที่ต้องการลบ');
+            }
+            $stmtP = $pdo->prepare("
+                SELECT P.*, R.status AS round_status
+                FROM dbo.AUDIT_5S_PHOTOS P WITH (NOLOCK)
+                LEFT JOIN dbo.AUDIT_5S_ROUNDS R WITH (NOLOCK) ON P.round_id = R.round_id
+                WHERE P.photo_id = ?
+            ");
+            $stmtP->execute([$photoId]);
+            $photo = $stmtP->fetch(PDO::FETCH_ASSOC);
+            if (!$photo) {
+                throw new InvalidArgumentException('ไม่พบรูปภาพที่ต้องการลบ');
+            }
+            if (($photo['round_status'] ?? '') === 'LOCKED') {
+                throw new InvalidArgumentException('รอบตรวจถูกล็อกแล้ว ไม่สามารถลบรูปภาพได้');
+            }
+            $isOwner = ($selfEmpId !== '' && trim((string)($photo['uploaded_by'] ?? '')) === $selfEmpId);
+            if (!$isManager && !$isOwner) {
+                mpJsonError('คุณไม่มีสิทธิ์ลบรูปภาพของกรรมการท่านอื่น', 403);
+            }
+
+            $pdo->beginTransaction();
+            $pdo->prepare('DELETE FROM dbo.AUDIT_5S_PHOTOS WHERE photo_id = ?')->execute([$photoId]);
+            writeLog($pdo, 'DELETE', 'AUDIT_5S_PHOTO', (string)$photoId, $photo, null, "Deleted 5S evidence photo #{$photoId}");
+            $pdo->commit();
+
+            $cleanFn = basename((string)($photo['file_name'] ?? ''));
+            if ($cleanFn !== '') {
+                foreach (resolve5sUploadSearchDirs() as $baseDir) {
+                    $p = $baseDir . DIRECTORY_SEPARATOR . '5s_audits' . DIRECTORY_SEPARATOR . $cleanFn;
+                    if (is_file($p)) {
+                        @unlink($p);
+                    }
+                }
+            }
+            mpJsonSuccess(['photo_id' => $photoId], 'ลบรูปภาพหลักฐาน 5ส เรียบร้อยแล้ว');
 
         default:
             throw new InvalidArgumentException('ไม่พบคำสั่งที่ระบุ');
