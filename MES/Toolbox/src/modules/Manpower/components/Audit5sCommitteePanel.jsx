@@ -67,9 +67,12 @@ function scoreToGrade(total) {
 export default function Audit5sCommitteePanel({ structure: propStructure, isOnline = true, standaloneHeader = false, onRoundUpdated }) {
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const [evalPeriod, setEvalPeriod] = useState(getMonthIso);
+  const [auditDate, setAuditDate] = useState(getTodayIso);
+  const evalPeriod = useMemo(() => (auditDate ? auditDate.slice(0, 7) : getMonthIso()), [auditDate]);
   const [loading, setLoading] = useState(false);
   const [rounds, setRounds] = useState([]);
+  const [auditDatesInPeriod, setAuditDatesInPeriod] = useState([]);
+  const [monthlyLineSummary, setMonthlyLineSummary] = useState({});
   const [isManager, setIsManager] = useState(false);
   const [selfEmpId, setSelfEmpId] = useState('');
   const [defaultCount, setDefaultCount] = useState(0);
@@ -134,9 +137,11 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
   const loadRounds = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await audit5sApi.getMyAssignments(evalPeriod);
+      const res = await audit5sApi.getMyAssignments({ audit_date: auditDate, eval_period: evalPeriod });
       const list = Array.isArray(res?.data?.rounds) ? res.data.rounds : [];
       setRounds(list);
+      setAuditDatesInPeriod(Array.isArray(res?.data?.audit_dates_in_period) ? res.data.audit_dates_in_period : []);
+      setMonthlyLineSummary(res?.data?.monthly_line_summary && typeof res.data.monthly_line_summary === 'object' ? res.data.monthly_line_summary : {});
       setIsManager(Boolean(res?.data?.is_manager));
       setSelfEmpId(res?.data?.self_emp_id || '');
       setDefaultCount(Number(res?.data?.default_committee_count || 0));
@@ -158,7 +163,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     } finally {
       setLoading(false);
     }
-  }, [evalPeriod, selectedKey, showToast]);
+  }, [auditDate, evalPeriod, selectedKey, showToast]);
 
   useEffect(() => {
     loadRounds();
@@ -171,7 +176,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
       const isExisting = key.startsWith('r:');
       const res = isExisting
         ? await audit5sApi.getRoundDetail(Number(key.slice(2)))
-        : await audit5sApi.getRoundDetail(0, { line: key.slice(2), eval_period: evalPeriod });
+        : await audit5sApi.getRoundDetail(0, { line: key.slice(2), audit_date: auditDate, eval_period: evalPeriod });
       const payload = res?.data || null;
       setDetail(payload);
       const own = (payload?.committee || []).find((m) => m.is_self);
@@ -205,7 +210,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     } finally {
       setDetailLoading(false);
     }
-  }, [evalPeriod, showToast]);
+  }, [auditDate, evalPeriod, showToast]);
 
   useEffect(() => {
     if (selectedKey) {
@@ -326,7 +331,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     if (!isOnline || !isManager) return;
     setSyncingRounds(true);
     try {
-      const res = await audit5sApi.syncPeriodRounds(evalPeriod, getTodayIso());
+      const res = await audit5sApi.syncPeriodRounds(evalPeriod, auditDate || getTodayIso());
       showToast(res?.message || 'เปิดรอบตรวจทุกสายจากชุด Default เรียบร้อยแล้ว', 'success');
       await loadRounds();
       onRoundUpdated?.();
@@ -339,6 +344,7 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
 
   const openNewRoundModal = async (preselectLine = '') => {
     const defaultLine = preselectLine || linesPool[0] || 'ASSEMBLY';
+    const targetDt = auditDate || getTodayIso();
     let seedCommittee = [];
     try {
       const res = await audit5sApi.getDefaultCommittee();
@@ -358,10 +364,10 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     }
     setRoundForm({
       round_id: 0,
-      eval_period: evalPeriod || getMonthIso(),
+      eval_period: targetDt.slice(0, 7),
       line: defaultLine,
-      round_name: `ตรวจ 5ส ประจำเดือน ${evalPeriod} (${defaultLine})`,
-      audit_date: getTodayIso(),
+      round_name: `ตรวจ 5ส ประจำวันที่ ${targetDt} (${defaultLine})`,
+      audit_date: targetDt,
       notes: '',
       committee: seedCommittee,
     });
@@ -373,12 +379,13 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
     const rObj = targetRound || detail?.round;
     const cList = targetCommittee || detail?.committee || [];
     if (!rObj) return;
+    const targetDt = rObj.audit_date || auditDate || getTodayIso();
     setRoundForm({
       round_id: Number(rObj.round_id || 0),
-      eval_period: rObj.eval_period || evalPeriod,
+      eval_period: rObj.eval_period || targetDt.slice(0, 7),
       line: rObj.line || linesPool[0] || 'ASSEMBLY',
-      round_name: rObj.round_name || `ตรวจ 5ส ประจำเดือน ${evalPeriod} (${rObj.line})`,
-      audit_date: rObj.audit_date || getTodayIso(),
+      round_name: rObj.round_name || `ตรวจ 5ส ประจำวันที่ ${targetDt} (${rObj.line})`,
+      audit_date: targetDt,
       notes: rObj.notes || '',
       committee: cList.map((m) => ({
         auditor_emp_id: m.auditor_emp_id,
@@ -587,21 +594,31 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
             </div>
             <div className="min-w-0">
               <h2 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white leading-tight truncate">
-                {standaloneHeader ? 'ระบบตรวจประเมินกิจกรรม 5ส หน้างาน' : 'คณะกรรมการตรวจ 5ส (หารเท่า 1/N)'}
+                {standaloneHeader ? 'ระบบตรวจประเมินกิจกรรม 5ส หน้างาน (รายวัน)' : 'คณะกรรมการตรวจ 5ส รายวัน (หารเท่า 1/N)'}
               </h2>
               <p className="text-[11px] text-slate-500 truncate">
-                กรรมการประจำ {defaultCount} คน · เฉลี่ยตามผู้ส่งผลจริง (1/N)
+                กรรมการประจำ {defaultCount} คน · ตรวจรายวัน (จ./พ./ศ. หรือวันตรวจพิเศษ) แล้วคำนวณค่าเฉลี่ยสะสมรายเดือนเข้าเกรด 4D
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <input
-              type="month"
-              value={evalPeriod}
-              onChange={(e) => setEvalPeriod(e.target.value)}
-              className="min-h-[36px] sm:min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs font-bold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              type="date"
+              value={auditDate}
+              onChange={(e) => setAuditDate(e.target.value || getTodayIso())}
+              className="min-h-[36px] sm:min-h-[38px] rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-bold dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+              title="เลือกวันที่ตรวจ 5ส"
             />
+            {auditDate !== getTodayIso() && (
+              <button
+                type="button"
+                onClick={() => setAuditDate(getTodayIso())}
+                className="min-h-[36px] sm:min-h-[38px] rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              >
+                วันนี้
+              </button>
+            )}
             <button
               type="button"
               onClick={loadRounds}
@@ -612,6 +629,31 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
             </button>
           </div>
         </div>
+
+        {auditDatesInPeriod.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t border-slate-100 dark:border-slate-700/70 custom-scrollbar">
+            <span className="shrink-0 text-[11px] font-bold text-slate-500">
+              วันที่ตรวจในเดือน {evalPeriod}:
+            </span>
+            {auditDatesInPeriod.map((d) => {
+              const isCur = d.audit_date === auditDate;
+              return (
+                <button
+                  key={d.audit_date}
+                  type="button"
+                  onClick={() => setAuditDate(d.audit_date)}
+                  className={`shrink-0 rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
+                    isCur
+                      ? 'border-emerald-600 bg-emerald-600 text-white'
+                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                  }`}
+                >
+                  {d.audit_date} ({d.audited_lines || 0} สาย{d.avg_score ? ` · เฉลี่ย ${d.avg_score}` : ''})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {isManager && (
           <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/70">
@@ -815,6 +857,11 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                         <p className="text-[11px] text-slate-500 mt-0.5">
                           ส่งแล้ว {r.submitted_count}/{r.required_auditors} คน · {r.audit_date}
                         </p>
+                        {monthlyLineSummary[r.line] && (
+                          <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                            สะสมเดือน {evalPeriod}: {Number(monthlyLineSummary[r.line].score_5s).toFixed(1)} (เกรด {monthlyLineSummary[r.line].grade_5s} · ตรวจ {monthlyLineSummary[r.line].audited_days_count || 1} วัน)
+                          </p>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <span className={`inline-block rounded-md border px-2 py-0.5 font-mono text-xs font-extrabold ${gBadge}`}>
@@ -920,24 +967,32 @@ export default function Audit5sCommitteePanel({ structure: propStructure, isOnli
                   )}
                 </div>
 
-                {/* 3 Compact Consensus KPI Boxes */}
-                <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-900/60">
+                {/* 4 Compact Consensus KPI Boxes (Daily + Monthly Rollup) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-900/60">
                   <div>
-                    <div className="text-[10px] sm:text-[11px] text-slate-500">ผู้ส่งผลตรวจ</div>
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">ผู้ส่งผลวันนี้</div>
                     <div className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white">
                       {detail.round.submitted_count} / {detail.round.required_auditors} คน
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] sm:text-[11px] text-slate-500">เฉลี่ยผู้ส่งจริง (1/N)</div>
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">คะแนนเฉลี่ยวันนี้ (1/N)</div>
                     <div className="text-xs sm:text-sm font-extrabold font-mono text-emerald-600">
                       {detail.round.weighted_score !== null ? `${Number(detail.round.weighted_score).toFixed(1)} / 100` : 'ยังไม่มีผู้ส่ง'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] sm:text-[11px] text-slate-500">เกรดสรุป 5ส</div>
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">เกรดประจำวัน</div>
                     <div className="text-xs sm:text-sm font-extrabold font-mono text-indigo-600">
                       {detail.round.final_grade || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] sm:text-[11px] text-slate-500">สะสมเฉลี่ยเดือน {evalPeriod}</div>
+                    <div className="text-xs sm:text-sm font-extrabold font-mono text-violet-600 dark:text-violet-400">
+                      {monthlyLineSummary[detail.round.line]
+                        ? `${Number(monthlyLineSummary[detail.round.line].score_5s).toFixed(1)} (เกรด ${monthlyLineSummary[detail.round.line].grade_5s} · ${monthlyLineSummary[detail.round.line].audited_days_count || 1} วัน)`
+                        : 'ยังไม่มีผลในเดือนนี้'}
                     </div>
                   </div>
                 </div>

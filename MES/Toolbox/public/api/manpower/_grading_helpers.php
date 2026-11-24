@@ -562,10 +562,12 @@ function fetchLearningEvalContext(PDO $pdo, array $empIds = []): array {
 }
 
 /**
- * Resolves 5S consensus per line for a period from multi-auditor rounds (fallback to standalone AUDIT_5S).
+ * Resolves 5S consensus per line for a period by averaging all daily multi-auditor rounds
+ * (and standalone daily audits) within [$startDate, $endDate).
  */
 function fetch5sPeriodConsensusMap(PDO $pdo, string $startDate, string $endDate): array {
     $map = [];
+    $dailyByLine = [];
 
     try {
         $stmtRounds = $pdo->prepare("
@@ -576,40 +578,64 @@ function fetch5sPeriodConsensusMap(PDO $pdo, string $startDate, string $endDate)
             FROM dbo.AUDIT_5S_ROUNDS R WITH (NOLOCK)
             WHERE R.audit_date >= ? AND R.audit_date < ?
               AND R.submitted_count > 0
+              AND R.weighted_score IS NOT NULL
             ORDER BY R.audit_date DESC, R.round_id DESC
         ");
         $stmtRounds->execute([$startDate, $endDate]);
         foreach ($stmtRounds->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $ln = trim((string)$row['line']);
-            if ($ln === '' || isset($map[$ln])) {
+            if ($ln === '') {
                 continue;
             }
-            $score = $row['weighted_score'] !== null ? round((float)$row['weighted_score'], 2) : null;
-            $map[$ln] = [
-                'source' => 'COMMITTEE_ROUND',
+            $dailyByLine[$ln][] = [
                 'round_id' => (int)$row['round_id'],
                 'round_name' => $row['round_name'],
-                'score_5s' => $score,
-                'grade_5s' => $row['final_grade'] ?: ($score !== null ? scoreTo5sGrade($score) : null),
+                'audit_date' => $row['audit_date'],
+                'score' => (float)$row['weighted_score'],
                 'submitted_count' => (int)$row['submitted_count'],
                 'required_auditors' => (int)$row['required_auditors'],
-                'is_consensus_complete' => ((int)$row['submitted_count'] >= (int)$row['required_auditors']),
+                'is_complete' => ((int)$row['submitted_count'] >= (int)$row['required_auditors']) || $row['status'] === 'LOCKED',
             ];
         }
     } catch (Throwable $ignore) {
         // Fallback smoothly if committee tables are unavailable
     }
 
+    foreach ($dailyByLine as $ln => $days) {
+        $cnt = count($days);
+        if ($cnt === 0) {
+            continue;
+        }
+        $avgScore = round(array_sum(array_column($days, 'score')) / $cnt, 2);
+        $totalSub = array_sum(array_column($days, 'submitted_count'));
+        $totalReq = array_sum(array_column($days, 'required_auditors'));
+        $latest = $days[0];
+        $map[$ln] = [
+            'source' => 'COMMITTEE_ROUND',
+            'round_id' => $latest['round_id'],
+            'round_name' => $cnt > 1
+                ? "เฉลี่ยตรวจ 5ส {$cnt} วัน (ล่าสุด {$latest['audit_date']})"
+                : $latest['round_name'],
+            'score_5s' => $avgScore,
+            'grade_5s' => scoreTo5sGrade($avgScore),
+            'submitted_count' => $totalSub,
+            'required_auditors' => $totalReq,
+            'audited_days_count' => $cnt,
+            'latest_audit_date' => $latest['audit_date'],
+            'is_consensus_complete' => true,
+        ];
+    }
+
+    // Fallback to standalone AUDIT_5S rows for lines without committee round records
     $stmtLegacy = $pdo->prepare("
-        SELECT a.line, a.grade, a.total_score, CONVERT(VARCHAR(10), a.audit_date, 120) AS audit_date
-        FROM dbo.AUDIT_5S a WITH (NOLOCK)
-        INNER JOIN (
-            SELECT line, MAX(audit_date) AS max_date
-            FROM dbo.AUDIT_5S WITH (NOLOCK)
-            WHERE audit_date >= ? AND audit_date < ?
-            GROUP BY line
-        ) latest ON a.line = latest.line AND a.audit_date = latest.max_date
-        ORDER BY a.audit_id DESC
+        SELECT line,
+               COUNT(*) AS audit_days,
+               AVG(CAST(total_score AS FLOAT)) AS avg_score,
+               MAX(CONVERT(VARCHAR(10), audit_date, 120)) AS latest_date
+        FROM dbo.AUDIT_5S WITH (NOLOCK)
+        WHERE audit_date >= ? AND audit_date < ?
+          AND (round_id IS NULL OR round_id = 0)
+        GROUP BY line
     ");
     $stmtLegacy->execute([$startDate, $endDate]);
     foreach ($stmtLegacy->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -617,15 +643,18 @@ function fetch5sPeriodConsensusMap(PDO $pdo, string $startDate, string $endDate)
         if ($ln === '' || isset($map[$ln])) {
             continue;
         }
-        $score = (float)($row['total_score'] ?? 0);
+        $score = round((float)($row['avg_score'] ?? 0), 2);
+        $daysCnt = (int)($row['audit_days'] ?? 1);
         $map[$ln] = [
             'source' => 'SINGLE_AUDIT',
             'round_id' => null,
-            'round_name' => 'ตรวจ 5ส ประจำวัน (' . $row['audit_date'] . ')',
+            'round_name' => "เฉลี่ยตรวจ 5ส {$daysCnt} วัน (ล่าสุด {$row['latest_date']})",
             'score_5s' => $score,
-            'grade_5s' => $row['grade'] ?: scoreTo5sGrade($score),
-            'submitted_count' => 1,
-            'required_auditors' => 1,
+            'grade_5s' => scoreTo5sGrade($score),
+            'submitted_count' => $daysCnt,
+            'required_auditors' => $daysCnt,
+            'audited_days_count' => $daysCnt,
+            'latest_audit_date' => $row['latest_date'],
             'is_consensus_complete' => true,
         ];
     }
@@ -811,17 +840,24 @@ function resolveDefaultCommitteeForLine(array $defaultRoster, string $line): arr
 }
 
 /**
- * Ensures a 5S round exists for (eval_period, line) initialized from the persistent Default Roster.
+ * Ensures a daily 5S round exists for (audit_date, line) initialized from the persistent Default Roster.
  * Must be called inside an active DB transaction.
  */
 function ensure5sRoundFromDefault(PDO $pdo, string $evalPeriod, string $line, string $actorEmpId, ?string $auditDate = null): array {
+    $dateVal = ($auditDate !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($auditDate)))
+        ? trim($auditDate)
+        : date('Y-m-d');
+    $periodVal = preg_match('/^\d{4}-\d{2}$/', trim($evalPeriod))
+        ? trim($evalPeriod)
+        : substr($dateVal, 0, 7);
+
     $stmtEx = $pdo->prepare("
         SELECT TOP 1 round_id, eval_period, line, round_name, CONVERT(VARCHAR(10), audit_date, 120) AS audit_date, status
         FROM dbo.AUDIT_5S_ROUNDS
-        WHERE eval_period = ? AND line = ?
+        WHERE audit_date = ? AND line = ?
         ORDER BY round_id DESC
     ");
-    $stmtEx->execute([$evalPeriod, $line]);
+    $stmtEx->execute([$dateVal, $line]);
     $existing = $stmtEx->fetch(PDO::FETCH_ASSOC);
 
     $defaultRoster = fetchDefault5sCommittee($pdo, true);
@@ -858,13 +894,12 @@ function ensure5sRoundFromDefault(PDO $pdo, string $evalPeriod, string $line, st
         throw new InvalidArgumentException("ยังไม่มีรายชื่อคณะกรรมการ 5ส ประจำสำหรับสาย {$line} กรุณาตั้งค่าคณะกรรมการประจำ (Default Roster) ก่อน");
     }
 
-    $dateVal = $auditDate ?: date('Y-m-d');
-    $roundName = "ตรวจ 5ส ประจำเดือน {$evalPeriod} ({$line})";
+    $roundName = "ตรวจ 5ส ประจำวันที่ {$dateVal} ({$line})";
     $reqCount = count($eligible);
     $pdo->prepare('
         INSERT INTO dbo.AUDIT_5S_ROUNDS (eval_period, line, round_name, audit_date, required_auditors, notes, created_by)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    ')->execute([$evalPeriod, $line, $roundName, $dateVal, $reqCount, 'Auto-created from Default 5S Committee Roster', $actorEmpId]);
+    ')->execute([$periodVal, $line, $roundName, $dateVal, $reqCount, 'Auto-created from Default 5S Committee Roster', $actorEmpId]);
     $roundId = (int)$pdo->lastInsertId();
 
     $insC = $pdo->prepare('INSERT INTO dbo.AUDIT_5S_COMMITTEE (round_id, auditor_emp_id, auditor_name, assigned_role, weight_pct, assigned_by) VALUES (?, ?, ?, ?, ?, ?)');

@@ -76,10 +76,18 @@ try {
 
     switch ($action) {
         case 'get_my_5s_assignments':
+            $dateRaw = trim((string)($input['audit_date'] ?? ''));
             $periodRaw = trim((string)($input['eval_period'] ?? ''));
-            $targetPeriod = ($periodRaw !== '' && preg_match('/^\d{4}-\d{2}$/', $periodRaw)) ? $periodRaw : date('Y-m');
-            $where = ['R.eval_period = ?'];
-            $params = [$targetPeriod];
+            if ($dateRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateRaw)) {
+                $targetDate = $dateRaw;
+                $targetPeriod = substr($targetDate, 0, 7);
+            } elseif ($periodRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodRaw)) {
+                $targetDate = $periodRaw;
+                $targetPeriod = substr($targetDate, 0, 7);
+            } else {
+                $targetDate = date('Y-m-d');
+                $targetPeriod = ($periodRaw !== '' && preg_match('/^\d{4}-\d{2}$/', $periodRaw)) ? $periodRaw : substr($targetDate, 0, 7);
+            }
 
             $defaultRoster = fetchDefault5sCommittee($pdo, true);
             $selfDefault = null;
@@ -96,6 +104,10 @@ try {
                 if ($selfEmpId === '') {
                     mpJsonSuccess([
                         'rounds' => [],
+                        'audit_date' => $targetDate,
+                        'eval_period' => $targetPeriod,
+                        'audit_dates_in_period' => [],
+                        'monthly_line_summary' => [],
                         'is_committee_member' => false,
                         'is_manager' => false,
                         'default_committee_count' => count($defaultRoster),
@@ -114,10 +126,10 @@ try {
                 FROM dbo.AUDIT_5S_ROUNDS R WITH (NOLOCK)
                 LEFT JOIN dbo.AUDIT_5S_COMMITTEE C WITH (NOLOCK)
                     ON C.round_id = R.round_id AND C.auditor_emp_id = ?
-                WHERE R.eval_period = ?
-                ORDER BY R.audit_date DESC, R.round_id DESC
+                WHERE R.audit_date = ?
+                ORDER BY R.line ASC, R.round_id DESC
             ");
-            $stmt->execute([$selfEmpId, $targetPeriod]);
+            $stmt->execute([$selfEmpId, $targetDate]);
             $allRounds = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $rounds = [];
@@ -134,7 +146,7 @@ try {
             }
 
             $activeLines = fetchActive5sLines($pdo);
-            if (preg_match('/^\d{4}-\d{2}$/', $targetPeriod) && !empty($defaultRoster)) {
+            if (!empty($defaultRoster)) {
                 foreach ($activeLines as $lnRaw) {
                     $ln = trim((string)$lnRaw);
                     if ($ln === '' || isset($existingLinesMap[$ln])) {
@@ -153,8 +165,8 @@ try {
                         'is_virtual_default' => true,
                         'eval_period' => $targetPeriod,
                         'line' => $ln,
-                        'round_name' => "ตรวจ 5ส ประจำเดือน {$targetPeriod} ({$ln})",
-                        'audit_date' => date('Y-m-d'),
+                        'round_name' => "ตรวจ 5ส ประจำวันที่ {$targetDate} ({$ln})",
+                        'audit_date' => $targetDate,
                         'required_auditors' => count($eligibleForLine),
                         'submitted_count' => 0,
                         'status' => 'READY',
@@ -172,12 +184,34 @@ try {
                 }
             }
 
+            // History of audit dates in this month + Monthly average per line
+            $monthStart = $targetPeriod . '-01';
+            $monthEnd = date('Y-m-d', strtotime($monthStart . ' +1 month'));
+            $stmtDates = $pdo->prepare("
+                SELECT CONVERT(VARCHAR(10), audit_date, 120) AS audit_date,
+                       COUNT(*) AS total_rounds,
+                       SUM(CASE WHEN submitted_count > 0 THEN 1 ELSE 0 END) AS audited_lines,
+                       ROUND(AVG(CASE WHEN submitted_count > 0 THEN CAST(weighted_score AS FLOAT) END), 1) AS avg_score
+                FROM dbo.AUDIT_5S_ROUNDS WITH (NOLOCK)
+                WHERE audit_date >= ? AND audit_date < ?
+                GROUP BY CONVERT(VARCHAR(10), audit_date, 120)
+                ORDER BY audit_date DESC
+            ");
+            $stmtDates->execute([$monthStart, $monthEnd]);
+            $auditDatesInPeriod = $stmtDates->fetchAll(PDO::FETCH_ASSOC);
+
+            $monthlyConsensusMap = fetch5sPeriodConsensusMap($pdo, $monthStart, $monthEnd);
+
             $stmtCnt = $pdo->prepare('SELECT COUNT(*) FROM dbo.AUDIT_5S_COMMITTEE WITH (NOLOCK) WHERE auditor_emp_id = ?');
             $stmtCnt->execute([$selfEmpId]);
             $isCommittee = $isDefaultMember || ((int)$stmtCnt->fetchColumn() > 0);
 
             mpJsonSuccess([
                 'rounds' => $rounds,
+                'audit_date' => $targetDate,
+                'eval_period' => $targetPeriod,
+                'audit_dates_in_period' => $auditDatesInPeriod,
+                'monthly_line_summary' => $monthlyConsensusMap,
                 'active_lines' => $activeLines,
                 'is_committee_member' => $isCommittee,
                 'is_manager' => $isManager,
@@ -189,10 +223,15 @@ try {
         case 'get_5s_round_detail':
             $roundId = (int)($input['round_id'] ?? 0);
             $virtualLine = trim((string)($input['line'] ?? ''));
-            $virtualPeriod = trim((string)($input['eval_period'] ?? date('Y-m')));
+            $virtualDateRaw = trim((string)($input['audit_date'] ?? ''));
+            $virtualDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $virtualDateRaw) ? $virtualDateRaw : date('Y-m-d');
+            $virtualPeriod = trim((string)($input['eval_period'] ?? substr($virtualDate, 0, 7)));
+            if (!preg_match('/^\d{4}-\d{2}$/', $virtualPeriod)) {
+                $virtualPeriod = substr($virtualDate, 0, 7);
+            }
 
             if ($roundId <= 0) {
-                if ($virtualLine === '' || !preg_match('/^\d{4}-\d{2}$/', $virtualPeriod)) {
+                if ($virtualLine === '') {
                     throw new InvalidArgumentException('ไม่พบรหัสรอบหรือสายผลิตที่ต้องการดูรายละเอียด');
                 }
                 $defaultRoster = fetchDefault5sCommittee($pdo, true);
@@ -235,14 +274,14 @@ try {
                         'is_virtual_default' => true,
                         'eval_period' => $virtualPeriod,
                         'line' => $virtualLine,
-                        'round_name' => "ตรวจ 5ส ประจำเดือน {$virtualPeriod} ({$virtualLine})",
-                        'audit_date' => date('Y-m-d'),
+                        'round_name' => "ตรวจ 5ส ประจำวันที่ {$virtualDate} ({$virtualLine})",
+                        'audit_date' => $virtualDate,
                         'required_auditors' => count($virtualMembers),
                         'submitted_count' => 0,
                         'status' => 'READY',
                         'weighted_score' => null,
                         'final_grade' => null,
-                        'notes' => 'ใช้รายชื่อกรรมการประจำ (Default Roster) — เมื่อส่งผลแรก ระบบจะเปิดรอบเดือนนี้ให้อัตโนมัติ',
+                        'notes' => 'ใช้รายชื่อกรรมการประจำ (Default Roster) — เมื่อส่งผลแรก ระบบจะเปิดรอบของวันนี้ให้อัตโนมัติ',
                     ],
                     'committee' => $virtualMembers,
                     'blind_mode' => !$isManager,
