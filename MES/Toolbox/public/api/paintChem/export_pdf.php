@@ -121,7 +121,7 @@ $stations = [
     ]],
     9 => ['name' => 'Deionized<br>Water Rinse', 'chem' => 'DI Water Rinse', 'params' => [
         ['key' => 'pH_DI',          'label' => 'pH',         'std' => '-',           'min' => '-',   'max' => '-',   'hasKg' => true, 'isOvf' => false],
-        ['key' => 'EC',             'label' => 'EC',         'std' => '< 10 µS/cm',  'min' => '-',   'max' => '10',  'hasKg' => true, 'isOvf' => false],
+        ['key' => 'EC',             'label' => 'EC',         'std' => '< 300 µS/cm',  'min' => '-',   'max' => '300', 'hasKg' => true, 'isOvf' => false],
         ['key' => 'FlowRate',       'label' => 'Flow rate',  'std' => '> 1.5 m3/hr', 'min' => '1.5', 'max' => '-',   'hasKg' => true, 'isOvf' => false],
     ]],
 ];

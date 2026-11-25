@@ -41,7 +41,7 @@ export const PARAM_STANDARDS = {
   Conta_WR3:   { min: null, max: null, unit: '' },
   Conta_WR4:   { min: null, max: null, unit: '' },
   pH_DI:       { min: null, max: null, unit: '' },
-  EC:          { min: null, max: 10.0, unit: 'μS/cm' },
+  EC:          { min: null, max: 300.0, unit: 'μS/cm' },
   FlowRate:    { min: 1.5,  max: null, unit: 'm³/hr' },
   BakeOvenTemp:{ min: 175.0, max: 220.0, unit: '°C' },
   DryOvenTemp: { min: 175.0, max: 220.0, unit: '°C' },

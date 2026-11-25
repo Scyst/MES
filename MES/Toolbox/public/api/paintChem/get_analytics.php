@@ -195,7 +195,7 @@ try {
         'FA_ZP'        => ['min' => 0.3,  'max' => 0.5,  'unit' => 'pt',   'label' => 'Zinc Phosphate (FA)'],
         'TA_ZP'        => ['min' => 23.0, 'max' => 25.0, 'unit' => 'pt',   'label' => 'Zinc Phosphate (TA)'],
         'AC_ZP'        => ['min' => 2.0,  'max' => 4.0,  'unit' => 'pt',   'label' => 'Zinc Phosphate (AC)'],
-        'EC_DI'        => ['min' => null, 'max' => 10.0, 'unit' => 'µS/cm', 'label' => 'DI Water (EC)'],
+        'EC_DI'        => ['min' => null, 'max' => 300.0, 'unit' => 'µS/cm', 'label' => 'DI Water (EC)'],
         'BakeOvenTemp' => ['min' => 175.0,'max' => 220.0,'unit' => '°C',   'label' => 'Bake Oven Temp.'],
         'DryOvenTemp'  => ['min' => 140.0,'max' => 160.0,'unit' => '°C',   'label' => 'Dry Oven Temp.'],
         'ConveyorSpeed'=> ['min' => 2.5,  'max' => 5.0,  'unit' => 'm/min', 'label' => 'Conveyor Speed'],

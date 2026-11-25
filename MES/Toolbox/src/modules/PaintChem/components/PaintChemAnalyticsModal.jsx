@@ -15,30 +15,30 @@ const API_BASE = `${import.meta.env.BASE_URL}api/paintChem`.replace(/\/$/, '');
 
 const TABS = [
   { id: 'degrease_sc', label: '1. ล้างไขมัน & ปรับผิว (Degreasing / SC)', icon: Activity },
-  { id: 'phosphate',   label: '2. ซิงค์ฟอสเฟต (Zinc Phosphate)',      icon: TrendingUp },
-  { id: 'rinse_di',    label: '3. บ่อล้างน้ำ & น้ำ DI (pH / EC)',      icon: Droplets },
-  { id: 'ovens',       label: '4. เตาอบ & สายพาน (Ovens / Speed)',     icon: Flame },
-  { id: 'chem_kg',     label: '5. ยอดเติมสารเคมีรายวัน (Kg Added)',    icon: Package },
+  { id: 'phosphate', label: '2. ซิงค์ฟอสเฟต (Zinc Phosphate)', icon: TrendingUp },
+  { id: 'rinse_di', label: '3. บ่อล้างน้ำ & น้ำ DI (pH / EC)', icon: Droplets },
+  { id: 'ovens', label: '4. เตาอบ & สายพาน (Ovens / Speed)', icon: Flame },
+  { id: 'chem_kg', label: '5. ยอดเติมสารเคมีรายวัน (Kg Added)', icon: Package },
 ];
 
 // Master parameters definition for SPC Statistical Table
 const PARAMETER_METRICS = [
-  { key: 'F_Al_1',       name: 'Degreasing 1: F.Al (ความเข้มข้นล้างไขมัน 1)', tank: 'บ่อ 1 (Degreasing 1)', min: 10.0, max: 12.0, unit: 'pt' },
-  { key: 'F_Al_2',       name: 'Degreasing 2: F.Al (ความเข้มข้นล้างไขมัน 2)', tank: 'บ่อ 2 (Degreasing 2)', min: 10.0, max: 12.0, unit: 'pt' },
-  { key: 'TC_SC',        name: 'Surface Cond.: T.C (ความเข้มข้นปรับผิว)',     tank: 'บ่อ 5 (Surface Cond.)', min: 2.0,  max: 4.0,  unit: 'pt' },
-  { key: 'pH_SC',        name: 'Surface Cond.: pH (กรด-ด่างปรับผิว)',         tank: 'บ่อ 5 (Surface Cond.)', min: 9.0,  max: 11.0, unit: '' },
-  { key: 'FA_ZP',        name: 'Zinc Phos.: FA (กรดอิสระ Free Acid)',         tank: 'บ่อ 6 (Zinc Phos.)',    min: 0.3,  max: 0.5,  unit: 'pt' },
-  { key: 'TA_ZP',        name: 'Zinc Phos.: TA (กรดรวม Total Acidity)',       tank: 'บ่อ 6 (Zinc Phos.)',    min: 23.0, max: 25.0, unit: 'pt' },
-  { key: 'AC_ZP',        name: 'Zinc Phos.: A.C (ตัวเร่งปฏิกิริยา Accelerator)', tank: 'บ่อ 6 (Zinc Phos.)', min: 2.0,  max: 4.0,  unit: 'pt' },
-  { key: 'pH_WR1',       name: 'Water Rinse 1: pH (บ่อล้างน้ำ 1)',            tank: 'บ่อ 3 (Rinse 1)',       min: 8.0,  max: 10.0, unit: '' },
-  { key: 'pH_WR2',       name: 'Water Rinse 2: pH (บ่อล้างน้ำ 2)',            tank: 'บ่อ 4 (Rinse 2)',       min: 8.0,  max: 10.0, unit: '' },
-  { key: 'pH_WR3',       name: 'Water Rinse 3: pH (บ่อล้างน้ำ 3)',            tank: 'บ่อ 7 (Rinse 3)',       min: 4.0,  max: 6.0,  unit: '' },
-  { key: 'pH_WR4',       name: 'Water Rinse 4: pH (บ่อล้างน้ำ 4)',            tank: 'บ่อ 8 (Rinse 4)',       min: 4.0,  max: 6.0,  unit: '' },
-  { key: 'EC_DI',        name: 'DI Water: EC (ความนำไฟฟ้าน้ำ DI)',            tank: 'บ่อ 9 (DI Rinse)',      min: null, max: 10.0, unit: 'µS/cm' },
-  { key: 'pH_DI',        name: 'DI Water: pH (กรด-ด่างน้ำ DI)',               tank: 'บ่อ 9 (DI Rinse)',      min: 5.0,  max: 8.0,  unit: '' },
-  { key: 'bake_oven_temp',name: 'เตาอบสี Bake Oven Temp',                     tank: 'เตาอบสี (Bake Oven)',   min: 175.0,max: 220.0,unit: '°C' },
-  { key: 'dry_oven_temp', name: 'เตาอบแห้ง Dry Oven Temp',                    tank: 'เตาอบแห้ง (Dry Oven)',  min: 140.0,max: 160.0,unit: '°C' },
-  { key: 'conveyor_speed',name: 'ความเร็วสายพาน Conveyor Speed',               tank: 'สายพานลำเลียง (Line)',  min: 2.5,  max: 5.0,  unit: 'm/min' },
+  { key: 'F_Al_1', name: 'Degreasing 1: F.Al (ความเข้มข้นล้างไขมัน 1)', tank: 'บ่อ 1 (Degreasing 1)', min: 10.0, max: 12.0, unit: 'pt' },
+  { key: 'F_Al_2', name: 'Degreasing 2: F.Al (ความเข้มข้นล้างไขมัน 2)', tank: 'บ่อ 2 (Degreasing 2)', min: 10.0, max: 12.0, unit: 'pt' },
+  { key: 'TC_SC', name: 'Surface Cond.: T.C (ความเข้มข้นปรับผิว)', tank: 'บ่อ 5 (Surface Cond.)', min: 2.0, max: 4.0, unit: 'pt' },
+  { key: 'pH_SC', name: 'Surface Cond.: pH (กรด-ด่างปรับผิว)', tank: 'บ่อ 5 (Surface Cond.)', min: 9.0, max: 11.0, unit: '' },
+  { key: 'FA_ZP', name: 'Zinc Phos.: FA (กรดอิสระ Free Acid)', tank: 'บ่อ 6 (Zinc Phos.)', min: 0.3, max: 0.5, unit: 'pt' },
+  { key: 'TA_ZP', name: 'Zinc Phos.: TA (กรดรวม Total Acidity)', tank: 'บ่อ 6 (Zinc Phos.)', min: 23.0, max: 25.0, unit: 'pt' },
+  { key: 'AC_ZP', name: 'Zinc Phos.: A.C (ตัวเร่งปฏิกิริยา Accelerator)', tank: 'บ่อ 6 (Zinc Phos.)', min: 2.0, max: 4.0, unit: 'pt' },
+  { key: 'pH_WR1', name: 'Water Rinse 1: pH (บ่อล้างน้ำ 1)', tank: 'บ่อ 3 (Rinse 1)', min: 8.0, max: 10.0, unit: '' },
+  { key: 'pH_WR2', name: 'Water Rinse 2: pH (บ่อล้างน้ำ 2)', tank: 'บ่อ 4 (Rinse 2)', min: 8.0, max: 10.0, unit: '' },
+  { key: 'pH_WR3', name: 'Water Rinse 3: pH (บ่อล้างน้ำ 3)', tank: 'บ่อ 7 (Rinse 3)', min: 4.0, max: 6.0, unit: '' },
+  { key: 'pH_WR4', name: 'Water Rinse 4: pH (บ่อล้างน้ำ 4)', tank: 'บ่อ 8 (Rinse 4)', min: 4.0, max: 6.0, unit: '' },
+  { key: 'EC_DI', name: 'DI Water: EC (ความนำไฟฟ้าน้ำ DI)', tank: 'บ่อ 9 (DI Rinse)', min: null, max: 300.0, unit: 'µS/cm' },
+  { key: 'pH_DI', name: 'DI Water: pH (กรด-ด่างน้ำ DI)', tank: 'บ่อ 9 (DI Rinse)', min: 5.0, max: 8.0, unit: '' },
+  { key: 'bake_oven_temp', name: 'เตาอบสี Bake Oven Temp', tank: 'เตาอบสี (Bake Oven)', min: 175.0, max: 220.0, unit: '°C' },
+  { key: 'dry_oven_temp', name: 'เตาอบแห้ง Dry Oven Temp', tank: 'เตาอบแห้ง (Dry Oven)', min: 140.0, max: 160.0, unit: '°C' },
+  { key: 'conveyor_speed', name: 'ความเร็วสายพาน Conveyor Speed', tank: 'สายพานลำเลียง (Line)', min: 2.5, max: 5.0, unit: 'm/min' },
 ];
 
 // Dark Glassmorphism Tooltip for Recharts
@@ -54,9 +54,8 @@ function CustomTooltip({ active, payload, label }) {
           {point?.time_slot && <span className="text-gray-400 font-normal">({point.time_slot})</span>}
         </div>
         {point?.shift && (
-          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-            point.shift === 'DAY' ? 'bg-amber-500/20 text-amber-300' : 'bg-indigo-500/20 text-indigo-300'
-          }`}>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${point.shift === 'DAY' ? 'bg-amber-500/20 text-amber-300' : 'bg-indigo-500/20 text-indigo-300'
+            }`}>
             {point.shift === 'DAY' ? 'กะกลางวัน (DAY)' : 'กะกลางคืน (NIGHT)'}
           </span>
         )}
@@ -80,15 +79,15 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
   const [dateFrom, setDateFrom] = useState('2026-10-01');
-  const [dateTo,   setDateTo]   = useState(new Date().toISOString().slice(0, 10));
-  const [shift,    setShift]    = useState('');
+  const [dateTo, setDateTo] = useState(new Date().toISOString().slice(0, 10));
+  const [shift, setShift] = useState('');
   const [activeTab, setActiveTab] = useState('degrease_sc');
-  const [viewMode, setViewMode]   = useState('chart'); // 'chart' | 'table'
+  const [viewMode, setViewMode] = useState('chart'); // 'chart' | 'table'
   const [isMaximized, setIsMaximized] = useState(false);
   const [hiddenSeries, setHiddenSeries] = useState({});
   const [tableSearch, setTableSearch] = useState('');
-  const [data,     setData]     = useState(null);
-  const [loading,  setLoading]  = useState(false);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleClose = () => {
     setIsMaximized(false);
@@ -268,15 +267,13 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
       onClick={(e) => {
         if (e.target === e.currentTarget && !isMaximized) handleClose();
       }}
-      className={`fixed top-16 md:left-16 right-0 bottom-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all duration-200 ${
-        isMaximized ? 'p-0' : 'p-3 sm:p-5'
-      }`}
+      className={`fixed top-16 md:left-16 right-0 bottom-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all duration-200 ${isMaximized ? 'p-0' : 'p-3 sm:p-5'
+        }`}
     >
-      <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col transition-all duration-200 overflow-hidden ${
-        isMaximized
-          ? 'w-full h-full rounded-none border-none'
-          : 'w-full max-w-6xl max-h-full rounded-2xl'
-      }`}>
+      <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col transition-all duration-200 overflow-hidden ${isMaximized
+        ? 'w-full h-full rounded-none border-none'
+        : 'w-full max-w-6xl max-h-full rounded-2xl'
+        }`}>
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/80 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -305,11 +302,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setViewMode('chart')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  viewMode === 'chart'
-                    ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'chart'
+                  ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                  }`}
               >
                 <TrendingUp size={14} />
                 <span>กราฟแนวโน้ม</span>
@@ -317,11 +313,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'table'
+                  ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                  }`}
               >
                 <TableIcon size={14} />
                 <span>ตารางสถิติ SPC</span>
@@ -501,7 +496,7 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
               </div>
               <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-cyan-700 dark:text-cyan-300 bg-cyan-100/60 dark:bg-cyan-900/40 px-2 py-0.5 rounded-full w-fit">
                 <CheckCircle2 size={11} className="text-emerald-500" />
-                <span>ผ่านเกณฑ์มาตรฐาน (&lt; 10 µS)</span>
+                <span>ผ่านเกณฑ์มาตรฐาน (&lt; 300 µS)</span>
               </div>
             </div>
           </div>
@@ -519,11 +514,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold whitespace-nowrap transition-all ${
-                      isActive
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white/70 dark:bg-gray-800/60'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                    }`}
+                    className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold whitespace-nowrap transition-all ${isActive
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white/70 dark:bg-gray-800/60'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                      }`}
                   >
                     <Icon size={15} />
                     {tab.label}
@@ -564,11 +558,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('F_Al_1')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['F_Al_1']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['F_Al_1']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-600" />
                             Degreasing 1 (F.Al)
@@ -576,11 +569,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('F_Al_2')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['F_Al_2']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-cyan-50 text-cyan-700 border-cyan-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['F_Al_2']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-cyan-50 text-cyan-700 border-cyan-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-cyan-500" />
                             Degreasing 2 (F.Al)
@@ -588,11 +580,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('TC_SC')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['TC_SC']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-purple-50 text-purple-700 border-purple-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['TC_SC']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-purple-50 text-purple-700 border-purple-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-purple-500" />
                             Surface Cond. (T.C)
@@ -600,11 +591,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('pH_SC')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['pH_SC']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['pH_SC']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
                             Surface Cond. (pH)
@@ -659,11 +649,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('TA_ZP')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['TA_ZP']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-amber-50 text-amber-800 border-amber-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['TA_ZP']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-amber-50 text-amber-800 border-amber-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-amber-500" />
                             Total Acidity (TA)
@@ -671,11 +660,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('AC_ZP')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['AC_ZP']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['AC_ZP']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-600" />
                             Accelerator (A.C)
@@ -683,11 +671,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('FA_ZP')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['FA_ZP']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-pink-50 text-pink-700 border-pink-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['FA_ZP']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-pink-50 text-pink-700 border-pink-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-pink-500" />
                             Free Acid (FA)
@@ -732,18 +719,17 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                             บ่อล้างน้ำ Water Rinse 1–4 และ น้ำบริสุทธิ์ Deionized Water Rinse (DI)
                           </h3>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            เกณฑ์ความบริสุทธิ์น้ำ DI EC: &lt; 10.0 µS/cm | ระดับความเป็นกรด-ด่าง (pH) ในแต่ละบ่อล้าง
+                            เกณฑ์ความบริสุทธิ์น้ำ DI EC: &lt; 300 µS/cm | ระดับความเป็นกรด-ด่าง (pH) ในแต่ละบ่อล้าง
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <button
                             type="button"
                             onClick={() => toggleSeries('EC_DI')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['EC_DI']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-red-50 text-red-700 border-red-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['EC_DI']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-red-50 text-red-700 border-red-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-red-500" />
                             DI: EC (µS/cm)
@@ -751,11 +737,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('pH_DI')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['pH_DI']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['pH_DI']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-blue-50 text-blue-700 border-blue-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-500" />
                             DI: pH
@@ -763,11 +748,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('pH_WR1')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['pH_WR1']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['pH_WR1']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
                             Rinse 1 (pH)
@@ -775,11 +759,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('pH_WR2')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['pH_WR2']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-cyan-50 text-cyan-700 border-cyan-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['pH_WR2']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-cyan-50 text-cyan-700 border-cyan-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-cyan-500" />
                             Rinse 2 (pH)
@@ -787,11 +770,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('pH_WR3')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['pH_WR3']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-purple-50 text-purple-700 border-purple-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['pH_WR3']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-purple-50 text-purple-700 border-purple-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-purple-500" />
                             Rinse 3 (pH)
@@ -799,11 +781,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('pH_WR4')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['pH_WR4']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-amber-50 text-amber-700 border-amber-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['pH_WR4']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-amber-500" />
                             Rinse 4 (pH)
@@ -813,31 +794,32 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
 
                       <div className={`w-full ${isMaximized ? 'h-[500px]' : 'h-80'}`}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={timeline} margin={{ top: 15, right: 30, left: 0, bottom: 25 }}>
+                          <LineChart data={timeline} margin={{ top: 15, right: 35, left: 0, bottom: 25 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
                             <XAxis dataKey="label" tick={{ fontSize: 10 }} angle={-25} textAnchor="end" height={45} />
-                            <YAxis domain={[0, 12]} tick={{ fontSize: 11 }} />
+                            <YAxis yAxisId="left" domain={[0, 14]} tick={{ fontSize: 11 }} />
+                            <YAxis yAxisId="right" orientation="right" domain={[0, 350]} tick={{ fontSize: 11 }} />
                             <Tooltip content={<CustomTooltip />} />
-                            {/* Safe zone for DI EC (< 10 µS/cm) */}
-                            <ReferenceArea y1={0} y2={10.0} fill="#10b981" fillOpacity={0.06} />
-                            <ReferenceLine y={10.0} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'เกณฑ์ DI EC < 10.0 µS', fill: '#dc2626', fontSize: 10, position: 'insideTopLeft' }} />
+                            {/* Safe zone for DI EC (< 300 µS/cm) */}
+                            <ReferenceArea yAxisId="right" y1={0} y2={300.0} fill="#10b981" fillOpacity={0.06} />
+                            <ReferenceLine yAxisId="right" y={300.0} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'เกณฑ์ DI EC < 300 µS', fill: '#dc2626', fontSize: 10, position: 'insideTopRight' }} />
                             {!hiddenSeries['EC_DI'] && (
-                              <Line type="monotone" dataKey="EC_DI" name="น้ำ DI: EC (µS/cm)" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 2.5 }} />
+                              <Line yAxisId="right" type="monotone" dataKey="EC_DI" name="น้ำ DI: EC (µS/cm)" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 2.5 }} />
                             )}
                             {!hiddenSeries['pH_DI'] && (
-                              <Line type="monotone" dataKey="pH_DI" name="น้ำ DI: pH" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
+                              <Line yAxisId="left" type="monotone" dataKey="pH_DI" name="น้ำ DI: pH" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
                             )}
                             {!hiddenSeries['pH_WR1'] && (
-                              <Line type="monotone" dataKey="pH_WR1" name="Rinse 1 (pH)" stroke="#10b981" strokeWidth={1.6} dot={false} />
+                              <Line yAxisId="left" type="monotone" dataKey="pH_WR1" name="Rinse 1 (pH)" stroke="#10b981" strokeWidth={1.6} dot={false} />
                             )}
                             {!hiddenSeries['pH_WR2'] && (
-                              <Line type="monotone" dataKey="pH_WR2" name="Rinse 2 (pH)" stroke="#06b6d4" strokeWidth={1.6} dot={false} />
+                              <Line yAxisId="left" type="monotone" dataKey="pH_WR2" name="Rinse 2 (pH)" stroke="#06b6d4" strokeWidth={1.6} dot={false} />
                             )}
                             {!hiddenSeries['pH_WR3'] && (
-                              <Line type="monotone" dataKey="pH_WR3" name="Rinse 3 (pH)" stroke="#8b5cf6" strokeWidth={1.6} dot={false} />
+                              <Line yAxisId="left" type="monotone" dataKey="pH_WR3" name="Rinse 3 (pH)" stroke="#8b5cf6" strokeWidth={1.6} dot={false} />
                             )}
                             {!hiddenSeries['pH_WR4'] && (
-                              <Line type="monotone" dataKey="pH_WR4" name="Rinse 4 (pH)" stroke="#f59e0b" strokeWidth={1.6} dot={false} />
+                              <Line yAxisId="left" type="monotone" dataKey="pH_WR4" name="Rinse 4 (pH)" stroke="#f59e0b" strokeWidth={1.6} dot={false} />
                             )}
                           </LineChart>
                         </ResponsiveContainer>
@@ -861,11 +843,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('bake_oven_temp')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['bake_oven_temp']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-orange-50 text-orange-700 border-orange-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['bake_oven_temp']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-orange-50 text-orange-700 border-orange-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-orange-500" />
                             เตาอบสี Bake Oven (°C)
@@ -873,11 +854,10 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             onClick={() => toggleSeries('dry_oven_temp')}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${
-                              hiddenSeries['dry_oven_temp']
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                : 'bg-sky-50 text-sky-700 border-sky-200 font-medium'
-                            }`}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 ${hiddenSeries['dry_oven_temp']
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                              : 'bg-sky-50 text-sky-700 border-sky-200 font-medium'
+                              }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-sky-500" />
                             เตาอบแห้ง Dry Oven (°C)
@@ -950,7 +930,7 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                               <YAxis tick={{ fontSize: 11 }} />
                               <Tooltip content={<CustomTooltip />} />
                               <Bar dataKey="FC_T5008" name="FC-T5008 ล้างไขมัน (กก.)" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="AC_131"   name="AC-131 เร่งฟอสเฟต (กก.)"  fill="#10b981" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="AC_131" name="AC-131 เร่งฟอสเฟต (กก.)" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         )}
@@ -1033,8 +1013,8 @@ export default function PaintChemAnalyticsModal({ isOpen, onClose }) {
                             {row.min !== null && row.max !== null
                               ? `${row.min} – ${row.max} ${row.unit}`
                               : row.max !== null
-                              ? `< ${row.max} ${row.unit}`
-                              : `> ${row.min} ${row.unit}`}
+                                ? `< ${row.max} ${row.unit}`
+                                : `> ${row.min} ${row.unit}`}
                           </td>
                           <td className="py-2.5 px-2 text-center font-mono">{row.count}</td>
                           <td className="py-2.5 px-2 text-right font-mono">{row.minVal}</td>

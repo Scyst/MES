@@ -36,7 +36,7 @@ const PARAM_STANDARDS = [
     'Conta_WR3'    => ['min' => null,  'max' => null],
     'Conta_WR4'    => ['min' => null,  'max' => null],
     'pH_DI'        => ['min' => null,  'max' => null],
-    'EC'           => ['min' => null,  'max' => 10.0],
+    'EC'           => ['min' => null,  'max' => 300.0],
     'FlowRate'     => ['min' => 1.5,   'max' => null],
     'BakeOvenTemp' => ['min' => 175.0, 'max' => 220.0],
     'DryOvenTemp'  => ['min' => 175.0, 'max' => 220.0],
