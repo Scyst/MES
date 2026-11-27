@@ -1338,7 +1338,16 @@ async function processTransfer(transferId, status) {
 window.exportInventoryData = async function() {
     const locId = document.getElementById('locationFilter')?.value || 'ALL';
     const locSelect = document.getElementById('locationFilter');
-    const locName = locSelect ? locSelect.options[locSelect.selectedIndex].text : 'All Locations';
+    const rawLocName = locSelect ? locSelect.options[locSelect.selectedIndex].text : 'All Locations';
+    const locTypeSelect = document.getElementById('locationTypeFilter');
+    const locType = locTypeSelect?.value || 'ALL';
+    const locTypeText = locTypeSelect ? locTypeSelect.options[locTypeSelect.selectedIndex].text : 'All Types';
+    const locName = (locId === 'ALL' && locType !== 'ALL')
+        ? `${locTypeText} — All Locations`
+        : rawLocName;
+    const shortScopeName = (locId === 'ALL')
+        ? (locType !== 'ALL' ? locType : 'All_Factory')
+        : rawLocName;
     const matType = document.getElementById('materialFilter')?.value || 'ALL';
     const hideZero = document.getElementById('hideZeroStock')?.checked || false;
     const searchStr = document.getElementById('filterSearch')?.value.trim() || '';
@@ -1348,8 +1357,8 @@ window.exportInventoryData = async function() {
             <div class="form-check mb-3">
                 <input class="form-check-input" type="radio" name="exportType" id="expCurrent" value="CURRENT" checked>
                 <label class="form-check-label fw-bold text-primary" for="expCurrent">
-                    1. Export ตามตารางที่เห็นอยู่ตอนนี้
-                    <div class="small text-muted fw-normal mt-1">ใช้เงื่อนไขคลัง, ประเภทสินค้า และคำค้นหาปัจจุบัน</div>
+                    1. Export ตามตารางที่เห็นอยู่ตอนนี้ (${escapeHTML(shortScopeName)})
+                    <div class="small text-muted fw-normal mt-1">ดึงเฉพาะยอดของ <b>${escapeHTML(locName)}</b> ตามตัวกรองปัจจุบัน</div>
                 </label>
             </div>
     `;
@@ -1359,8 +1368,8 @@ window.exportInventoryData = async function() {
             <div class="form-check mb-3">
                 <input class="form-check-input" type="radio" name="exportType" id="expFilter" value="FILTER">
                 <label class="form-check-label fw-bold text-success" for="expFilter">
-                    2. Export คลัง "${escapeHTML(locName)}" ทั้งหมด
-                    <div class="small text-muted fw-normal mt-1">โหลดของทั้งหมดในคลังนี้ (ยกเลิกคำค้นหา)</div>
+                    2. Export พิกัด "${escapeHTML(rawLocName)}" ทั้งหมด
+                    <div class="small text-muted fw-normal mt-1">โหลดของทั้งหมดในพิกัดนี้ (ยกเลิกคำค้นหา)</div>
                 </label>
             </div>
         `;
@@ -1370,8 +1379,8 @@ window.exportInventoryData = async function() {
             <div class="form-check mb-2">
                 <input class="form-check-input" type="radio" name="exportType" id="expAll" value="ALL">
                 <label class="form-check-label fw-bold text-danger" for="expAll">
-                    3. Export ทุกคลัง (แยกชีท + ผูกสูตรรวม)
-                    <div class="small text-muted fw-normal mt-1">แต่ละคลังจะแยกเป็น 1 ชีท และมีชีท Summary รวมยอดด้วยสูตร</div>
+                    3. Export แยกตามพิกัดย่อยใน "${escapeHTML(locType !== 'ALL' ? locTypeText : 'ทุกคลัง')}" (แยกชีท + ผูกสูตรรวม)
+                    <div class="small text-muted fw-normal mt-1">แต่ละพิกัดในกลุ่ม ${escapeHTML(locType !== 'ALL' ? locType : 'ALL')} จะแยกเป็น 1 ชีท และมีชีท Summary รวมยอด</div>
                 </label>
             </div>
         </div>
@@ -1483,8 +1492,9 @@ window.exportInventoryData = async function() {
             }
 
             // สร้างชีท Summary
+            const summaryScopeLabel = locType !== 'ALL' ? `Summary (${locTypeText})` : 'Summary (All Locations)';
             const summary_data = [
-                ["Location:", "Summary (All Locations)"],
+                ["Location:", summaryScopeLabel],
                 ["Export Date:", new Date().toLocaleString('th-TH')],
                 [],
                 ["SAP No.", "Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
@@ -1526,7 +1536,8 @@ window.exportInventoryData = async function() {
                 sheetNames.unshift("Summary");
             }
 
-            XLSX.writeFile(wb, `Inventory_All_Locations_${dateStr}.xlsx`);
+            const safeTypeLabel = (locType !== 'ALL' ? locType : 'All_Locations').replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_');
+            XLSX.writeFile(wb, `Inventory_${safeTypeLabel}_By_Location_${dateStr}.xlsx`);
 
         } else {
             // โหมด FILTER / CURRENT: แบบเก่า (ชีทเดียว)
@@ -1534,9 +1545,8 @@ window.exportInventoryData = async function() {
             let reqMatType = exportType === 'FILTER' ? matType : matType;
             let reqHideZero = exportType === 'FILTER' ? hideZero : hideZero;
             let reqSearchStr = exportType === 'FILTER' ? '' : searchStr;
-            let exportLocName = exportType === 'FILTER' ? locName : locName;
+            let exportLocName = locName;
             
-            const locType = document.getElementById('locationTypeFilter')?.value || 'ALL';
             const category = document.getElementById('categoryFilter')?.value || 'ALL';
 
             const sortVal = document.getElementById('sortFilter')?.value || 'DEFAULT';
@@ -1573,12 +1583,12 @@ window.exportInventoryData = async function() {
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             ws['!cols'] = calcInventoryColWidths(ws_data);
 
-            const safeLocName = exportLocName.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_').substring(0,30);
+            const safeLocName = shortScopeName.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_').substring(0,30);
             XLSX.utils.book_append_sheet(wb, ws, safeLocName || "Inventory");
             
             let fileName = `Inventory_${safeLocName}_${dateStr}.xlsx`;
             if (exportType === 'CURRENT' && reqSearchStr) {
-                fileName = `Inventory_Filtered_${dateStr}.xlsx`;
+                fileName = `Inventory_${safeLocName}_Filtered_${dateStr}.xlsx`;
             }
 
             XLSX.writeFile(wb, fileName);
