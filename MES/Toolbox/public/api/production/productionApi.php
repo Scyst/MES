@@ -45,8 +45,9 @@ try {
             handleUpdateTransaction($pdo, $input, $currentUser);
             break;
 
+        case 'reverse_transaction':
         case 'delete_transaction':
-            handleDeleteTransaction($pdo, $input, $currentUser);
+            handleReverseTransaction($pdo, $input, $currentUser);
             break;
 
         case 'get_wip_onhand_report':
@@ -167,6 +168,8 @@ function handleGetInitialData(PDO $pdo, array $currentUser): void {
 }
 
 function handleExecuteProduction(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionEntryPermission();
+
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'สินค้า (Item)');
     $locationId = parsePositiveInt($input['location_id'] ?? 0, 'ไลน์ผลิต / สถานที่ (Location)');
     $logDate = parseDateOrDefault($input['log_date'] ?? null);
@@ -176,6 +179,7 @@ function handleExecuteProduction(PDO $pdo, array $input, array $currentUser): vo
     $notes = trim((string)($input['notes'] ?? ''));
     $scrapReason = trim((string)($input['scrap_reason'] ?? ''));
     $machineId = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
+    $jobId = !empty($input['job_id']) ? (int)$input['job_id'] : null;
     $teamCsv = resolveTeamUserIdsCsv($input['team_user_ids'] ?? '', (int)$currentUser['id']);
 
     $fgQty = (float)($input['fg_qty'] ?? $input['quantity'] ?? 0);
@@ -205,61 +209,68 @@ function handleExecuteProduction(PDO $pdo, array $input, array $currentUser): vo
     $createdIds = [];
     $reqUuids = [];
 
-    $spStmt = $pdo->prepare(
-        "EXEC " . SP_EXECUTE_PRODUCTION . "
-            @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
-            @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
-            @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?"
-    );
-
-    foreach ($entries as $entry) {
-        $entryNotes = $notes;
-        if ($entry['type'] === 'SCRAP' && $scrapReason !== '') {
-            $entryNotes = trim(($notes !== '' ? $notes . ' | ' : '') . "Scrap Reason: {$scrapReason}");
-        }
-
-        $spStmt->execute([
-            $itemId,
-            $locationId,
-            $entry['qty'],
-            $entry['type'],
-            mb_substr($lotNo, 0, 250),
-            mb_substr($entryNotes, 0, 490),
-            $timestamp,
-            $startTime,
-            $endTime,
-            (int)$currentUser['id'],
-            $currentUser['username'],
-            $machineId,
-            $teamCsv,
-        ]);
-        $spStmt->closeCursor();
-
-        $findIdStmt = $pdo->prepare(
-            "SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WITH (NOLOCK)
-             WHERE parameter_id = ? AND to_location_id = ? AND created_by_user_id = ?
-             ORDER BY transaction_id DESC"
+    $pdo->beginTransaction();
+    try {
+        $spStmt = $pdo->prepare(
+            "EXEC " . SP_EXECUTE_PRODUCTION . "
+                @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
+                @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
+                @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?, @job_id = ?"
         );
-        $findIdStmt->execute([$itemId, $locationId, (int)$currentUser['id']]);
-        $txnId = (int)$findIdStmt->fetchColumn();
-        if ($txnId > 0) {
-            $createdIds[] = $txnId;
+
+        foreach ($entries as $entry) {
+            $entryNotes = $notes;
+            if ($entry['type'] === 'SCRAP' && $scrapReason !== '') {
+                $entryNotes = trim(($notes !== '' ? $notes . ' | ' : '') . "Scrap Reason: {$scrapReason}");
+            }
+
+            $spStmt->execute([
+                $itemId,
+                $locationId,
+                $entry['qty'],
+                $entry['type'],
+                mb_substr($lotNo, 0, 250),
+                mb_substr($entryNotes, 0, 490),
+                $timestamp,
+                $startTime,
+                $endTime,
+                (int)$currentUser['id'],
+                $currentUser['username'],
+                $machineId,
+                $teamCsv,
+                $jobId,
+            ]);
+            $txnId = (int)$spStmt->fetchColumn();
+            $spStmt->closeCursor();
+
+            if ($txnId > 0) {
+                $createdIds[] = $txnId;
+            }
+
+            if ($entry['type'] === 'SCRAP') {
+                $reqNote = 'Replacement: ' . ($scrapReason !== '' ? $scrapReason : 'Scrap');
+                $createdReqs = buildScrapRequisition($pdo, $itemId, $entry['qty'], $locationId, (int)$currentUser['id'], $reqNote, $txnId ?: null);
+                $reqUuids = array_merge($reqUuids, $createdReqs);
+            }
         }
 
-        if ($entry['type'] === 'SCRAP') {
-            $reqNote = 'Replacement: ' . ($scrapReason !== '' ? $scrapReason : 'Scrap');
-            $createdReqs = buildScrapRequisition($pdo, $itemId, $entry['qty'], $locationId, (int)$currentUser['id'], $reqNote, $txnId ?: null);
-            $reqUuids = array_merge($reqUuids, $createdReqs);
+        writeLog($pdo, 'EXECUTE_PRODUCTION', 'PRODUCTION_API', implode(',', $createdIds), null, [
+            'item_id' => $itemId,
+            'location_id' => $locationId,
+            'machine_id' => $machineId,
+            'job_id' => $jobId,
+            'entries' => $entries,
+            'lot_no' => $lotNo,
+            'req_uuids' => $reqUuids,
+        ], 'Recorded production execution');
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
         }
+        throw $e;
     }
-
-    writeLog($pdo, 'EXECUTE_PRODUCTION', 'PRODUCTION_API', implode(',', $createdIds), null, [
-        'item_id' => $itemId,
-        'location_id' => $locationId,
-        'entries' => $entries,
-        'lot_no' => $lotNo,
-        'req_uuids' => $reqUuids,
-    ], 'Recorded production execution');
 
     prodJsonSuccess([
         'transaction_ids' => $createdIds,
@@ -346,13 +357,21 @@ function handleExecuteReceipt(PDO $pdo, array $input, array $currentUser): void 
     }
 }
 
-function buildTransactionWhereClause(string $action, array $input, array &$params): string {
+function buildTransactionWhereClause(string $action, array $input, array &$params, bool $activeOnly = false): string {
     $conditions = [];
 
     if ($action === 'get_production_history') {
-        $conditions[] = "t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')";
+        $conditions[] = $activeOnly
+            ? "t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')"
+            : "(t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP') OR t.transaction_type LIKE 'REVERSAL_PRODUCTION_%')";
     } elseif ($action === 'get_receipt_history') {
-        $conditions[] = "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'INTERNAL_TRANSFER')";
+        $conditions[] = $activeOnly
+            ? "t.transaction_type IN ('RECEIPT', 'TRANSFER', 'INTERNAL_TRANSFER')"
+            : "(t.transaction_type IN ('RECEIPT', 'TRANSFER', 'INTERNAL_TRANSFER', 'REVERSAL_RECEIPT', 'REVERSAL_TRANSFER', 'TRANSFER_REVERSAL'))";
+    }
+
+    if ($activeOnly) {
+        $conditions[] = SQL_ACTIVE_TXN_FILTER;
     }
 
     if (!empty($input['transaction_type']) && $input['transaction_type'] !== 'ALL') {
@@ -413,8 +432,11 @@ function handleGetTransactionHistory(PDO $pdo, string $action, array $input): vo
     $dataSql = "
         SELECT
             t.transaction_id, t.parameter_id AS item_id, t.quantity, t.transaction_type,
+            ISNULL(t.stock_type, 'UNRESTRICTED') AS stock_type,
+            ISNULL(t.is_reversed, 0) AS is_reversed,
+            t.reversal_of_tx_id, t.reversal_reason, t.reversed_at,
             t.transaction_timestamp, t.from_location_id, t.to_location_id,
-            t.reference_id, t.notes, t.start_time, t.end_time, t.created_by_user_id, t.machine_id,
+            t.reference_id, t.notes, t.start_time, t.end_time, t.created_by_user_id, t.machine_id, t.job_id,
             i.sap_no, i.part_no, i.part_description, i.material_type,
             lf.location_name AS from_location_name,
             lt.location_name AS to_location_name,
@@ -458,7 +480,7 @@ function handleGetTransactionHistory(PDO $pdo, string $action, array $input): vo
 function handleGetTransactionSummary(PDO $pdo, string $action, array $input): void {
     $mappedAction = $action === 'get_receipt_history_summary' ? 'get_receipt_history' : 'get_production_history';
     $params = [];
-    $whereSql = buildTransactionWhereClause($mappedAction, $input, $params);
+    $whereSql = buildTransactionWhereClause($mappedAction, $input, $params, true);
 
     $sql = "
         SELECT
@@ -481,7 +503,7 @@ function handleGetTransactionSummary(PDO $pdo, string $action, array $input): vo
 
 function handleGetHourlyCounts(PDO $pdo, array $input): void {
     $params = [];
-    $whereSql = buildTransactionWhereClause('get_production_history', $input, $params);
+    $whereSql = buildTransactionWhereClause('get_production_history', $input, $params, true);
     $sql = "
         SELECT
             DATEPART(HOUR, COALESCE(CAST(t.start_time AS DATETIME), t.transaction_timestamp)) AS prod_hour,
@@ -529,181 +551,163 @@ function handleGetTransactionDetails(PDO $pdo, array $input): void {
 }
 
 function assertTransactionEditPermission(array $oldTxn, array $currentUser): void {
-    if (hasPermission('manage_production') || hasRole(['admin', 'creator', 'supervisor'])) {
-        return;
-    }
-    if ((int)$oldTxn['created_by_user_id'] !== (int)$currentUser['id']) {
-        prodJsonError('คุณไม่มีสิทธิ์แก้ไขหรือลบรายการที่ผู้อื่นเป็นผู้บันทึก', 403);
-    }
+    requireProductionManagePermission('คุณไม่มีสิทธิ์แก้ไขหรือกลับรายการธุรกรรมสต็อก (ต้องมีสิทธิ์ manage_production ระดับหัวหน้างานขึ้นไป)');
 }
 
 function handleUpdateTransaction(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionManagePermission('คุณไม่มีสิทธิ์แก้ไขข้อมูลรายการผลิต/สต็อก (ต้องมีสิทธิ์ manage_production)');
+
     $txnId = parsePositiveInt($input['transaction_id'] ?? 0, 'Transaction ID');
-    $newQty = parsePositiveQty($input['quantity'] ?? 0, 'จำนวน');
-    $logDate = parseDateOrDefault($input['log_date'] ?? null);
-    $startTime = trim((string)($input['start_time'] ?? ''));
-    $endTime = trim((string)($input['end_time'] ?? ''));
-    $logTime = trim((string)($input['log_time'] ?? ($endTime !== '' ? $endTime : date('H:i:s'))));
     $lotNo = trim((string)($input['lot_no'] ?? ''));
     $notes = trim((string)($input['notes'] ?? ''));
 
-    $stmt = $pdo->prepare(
-        "SELECT transaction_id, parameter_id, quantity, transaction_type, from_location_id, to_location_id, reference_id, notes, created_by_user_id
-         FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?"
-    );
-    $stmt->execute([$txnId]);
-    $oldTxn = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$oldTxn) {
-        prodJsonError('ไม่พบ Transaction ที่ต้องการแก้ไข', 404);
-    }
-    assertTransactionEditPermission($oldTxn, $currentUser);
-
-    $oldQty = (float)$oldTxn['quantity'];
-    $oldItemId = (int)$oldTxn['parameter_id'];
-    $txnType = $oldTxn['transaction_type'];
-    $deltaQty = $newQty - $oldQty;
-    $newTimestamp = $logDate . ' ' . $logTime;
-
     $pdo->beginTransaction();
     try {
-        $spStock = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-
-        if (str_starts_with($txnType, 'PRODUCTION_')) {
-            $newLocId = !empty($input['location_id']) ? (int)$input['location_id'] : (int)$oldTxn['to_location_id'];
-            $oldLocId = (int)$oldTxn['to_location_id'];
-
-            if ($newLocId !== $oldLocId) {
-                $spStock->execute([$oldItemId, $oldLocId, -$oldQty]);
-                $spStock->closeCursor();
-                $spStock->execute([$oldItemId, $newLocId, $newQty]);
-                $spStock->closeCursor();
-            } elseif (abs($deltaQty) > 0.0001) {
-                $spStock->execute([$oldItemId, $newLocId, $deltaQty]);
-                $spStock->closeCursor();
-            }
-
-            if (abs($deltaQty) > 0.0001 || $newLocId !== $oldLocId) {
-                $consumeNote = 'Auto-consumed for production ID: ' . $txnId;
-                $childStmt = $pdo->prepare(
-                    "SELECT transaction_id, parameter_id, quantity, from_location_id
-                     FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK)
-                     WHERE notes = ? AND transaction_type = 'CONSUMPTION'"
-                );
-                $childStmt->execute([$consumeNote]);
-                $children = $childStmt->fetchAll(PDO::FETCH_ASSOC);
-                foreach ($children as $child) {
-                    $childQty = (float)$child['quantity'];
-                    $ratio = $oldQty > 0 ? ($newQty / $oldQty) : 1.0;
-                    $newChildQty = round($childQty * $ratio, 6);
-                    if ((int)$child['from_location_id'] !== $newLocId) {
-                        $spStock->execute([(int)$child['parameter_id'], (int)$child['from_location_id'], -$childQty]);
-                        $spStock->closeCursor();
-                        $spStock->execute([(int)$child['parameter_id'], $newLocId, $newChildQty]);
-                        $spStock->closeCursor();
-                    } else {
-                        $childDelta = $newChildQty - $childQty;
-                        if (abs($childDelta) > 0.0001) {
-                            $spStock->execute([(int)$child['parameter_id'], $newLocId, $childDelta]);
-                            $spStock->closeCursor();
-                        }
-                    }
-                    $updChild = $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET quantity = ?, from_location_id = ?, transaction_timestamp = ? WHERE transaction_id = ?");
-                    $updChild->execute([$newChildQty, $newLocId, $newTimestamp, (int)$child['transaction_id']]);
-                }
-            }
-
-            $updMain = $pdo->prepare(
-                "UPDATE " . TRANSACTIONS_TABLE . "
-                 SET quantity = ?, to_location_id = ?, reference_id = ?, notes = ?, transaction_timestamp = ?,
-                     start_time = CASE WHEN ? != '' THEN CAST(? AS TIME) ELSE start_time END,
-                     end_time = CASE WHEN ? != '' THEN CAST(? AS TIME) ELSE end_time END
-                 WHERE transaction_id = ?"
-            );
-            $updMain->execute([
-                $newQty, $newLocId, $lotNo !== '' ? $lotNo : null, $notes !== '' ? $notes : null, $newTimestamp,
-                $startTime, $startTime, $endTime, $endTime, $txnId
-            ]);
-        } else {
-            $newToLoc = parsePositiveInt($input['to_location_id'] ?? $input['location_id'] ?? $oldTxn['to_location_id'], 'คลังปลายทาง');
-            $newFromLoc = $txnType === 'TRANSFER'
-                ? parsePositiveInt($input['from_location_id'] ?? $oldTxn['from_location_id'], 'คลังต้นทาง')
-                : null;
-
-            if (!empty($oldTxn['to_location_id'])) {
-                $spStock->execute([$oldItemId, (int)$oldTxn['to_location_id'], -$oldQty]);
-                $spStock->closeCursor();
-            }
-            if (!empty($oldTxn['from_location_id'])) {
-                $spStock->execute([$oldItemId, (int)$oldTxn['from_location_id'], $oldQty]);
-                $spStock->closeCursor();
-            }
-
-            if ($newFromLoc) {
-                $spStock->execute([$oldItemId, $newFromLoc, -$newQty]);
-                $spStock->closeCursor();
-            }
-            $spStock->execute([$oldItemId, $newToLoc, $newQty]);
-            $spStock->closeCursor();
-
-            $updStmt = $pdo->prepare(
-                "UPDATE " . TRANSACTIONS_TABLE . "
-                 SET quantity = ?, from_location_id = ?, to_location_id = ?, reference_id = ?, notes = ?, transaction_timestamp = ?
-                 WHERE transaction_id = ?"
-            );
-            $updStmt->execute([$newQty, $newFromLoc, $newToLoc, $lotNo !== '' ? $lotNo : null, $notes !== '' ? $notes : null, $newTimestamp, $txnId]);
+        $stmt = $pdo->prepare(
+            "SELECT transaction_id, parameter_id, quantity, transaction_type, from_location_id, to_location_id,
+                    reference_id, notes, created_by_user_id, ISNULL(is_reversed, 0) AS is_reversed, reversal_of_tx_id
+             FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK, HOLDLOCK) WHERE transaction_id = ?"
+        );
+        $stmt->execute([$txnId]);
+        $oldTxn = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$oldTxn) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบ Transaction ที่ต้องการแก้ไข', 404);
+        }
+        if ((int)$oldTxn['is_reversed'] === 1 || !empty($oldTxn['reversal_of_tx_id'])) {
+            $pdo->rollBack();
+            prodJsonError('ไม่สามารถแก้ไขรายการที่ถูกกลับรายการ (Reversed) หรือรายการกลับยอดได้', 400);
         }
 
-        writeLog($pdo, 'UPDATE_TXN', 'PRODUCTION_API', (string)$txnId, $oldTxn, $input, 'Updated stock transaction');
+        // Audit Policy (Immutable Ledger): Block in-place quantity/location mutation on posted transactions.
+        if (isset($input['quantity']) && abs((float)$input['quantity'] - (float)$oldTxn['quantity']) > 0.0001) {
+            $pdo->rollBack();
+            prodJsonError('ไม่อนุญาตให้แก้ไขจำนวนย้อนหลังโดยตรงตามมาตรฐาน Audit กรุณาใช้คำสั่ง "กลับรายการ (Reverse)" แล้วบันทึกยอดใหม่', 400);
+        }
+        if (!empty($input['location_id']) && !empty($oldTxn['to_location_id']) && (int)$input['location_id'] !== (int)$oldTxn['to_location_id']) {
+            $pdo->rollBack();
+            prodJsonError('ไม่อนุญาตให้เปลี่ยนคลัง/ไลน์ผลิตย้อนหลังโดยตรง กรุณาใช้คำสั่ง "กลับรายการ (Reverse)" แล้วบันทึกใหม่', 400);
+        }
+
+        $updMain = $pdo->prepare(
+            "UPDATE " . TRANSACTIONS_TABLE . "
+             SET reference_id = ?, notes = ?
+             WHERE transaction_id = ?"
+        );
+        $updMain->execute([
+            $lotNo !== '' ? mb_substr($lotNo, 0, 250) : null,
+            $notes !== '' ? mb_substr($notes, 0, 490) : null,
+            $txnId,
+        ]);
+
+        writeLog($pdo, 'UPDATE_TXN_META', 'PRODUCTION_API', (string)$txnId, [
+            'reference_id' => $oldTxn['reference_id'],
+            'notes' => $oldTxn['notes'],
+        ], [
+            'reference_id' => $lotNo,
+            'notes' => $notes,
+        ], 'Updated transaction metadata (lot/notes only)');
+
         $pdo->commit();
-        prodJsonSuccess(['transaction_id' => $txnId], 'แก้ไขรายการเรียบร้อยแล้ว');
+        prodJsonSuccess(['transaction_id' => $txnId], 'อัปเดตหมายเหตุ/เลข Lot เรียบร้อยแล้ว');
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
 }
 
-function handleDeleteTransaction(PDO $pdo, array $input, array $currentUser): void {
-    $txnId = parsePositiveInt($input['transaction_id'] ?? 0, 'Transaction ID');
-    $stmt = $pdo->prepare(
-        "SELECT transaction_id, parameter_id, quantity, transaction_type, from_location_id, to_location_id, created_by_user_id, reference_id
-         FROM " . TRANSACTIONS_TABLE . " WITH (NOLOCK) WHERE transaction_id = ?"
-    );
-    $stmt->execute([$txnId]);
-    $oldTxn = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$oldTxn) {
-        prodJsonError('ไม่พบรายการที่ต้องการลบ', 404);
-    }
-    assertTransactionEditPermission($oldTxn, $currentUser);
+function handleReverseTransaction(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionManagePermission('คุณไม่มีสิทธิ์กลับรายการ (Reverse) ธุรกรรมสต็อก ต้องให้หัวหน้างานหรือผู้ดูแลระบบดำเนินการ');
 
-    if (str_starts_with($oldTxn['transaction_type'], 'PRODUCTION_')) {
-        // sp_Job_DeleteTransaction owns its internal transaction boundary
-        $jobId = !empty($input['job_id']) ? (int)$input['job_id'] : null;
-        $spStmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-        $spStmt->execute([$txnId, $jobId, (int)$currentUser['id']]);
-        $spStmt->closeCursor();
-        writeLog($pdo, 'DELETE_TXN', 'PRODUCTION_API', (string)$txnId, $oldTxn, null, 'Deleted production transaction');
-        prodJsonSuccess(['transaction_id' => $txnId], 'ลบรายการและคืนยอดสต็อกเรียบร้อยแล้ว');
-    }
+    $txnId = parsePositiveInt($input['transaction_id'] ?? $input['txn_id'] ?? 0, 'Transaction ID');
+    $reason = parseReversalReason($input['reason'] ?? $input['reversal_reason'] ?? '');
 
     $pdo->beginTransaction();
     try {
+        $stmt = $pdo->prepare(
+            "SELECT transaction_id, parameter_id, quantity, transaction_type, ISNULL(stock_type, 'UNRESTRICTED') AS stock_type,
+                    from_location_id, to_location_id, created_by_user_id, reference_id, job_id, machine_id,
+                    ISNULL(is_reversed, 0) AS is_reversed, reversal_of_tx_id
+             FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK, HOLDLOCK) WHERE transaction_id = ?"
+        );
+        $stmt->execute([$txnId]);
+        $oldTxn = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$oldTxn) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบรายการที่ต้องการกลับรายการ', 404);
+        }
+        if ((int)$oldTxn['is_reversed'] === 1) {
+            $pdo->rollBack();
+            prodJsonError('รายการนี้ถูกกลับรายการ (Reversed) ไปแล้ว ไม่สามารถทำซ้ำได้', 400);
+        }
+        if (!empty($oldTxn['reversal_of_tx_id']) || str_starts_with((string)$oldTxn['transaction_type'], 'REVERSAL_')) {
+            $pdo->rollBack();
+            prodJsonError('ไม่สามารถกลับรายการของรายการ Reversal ได้', 400);
+        }
+
+        if (str_starts_with((string)$oldTxn['transaction_type'], 'PRODUCTION_')) {
+            $jobId = !empty($input['job_id']) ? (int)$input['job_id'] : (!empty($oldTxn['job_id']) ? (int)$oldTxn['job_id'] : null);
+            $spStmt = $pdo->prepare("EXEC dbo.sp_ReverseProductionTransaction @txn_id = ?, @job_id = ?, @user_id = ?, @reason = ?");
+            $spStmt->execute([$txnId, $jobId, (int)$currentUser['id'], $reason]);
+            $revTxnId = (int)$spStmt->fetchColumn();
+            $spStmt->closeCursor();
+
+            writeLog($pdo, 'REVERSE_TXN', 'PRODUCTION_API', (string)$txnId, $oldTxn, [
+                'reversal_transaction_id' => $revTxnId,
+                'reason' => $reason,
+            ], 'Reversed production transaction (immutable ledger)');
+
+            $pdo->commit();
+            prodJsonSuccess([
+                'transaction_id' => $txnId,
+                'reversal_transaction_id' => $revTxnId,
+            ], 'กลับรายการผลิตและคืนยอดสต็อกเรียบร้อยแล้ว');
+        }
+
+        // Non-production transactions (RECEIPT, TRANSFER, ADJUSTMENT): Immutable Reversal
         $qty = (float)$oldTxn['quantity'];
         $itemId = (int)$oldTxn['parameter_id'];
-        $spStock = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
+        $stockType = (string)$oldTxn['stock_type'];
+        $spStock = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?, @stock_type = ?");
+
         if (!empty($oldTxn['to_location_id'])) {
-            $spStock->execute([$itemId, (int)$oldTxn['to_location_id'], -$qty]);
+            $spStock->execute([$itemId, (int)$oldTxn['to_location_id'], -$qty, $stockType]);
             $spStock->closeCursor();
         }
         if (!empty($oldTxn['from_location_id'])) {
-            $spStock->execute([$itemId, (int)$oldTxn['from_location_id'], $qty]);
+            $spStock->execute([$itemId, (int)$oldTxn['from_location_id'], abs($qty), $stockType]);
             $spStock->closeCursor();
         }
-        $pdo->prepare("DELETE FROM dbo.STOCK_TRANSACTION_USERS WHERE transaction_id = ?")->execute([$txnId]);
-        $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?")->execute([$txnId]);
 
-        writeLog($pdo, 'DELETE_TXN', 'PRODUCTION_API', (string)$txnId, $oldTxn, null, 'Deleted inventory transaction');
+        $pdo->prepare("
+            UPDATE " . TRANSACTIONS_TABLE . "
+            SET is_reversed = 1, reversed_by_user_id = ?, reversed_at = GETDATE(), reversal_reason = ?
+            WHERE transaction_id = ?
+        ")->execute([(int)$currentUser['id'], $reason, $txnId]);
+
+        $revType = 'REVERSAL_' . substr((string)$oldTxn['transaction_type'], 0, 40);
+        $insRev = $pdo->prepare("
+            INSERT INTO " . TRANSACTIONS_TABLE . "
+                (parameter_id, quantity, transaction_type, stock_type, from_location_id, to_location_id,
+                 reference_id, created_by_user_id, notes, transaction_timestamp, reversal_of_tx_id, reversal_reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)
+        ");
+        $insRev->execute([
+            $itemId, -$qty, $revType, $stockType, $oldTxn['from_location_id'], $oldTxn['to_location_id'],
+            $oldTxn['reference_id'], (int)$currentUser['id'], "Reversal of TXN #{$txnId}: {$reason}", $txnId, $reason
+        ]);
+        $revTxnId = (int)$pdo->lastInsertId();
+
+        writeLog($pdo, 'REVERSE_TXN', 'PRODUCTION_API', (string)$txnId, $oldTxn, [
+            'reversal_transaction_id' => $revTxnId,
+            'reason' => $reason,
+        ], 'Reversed inventory transaction (immutable ledger)');
+
         $pdo->commit();
-        prodJsonSuccess(['transaction_id' => $txnId], 'ลบรายการเรียบร้อยแล้ว');
+        prodJsonSuccess([
+            'transaction_id' => $txnId,
+            'reversal_transaction_id' => $revTxnId,
+        ], 'กลับรายการสต็อกเรียบร้อยแล้ว');
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
@@ -733,14 +737,16 @@ function handleGetWipOnhandReport(PDO $pdo, array $input): void {
         : '';
     $sql = "
         SELECT TOP 500
-            oh.onhand_id, oh.parameter_id AS item_id, oh.location_id, oh.quantity AS onhand_qty, oh.last_updated,
+            oh.onhand_id, oh.parameter_id AS item_id, oh.location_id,
+            ISNULL(oh.stock_type, 'UNRESTRICTED') AS stock_type,
+            oh.quantity AS onhand_qty, oh.last_updated,
             i.sap_no, i.part_no, i.part_description, i.material_type{$costCols},
             l.location_name, l.location_type, l.production_line
         FROM " . ONHAND_TABLE . " oh WITH (NOLOCK)
         JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON oh.parameter_id = i.item_id
         JOIN " . LOCATIONS_TABLE . " l WITH (NOLOCK) ON oh.location_id = l.location_id
         {$whereSql}
-        ORDER BY l.location_name ASC, i.sap_no ASC
+        ORDER BY l.location_name ASC, i.sap_no ASC, oh.stock_type ASC
     ";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -778,6 +784,7 @@ function handleGetWipReportByLot(PDO $pdo, array $input): void {
         JOIN " . ITEMS_TABLE . " i WITH (NOLOCK) ON t.parameter_id = i.item_id
         LEFT JOIN " . LOCATIONS_TABLE . " l WITH (NOLOCK) ON t.to_location_id = l.location_id
         WHERE t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+          AND " . SQL_ACTIVE_TXN_FILTER . "
           AND CAST(t.transaction_timestamp AS DATE) BETWEEN ? AND ?
           {$locFilter}
           {$searchFilter}
@@ -819,6 +826,7 @@ function handleGetProductionVarianceReport(PDO $pdo, array $input): void {
                 ISNULL(SUM(CASE WHEN t.transaction_type = 'PRODUCTION_SCRAP' THEN t.quantity ELSE 0 END), 0) AS scrap_qty
             FROM " . TRANSACTIONS_TABLE . " t WITH (NOLOCK)
             WHERE t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+              AND " . SQL_ACTIVE_TXN_FILTER . "
               AND CAST(t.transaction_timestamp AS DATE) BETWEEN ? AND ?
             GROUP BY t.parameter_id
         )
@@ -857,6 +865,7 @@ function handleGetVarianceDetails(PDO $pdo, array $input): void {
         LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
         WHERE t.parameter_id = ?
           AND t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+          AND " . SQL_ACTIVE_TXN_FILTER . "
           AND CAST(t.transaction_timestamp AS DATE) BETWEEN ? AND ?
         ORDER BY t.transaction_timestamp DESC
     ");
@@ -908,7 +917,9 @@ function handleGetStockInventoryReport(PDO $pdo, array $input): void {
     $dataSql = "
         SELECT
             i.item_id, i.sap_no, i.part_no, i.part_description, i.material_type, i.min_stock, i.max_stock{$costCols},
-            ISNULL(SUM(oh.quantity), 0) AS total_onhand
+            ISNULL(SUM(CASE WHEN ISNULL(oh.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' THEN oh.quantity ELSE 0 END), 0) AS total_onhand,
+            ISNULL(SUM(CASE WHEN oh.stock_type = 'QUALITY_INSPECTION' THEN oh.quantity ELSE 0 END), 0) AS total_qi_hold,
+            ISNULL(SUM(CASE WHEN oh.stock_type = 'BLOCKED_SCRAP' THEN oh.quantity ELSE 0 END), 0) AS total_blocked_scrap
         FROM " . ITEMS_TABLE . " i WITH (NOLOCK)
         LEFT JOIN " . ONHAND_TABLE . " oh WITH (NOLOCK) ON i.item_id = oh.parameter_id
         {$whereSql}
@@ -937,11 +948,13 @@ function handleGetStockInventoryReport(PDO $pdo, array $input): void {
 function handleGetStockDetailsByItem(PDO $pdo, array $input): void {
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'Item ID');
     $stmt = $pdo->prepare("
-        SELECT oh.location_id, l.location_name, l.location_type, oh.quantity, oh.last_updated
+        SELECT oh.location_id, l.location_name, l.location_type,
+               ISNULL(oh.stock_type, 'UNRESTRICTED') AS stock_type,
+               oh.quantity, oh.last_updated
         FROM " . ONHAND_TABLE . " oh WITH (NOLOCK)
         JOIN " . LOCATIONS_TABLE . " l WITH (NOLOCK) ON oh.location_id = l.location_id
         WHERE oh.parameter_id = ?
-        ORDER BY l.location_name ASC
+        ORDER BY l.location_name ASC, oh.stock_type ASC
     ");
     $stmt->execute([$itemId]);
     prodJsonSuccess($stmt->fetchAll(PDO::FETCH_ASSOC), 'Loaded item stock locations');
@@ -954,6 +967,10 @@ function handleAdjustSingleStock(PDO $pdo, array $input, array $currentUser): vo
 
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'Item ID');
     $locationId = parsePositiveInt($input['location_id'] ?? 0, 'Location ID');
+    $stockType = strtoupper(trim((string)($input['stock_type'] ?? 'UNRESTRICTED')));
+    if (!in_array($stockType, ['UNRESTRICTED', 'QUALITY_INSPECTION', 'BLOCKED_SCRAP'], true)) {
+        throw new InvalidArgumentException('ประเภทสต็อก (stock_type) ไม่ถูกต้อง');
+    }
     if (!isset($input['new_quantity']) || !is_numeric($input['new_quantity'])) {
         throw new InvalidArgumentException('จำนวนใหม่ไม่ถูกต้อง');
     }
@@ -965,27 +982,27 @@ function handleAdjustSingleStock(PDO $pdo, array $input, array $currentUser): vo
 
     $pdo->beginTransaction();
     try {
-        $currStmt = $pdo->prepare("SELECT ISNULL(quantity, 0) FROM " . ONHAND_TABLE . " WITH (UPDLOCK) WHERE parameter_id = ? AND location_id = ?");
-        $currStmt->execute([$itemId, $locationId]);
+        $currStmt = $pdo->prepare("SELECT ISNULL(quantity, 0) FROM " . ONHAND_TABLE . " WITH (UPDLOCK, HOLDLOCK) WHERE parameter_id = ? AND location_id = ? AND stock_type = ?");
+        $currStmt->execute([$itemId, $locationId, $stockType]);
         $oldQty = (float)($currStmt->fetchColumn() ?: 0);
         $diff = round($newQty - $oldQty, 3);
 
         if (abs($diff) > 0.0001) {
-            $sp = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-            $sp->execute([$itemId, $locationId, $diff]);
+            $sp = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?, @stock_type = ?");
+            $sp->execute([$itemId, $locationId, $diff, $stockType]);
             $sp->closeCursor();
 
             $ins = $pdo->prepare(
                 "INSERT INTO " . TRANSACTIONS_TABLE . "
-                    (parameter_id, quantity, transaction_type, transaction_timestamp, to_location_id, reference_id, notes, created_by_user_id)
-                 VALUES (?, ?, 'ADJUSTMENT', GETDATE(), ?, 'MANUAL_ADJ', ?, ?)"
+                    (parameter_id, quantity, transaction_type, stock_type, transaction_timestamp, to_location_id, reference_id, notes, created_by_user_id)
+                 VALUES (?, ?, 'ADJUSTMENT', ?, GETDATE(), ?, 'MANUAL_ADJ', ?, ?)"
             );
-            $ins->execute([$itemId, $diff, $locationId, $reason, (int)$currentUser['id']]);
+            $ins->execute([$itemId, $diff, $stockType, $locationId, $reason, (int)$currentUser['id']]);
         }
 
-        writeLog($pdo, 'ADJUST_STOCK', 'PRODUCTION_API', "{$itemId}:{$locationId}", ['quantity' => $oldQty], ['quantity' => $newQty], $reason);
+        writeLog($pdo, 'ADJUST_STOCK', 'PRODUCTION_API', "{$itemId}:{$locationId}:{$stockType}", ['quantity' => $oldQty], ['quantity' => $newQty], $reason);
         $pdo->commit();
-        prodJsonSuccess(['old_quantity' => $oldQty, 'new_quantity' => $newQty, 'diff' => $diff], 'ปรับยอดสต็อกเรียบร้อยแล้ว');
+        prodJsonSuccess(['old_quantity' => $oldQty, 'new_quantity' => $newQty, 'diff' => $diff, 'stock_type' => $stockType], 'ปรับยอดสต็อกเรียบร้อยแล้ว');
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
@@ -995,9 +1012,10 @@ function handleAdjustSingleStock(PDO $pdo, array $input, array $currentUser): vo
 function handleGetStockOnhand(PDO $pdo, array $input): void {
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'Item ID');
     $locationId = parsePositiveInt($input['location_id'] ?? 0, 'Location ID');
-    $stmt = $pdo->prepare("SELECT ISNULL(quantity, 0) FROM " . ONHAND_TABLE . " WITH (NOLOCK) WHERE parameter_id = ? AND location_id = ?");
-    $stmt->execute([$itemId, $locationId]);
-    prodJsonSuccess(['quantity' => (float)($stmt->fetchColumn() ?: 0)], 'Loaded stock onhand');
+    $stockType = strtoupper(trim((string)($input['stock_type'] ?? 'UNRESTRICTED')));
+    $stmt = $pdo->prepare("SELECT ISNULL(quantity, 0) FROM " . ONHAND_TABLE . " WITH (NOLOCK) WHERE parameter_id = ? AND location_id = ? AND stock_type = ?");
+    $stmt->execute([$itemId, $locationId, $stockType]);
+    prodJsonSuccess(['quantity' => (float)($stmt->fetchColumn() ?: 0), 'stock_type' => $stockType], 'Loaded stock onhand');
 }
 
 function handleGetEmployeeDailySummary(PDO $pdo, array $input): void {
@@ -1026,6 +1044,7 @@ function handleGetEmployeeDailySummary(PDO $pdo, array $input): void {
         JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON stu.user_id = u.id
         LEFT JOIN dbo.MANPOWER_EMPLOYEES me WITH (NOLOCK) ON u.emp_id = me.emp_id
         WHERE t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+          AND " . SQL_ACTIVE_TXN_FILTER . "
           AND CAST(t.transaction_timestamp AS DATE) BETWEEN ? AND ?
           {$locSql}
         GROUP BY u.id, u.username, COALESCE(NULLIF(me.name_th, ''), NULLIF(u.fullname, ''), u.username), COALESCE(NULLIF(u.emp_id, ''), stu.emp_id, '-'), COALESCE(u.team_group, '-')

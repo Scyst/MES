@@ -84,6 +84,8 @@ export default function JobQueueTab({ metadata, isOffline }) {
 
   const [logsModalJob, setLogsModalJob] = useState(null);
   const [jobLogs, setJobLogs] = useState([]);
+  const [reverseLogTxn, setReverseLogTxn] = useState(null);
+  const [reverseLogReason, setReverseLogReason] = useState('');
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyJobs, setHistoryJobs] = useState([]);
@@ -323,23 +325,32 @@ export default function JobQueueTab({ metadata, isOffline }) {
     }
   };
 
-  const handleDeleteJobTxn = async (txn) => {
+  const handleOpenReverseJobTxn = (txn) => {
     if (!logsModalJob || isOffline) return;
-    const ok = await confirm({
-      title: `ยืนยันการลบรายการ #${txn.transaction_id}?`,
-      message: `จำนวน ${Number(txn.quantity).toLocaleString()} (${txn.transaction_type})\nระบบจะหักออกจากใบงานและคืนสต็อก On-Hand`,
-      confirmText: 'ลบและคืนยอด',
-      danger: true,
-    });
-    if (!ok) return;
+    setReverseLogTxn(txn);
+    setReverseLogReason('');
+  };
+
+  const handleSubmitReverseJobTxn = async (e) => {
+    e.preventDefault();
+    if (!logsModalJob || !reverseLogTxn || isOffline) return;
+    const reason = reverseLogReason.trim();
+    if (reason.length < 5) {
+      return toast.warning('กรุณาระบุเหตุผลการกลับรายการอย่างน้อย 5 ตัวอักษร');
+    }
+    setSubmitting(true);
     try {
-      const res = await productionApi.deleteJobTxn(txn.transaction_id, logsModalJob.job_id);
-      toast.success(res?.message || 'ลบยอดผลิตแล้ว');
+      const res = await productionApi.reverseJobTxn(reverseLogTxn.transaction_id, logsModalJob.job_id, reason);
+      toast.success(res?.message || 'กลับรายการยอดผลิตเรียบร้อยแล้ว');
+      setReverseLogTxn(null);
+      setReverseLogReason('');
       const logsRes = await productionApi.getJobLogs(logsModalJob.job_no);
       setJobLogs(logsRes?.data || []);
       loadJobs();
     } catch {
       // Handled globally
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -996,27 +1007,39 @@ export default function JobQueueTab({ metadata, isOffline }) {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {jobLogs.map((log) => {
-                  const canDeleteLog =
-                    canManage || Number(log.created_by_user_id) === Number(metadata?.current_user?.id);
+                  const isReversed = Number(log.is_reversed) === 1;
+                  const isReversalEntry = Boolean(log.reversal_of_tx_id) || String(log.transaction_type || '').startsWith('REVERSAL_');
+                  const canReverseLog = canManage && !isReversed && !isReversalEntry;
                   const teamNames = String(log.team_member_names || '').split(',').map((s) => s.trim()).filter(Boolean);
                   const lead = log.created_by_name || teamNames[0] || '-';
                   return (
-                    <tr key={log.transaction_id}>
+                    <tr key={log.transaction_id} className={isReversed ? 'opacity-60' : ''}>
                       <td className="px-3 py-2 font-mono">{String(log.transaction_timestamp || '').replace('T', ' ').slice(0, 16)}</td>
-                      <td className="px-3 py-2 font-semibold">{log.transaction_type}</td>
-                      <td className="px-3 py-2 text-right font-mono font-bold">{Number(log.quantity).toLocaleString()}</td>
+                      <td className="px-3 py-2 font-semibold">
+                        <span>{log.transaction_type}</span>
+                        {isReversed && (
+                          <span className="ml-1.5 inline-flex rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
+                            REVERSED
+                          </span>
+                        )}
+                      </td>
+                      <td className={`px-3 py-2 text-right font-mono font-bold ${isReversed ? 'line-through' : ''}`}>
+                        {Number(log.quantity).toLocaleString()}
+                      </td>
                       <td className="px-3 py-2 max-w-[160px] truncate" title={teamNames.join(', ') || lead}>
                         {lead}{teamNames.length > 1 ? ` (+${teamNames.length - 1})` : ''}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        {canDeleteLog ? (
+                        {canReverseLog ? (
                           <button
                             type="button"
                             disabled={isOffline}
-                            onClick={() => handleDeleteJobTxn(log)}
+                            onClick={() => handleOpenReverseJobTxn(log)}
+                            title="กลับรายการ (Reverse)"
+                            aria-label="กลับรายการ (Reverse)"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 cursor-pointer"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <RotateCcw className="h-3.5 w-3.5" />
                           </button>
                         ) : (
                           <span className="text-slate-300">-</span>
@@ -1113,6 +1136,60 @@ export default function JobQueueTab({ metadata, isOffline }) {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reverse Job Transaction Modal */}
+      {reverseLogTxn && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5 text-rose-600" />
+                <h3 className="text-base font-bold">กลับรายการยอดผลิตใบงาน #{reverseLogTxn.transaction_id}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReverseLogTxn(null)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitReverseJobTxn} className="space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                จำนวน <span className="font-mono font-bold">{Number(reverseLogTxn.quantity).toLocaleString()}</span> ({reverseLogTxn.transaction_type}) — ระบบจะสร้างรายการ Reversal หักออกจากใบงานและคืนสต็อก RM/FG อัตโนมัติ
+              </p>
+              <div>
+                <label className="mb-1 block text-xs font-semibold">เหตุผลการกลับรายการ (อย่างน้อย 5 ตัวอักษร) *</label>
+                <textarea
+                  rows={3}
+                  required
+                  minLength={5}
+                  value={reverseLogReason}
+                  onChange={(e) => setReverseLogReason(e.target.value)}
+                  placeholder="ระบุเหตุผลที่ต้องกลับรายการ..."
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReverseLogTxn(null)}
+                  className="min-h-[44px] rounded-xl border border-slate-300 px-4 text-xs font-bold"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || reverseLogReason.trim().length < 5}
+                  className="min-h-[44px] rounded-xl bg-rose-600 px-5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+                >
+                  {submitting ? 'กำลังบันทึก...' : 'ยืนยันกลับรายการ'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

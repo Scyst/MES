@@ -231,7 +231,7 @@ try {
 
             $sqlItems = "SELECT ri.id as row_id, ri.item_code, ri.qty_requested, ri.qty_issued, ri.requested_tags,
                                 i.item_id, i.part_description as description, i.image_path, ISNULL(i.material_sub_type, 'OTHER') as material_sub_type,
-                                ISNULL((SELECT SUM(quantity) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = i.item_id AND location_id IN (SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE location_type = 'STORE')), 0) as onhand_qty
+                                ISNULL((SELECT SUM(quantity) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = i.item_id AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' AND location_id IN (SELECT location_id FROM dbo.LOCATIONS WITH (NOLOCK) WHERE location_type = 'STORE')), 0) as onhand_qty
                          FROM dbo.STORE_REQUISITION_ITEMS ri WITH (NOLOCK)
                          JOIN dbo.ITEMS i WITH (NOLOCK) ON ri.item_code = i.sap_no
                          WHERE ri.req_id = ? AND ri.request_type = 'STOCK'";
@@ -302,7 +302,7 @@ try {
                 
             if ($locId) {
                 // Deduct inventory (allowing negative to highlight discrepancies) and update timestamp
-                $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ?")
+                $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = quantity - ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'")
                     ->execute([$tag['current_qty'], $tag['item_id'], $locId]);
 
                 // Insert into STOCK_TRANSACTIONS
@@ -443,10 +443,10 @@ try {
                         $pdo->prepare("
                             MERGE dbo.INVENTORY_ONHAND AS t
                             USING (SELECT ? as item_id, ? as loc_id) AS s
-                            ON (t.parameter_id = s.item_id AND t.location_id = s.loc_id)
+                            ON (t.parameter_id = s.item_id AND t.location_id = s.loc_id AND t.stock_type = 'UNRESTRICTED')
                             WHEN MATCHED THEN UPDATE SET quantity = quantity + ?, last_updated = GETDATE()
-                            WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, quantity, last_updated)
-                            VALUES (?, ?, ?, GETDATE());
+                            WHEN NOT MATCHED THEN INSERT (parameter_id, location_id, stock_type, quantity, last_updated)
+                            VALUES (?, ?, 'UNRESTRICTED', ?, GETDATE());
                         ")->execute([
                             $itemId, $destLocId, 
                             $total_issued_for_this_item, 
@@ -626,7 +626,7 @@ try {
                 DECLARE @DeadStock FLOAT = (
                     SELECT ISNULL(SUM(inv.quantity * i.StandardPrice), 0)
                     FROM dbo.INVENTORY_ONHAND inv WITH (NOLOCK)
-                    JOIN dbo.ITEMS i WITH (NOLOCK) ON inv.parameter_id = i.item_id
+                    JOIN dbo.ITEMS i WITH (NOLOCK) ON inv.parameter_id = i.item_id AND ISNULL(inv.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
                     LEFT JOIN (
                         SELECT DISTINCT parameter_id 
                         FROM dbo.STOCK_TRANSACTIONS WITH (NOLOCK) 
@@ -648,7 +648,7 @@ try {
                     SELECT ISNULL(SUM(inv.quantity * i.StandardPrice), 0) 
                     FROM dbo.INVENTORY_ONHAND inv WITH (NOLOCK) 
                     JOIN dbo.ITEMS i WITH (NOLOCK) ON inv.parameter_id = i.item_id 
-                    WHERE inv.quantity > 0
+                    WHERE inv.quantity > 0 AND ISNULL(inv.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
                 );
                 
                 DECLARE @Turnover FLOAT = CASE WHEN @InvVal > 0 THEN (@Cogs / @InvVal) ELSE 0 END;
@@ -1075,7 +1075,7 @@ try {
                 OUTER APPLY (
                     SELECT SUM(o.quantity) AS available_qty 
                     FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) 
-                    WHERE o.parameter_id = i.item_id $locFilter
+                    WHERE o.parameter_id = i.item_id AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' $locFilter
                 ) Onhand
                 OUTER APPLY (
                     SELECT SUM(p.qty_per_pallet) AS pending_qty 
@@ -1127,7 +1127,7 @@ try {
                 OUTER APPLY (
                     SELECT SUM(o.quantity) AS available_qty 
                     FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) 
-                    WHERE o.parameter_id = i.item_id $locFilter
+                    WHERE o.parameter_id = i.item_id AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' $locFilter
                 ) Onhand
                 OUTER APPLY (
                     SELECT SUM(p.qty_per_pallet) AS pending_qty 
@@ -1138,7 +1138,7 @@ try {
                     SELECT TOP 1 loc.location_name, loc.zone_name 
                     FROM dbo.INVENTORY_ONHAND o2 WITH (NOLOCK) 
                     JOIN dbo.LOCATIONS loc WITH (NOLOCK) ON o2.location_id = loc.location_id 
-                    WHERE o2.parameter_id = i.item_id AND o2.quantity > 0 
+                    WHERE o2.parameter_id = i.item_id AND o2.quantity > 0 AND ISNULL(o2.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' 
                     ORDER BY o2.quantity DESC
                 ) TopLoc
                 $whereSQL
@@ -1191,7 +1191,7 @@ try {
                 $paramsAvail[] = $location_type;
             }
             
-            $stmtAvail = $pdo->prepare("SELECT l.location_id, l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE $condAvail GROUP BY l.location_id, l.location_name ORDER BY qty DESC");
+            $stmtAvail = $pdo->prepare("SELECT l.location_id, l.location_name, SUM(o.quantity) as qty FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id WHERE $condAvail AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' GROUP BY l.location_id, l.location_name ORDER BY qty DESC");
             $stmtAvail->execute($paramsAvail);
             $available_details = $stmtAvail->fetchAll(PDO::FETCH_ASSOC);
 
@@ -3593,7 +3593,7 @@ try {
             $stmtTags->execute([$item_id]);
             $tags_qty = (float)$stmtTags->fetchColumn();
 
-            $stmtStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = 1008");
+            $stmtStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = 1008 AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
             $stmtStock->execute([$item_id]);
             $stock_qty = (float)$stmtStock->fetchColumn();
 
@@ -3617,7 +3617,7 @@ try {
             $tags_qty = (float)$stmtTags->fetchColumn();
 
             // 2. Get current stock qty in Store (1008)
-            $stmtStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) as stock_qty FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = 1008");
+            $stmtStock = $pdo->prepare("SELECT ISNULL(SUM(quantity), 0) as stock_qty FROM dbo.INVENTORY_ONHAND WITH (NOLOCK) WHERE parameter_id = ? AND location_id = 1008 AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
             $stmtStock->execute([$item_id]);
             $stock_qty = (float)$stmtStock->fetchColumn();
 
@@ -3640,12 +3640,12 @@ try {
                 $stmtMerge = $pdo->prepare("
                     MERGE INTO dbo.INVENTORY_ONHAND AS T
                     USING (SELECT ? AS item_id, 1008 AS location_id) AS S
-                    ON (T.parameter_id = S.item_id AND T.location_id = S.location_id)
+                    ON (T.parameter_id = S.item_id AND T.location_id = S.location_id AND T.stock_type = 'UNRESTRICTED')
                     WHEN MATCHED THEN
                         UPDATE SET T.quantity = T.quantity + ?, T.last_updated = GETDATE()
                     WHEN NOT MATCHED THEN
-                        INSERT (parameter_id, location_id, quantity)
-                        VALUES (S.item_id, S.location_id, ?);
+                        INSERT (parameter_id, location_id, stock_type, quantity, last_updated)
+                        VALUES (S.item_id, S.location_id, 'UNRESTRICTED', ?, GETDATE());
                 ");
                 $stmtMerge->execute([$item_id, $variance, $variance]);
 

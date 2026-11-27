@@ -80,6 +80,7 @@ try {
                         SELECT SUM(O.quantity)
                         FROM dbo.INVENTORY_ONHAND O WITH (NOLOCK)
                         WHERE O.parameter_id = P.item_id
+                          AND ISNULL(O.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
                     ), 0) AS FLOAT) AS current_stock
                 FROM dbo.PRODUCTION_PLANS P WITH (NOLOCK)
                 LEFT JOIN dbo.ITEMS I WITH (NOLOCK) ON P.item_id = I.item_id
@@ -114,7 +115,7 @@ try {
                     S.dc_location,
                     S.container_no,
                     I.part_no,
-                    CAST(ISNULL((SELECT SUM(O.quantity) FROM dbo.INVENTORY_ONHAND O WITH (NOLOCK) WHERE O.parameter_id = I.item_id), 0) AS FLOAT) AS onhand_qty
+                    CAST(ISNULL((SELECT SUM(O.quantity) FROM dbo.INVENTORY_ONHAND O WITH (NOLOCK) WHERE O.parameter_id = I.item_id AND ISNULL(O.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'), 0) AS FLOAT) AS onhand_qty
                 FROM dbo.SALES_ORDERS S WITH (NOLOCK)
                 LEFT JOIN dbo.ITEMS I WITH (NOLOCK) ON S.sku = I.sku
                 WHERE S.loading_date BETWEEN ? AND ?
@@ -131,7 +132,7 @@ try {
                     CAST(I.min_stock AS FLOAT) AS min_stock,
                     CAST(ISNULL(SUM(O.quantity), 0) AS FLOAT) AS onhand_qty
                 FROM dbo.ITEMS I WITH (NOLOCK)
-                LEFT JOIN dbo.INVENTORY_ONHAND O WITH (NOLOCK) ON I.item_id = O.parameter_id
+                LEFT JOIN dbo.INVENTORY_ONHAND O WITH (NOLOCK) ON I.item_id = O.parameter_id AND ISNULL(O.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
                 WHERE I.is_active = 1 AND I.min_stock > 0
                 GROUP BY I.item_id, I.sap_no, I.part_no, I.part_description, I.sku, I.min_stock
                 HAVING ISNULL(SUM(O.quantity), 0) < I.min_stock

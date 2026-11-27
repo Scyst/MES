@@ -144,11 +144,14 @@ function handleScanGetLogs(PDO $pdo, array $input): void {
 }
 
 function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionEntryPermission();
+
     $barcode = strtoupper(trim((string)($input['barcode'] ?? '')));
     $prodType = strtoupper(trim((string)($input['production_type'] ?? 'FG')));
     $locationId = parsePositiveInt($input['location_id'] ?? 0, 'สถานี / ไลน์ผลิต');
     $lotRef = trim((string)($input['lot_ref'] ?? ''));
     $jobNo = trim((string)($input['job_no'] ?? ''));
+    $machineId = !empty($input['machine_id']) ? (int)$input['machine_id'] : null;
     $userNotes = trim((string)($input['notes'] ?? ''));
     $teamCsv = resolveTeamUserIdsCsv($input['team_user_ids'] ?? '', (int)$currentUser['id']);
 
@@ -180,6 +183,7 @@ function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
         prodJsonError('ไม่พบข้อมูล Location ที่เลือก', 404);
     }
 
+    $linkedJobId = null;
     if ($jobNo !== '') {
         $jobStmt = $pdo->prepare('SELECT TOP 1 job_id, status FROM dbo.PRODUCTION_JOBS WITH (NOLOCK) WHERE job_no = ?');
         $jobStmt->execute([$jobNo]);
@@ -190,6 +194,7 @@ function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
         if (in_array(strtoupper((string)$jobRow['status']), ['COMPLETED', 'CLOSED', 'CANCELLED'], true)) {
             prodJsonError("ใบงาน '{$jobNo}' ปิดงานหรือยกเลิกแล้ว ไม่สามารถสแกนเพิ่มได้ — กรุณารีเฟรชคิวงานและเลือกใบงานที่กำลังดำเนินการอยู่", 409);
         }
+        $linkedJobId = (int)$jobRow['job_id'];
     }
 
     $itemId = (int)$item['item_id'];
@@ -198,6 +203,7 @@ function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
     $startTime = "{$curHour}:00:00";
     $endTime = "{$curHour}:59:59";
     $scanDate = date('Y-m-d');
+    $targetStockType = $prodType === 'FG' ? 'UNRESTRICTED' : ($prodType === 'HOLD' ? 'QUALITY_INSPECTION' : 'BLOCKED_SCRAP');
 
     $noteSegments = ['Scan:'];
     if ($jobNo !== '') $noteSegments[] = "[Job: {$jobNo}]";
@@ -206,56 +212,60 @@ function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
     $scanNote = mb_substr(implode(' ', $noteSegments), 0, 490);
     $refId = $jobNo !== '' ? $jobNo : ($lotRef !== '' ? $lotRef : 'SCAN');
 
-    // 1. Record raw scan event
-    $insScan = $pdo->prepare("
-        INSERT INTO " . SCAN_LOGS_TABLE . "
-            (" . COL_LOG_BARCODE . ", " . COL_LOG_SAP . ", " . COL_LOG_LOTREF . ", " . COL_LOG_LOC_ID . ", " . COL_LOG_LOC_NAME . ",
-             " . COL_LOG_PROD_TYPE . ", " . COL_LOG_LOGDATE . ", " . COL_LOG_NOTES . ", created_at, " . COL_LOG_SCANNED_BY . ")
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
-    ");
-    $insScan->execute([
-        $barcode,
-        $item['sap_no'],
-        $lotRef !== '' ? $lotRef : null,
-        (string)$locationId,
-        $location['location_name'],
-        $prodType,
-        $scanNow,
-        $scanNote,
-        $currentUser['username'],
-    ]);
-    $scanLogId = (int)$pdo->lastInsertId();
-
-    // 2. Aggregate into hourly STOCK_TRANSACTIONS row or create new hourly rollup via sp_ExecuteProduction
     $fullType = 'PRODUCTION_' . $prodType;
-    $findAggStmt = $pdo->prepare("
-        SELECT TOP 1 transaction_id, quantity
-        FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK)
-        WHERE parameter_id = ?
-          AND to_location_id = ?
-          AND transaction_type = ?
-          AND CAST(transaction_timestamp AS DATE) = ?
-          AND start_time = CAST(? AS TIME)
-          AND end_time = CAST(? AS TIME)
-          AND ISNULL(notes, '') = ?
-        ORDER BY transaction_id DESC
-    ");
-    $findAggStmt->execute([$itemId, $locationId, $fullType, $scanDate, $startTime, $endTime, $scanNote]);
-    $existingTxn = $findAggStmt->fetch(PDO::FETCH_ASSOC);
-
+    $scanLogId = 0;
     $stockTxnId = 0;
-    if ($existingTxn) {
-        $stockTxnId = (int)$existingTxn['transaction_id'];
-        $pdo->beginTransaction();
-        try {
+
+    $pdo->beginTransaction();
+    try {
+        // 1. Record raw scan event
+        $insScan = $pdo->prepare("
+            INSERT INTO " . SCAN_LOGS_TABLE . "
+                (" . COL_LOG_BARCODE . ", " . COL_LOG_SAP . ", " . COL_LOG_LOTREF . ", " . COL_LOG_LOC_ID . ", " . COL_LOG_LOC_NAME . ",
+                 " . COL_LOG_PROD_TYPE . ", " . COL_LOG_LOGDATE . ", " . COL_LOG_NOTES . ", created_at, " . COL_LOG_SCANNED_BY . ")
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
+        ");
+        $insScan->execute([
+            $barcode,
+            $item['sap_no'],
+            $lotRef !== '' ? $lotRef : null,
+            (string)$locationId,
+            $location['location_name'],
+            $prodType,
+            $scanNow,
+            $scanNote,
+            $currentUser['username'],
+        ]);
+        $scanLogId = (int)$pdo->lastInsertId();
+
+        // 2. Aggregate into active hourly STOCK_TRANSACTIONS row or create new hourly rollup via sp_ExecuteProduction
+        $findAggStmt = $pdo->prepare("
+            SELECT TOP 1 transaction_id, quantity
+            FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK, HOLDLOCK)
+            WHERE parameter_id = ?
+              AND to_location_id = ?
+              AND transaction_type = ?
+              AND ISNULL(is_reversed, 0) = 0
+              AND reversal_of_tx_id IS NULL
+              AND CAST(transaction_timestamp AS DATE) = ?
+              AND start_time = CAST(? AS TIME)
+              AND end_time = CAST(? AS TIME)
+              AND ISNULL(notes, '') = ?
+            ORDER BY transaction_id DESC
+        ");
+        $findAggStmt->execute([$itemId, $locationId, $fullType, $scanDate, $startTime, $endTime, $scanNote]);
+        $existingTxn = $findAggStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingTxn) {
+            $stockTxnId = (int)$existingTxn['transaction_id'];
             $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET quantity = quantity + 1, transaction_timestamp = ? WHERE transaction_id = ?")
                 ->execute([$scanNow, $stockTxnId]);
 
-            $spStock = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-            $spStock->execute([$itemId, $locationId, 1]);
+            $spStock = $pdo->prepare("EXEC " . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?, @stock_type = ?");
+            $spStock->execute([$itemId, $locationId, 1, $targetStockType]);
             $spStock->closeCursor();
 
-            $bomStmt = $pdo->prepare("SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND ISNULL(bom_status, 'ACTIVE') != 'INACTIVE'");
+            $bomStmt = $pdo->prepare("SELECT component_item_id, quantity_required FROM " . BOM_TABLE . " WITH (NOLOCK) WHERE fg_item_id = ? AND ISNULL(bom_status, 'ACTIVE') = 'ACTIVE'");
             $bomStmt->execute([$itemId]);
             $components = $bomStmt->fetchAll(PDO::FETCH_ASSOC);
             $consumeNote = 'Auto-consumed for production ID: ' . $stockTxnId;
@@ -266,44 +276,42 @@ function handleSaveScan(PDO $pdo, array $input, array $currentUser): void {
                 $updComp = $pdo->prepare("
                     UPDATE " . TRANSACTIONS_TABLE . "
                     SET quantity = quantity + ?, transaction_timestamp = ?
-                    WHERE notes = ? AND parameter_id = ? AND transaction_type = 'CONSUMPTION'
+                    WHERE notes = ? AND parameter_id = ? AND transaction_type = 'CONSUMPTION' AND ISNULL(is_reversed, 0) = 0
                 ");
                 $updComp->execute([$compDelta, $scanNow, $consumeNote, $compId]);
-                $spStock->execute([$compId, $locationId, $compDelta]);
+                $spStock->execute([$compId, $locationId, $compDelta, 'UNRESTRICTED']);
                 $spStock->closeCursor();
             }
-            $pdo->commit();
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            throw $e;
+        } else {
+            $spProd = $pdo->prepare(
+                "EXEC " . SP_EXECUTE_PRODUCTION . "
+                    @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
+                    @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
+                    @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?, @job_id = ?"
+            );
+            $spProd->execute([
+                $itemId, $locationId, 1, $prodType,
+                $refId, $scanNote, $scanNow, $startTime, $endTime,
+                (int)$currentUser['id'], $currentUser['username'], $machineId, $teamCsv, $linkedJobId
+            ]);
+            $stockTxnId = (int)$spProd->fetchColumn();
+            $spProd->closeCursor();
         }
-    } else {
-        $spProd = $pdo->prepare(
-            "EXEC " . SP_EXECUTE_PRODUCTION . "
-                @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
-                @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
-                @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?"
-        );
-        $spProd->execute([
-            $itemId, $locationId, 1, $prodType,
-            $refId, $scanNote, $scanNow, $startTime, $endTime,
-            (int)$currentUser['id'], $currentUser['username'], null, $teamCsv
-        ]);
-        $spProd->closeCursor();
 
-        $findNew = $pdo->prepare("SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WITH (NOLOCK) WHERE parameter_id = ? AND to_location_id = ? AND created_by_user_id = ? ORDER BY transaction_id DESC");
-        $findNew->execute([$itemId, $locationId, (int)$currentUser['id']]);
-        $stockTxnId = (int)$findNew->fetchColumn();
-    }
+        if ($prodType === 'SCRAP') {
+            buildScrapRequisition($pdo, $itemId, 1.0, $locationId, (int)$currentUser['id'], "Replacement: Scan Scrap {$barcode}", $stockTxnId ?: null);
+        }
 
-    if ($prodType === 'SCRAP') {
-        buildScrapRequisition($pdo, $itemId, 1.0, $locationId, (int)$currentUser['id'], "Replacement: Scan Scrap {$barcode}", $stockTxnId ?: null);
-    }
+        if ($jobNo !== '') {
+            $jobCol = $prodType === 'FG' ? 'actual_qty' : ($prodType === 'HOLD' ? 'hold_qty' : 'scrap_qty');
+            $pdo->prepare("UPDATE dbo.PRODUCTION_JOBS SET {$jobCol} = ISNULL({$jobCol}, 0) + 1 WHERE job_no = ? AND status = 'RUNNING'")
+                ->execute([$jobNo]);
+        }
 
-    if ($jobNo !== '') {
-        $jobCol = $prodType === 'FG' ? 'actual_qty' : ($prodType === 'HOLD' ? 'hold_qty' : 'scrap_qty');
-        $pdo->prepare("UPDATE dbo.PRODUCTION_JOBS SET {$jobCol} = ISNULL({$jobCol}, 0) + 1 WHERE job_no = ? AND status = 'RUNNING'")
-            ->execute([$jobNo]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
     }
 
     prodJsonSuccess([

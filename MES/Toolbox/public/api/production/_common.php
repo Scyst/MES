@@ -20,6 +20,88 @@ require_once __DIR__ . '/../../utils/check_auth.php';
 require_once __DIR__ . '/../../utils/logger.php';
 
 /**
+ * Standard SQL filter excluding reversed original entries and counter-reversal entries
+ * for active KPI / Summary / Variance / IPH aggregations.
+ */
+if (!defined('SQL_ACTIVE_TXN_FILTER')) {
+    define('SQL_ACTIVE_TXN_FILTER', 'ISNULL(t.is_reversed, 0) = 0 AND t.reversal_of_tx_id IS NULL');
+}
+
+/**
+ * Enforces RBAC for recording production output, job execution, and barcode scans.
+ */
+function requireProductionEntryPermission(): void {
+    if (
+        !hasPermission('add_production')
+        && !hasPermission('manage_production')
+        && !hasRole(['admin', 'creator', 'supervisor', 'planner', 'manager'])
+    ) {
+        prodJsonError('คุณไม่มีสิทธิ์บันทึกผลผลิตหรือสั่งเดินงานผลิต (ต้องมีสิทธิ์ add_production)', 403);
+    }
+}
+
+/**
+ * Enforces RBAC for Supervisor/Admin production controls (reversals, overrides, adjustments).
+ */
+function requireProductionManagePermission(string $message = 'คุณไม่มีสิทธิ์ดำเนินการนี้ (ต้องมีสิทธิ์ manage_production ระดับหัวหน้างานขึ้นไป)'): void {
+    if (!hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor'])) {
+        prodJsonError($message, 403);
+    }
+}
+
+/**
+ * Enforces RBAC for printing/managing WIP/FG transfer labels.
+ */
+function requireLabelPrintPermission(): void {
+    if (
+        !hasPermission('print_label')
+        && !hasPermission('add_production')
+        && !hasPermission('manage_production')
+        && !hasRole(['admin', 'creator', 'supervisor'])
+    ) {
+        prodJsonError('คุณไม่มีสิทธิ์สร้างหรือแก้ไขสติ๊กเกอร์แท็ก (ต้องมีสิทธิ์ print_label)', 403);
+    }
+}
+
+/**
+ * Enforces RBAC for confirming/reversing warehouse tag transfers.
+ */
+function requireWarehouseConfirmPermission(): void {
+    if (
+        !hasPermission('manage_warehouse')
+        && !hasPermission('manage_production')
+        && !hasRole(['admin', 'creator', 'supervisor', 'store'])
+    ) {
+        prodJsonError('คุณไม่มีสิทธิ์ยืนยันหรือตีกลับการรับเข้าคลัง (ต้องมีสิทธิ์ manage_warehouse)', 403);
+    }
+}
+
+/**
+ * Enforces RBAC for shipping/scan-sale deductions.
+ */
+function requireShipmentPermission(): void {
+    if (
+        !hasPermission('manage_shipment')
+        && !hasPermission('manage_warehouse')
+        && !hasPermission('manage_production')
+        && !hasRole(['admin', 'creator', 'supervisor', 'store'])
+    ) {
+        prodJsonError('คุณไม่มีสิทธิ์ตัดขาย/ยืนยันการส่งออกสินค้า (ต้องมีสิทธิ์ manage_shipment)', 403);
+    }
+}
+
+/**
+ * Validates mandatory audit reason for transaction reversals.
+ */
+function parseReversalReason($rawReason): string {
+    $reason = trim((string)($rawReason ?? ''));
+    if (mb_strlen($reason) < 5) {
+        throw new InvalidArgumentException('กรุณาระบุเหตุผลการกลับรายการ (Reversal Reason) อย่างน้อย 5 ตัวอักษร');
+    }
+    return mb_substr($reason, 0, 480);
+}
+
+/**
  * Emits standard JSON success response and terminates execution.
  */
 function prodJsonSuccess($data = null, string $message = 'OK', array $extra = []): void {

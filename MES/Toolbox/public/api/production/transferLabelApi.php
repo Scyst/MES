@@ -199,6 +199,7 @@ function handleGetLabelHistory(PDO $pdo, array $input, array $currentUser): void
 }
 
 function handleCreateBatchLabels(PDO $pdo, array $input, array $currentUser): void {
+    requireLabelPrintPermission();
     $parentLot = trim((string)($input['parent_lot'] ?? ''));
     $printCount = (int)($input['print_count'] ?? 1);
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'สินค้า');
@@ -279,6 +280,7 @@ function handleCreateBatchLabels(PDO $pdo, array $input, array $currentUser): vo
 }
 
 function handleCreateSingleTransferOrder(PDO $pdo, array $input, array $currentUser): void {
+    requireLabelPrintPermission();
     $uuid = trim((string)($input['transfer_uuid'] ?? ''));
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'สินค้า');
     $qty = parsePositiveQty($input['quantity'] ?? 0, 'จำนวน');
@@ -407,6 +409,7 @@ function handleGetLabelsByRange(PDO $pdo, array $input): void {
 }
 
 function handleUpdateLabel(PDO $pdo, array $input, array $currentUser): void {
+    requireLabelPrintPermission();
     $uuid = trim((string)($input['transfer_uuid'] ?? ''));
     $itemId = parsePositiveInt($input['item_id'] ?? 0, 'สินค้า');
     $qty = parsePositiveQty($input['quantity'] ?? 0, 'จำนวนบรรจุ');
@@ -446,6 +449,7 @@ function handleUpdateLabel(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleUpdateBatchLabels(PDO $pdo, array $input, array $currentUser): void {
+    requireLabelPrintPermission();
     $lotNo = trim((string)($input['lot_no'] ?? ''));
     $isRange = !empty($input['is_range']);
     $startNo = (int)($input['start_no'] ?? 0);
@@ -498,6 +502,7 @@ function handleUpdateBatchLabels(PDO $pdo, array $input, array $currentUser): vo
 }
 
 function handleCancelLabel(PDO $pdo, array $input, array $currentUser): void {
+    requireLabelPrintPermission();
     $uuid = trim((string)($input['transfer_uuid'] ?? ''));
     if ($uuid === '') throw new InvalidArgumentException('กรุณาระบุ Transfer UUID');
 
@@ -518,6 +523,7 @@ function handleCancelLabel(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleCancelBatchLabels(PDO $pdo, array $input, array $currentUser): void {
+    requireLabelPrintPermission();
     $lotNo = trim((string)($input['lot_no'] ?? ''));
     $isRange = !empty($input['is_range']);
     $startNo = (int)($input['start_no'] ?? 0);
@@ -530,8 +536,10 @@ function handleCancelBatchLabels(PDO $pdo, array $input, array $currentUser): vo
 
     $pdo->beginTransaction();
     try {
-        $sql = "DELETE FROM " . TRANSFER_ORDERS_TABLE . " WHERE status IN ('PENDING', 'CANCELLED') AND transfer_uuid LIKE ?";
-        $params = [$lotNo . '-%'];
+        // Audit Policy: Soft-cancel instead of Hard DELETE
+        $auditNote = "\nBatch cancelled by {$currentUser['username']} at " . date('Y-m-d H:i:s');
+        $sql = "UPDATE " . TRANSFER_ORDERS_TABLE . " SET status = 'CANCELLED', notes = ISNULL(notes, '') + ? WHERE status = 'PENDING' AND transfer_uuid LIKE ?";
+        $params = [$auditNote, $lotNo . '-%'];
         if (!hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor'])) {
             $sql .= " AND created_by_user_id = ?";
             $params[] = (int)$currentUser['id'];
@@ -545,20 +553,10 @@ function handleCancelBatchLabels(PDO $pdo, array $input, array $currentUser): vo
         $stmt->execute($params);
         $affected = $stmt->rowCount();
         if ($affected === 0) {
-            throw new InvalidArgumentException('ไม่พบสติ๊กเกอร์สถานะ PENDING ในช่วงที่ระบุหรือไม่มีสิทธิ์ลบ');
+            throw new InvalidArgumentException('ไม่พบสติ๊กเกอร์สถานะ PENDING ในช่วงที่ระบุหรือไม่มีสิทธิ์ยกเลิก');
         }
 
-        $pdo->prepare("
-            UPDATE " . LOT_SERIALS_TABLE . "
-            SET last_serial = ISNULL((
-                SELECT MAX(TRY_CAST(RIGHT(transfer_uuid, CHARINDEX('-', REVERSE(transfer_uuid)) - 1) AS INT))
-                FROM " . TRANSFER_ORDERS_TABLE . " WITH (NOLOCK)
-                WHERE transfer_uuid LIKE ?
-            ), 0)
-            WHERE parent_lot = ?
-        ")->execute([$lotNo . '-%', $lotNo]);
-
-        writeLog($pdo, 'CANCEL_BATCH_LABELS', 'LABEL_API', $lotNo, ['affected' => $affected], null, 'Batch cancelled pending tags');
+        writeLog($pdo, 'CANCEL_BATCH_LABELS', 'LABEL_API', $lotNo, ['affected' => $affected], ['status' => 'CANCELLED'], 'Batch soft-cancelled pending tags');
         $pdo->commit();
         prodJsonSuccess(['affected' => $affected], "ยกเลิกสติ๊กเกอร์ Lot {$lotNo} จำนวน {$affected} รายการ สำเร็จ");
     } catch (Throwable $e) {
@@ -616,6 +614,7 @@ function executeTransferConfirmationSingle(PDO $pdo, string $uuid, ?float $confi
 }
 
 function handleConfirmTransfer(PDO $pdo, array $input, array $currentUser): void {
+    requireWarehouseConfirmPermission();
     $uuid = extractTransferUuid((string)($input['transfer_uuid'] ?? ''));
     if ($uuid === '') throw new InvalidArgumentException('กรุณาระบุ Transfer UUID');
     $confirmedQty = isset($input['confirmed_quantity']) ? (float)$input['confirmed_quantity'] : null;
@@ -634,6 +633,7 @@ function handleConfirmTransfer(PDO $pdo, array $input, array $currentUser): void
 }
 
 function handleReverseTransfer(PDO $pdo, array $input, array $currentUser): void {
+    requireWarehouseConfirmPermission();
     $uuid = extractTransferUuid((string)($input['transfer_uuid'] ?? ''));
     if ($uuid === '') throw new InvalidArgumentException('กรุณาระบุ Transfer UUID');
 
@@ -670,6 +670,7 @@ function handleReverseTransfer(PDO $pdo, array $input, array $currentUser): void
 }
 
 function handleExecuteScanSale(PDO $pdo, array $input, array $currentUser): void {
+    requireShipmentPermission();
     $uuid = extractTransferUuid((string)($input['transfer_uuid'] ?? ''));
     if ($uuid === '') throw new InvalidArgumentException('กรุณาระบุ Transfer UUID');
 
@@ -748,6 +749,7 @@ function handleGetPendingList(PDO $pdo, array $input, string $status, string $lo
 }
 
 function handleBulkConfirmTransfer(PDO $pdo, array $input, array $currentUser): void {
+    requireWarehouseConfirmPermission();
     $uuids = $input['transfer_uuids'] ?? [];
     if (!is_array($uuids) || empty($uuids)) {
         throw new InvalidArgumentException('กรุณาเลือกรายการอย่างน้อย 1 แท็ก');
@@ -776,6 +778,7 @@ function handleBulkConfirmTransfer(PDO $pdo, array $input, array $currentUser): 
 }
 
 function handleBulkExecuteScanSale(PDO $pdo, array $input, array $currentUser): void {
+    requireShipmentPermission();
     $uuids = $input['transfer_uuids'] ?? [];
     if (!is_array($uuids) || empty($uuids)) {
         throw new InvalidArgumentException('กรุณาเลือกรายการอย่างน้อย 1 แท็ก');

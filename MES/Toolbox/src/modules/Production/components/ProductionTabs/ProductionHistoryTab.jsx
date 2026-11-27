@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2, Clock, Edit3, FileSpreadsheet, PackagePlus, PauseCircle,
-  Plus, RefreshCw, Search, Trash2, X, XCircle, ArrowRightLeft
+  Plus, RefreshCw, RotateCcw, Search, X, XCircle, ArrowRightLeft
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Pagination from '../../../../shared/components/Pagination';
@@ -38,6 +38,11 @@ const TYPE_BADGE = {
   PRODUCTION_FG: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
   PRODUCTION_HOLD: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
   PRODUCTION_SCRAP: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300',
+  REVERSAL_PRODUCTION_FG: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/60 dark:text-fuchsia-300',
+  REVERSAL_PRODUCTION_HOLD: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/60 dark:text-fuchsia-300',
+  REVERSAL_PRODUCTION_SCRAP: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/60 dark:text-fuchsia-300',
+  REVERSAL_RECEIPT: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/60 dark:text-fuchsia-300',
+  REVERSAL_TRANSFER: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/60 dark:text-fuchsia-300',
   RECEIPT: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300',
   TRANSFER: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300',
   INTERNAL_TRANSFER: 'bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300',
@@ -71,6 +76,8 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
   const [prodModalOpen, setProdModalOpen] = useState(false);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [editModalTxn, setEditModalTxn] = useState(null);
+  const [reverseModalTxn, setReverseModalTxn] = useState(null);
+  const [reverseReason, setReverseReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Record Production Form State
@@ -312,22 +319,30 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
     }
   };
 
-  const handleDeleteRow = async (row) => {
+  const handleOpenReverseModal = (row) => {
     if (isOffline) return toast.warning('ขณะนี้อยู่ในโหมด Offline');
-    const ok = await confirm({
-      title: 'ยืนยันการลบรายการผลิต / สต็อก?',
-      message: `ต้องการลบรายการ #${row.transaction_id} (${row.sap_no} • จำนวน ${Number(row.quantity).toLocaleString()}) ใช่หรือไม่?\nระบบจะคำนวณและคืนยอดสต็อก On-Hand อัตโนมัติ`,
-      confirmText: 'ยืนยันการลบ',
-      danger: true,
-    });
-    if (!ok) return;
+    setReverseModalTxn(row);
+    setReverseReason('');
+  };
 
+  const handleSubmitReverse = async (e) => {
+    e.preventDefault();
+    if (!reverseModalTxn || isOffline) return;
+    const trimmed = reverseReason.trim();
+    if (trimmed.length < 5) {
+      return toast.warning('กรุณาระบุเหตุผลการกลับรายการอย่างน้อย 5 ตัวอักษร');
+    }
+    setSubmitting(true);
     try {
-      const res = await productionApi.deleteTransaction(row.transaction_id);
-      toast.success(res?.message || 'ลบรายการเรียบร้อยแล้ว');
+      const res = await productionApi.reverseTransaction(reverseModalTxn.transaction_id, trimmed);
+      toast.success(res?.message || 'กลับรายการผลิตและคืนยอดสต็อกเรียบร้อยแล้ว');
+      setReverseModalTxn(null);
+      setReverseReason('');
       loadData();
     } catch {
       // Handled globally
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -665,8 +680,9 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                 </tr>
               ) : (
                 rows.map((row) => {
-                  const canModify =
-                    canManage || Number(row.created_by_user_id) === Number(metadata?.current_user?.id);
+                  const isReversed = Number(row.is_reversed) === 1;
+                  const isReversalEntry = Boolean(row.reversal_of_tx_id) || String(row.transaction_type || '').startsWith('REVERSAL_');
+                  const canModify = canManage && !isReversed && !isReversalEntry;
                   const teamList = String(row.team_member_names || '')
                     .split(',')
                     .map((s) => s.trim())
@@ -678,28 +694,42 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                   return (
                     <tr
                       key={row.transaction_id}
-                      className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                      className={`transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40 ${
+                        isReversed ? 'opacity-60 bg-slate-50/70 dark:bg-slate-900/60' : ''
+                      }`}
                     >
                       <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                         <div>{String(row.transaction_timestamp || '').replace('T', ' ').slice(0, 16)}</div>
                         <div className="text-[10px] text-slate-400">#{row.transaction_id}</div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                            TYPE_BADGE[row.transaction_type] || 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          {row.transaction_type}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                              TYPE_BADGE[row.transaction_type] || 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {row.transaction_type}
+                          </span>
+                          {isReversed && (
+                            <span
+                              title={row.reversal_reason || 'กลับรายการแล้ว'}
+                              className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+                            >
+                              REVERSED
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-2.5">
-                        <div className="font-bold text-slate-900 dark:text-white">{row.part_no}</div>
+                        <div className={`font-bold text-slate-900 dark:text-white ${isReversed ? 'line-through' : ''}`}>
+                          {row.part_no}
+                        </div>
                         <div className="text-[11px] text-slate-500">
                           {row.sap_no} • {row.part_description || '-'}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono text-sm font-extrabold text-slate-900 dark:text-white">
+                      <td className={`whitespace-nowrap px-3 py-2.5 text-right font-mono text-sm font-extrabold text-slate-900 dark:text-white ${isReversed ? 'line-through' : ''}`}>
                         {Number(row.quantity || 0).toLocaleString()}
                       </td>
                       <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300">
@@ -752,7 +782,8 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                               type="button"
                               disabled={isOffline}
                               onClick={() => openEditModal(row)}
-                              aria-label="แก้ไขรายการ"
+                              title="แก้ไขหมายเหตุ / เลข Lot"
+                              aria-label="แก้ไขหมายเหตุ / เลข Lot"
                               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800 cursor-pointer"
                             >
                               <Edit3 className="h-3.5 w-3.5" />
@@ -760,11 +791,12 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                             <button
                               type="button"
                               disabled={isOffline}
-                              onClick={() => handleDeleteRow(row)}
-                              aria-label="ลบรายการ"
+                              onClick={() => handleOpenReverseModal(row)}
+                              title="กลับรายการ (Reverse)"
+                              aria-label="กลับรายการ (Reverse)"
                               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800 cursor-pointer"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <RotateCcw className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         ) : (
@@ -1219,6 +1251,69 @@ export default function ProductionHistoryTab({ metadata, isOffline }) {
                   className="min-h-[44px] rounded-xl bg-blue-600 px-5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
                 >
                   {submitting ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reverse Transaction Modal (Immutable Ledger) */}
+      {reverseModalTxn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5 text-rose-600" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  กลับรายการผลิต / สต็อก (Reverse)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReverseModalTxn(null)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitReverse} className="space-y-3">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                <div className="font-bold">
+                  รายการ #{reverseModalTxn.transaction_id} • {reverseModalTxn.part_no} ({reverseModalTxn.transaction_type})
+                </div>
+                <div className="mt-1">
+                  จำนวน: <span className="font-mono font-extrabold">{Number(reverseModalTxn.quantity).toLocaleString()}</span> • ระบบจะสร้างรายการกลับยอด (Reversal) และคืนสต็อก RM/FG อัตโนมัติโดยไม่ลบประวัติเดิม
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  เหตุผลการกลับรายการ (อย่างน้อย 5 ตัวอักษร) <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  minLength={5}
+                  value={reverseReason}
+                  onChange={(e) => setReverseReason(e.target.value)}
+                  placeholder="ระบุเหตุผล เช่น คีย์จำนวนผิดจาก 100 เป็น 1000 หรือเลือกไลน์ผลิตผิด..."
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setReverseModalTxn(null)}
+                  className="min-h-[44px] rounded-xl border border-slate-300 px-4 text-xs font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || reverseReason.trim().length < 5}
+                  className="min-h-[44px] rounded-xl bg-rose-600 px-5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
+                >
+                  {submitting ? 'กำลังกลับรายการ...' : 'ยืนยันกลับรายการ (Reverse)'}
                 </button>
               </div>
             </form>

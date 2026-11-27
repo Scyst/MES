@@ -87,7 +87,8 @@ try {
     $sqlInv = "
         SELECT i.item_id, i.sap_no, i.part_description, ISNULL(SUM(inv.quantity), 0) as onhand_qty
         FROM {$table_items} i WITH (NOLOCK)
-        LEFT JOIN {$table_inv} inv WITH (NOLOCK) ON i.item_id = inv.parameter_id 
+        LEFT JOIN {$table_inv} inv WITH (NOLOCK) ON i.item_id = inv.parameter_id
+            AND ISNULL(inv.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
             AND inv.location_id IN (SELECT location_id FROM {$table_loc} WITH (NOLOCK) WHERE location_type = 'STORE')
         WHERE (i.sap_no LIKE '10%' OR i.sap_no LIKE '20%')
         GROUP BY i.item_id, i.sap_no, i.part_description

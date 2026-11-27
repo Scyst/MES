@@ -52,7 +52,7 @@ function getSystemInitialData($pdo, $date, $shift) {
                     COALESCE(I.part_no, 'Unknown') as model,
                     I.sap_no,
                     (P.original_planned_quantity + P.carry_over_quantity) as plan_qty,
-                    ISNULL((SELECT SUM(quantity) FROM $onhandTable O WHERE O.parameter_id = P.item_id), 0) as current_stock
+                    ISNULL((SELECT SUM(quantity) FROM $onhandTable O WHERE O.parameter_id = P.item_id AND ISNULL(O.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'), 0) as current_stock
                 FROM $planTable P
                 LEFT JOIN $itemTable I ON P.item_id = I.item_id
                 WHERE P.plan_date = ? AND ($shiftCondition)";

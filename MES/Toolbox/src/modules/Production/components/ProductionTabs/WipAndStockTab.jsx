@@ -6,6 +6,21 @@ import Pagination from '../../../../shared/components/Pagination';
 import { productionApi } from '../../../../shared/services/productionApi';
 import { useToast } from '../../../../shared/contexts/FeedbackContext';
 
+const STOCK_TYPE_BADGE = {
+  UNRESTRICTED: {
+    label: 'Unrestricted (ดี)',
+    cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
+  },
+  QUALITY_INSPECTION: {
+    label: 'QI Hold (รอตรวจ)',
+    cls: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+  },
+  BLOCKED_SCRAP: {
+    label: 'Blocked (ของเสีย)',
+    cls: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300',
+  },
+};
+
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -274,6 +289,7 @@ export default function WipAndStockTab({ metadata, isOffline }) {
               <thead className="bg-slate-50 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <tr>
                   <th className="px-3 py-3">สถานที่</th>
+                  <th className="px-3 py-3">ถังสต็อก</th>
                   <th className="px-3 py-3">SAP No</th>
                   <th className="px-3 py-3">Part No</th>
                   <th className="px-3 py-3">รายละเอียด</th>
@@ -284,14 +300,21 @@ export default function WipAndStockTab({ metadata, isOffline }) {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={canViewCost ? 6 : 5} className="py-10 text-center text-slate-500">
+                    <td colSpan={canViewCost ? 7 : 6} className="py-10 text-center text-slate-500">
                       {loading ? 'กำลังโหลด...' : 'ไม่พบข้อมูล WIP On-Hand'}
                     </td>
                   </tr>
                 ) : (
-                  rows.map((r) => (
-                    <tr key={`${r.onhand_id}-${r.location_id}-${r.item_id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  rows.map((r) => {
+                    const stMeta = STOCK_TYPE_BADGE[r.stock_type] || STOCK_TYPE_BADGE.UNRESTRICTED;
+                    return (
+                    <tr key={`${r.onhand_id}-${r.location_id}-${r.item_id}-${r.stock_type || 'U'}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                       <td className="px-3 py-2.5 font-semibold">{r.location_name}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${stMeta.cls}`}>
+                          {stMeta.label}
+                        </span>
+                      </td>
                       <td className="px-3 py-2.5 font-mono">{r.sap_no}</td>
                       <td className="px-3 py-2.5 font-bold">{r.part_no}</td>
                       <td className="px-3 py-2.5 text-slate-500">{r.part_description}</td>
@@ -304,7 +327,8 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                         </td>
                       )}
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -409,7 +433,9 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                   <th className="px-3 py-3">SAP No</th>
                   <th className="px-3 py-3">Part No / รายละเอียด</th>
                   <th className="px-3 py-3">ประเภท</th>
-                  <th className="px-3 py-3 text-right">คงเหลือรวม</th>
+                  <th className="px-3 py-3 text-right text-emerald-700 dark:text-emerald-400">Unrestricted (ดี)</th>
+                  <th className="px-3 py-3 text-right text-amber-700 dark:text-amber-400">QI Hold</th>
+                  <th className="px-3 py-3 text-right text-rose-700 dark:text-rose-400">Blocked Scrap</th>
                   {canViewCost && <th className="px-3 py-3 text-right">มูลค่ารวม (฿)</th>}
                   <th className="px-3 py-3 text-center">แยกตามคลัง</th>
                 </tr>
@@ -417,7 +443,7 @@ export default function WipAndStockTab({ metadata, isOffline }) {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={canViewCost ? 6 : 5} className="py-10 text-center text-slate-500">ไม่พบข้อมูลสินค้าคงคลัง</td>
+                    <td colSpan={canViewCost ? 8 : 7} className="py-10 text-center text-slate-500">ไม่พบข้อมูลสินค้าคงคลัง</td>
                   </tr>
                 ) : (
                   rows.map((r) => (
@@ -430,6 +456,12 @@ export default function WipAndStockTab({ metadata, isOffline }) {
                       <td className="px-3 py-2.5">{r.material_type || '-'}</td>
                       <td className="px-3 py-2.5 text-right font-mono font-extrabold text-blue-700 dark:text-blue-300">
                         {Number(r.total_onhand || 0).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono text-amber-600 dark:text-amber-400">
+                        {Number(r.total_qi_hold || 0).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono text-rose-600 dark:text-rose-400">
+                        {Number(r.total_blocked_scrap || 0).toLocaleString()}
                       </td>
                       {canViewCost && (
                         <td className="px-3 py-2.5 text-right font-mono">

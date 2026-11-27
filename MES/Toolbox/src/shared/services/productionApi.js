@@ -39,8 +39,21 @@ export const productionApi = {
   updateTransaction: (payload) =>
     apiPost(PROD_URL, { action: 'update_transaction', ...payload }),
 
-  deleteTransaction: (transactionId, jobId = null) =>
-    apiPost(PROD_URL, { action: 'delete_transaction', transaction_id: transactionId, job_id: jobId }),
+  reverseTransaction: (transactionId, reason, jobId = null) =>
+    apiPost(PROD_URL, {
+      action: 'reverse_transaction',
+      transaction_id: transactionId,
+      reason,
+      job_id: jobId,
+    }),
+
+  deleteTransaction: (transactionId, jobId = null, reason = '') =>
+    apiPost(PROD_URL, {
+      action: 'reverse_transaction',
+      transaction_id: transactionId,
+      job_id: jobId,
+      reason,
+    }),
 
   getWipOnhandReport: (params = {}) =>
     apiGet(PROD_URL, { action: 'get_wip_onhand_report', ...params }),
@@ -97,8 +110,11 @@ export const productionApi = {
   recordJobOutput: (payload) =>
     apiPost(JOB_URL, { action: 'record_output', ...payload }),
 
-  deleteJobTxn: (txnId, jobId = null) =>
-    apiPost(JOB_URL, { action: 'delete_txn', txn_id: txnId, job_id: jobId }),
+  reverseJobTxn: (txnId, jobId = null, reason = '') =>
+    apiPost(JOB_URL, { action: 'reverse_txn', txn_id: txnId, job_id: jobId, reason }),
+
+  deleteJobTxn: (txnId, jobId = null, reason = '') =>
+    apiPost(JOB_URL, { action: 'reverse_txn', txn_id: txnId, job_id: jobId, reason }),
 
   closeJob: (jobId) =>
     apiPost(JOB_URL, { action: 'close_job', job_id: jobId }),

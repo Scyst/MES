@@ -860,7 +860,7 @@ function queryInventoryHealthReport(?string $materialType = 'ALL', int $limitTop
         ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as total_inventory_value_thb
         FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
         JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
-        WHERE o.quantity > 0";
+        WHERE o.quantity > 0 AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'";
     $stmtSummary = $pdo->query($summarySql);
     $summary = $stmtSummary->fetch() ?: [];
     $totalVal = (float)($summary['total_inventory_value_thb'] ?? 0);
@@ -872,7 +872,7 @@ function queryInventoryHealthReport(?string $materialType = 'ALL', int $limitTop
         ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as total_value_thb
         FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
         JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
-        WHERE o.quantity > 0
+        WHERE o.quantity > 0 AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
         GROUP BY ISNULL(i.material_type, 'OTHER')
         ORDER BY total_value_thb DESC";
     $stmtCat = $pdo->query($catSql);
@@ -897,7 +897,7 @@ function queryInventoryHealthReport(?string $materialType = 'ALL', int $limitTop
         SUM(o.quantity * ISNULL(i.StandardPrice, 0)) as tied_up_value_thb
         FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
         JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
-        WHERE o.quantity > 0";
+        WHERE o.quantity > 0 AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'";
     $topParams = [];
     if (!empty($materialType) && $materialType !== 'ALL') {
         $topSql .= " AND i.material_type = ?";
@@ -927,7 +927,7 @@ function queryInventoryHealthReport(?string $materialType = 'ALL', int $limitTop
         FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK)
         LEFT JOIN dbo.LOCATIONS l WITH (NOLOCK) ON o.location_id = l.location_id
         JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id
-        WHERE o.quantity > 0
+        WHERE o.quantity > 0 AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
         GROUP BY l.location_type
         ORDER BY total_val DESC";
     $stmtLoc = $pdo->query($locSql);
@@ -1132,7 +1132,7 @@ function queryProactiveRedFlags(): array {
     }
 
     // 4. Assembly FG Storage Accumulation
-    $stmtFG = $pdo->query("SELECT ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as fg_val FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id WHERE o.location_id = 1 AND o.quantity > 0");
+    $stmtFG = $pdo->query("SELECT ISNULL(SUM(o.quantity * ISNULL(i.StandardPrice, 0)), 0) as fg_val FROM dbo.INVENTORY_ONHAND o WITH (NOLOCK) JOIN dbo.ITEMS i WITH (NOLOCK) ON o.parameter_id = i.item_id WHERE o.location_id = 1 AND o.quantity > 0 AND ISNULL(o.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
     $fgVal = (float)(($stmtFG->fetch() ?: [])['fg_val'] ?? 0);
     if ($fgVal >= 500000000) {
         $fgM = round($fgVal / 1000000, 1);

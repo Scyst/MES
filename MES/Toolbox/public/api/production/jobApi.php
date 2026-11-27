@@ -42,6 +42,7 @@ try {
             handleRecordJobOutput($pdo, $input, $currentUser);
             break;
 
+        case 'reverse_txn':
         case 'delete_txn':
             handleDeleteJobTxn($pdo, $input, $currentUser);
             break;
@@ -300,33 +301,40 @@ function inspectSapBomShortages(PDO $pdo, int $itemId, float $targetQty): array 
 }
 
 function handleStartJob(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionEntryPermission();
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
     $ignoreSapWarning = !empty($input['ignore_sap_warning']);
-
-    $stmt = $pdo->prepare("SELECT job_id, job_no, item_id, target_qty, actual_qty, status FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $job = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$job) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-    if (!in_array($job['status'], ['PENDING', 'PAUSED'], true)) {
-        prodJsonError("ไม่สามารถเริ่มงานจากสถานะ {$job['status']} ได้", 400);
-    }
-
-    if (!$ignoreSapWarning && $job['status'] === 'PENDING') {
-        $remainingTarget = max(0.0, (float)$job['target_qty'] - (float)$job['actual_qty']);
-        $shortages = inspectSapBomShortages($pdo, (int)$job['item_id'], $remainingTarget > 0 ? $remainingTarget : (float)$job['target_qty']);
-        if (!empty($shortages)) {
-            prodJsonSuccess([
-                'started' => false,
-                'sap_warning' => true,
-                'shortages' => $shortages,
-            ], 'พบรายการวัตถุดิบในคลัง SAP ไม่เพียงพอตามสูตร BOM');
-        }
+    if ($ignoreSapWarning) {
+        requireProductionManagePermission('การข้ามคำเตือนวัตถุดิบ SAP ไม่เพียงพอ ต้องได้รับอนุมัติจากหัวหน้างาน (manage_production)');
     }
 
     $pdo->beginTransaction();
     try {
+        $stmt = $pdo->prepare("SELECT job_id, job_no, item_id, target_qty, actual_qty, status FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
+        }
+        if (!in_array($job['status'], ['PENDING', 'PAUSED'], true)) {
+            $pdo->rollBack();
+            prodJsonError("ไม่สามารถเริ่มงานจากสถานะ {$job['status']} ได้", 400);
+        }
+
+        if (!$ignoreSapWarning && $job['status'] === 'PENDING') {
+            $remainingTarget = max(0.0, (float)$job['target_qty'] - (float)$job['actual_qty']);
+            $shortages = inspectSapBomShortages($pdo, (int)$job['item_id'], $remainingTarget > 0 ? $remainingTarget : (float)$job['target_qty']);
+            if (!empty($shortages)) {
+                $pdo->rollBack();
+                prodJsonSuccess([
+                    'started' => false,
+                    'sap_warning' => true,
+                    'shortages' => $shortages,
+                ], 'พบรายการวัตถุดิบในคลัง SAP ไม่เพียงพอตามสูตร BOM');
+            }
+        }
+
         $upd = $pdo->prepare("
             UPDATE dbo.PRODUCTION_JOBS
             SET status = 'RUNNING',
@@ -334,7 +342,10 @@ function handleStartJob(PDO $pdo, array $input, array $currentUser): void {
             WHERE job_id = ?
         ");
         $upd->execute([$jobId]);
-        writeLog($pdo, 'START_JOB', 'JOB_API', (string)$jobId, $job, ['status' => 'RUNNING'], 'Started production job');
+        writeLog($pdo, 'START_JOB', 'JOB_API', (string)$jobId, $job, [
+            'status' => 'RUNNING',
+            'sap_warning_overridden' => $ignoreSapWarning,
+        ], 'Started production job');
         $pdo->commit();
         prodJsonSuccess(['started' => true, 'job_id' => $jobId, 'status' => 'RUNNING'], "เริ่มผลิตใบงาน {$job['job_no']} แล้ว");
     } catch (Throwable $e) {
@@ -344,19 +355,23 @@ function handleStartJob(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handlePauseJob(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionEntryPermission();
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
-    $stmt = $pdo->prepare("SELECT job_id, job_no, status, start_time, total_running_minutes FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $job = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$job) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-    if ($job['status'] !== 'RUNNING') {
-        prodJsonError("สามารถหยุดพักได้เฉพาะงานที่กำลังทำงาน (RUNNING) เท่านั้น สถานะปัจจุบัน: {$job['status']}", 400);
-    }
 
     $pdo->beginTransaction();
     try {
+        $stmt = $pdo->prepare("SELECT job_id, job_no, status, start_time, total_running_minutes FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
+        }
+        if ($job['status'] !== 'RUNNING') {
+            $pdo->rollBack();
+            prodJsonError("สามารถหยุดพักได้เฉพาะงานที่กำลังทำงาน (RUNNING) เท่านั้น สถานะปัจจุบัน: {$job['status']}", 400);
+        }
+
         $upd = $pdo->prepare("
             UPDATE dbo.PRODUCTION_JOBS
             SET status = 'PAUSED',
@@ -375,16 +390,8 @@ function handlePauseJob(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleRecordJobOutput(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionEntryPermission();
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
-    $stmt = $pdo->prepare("SELECT job_id, job_no, location_id, item_id, status, lot_no, actual_qty, hold_qty, scrap_qty FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $job = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$job) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-    if ($job['status'] !== 'RUNNING') {
-        prodJsonError("ไม่สามารถบันทึกผลผลิตได้ เนื่องจากใบงานอยู่ในสถานะ {$job['status']} (ต้องกด Start ก่อน)", 400);
-    }
 
     $fgQty = max(0.0, (float)($input['actual_qty'] ?? $input['fg_qty'] ?? 0));
     $holdQty = max(0.0, (float)($input['hold_qty'] ?? 0));
@@ -406,119 +413,157 @@ function handleRecordJobOutput(PDO $pdo, array $input, array $currentUser): void
     if ($holdQty > 0) $batches[] = ['type' => 'HOLD', 'qty' => parsePositiveQty($holdQty, 'ยอด Hold')];
     if ($scrapQty > 0) $batches[] = ['type' => 'SCRAP', 'qty' => parsePositiveQty($scrapQty, 'ยอด Scrap')];
 
-    $spStmt = $pdo->prepare(
-        "EXEC " . SP_EXECUTE_PRODUCTION . "
-            @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
-            @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
-            @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?"
-    );
-
-    $createdTxns = [];
-    $reqUuids = [];
-    foreach ($batches as $batch) {
-        $note = "Output [Job: {$job['job_no']}]";
-        if ($batch['type'] === 'SCRAP' && $scrapReason !== '') {
-            $note .= " | Reason: {$scrapReason}";
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("SELECT job_id, job_no, location_id, item_id, status, lot_no, actual_qty, hold_qty, scrap_qty FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
         }
-        $spStmt->execute([
-            (int)$job['item_id'],
-            (int)$job['location_id'],
-            $batch['qty'],
-            $batch['type'],
-            (string)($job['lot_no'] ?? $job['job_no']),
-            mb_substr($note, 0, 490),
-            $timestamp,
-            $startTime,
-            $endTime,
-            (int)$currentUser['id'],
-            $currentUser['username'],
-            $machineId,
-            $teamCsv,
-        ]);
-        $spStmt->closeCursor();
+        if ($job['status'] !== 'RUNNING') {
+            $pdo->rollBack();
+            prodJsonError("ไม่สามารถบันทึกผลผลิตได้ เนื่องจากใบงานอยู่ในสถานะ {$job['status']} (ต้องกด Start ก่อน)", 400);
+        }
 
-        $findIdStmt = $pdo->prepare(
-            "SELECT TOP 1 transaction_id FROM " . TRANSACTIONS_TABLE . " WITH (NOLOCK)
-             WHERE parameter_id = ? AND to_location_id = ? AND created_by_user_id = ?
-             ORDER BY transaction_id DESC"
+        $spStmt = $pdo->prepare(
+            "EXEC " . SP_EXECUTE_PRODUCTION . "
+                @item_id = ?, @location_id = ?, @quantity = ?, @count_type = ?,
+                @lot_no = ?, @notes = ?, @timestamp = ?, @start_time = ?, @end_time = ?,
+                @user_id = ?, @username = ?, @machine_id = ?, @team_user_ids = ?, @job_id = ?"
         );
-        $findIdStmt->execute([(int)$job['item_id'], (int)$job['location_id'], (int)$currentUser['id']]);
-        $txnId = (int)$findIdStmt->fetchColumn();
-        if ($txnId > 0) {
-            $createdTxns[] = $txnId;
-        }
 
-        if ($batch['type'] === 'SCRAP') {
-            $createdReqs = buildScrapRequisition(
-                $pdo,
+        $createdTxns = [];
+        $reqUuids = [];
+        foreach ($batches as $batch) {
+            $note = "Output [Job: {$job['job_no']}]";
+            if ($batch['type'] === 'SCRAP' && $scrapReason !== '') {
+                $note .= " | Reason: {$scrapReason}";
+            }
+            $spStmt->execute([
                 (int)$job['item_id'],
-                $batch['qty'],
                 (int)$job['location_id'],
+                $batch['qty'],
+                $batch['type'],
+                (string)($job['lot_no'] ?? $job['job_no']),
+                mb_substr($note, 0, 490),
+                $timestamp,
+                $startTime,
+                $endTime,
                 (int)$currentUser['id'],
-                "Replacement: Job {$job['job_no']} " . $scrapReason,
-                $txnId ?: null
-            );
-            $reqUuids = array_merge($reqUuids, $createdReqs);
+                $currentUser['username'],
+                $machineId,
+                $teamCsv,
+                $jobId,
+            ]);
+            $txnId = (int)$spStmt->fetchColumn();
+            $spStmt->closeCursor();
+
+            if ($txnId > 0) {
+                $createdTxns[] = $txnId;
+            }
+
+            if ($batch['type'] === 'SCRAP') {
+                $createdReqs = buildScrapRequisition(
+                    $pdo,
+                    (int)$job['item_id'],
+                    $batch['qty'],
+                    (int)$job['location_id'],
+                    (int)$currentUser['id'],
+                    "Replacement: Job {$job['job_no']} " . $scrapReason,
+                    $txnId ?: null
+                );
+                $reqUuids = array_merge($reqUuids, $createdReqs);
+            }
         }
+
+        $updJob = $pdo->prepare("
+            UPDATE dbo.PRODUCTION_JOBS
+            SET actual_qty = ISNULL(actual_qty, 0) + ?,
+                hold_qty = ISNULL(hold_qty, 0) + ?,
+                scrap_qty = ISNULL(scrap_qty, 0) + ?
+            WHERE job_id = ?
+        ");
+        $updJob->execute([$fgQty, $holdQty, $scrapQty, $jobId]);
+
+        writeLog($pdo, 'RECORD_JOB_OUTPUT', 'JOB_API', (string)$jobId, $job, [
+            'fg_added' => $fgQty, 'hold_added' => $holdQty, 'scrap_added' => $scrapQty,
+            'machine_id' => $machineId, 'txns' => $createdTxns,
+        ], "Recorded output for {$job['job_no']}");
+
+        $pdo->commit();
+        prodJsonSuccess([
+            'job_id' => $jobId,
+            'transaction_ids' => $createdTxns,
+            'req_uuids' => $reqUuids,
+        ], "บันทึกยอดผลิตใบงาน {$job['job_no']} สำเร็จ");
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
     }
-
-    $updJob = $pdo->prepare("
-        UPDATE dbo.PRODUCTION_JOBS
-        SET actual_qty = ISNULL(actual_qty, 0) + ?,
-            hold_qty = ISNULL(hold_qty, 0) + ?,
-            scrap_qty = ISNULL(scrap_qty, 0) + ?
-        WHERE job_id = ?
-    ");
-    $updJob->execute([$fgQty, $holdQty, $scrapQty, $jobId]);
-
-    writeLog($pdo, 'RECORD_JOB_OUTPUT', 'JOB_API', (string)$jobId, $job, [
-        'fg_added' => $fgQty, 'hold_added' => $holdQty, 'scrap_added' => $scrapQty, 'txns' => $createdTxns
-    ], "Recorded output for {$job['job_no']}");
-
-    prodJsonSuccess([
-        'job_id' => $jobId,
-        'transaction_ids' => $createdTxns,
-        'req_uuids' => $reqUuids,
-    ], "บันทึกยอดผลิตใบงาน {$job['job_no']} สำเร็จ");
 }
 
 function handleDeleteJobTxn(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionManagePermission('คุณไม่มีสิทธิ์กลับรายการยอดผลิต ต้องให้หัวหน้างานหรือผู้ดูแลระบบดำเนินการ');
     $txnId = parsePositiveInt($input['txn_id'] ?? $input['transaction_id'] ?? 0, 'Transaction ID');
     $jobId = !empty($input['job_id']) ? (int)$input['job_id'] : null;
-
-    $oldStmt = $pdo->prepare("SELECT transaction_id, parameter_id, quantity, transaction_type, created_by_user_id FROM " . TRANSACTIONS_TABLE . " WITH (NOLOCK) WHERE transaction_id = ?");
-    $oldStmt->execute([$txnId]);
-    $oldTxn = $oldStmt->fetch(PDO::FETCH_ASSOC);
-    if (!$oldTxn) {
-        prodJsonError('ไม่พบรายการผลิตที่ต้องการลบ', 404);
-    }
-
-    if (!hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor']) && (int)$oldTxn['created_by_user_id'] !== (int)$currentUser['id']) {
-        prodJsonError('คุณไม่มีสิทธิ์ลบรายการที่ผู้อื่นเป็นผู้บันทึก', 403);
-    }
-
-    $sp = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-    $sp->execute([$txnId, $jobId, (int)$currentUser['id']]);
-    $sp->closeCursor();
-
-    writeLog($pdo, 'DELETE_JOB_TXN', 'JOB_API', (string)$txnId, $oldTxn, null, "Deleted job transaction");
-    prodJsonSuccess(['txn_id' => $txnId, 'job_id' => $jobId], 'ลบยอดผลิตและคืนสต็อกเรียบร้อยแล้ว');
-}
-
-function handleCloseJob(PDO $pdo, array $input, array $currentUser): void {
-    $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
-    $stmt = $pdo->prepare("SELECT job_id, job_no, status, start_time FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $job = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$job) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-    if (!in_array($job['status'], ['RUNNING', 'PAUSED'], true)) {
-        prodJsonError("ไม่สามารถปิดงานจากสถานะ {$job['status']} ได้", 400);
-    }
+    $reason = parseReversalReason($input['reason'] ?? $input['reversal_reason'] ?? '');
 
     $pdo->beginTransaction();
     try {
+        $oldStmt = $pdo->prepare("SELECT transaction_id, parameter_id, quantity, transaction_type, created_by_user_id, ISNULL(is_reversed, 0) AS is_reversed FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK, HOLDLOCK) WHERE transaction_id = ?");
+        $oldStmt->execute([$txnId]);
+        $oldTxn = $oldStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$oldTxn) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบรายการผลิตที่ต้องการกลับรายการ', 404);
+        }
+        if ((int)$oldTxn['is_reversed'] === 1) {
+            $pdo->rollBack();
+            prodJsonError('รายการนี้ถูกกลับรายการไปแล้ว', 400);
+        }
+
+        $sp = $pdo->prepare("EXEC dbo.sp_ReverseProductionTransaction @txn_id = ?, @job_id = ?, @user_id = ?, @reason = ?");
+        $sp->execute([$txnId, $jobId, (int)$currentUser['id'], $reason]);
+        $revTxnId = (int)$sp->fetchColumn();
+        $sp->closeCursor();
+
+        writeLog($pdo, 'REVERSE_JOB_TXN', 'JOB_API', (string)$txnId, $oldTxn, [
+            'reversal_transaction_id' => $revTxnId,
+            'reason' => $reason,
+        ], 'Reversed job transaction');
+
+        $pdo->commit();
+        prodJsonSuccess([
+            'txn_id' => $txnId,
+            'reversal_transaction_id' => $revTxnId,
+            'job_id' => $jobId,
+        ], 'กลับรายการยอดผลิตและคืนสต็อกเรียบร้อยแล้ว');
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function handleCloseJob(PDO $pdo, array $input, array $currentUser): void {
+    requireProductionEntryPermission();
+    $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
+
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("SELECT job_id, job_no, status, start_time FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
+        }
+        if (!in_array($job['status'], ['RUNNING', 'PAUSED'], true)) {
+            $pdo->rollBack();
+            prodJsonError("ไม่สามารถปิดงานจากสถานะ {$job['status']} ได้", 400);
+        }
+
         $upd = $pdo->prepare("
             UPDATE dbo.PRODUCTION_JOBS
             SET status = 'COMPLETED',
@@ -542,18 +587,20 @@ function handleEditJob(PDO $pdo, array $input, array $currentUser): void {
     $targetQty = parsePositiveQty($input['target_qty'] ?? 0, 'เป้าหมายผลิต');
     $lotNo = trim((string)($input['lot_no'] ?? ''));
 
-    $stmt = $pdo->prepare("SELECT job_id, job_no, target_qty, lot_no, status, created_by FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $oldJob = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$oldJob) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-    if (in_array($oldJob['status'], ['COMPLETED', 'CANCELLED'], true)) {
-        prodJsonError('ไม่สามารถแก้ไขใบงานที่ปิดแล้วได้', 400);
-    }
-
     $pdo->beginTransaction();
     try {
+        $stmt = $pdo->prepare("SELECT job_id, job_no, target_qty, lot_no, status, created_by FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $oldJob = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$oldJob) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
+        }
+        if (in_array($oldJob['status'], ['COMPLETED', 'CANCELLED'], true)) {
+            $pdo->rollBack();
+            prodJsonError('ไม่สามารถแก้ไขใบงานที่ปิดแล้วได้', 400);
+        }
+
         $upd = $pdo->prepare("UPDATE dbo.PRODUCTION_JOBS SET target_qty = ?, lot_no = ? WHERE job_id = ?");
         $upd->execute([$targetQty, $lotNo !== '' ? $lotNo : null, $jobId]);
         writeLog($pdo, 'EDIT_JOB', 'JOB_API', (string)$jobId, $oldJob, ['target_qty' => $targetQty, 'lot_no' => $lotNo], "Edited job {$oldJob['job_no']}");
@@ -568,26 +615,26 @@ function handleEditJob(PDO $pdo, array $input, array $currentUser): void {
 function handleDeleteJob(PDO $pdo, array $input, array $currentUser): void {
     requireJobManagePermission();
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
-    $stmt = $pdo->prepare("SELECT job_id, job_no, status, actual_qty, hold_qty, scrap_qty FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $job = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$job) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-
-    $hasOutput = ((float)$job['actual_qty'] > 0 || (float)$job['hold_qty'] > 0 || (float)$job['scrap_qty'] > 0);
-    if ($hasOutput && !hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor'])) {
-        prodJsonError('ใบงานนี้มีการบันทึกยอดผลิตแล้ว ต้องให้ผู้ดูแลระบบหรือหัวหน้างานเป็นผู้ยกเลิก', 403);
-    }
 
     $pdo->beginTransaction();
     try {
-        if ($job['status'] === 'PENDING' && !$hasOutput) {
-            $pdo->prepare("DELETE FROM dbo.PRODUCTION_JOBS WHERE job_id = ?")->execute([$jobId]);
-        } else {
-            $pdo->prepare("UPDATE dbo.PRODUCTION_JOBS SET status = 'CANCELLED', end_time = GETDATE() WHERE job_id = ?")->execute([$jobId]);
+        $stmt = $pdo->prepare("SELECT job_id, job_no, status, actual_qty, hold_qty, scrap_qty, start_time FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
         }
-        writeLog($pdo, 'CANCEL_JOB', 'JOB_API', (string)$jobId, $job, ['status' => 'CANCELLED'], "Cancelled/Deleted job {$job['job_no']}");
+
+        $hasOutput = ((float)$job['actual_qty'] > 0 || (float)$job['hold_qty'] > 0 || (float)$job['scrap_qty'] > 0);
+        if ($hasOutput && !hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor'])) {
+            $pdo->rollBack();
+            prodJsonError('ใบงานนี้มีการบันทึกยอดผลิตแล้ว ต้องให้ผู้ดูแลระบบหรือหัวหน้างานเป็นผู้ยกเลิก', 403);
+        }
+
+        // Audit Policy: Never hard-delete production jobs; always transition to CANCELLED
+        $pdo->prepare("UPDATE dbo.PRODUCTION_JOBS SET status = 'CANCELLED', end_time = GETDATE() WHERE job_id = ?")->execute([$jobId]);
+        writeLog($pdo, 'CANCEL_JOB', 'JOB_API', (string)$jobId, $job, ['status' => 'CANCELLED'], "Cancelled job {$job['job_no']}");
         $pdo->commit();
         prodJsonSuccess(['job_id' => $jobId], "ยกเลิกใบงาน {$job['job_no']} เรียบร้อยแล้ว");
     } catch (Throwable $e) {
@@ -597,23 +644,24 @@ function handleDeleteJob(PDO $pdo, array $input, array $currentUser): void {
 }
 
 function handleReopenJob(PDO $pdo, array $input, array $currentUser): void {
-    if (!hasPermission('manage_production') && !hasRole(['admin', 'creator', 'supervisor'])) {
-        prodJsonError('คุณไม่มีสิทธิ์เปิดงานที่ปิดแล้วใหม่ (ต้องมีสิทธิ์ manage_production)', 403);
-    }
+    requireProductionManagePermission('คุณไม่มีสิทธิ์เปิดงานที่ปิดแล้วใหม่ (ต้องมีสิทธิ์ manage_production)');
 
     $jobId = parsePositiveInt($input['job_id'] ?? 0, 'Job ID');
-    $stmt = $pdo->prepare("SELECT job_id, job_no, status FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK) WHERE job_id = ?");
-    $stmt->execute([$jobId]);
-    $job = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$job) {
-        prodJsonError('ไม่พบใบงานที่ระบุ', 404);
-    }
-    if (!in_array($job['status'], ['COMPLETED', 'CANCELLED'], true)) {
-        prodJsonError("ใบงานอยู่ในสถานะ {$job['status']} ไม่จำเป็นต้อง Reopen", 400);
-    }
 
     $pdo->beginTransaction();
     try {
+        $stmt = $pdo->prepare("SELECT job_id, job_no, status FROM dbo.PRODUCTION_JOBS WITH (UPDLOCK, HOLDLOCK) WHERE job_id = ?");
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            $pdo->rollBack();
+            prodJsonError('ไม่พบใบงานที่ระบุ', 404);
+        }
+        if (!in_array($job['status'], ['COMPLETED', 'CANCELLED'], true)) {
+            $pdo->rollBack();
+            prodJsonError("ใบงานอยู่ในสถานะ {$job['status']} ไม่จำเป็นต้อง Reopen", 400);
+        }
+
         $pdo->prepare("UPDATE dbo.PRODUCTION_JOBS SET status = 'PAUSED', end_time = NULL WHERE job_id = ?")->execute([$jobId]);
         writeLog($pdo, 'REOPEN_JOB', 'JOB_API', (string)$jobId, $job, ['status' => 'PAUSED'], "Reopened job {$job['job_no']}");
         $pdo->commit();
@@ -658,6 +706,9 @@ function handleGetJobLogs(PDO $pdo, array $input): void {
     $stmt = $pdo->prepare("
         SELECT TOP 200
             t.transaction_id, t.transaction_type, t.quantity, t.transaction_timestamp,
+            ISNULL(t.stock_type, 'UNRESTRICTED') AS stock_type,
+            ISNULL(t.is_reversed, 0) AS is_reversed,
+            t.reversal_of_tx_id, t.reversal_reason,
             t.start_time, t.end_time, t.reference_id, t.notes, t.created_by_user_id,
             COALESCE(NULLIF(u.fullname, ''), u.username) AS created_by_name,
             STUFF((
@@ -669,7 +720,7 @@ function handleGetJobLogs(PDO $pdo, array $input): void {
             ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS team_member_names
         FROM " . TRANSACTIONS_TABLE . " t WITH (NOLOCK)
         LEFT JOIN " . USERS_TABLE . " u WITH (NOLOCK) ON t.created_by_user_id = u.id
-        WHERE t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP')
+        WHERE (t.transaction_type IN ('PRODUCTION_FG', 'PRODUCTION_HOLD', 'PRODUCTION_SCRAP') OR t.transaction_type LIKE 'REVERSAL_PRODUCTION_%')
           AND (t.reference_id = ? OR t.notes LIKE ?)
         ORDER BY t.transaction_timestamp DESC, t.transaction_id DESC
     ");

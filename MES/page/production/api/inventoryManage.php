@@ -73,6 +73,12 @@ try {
             break;
 
         case 'execute_receipt':
+            if (!hasPermission('manage_production') && !hasPermission('manage_warehouse') && !in_array($currentUser['role'] ?? '', ['admin', 'creator', 'supervisor', 'planner', 'store'], true)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized: ต้องมีสิทธิ์ manage_production หรือ manage_warehouse']);
+                exit;
+            }
+            header('X-Deprecated-API: Use Toolbox productionApi.php');
             $item_id = $input['item_id'] ?? 0;
             $to_location_id = $input['to_location_id'] ?? 0;
             $from_location_id = $input['from_location_id'] ?? 0;
@@ -1123,92 +1129,54 @@ try {
             break;
 
         case 'delete_transaction':
-             $pdo->beginTransaction();
+            if (!hasPermission('manage_production') && !in_array($currentUser['role'] ?? '', ['admin', 'creator', 'supervisor'], true)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized: ต้องมีสิทธิ์ manage_production ระดับหัวหน้างานเพื่อกลับรายการ']);
+                exit;
+            }
+            header('X-Deprecated-API: Use Toolbox productionApi.php');
+            $pdo->beginTransaction();
             try {
-                $transaction_id = $input['transaction_id'] ?? 0;
-                if (!$transaction_id) throw new Exception("Transaction ID is required.");
+                $transaction_id = (int)($input['transaction_id'] ?? 0);
+                if ($transaction_id <= 0) throw new Exception("Transaction ID is required.");
+                $reason = trim((string)($input['reason'] ?? 'Reversed via legacy Production UI'));
 
-                $stmt = $pdo->prepare("SELECT created_by_user_id FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
-                $stmt->execute([$transaction_id]);
-                $owner_user_id = $stmt->fetchColumn();
-
-                if (!$owner_user_id) {
-                    throw new Exception("Transaction not found.");
-                }
-
-                $can_manage = hasPermission('manage_production');
-                $is_owner = ($currentUser['id'] == $owner_user_id);
-
-                if (!$can_manage && !$is_owner) {
-                    http_response_code(403);
-                    echo json_encode(['success' => false, 'message' => 'Unauthorized: You can only delete your own records.']);
-                    $pdo->rollBack();
-                    exit;
-                }
-                
-                $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK) WHERE transaction_id = ?");
+                $stmt = $pdo->prepare("SELECT * FROM " . TRANSACTIONS_TABLE . " WITH (UPDLOCK, HOLDLOCK) WHERE transaction_id = ?");
                 $stmt->execute([$transaction_id]);
                 $transaction = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$transaction) throw new Exception("Transaction not found (lock failed).");
+                if (!$transaction) throw new Exception("Transaction not found.");
+                if (!empty($transaction['is_reversed'])) throw new Exception("รายการนี้ถูกกลับรายการไปแล้ว");
 
                 if ($transaction['transaction_type'] === 'INTERNAL_TRANSFER' || $transaction['transaction_type'] === 'REVERSAL_TRANSFER') {
                     throw new Exception("ไม่สามารถลบรายการโอนย้ายที่ยืนยันแล้วได้! กรุณาใช้ฟังก์ชัน 'ยกเลิก' (Reversal) เท่านั้น");
                 }
-                $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?");
-                if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0 || $transaction['transaction_type'] === 'RECEIPT') {
-                    $spStock->execute([$transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']]);
-                } elseif ($transaction['transaction_type'] === 'TRANSFER') {
-                    $spStock->execute([$transaction['parameter_id'], $transaction['from_location_id'], $transaction['quantity']]);
-                    $spStock->execute([$transaction['parameter_id'], $transaction['to_location_id'], -$transaction['quantity']]);
-                }
 
                 if (strpos($transaction['transaction_type'], 'PRODUCTION_') === 0) {
-                    $note_to_find = "Auto-consumed for production ID: " . $transaction['transaction_id'];
-                    $getConsumeSql = "SELECT parameter_id, quantity, from_location_id FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
-                    $getConsumeStmt = $pdo->prepare($getConsumeSql);
-                    $getConsumeStmt->execute([$note_to_find]);
-                    $consumed_items = $getConsumeStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                    foreach ($consumed_items as $item) {
-                        $qty_to_revert = -$item['quantity'];
-                        $location_to_revert = $item['from_location_id'] ?: $transaction['to_location_id'];
-                        $spStock->execute([$item['parameter_id'], $location_to_revert, $qty_to_revert]);
-                    }
-
-                    $deleteConsumeSql = "DELETE FROM " . TRANSACTIONS_TABLE . " WHERE notes = ?";
-                    $deleteConsumeStmt = $pdo->prepare($deleteConsumeSql);
-                    $deleteConsumeStmt->execute([$note_to_find]);
-                }
-
-                $deleteStmt = $pdo->prepare("DELETE FROM " . TRANSACTIONS_TABLE . " WHERE transaction_id = ?");
-                $deleteStmt->execute([$transaction_id]);
-
-                if ($transaction['transaction_type'] === 'PRODUCTION_SCRAP') {
-                    $delReqStmt = $pdo->prepare("
-                        DELETE FROM dbo.STOCK_TRANSFER_ORDERS 
-                        WHERE status = 'PENDING' AND CHARINDEX('[TXN:' + CAST(? AS VARCHAR) + ']', notes) > 0
-                    ");
-                    $delReqStmt->execute([$transaction_id]);
-                }
-                
-                // Sync with PRODUCTION_JOBS
-                if (preg_match('/\[Job:\s*(.+?)\]/i', $transaction['notes'], $matches)) {
-                    $job_no = trim($matches[1]);
+                    $spRev = $pdo->prepare("EXEC dbo.sp_ReverseProductionTransaction @txn_id = ?, @job_id = ?, @user_id = ?, @reason = ?");
+                    $spRev->execute([$transaction_id, !empty($transaction['job_id']) ? (int)$transaction['job_id'] : null, $currentUser['id'], $reason]);
+                    $spRev->closeCursor();
+                } else {
+                    $stockType = $transaction['stock_type'] ?? 'UNRESTRICTED';
                     $qty = (float)$transaction['quantity'];
-                    $ttype = $transaction['transaction_type'];
-                    $col = null;
-                    if ($ttype === 'PRODUCTION_FG') $col = 'actual_qty';
-                    elseif ($ttype === 'PRODUCTION_HOLD') $col = 'hold_qty';
-                    elseif ($ttype === 'PRODUCTION_SCRAP') $col = 'scrap_qty';
-                    
-                    if ($col) {
-                        $pdo->prepare("UPDATE PRODUCTION_JOBS SET $col = ISNULL($col, 0) - ? WHERE job_no = ?")->execute([$qty, $job_no]);
+                    $spStock = $pdo->prepare("EXEC dbo." . SP_UPDATE_ONHAND . " @item_id = ?, @location_id = ?, @quantity_to_change = ?, @stock_type = ?");
+                    if (!empty($transaction['to_location_id'])) {
+                        $spStock->execute([$transaction['parameter_id'], $transaction['to_location_id'], -$qty, $stockType]);
+                        $spStock->closeCursor();
                     }
+                    if (!empty($transaction['from_location_id'])) {
+                        $spStock->execute([$transaction['parameter_id'], $transaction['from_location_id'], abs($qty), $stockType]);
+                        $spStock->closeCursor();
+                    }
+                    $pdo->prepare("UPDATE " . TRANSACTIONS_TABLE . " SET is_reversed = 1, reversed_by_user_id = ?, reversed_at = GETDATE(), reversal_reason = ? WHERE transaction_id = ?")
+                        ->execute([$currentUser['id'], $reason, $transaction_id]);
+                    $revType = 'REVERSAL_' . substr($transaction['transaction_type'], 0, 40);
+                    $pdo->prepare("INSERT INTO " . TRANSACTIONS_TABLE . " (parameter_id, quantity, transaction_type, stock_type, from_location_id, to_location_id, reference_id, created_by_user_id, notes, transaction_timestamp, reversal_of_tx_id, reversal_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)")
+                        ->execute([$transaction['parameter_id'], -$qty, $revType, $stockType, $transaction['from_location_id'], $transaction['to_location_id'], $transaction['reference_id'], $currentUser['id'], "Reversal of TXN #{$transaction_id}: {$reason}", $transaction_id, $reason]);
                 }
 
                 $pdo->commit();
-                writeLog($pdo, 'DELETE', 'INVENTORY_API', $transaction_id);
-                echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully.']);
+                writeLog($pdo, 'REVERSE_TXN', 'INVENTORY_API', $transaction_id, $transaction, ['reason' => $reason], 'Reversed via legacy API');
+                echo json_encode(['success' => true, 'message' => 'กลับรายการและคืนยอดสต็อกเรียบร้อยแล้ว (Immutable Reversal)']);
 
             } catch (Exception $e) { 
                 if ($pdo->inTransaction()) $pdo->rollBack();
@@ -1309,7 +1277,7 @@ try {
                     throw new Exception("Item, Location, and a valid Physical Count are required.");
                 }
 
-                $onhandStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
+                $onhandStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
                 $onhandStmt->execute([$item_id, $location_id]);
                 $current_quantity = ($onhandStmt->fetchColumn() ?: '0');
 
@@ -1347,7 +1315,7 @@ try {
                 echo json_encode(['success' => true, 'quantity' => 0]);
                 exit;
             }
-            $stockStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ?");
+            $stockStmt = $pdo->prepare("SELECT quantity FROM " . ONHAND_TABLE . " WHERE parameter_id = ? AND location_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
             $stockStmt->execute([$item_id, $location_id]);
             $quantity = $stockStmt->fetchColumn();
             echo json_encode(['success' => true, 'quantity' => $quantity ?: 0]);

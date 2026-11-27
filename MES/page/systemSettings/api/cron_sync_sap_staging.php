@@ -1,26 +1,58 @@
 <?php
-// e:\MES\MES\MES\page\systemSettings\api\cron_sync_sap_staging.php
-// This script is meant to be run via Windows Task Scheduler or Cron Job periodically.
-// It pulls data from SAP and stages it locally.
-
-// Allow unlimited execution time for syncing
+/**
+ * Legacy SAP Staging Sync Endpoint (Hardened).
+ * Security: Requires CLI execution, valid X-CRON-SECRET header, or authenticated admin session.
+ */
 set_time_limit(0);
 ini_set('memory_limit', '512M');
+
+header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/../../sap_db.php';
 
-header('Content-Type: application/json; charset=utf-8');
+// Authentication Guard
+$isAuthorized = false;
+if (PHP_SAPI === 'cli') {
+    $isAuthorized = true;
+} else {
+    $expectedSecret = getenv('CRON_SYNC_SECRET') ?: '';
+    $providedSecret = $_SERVER['HTTP_X_CRON_SECRET'] ?? '';
+    if ($expectedSecret !== '' && $providedSecret !== '' && hash_equals($expectedSecret, $providedSecret)) {
+        $isAuthorized = true;
+    } else {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user']['role'] ?? '';
+        if (in_array($role, ['admin', 'creator'], true)) {
+            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+                $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+                $sessionToken = $_SESSION['csrf_token'] ?? '';
+                if (empty($headerToken) || empty($sessionToken) || !hash_equals($sessionToken, $headerToken)) {
+                    http_response_code(403);
+                    echo json_encode(['success' => false, 'data' => null, 'message' => 'CSRF token validation failed.']);
+                    exit;
+                }
+            }
+            $isAuthorized = true;
+        }
+    }
+}
+
+if (!$isAuthorized) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'data' => null, 'message' => 'Unauthorized: Valid CLI, Cron Secret, or Admin session required.']);
+    exit;
+}
 
 try {
     $startTime = microtime(true);
-    
-    // ========================================================
-    // 1. SYNC SAP_STG_ALL_STOCK (Zero-Row Safety Guard)
-    // ========================================================
+
     $sapStockQuery = "SELECT Plant, Mat_No, MatDesc, Storage_Location, Batch, Quantity, Unit, Logdate FROM View_SAP_ALL_STOCK_1820 WHERE Mat_No IS NOT NULL AND Mat_No != ''";
-    $sapStockStmt = $pdo_sap->query($sapStockQuery);
-    $stockRows = $sapStockStmt->fetchAll(PDO::FETCH_ASSOC);
+    $stockRows = $pdo_sap->query($sapStockQuery)->fetchAll(PDO::FETCH_ASSOC);
     $stockCount = count($stockRows);
     $stockSkipped = false;
 
@@ -37,7 +69,7 @@ try {
                 $row['Batch'] ?? null,
                 $row['Quantity'] ?? 0,
                 $row['Unit'] ?? null,
-                $row['Logdate'] ?? null
+                $row['Logdate'] ?? null,
             ]);
         }
         $pdo->commit();
@@ -45,27 +77,23 @@ try {
         $stockSkipped = true;
     }
 
-    // ========================================================
-    // 2. SYNC SAP_STG_OPERATION_SLIP (Zero-Row Safety Guard)
-    // ========================================================
-    $sapOpsQuery = "SELECT 
-        Plant, Order_ID, Mat_No, MatDesc, BS_StartDate, BS_FinishDate, TargetQty, ScrapQty, Unit, 
-        MRP_Controller, ProdSup, Opt_task_list_no, CounterNo, SequenceNo, TaskListNode, GrpRounting, 
-        GrpCounter, Activity, OptShortText, ObjectID, WorkCenter, SetTime1, SetTime2, SetTime3, 
-        Lot, PlanCT, PlanActualTime, PlanTargetDay, STD_Cost, Identify_Order_Seq_ACt, LogDate, 
-        OperationQty, CONFIRMYIELD, CONFIRM_NG, Status_order 
+    $sapOpsQuery = "SELECT
+        Plant, Order_ID, Mat_No, MatDesc, BS_StartDate, BS_FinishDate, TargetQty, ScrapQty, Unit,
+        MRP_Controller, ProdSup, Opt_task_list_no, CounterNo, SequenceNo, TaskListNode, GrpRounting,
+        GrpCounter, Activity, OptShortText, ObjectID, WorkCenter, SetTime1, SetTime2, SetTime3,
+        Lot, PlanCT, PlanActualTime, PlanTargetDay, STD_Cost, Identify_Order_Seq_ACt, LogDate,
+        OperationQty, CONFIRMYIELD, CONFIRM_NG, Status_order
         FROM View_OperationSlip_1820 WHERE Mat_No IS NOT NULL AND Mat_No != ''";
-    $sapOpsStmt = $pdo_sap->query($sapOpsQuery);
-    $opsRows = $sapOpsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $opsRows = $pdo_sap->query($sapOpsQuery)->fetchAll(PDO::FETCH_ASSOC);
     $opsCount = count($opsRows);
     $opsSkipped = false;
 
     if ($opsCount > 0) {
         $insertOpsStmt = $pdo->prepare("INSERT INTO SAP_STG_OPERATION_SLIP (
-            Plant, Order_ID, Mat_No, MatDesc, BS_StartDate, BS_FinishDate, TargetQty, ScrapQty, Unit, 
-            MRP_Controller, ProdSup, Opt_task_list_no, CounterNo, SequenceNo, TaskListNode, GrpRounting, 
-            GrpCounter, Activity, OptShortText, ObjectID, WorkCenter, SetTime1, SetTime2, SetTime3, 
-            Lot, PlanCT, PlanActualTime, PlanTargetDay, STD_Cost, Identify_Order_Seq_ACt, LogDate, 
+            Plant, Order_ID, Mat_No, MatDesc, BS_StartDate, BS_FinishDate, TargetQty, ScrapQty, Unit,
+            MRP_Controller, ProdSup, Opt_task_list_no, CounterNo, SequenceNo, TaskListNode, GrpRounting,
+            GrpCounter, Activity, OptShortText, ObjectID, WorkCenter, SetTime1, SetTime2, SetTime3,
+            Lot, PlanCT, PlanActualTime, PlanTargetDay, STD_Cost, Identify_Order_Seq_ACt, LogDate,
             OperationQty, CONFIRMYIELD, CONFIRM_NG, Status_order
         ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
@@ -98,7 +126,7 @@ try {
                 $row['SetTime1'] ?? 0,
                 $row['SetTime2'] ?? 0,
                 $row['SetTime3'] ?? 0,
-                $row['Lot'] ?? 0,
+                $row['Lot'] ?? null,
                 $row['PlanCT'] ?? 0,
                 $row['PlanActualTime'] ?? 0,
                 $row['PlanTargetDay'] ?? 0,
@@ -108,7 +136,7 @@ try {
                 $row['OperationQty'] ?? 0,
                 $row['CONFIRMYIELD'] ?? 0,
                 $row['CONFIRM_NG'] ?? 0,
-                $row['Status_order'] ?? null
+                $row['Status_order'] ?? null,
             ]);
         }
         $pdo->commit();
@@ -129,18 +157,18 @@ try {
             'stock_preserved_old' => $stockSkipped,
             'operation_rows_synced' => $opsCount,
             'operation_preserved_old' => $opsSkipped,
-            'duration_seconds' => $duration
-        ]
-    ]);
-
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+            'duration_seconds' => $duration,
+        ],
+    ], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('[LEGACY_SAP_STAGING_SYNC_ERROR] ' . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Cron Sync Failed: ' . $e->getMessage()
-    ]);
+        'data' => null,
+        'message' => 'การซิงค์ข้อมูล SAP Staging ล้มเหลว กรุณาตรวจสอบ System Error Log',
+    ], JSON_UNESCAPED_UNICODE);
 }
-?>

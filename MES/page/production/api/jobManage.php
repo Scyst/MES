@@ -321,13 +321,24 @@ try {
             break;
 
         case 'delete_txn':
-            $txn_id = $input['txn_id'];
-            $job_id = $input['job_id'];
+            if (!hasPermission('manage_production') && !in_array($currentUser['role'] ?? '', ['admin', 'creator', 'supervisor'], true)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized: ต้องมีสิทธิ์ manage_production เพื่อกลับรายการผลิต']);
+                exit;
+            }
+            $txn_id = (int)($input['txn_id'] ?? 0);
+            $job_id = !empty($input['job_id']) ? (int)$input['job_id'] : null;
+            $reason = trim((string)($input['reason'] ?? 'Reversed via legacy Job Queue UI'));
+            if ($txn_id <= 0) {
+                throw new Exception("Transaction ID is required.");
+            }
 
-            $stmt = $pdo->prepare("EXEC dbo.sp_Job_DeleteTransaction @txn_id = ?, @job_id = ?, @user_id = ?");
-            $stmt->execute([$txn_id, $job_id, $currentUser['id']]);
-            
-            echo json_encode(['success' => true, 'message' => "ลบรายการและคืนสต็อกสำเร็จ"]);
+            header('X-Deprecated-API: Use Toolbox jobApi.php');
+            $stmt = $pdo->prepare("EXEC dbo.sp_ReverseProductionTransaction @txn_id = ?, @job_id = ?, @user_id = ?, @reason = ?");
+            $stmt->execute([$txn_id, $job_id, $currentUser['id'], $reason]);
+            $stmt->closeCursor();
+
+            echo json_encode(['success' => true, 'message' => "กลับรายการผลิตและคืนสต็อกสำเร็จ (Immutable Reversal)"]);
             break;
 
         case 'close_job':

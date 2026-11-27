@@ -62,7 +62,7 @@ try {
                 echo json_encode(['success' => false, 'message' => 'Invalid location_id']);
                 break;
             }
-            $stmt = $pdo->prepare("SELECT SUM(quantity) as total_stock FROM INVENTORY_ONHAND WITH (NOLOCK) WHERE location_id = ?");
+            $stmt = $pdo->prepare("SELECT SUM(quantity) as total_stock FROM INVENTORY_ONHAND WITH (NOLOCK) WHERE location_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
             $stmt->execute([$loc_id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             $total_stock = $row ? (float)$row['total_stock'] : 0;

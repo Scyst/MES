@@ -282,20 +282,21 @@ function deductFgStockOnLoadingDone(PDO $pdo, array $orderRow, int $userId): arr
     $itemId = (int)$item['item_id'];
     $stmtLoc = $pdo->prepare(
         "SELECT TOP 1 location_id FROM dbo.INVENTORY_ONHAND WITH (UPDLOCK)
-         WHERE parameter_id = ? ORDER BY quantity DESC, location_id ASC"
+         WHERE parameter_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
+         ORDER BY quantity DESC, location_id ASC"
     );
     $stmtLoc->execute([$itemId]);
     $locId = (int)($stmtLoc->fetchColumn() ?: 1); // Fallback: Assembly B9 (location_id = 1)
 
     $stmtUpd = $pdo->prepare(
         "UPDATE dbo.INVENTORY_ONHAND SET quantity = quantity - ?, last_updated = GETDATE()
-         WHERE parameter_id = ? AND location_id = ?"
+         WHERE parameter_id = ? AND location_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'"
     );
     $stmtUpd->execute([$qty, $itemId, $locId]);
     if ($stmtUpd->rowCount() === 0) {
         $pdo->prepare(
-            "INSERT INTO dbo.INVENTORY_ONHAND (parameter_id, location_id, quantity, last_updated)
-             VALUES (?, ?, ?, GETDATE())"
+            "INSERT INTO dbo.INVENTORY_ONHAND (parameter_id, location_id, stock_type, quantity, last_updated)
+             VALUES (?, ?, 'UNRESTRICTED', ?, GETDATE())"
         )->execute([$itemId, $locId, -$qty]);
     }
 
@@ -475,6 +476,7 @@ function handleForecastRm(PDO $pdo, array $input): void {
         "SELECT i.item_id, i.sap_no, i.part_description, ISNULL(SUM(inv.quantity), 0) AS onhand_qty
          FROM " . ITEMS_MASTER_TABLE . " i WITH (NOLOCK)
          LEFT JOIN " . ONHAND_INV_TABLE . " inv WITH (NOLOCK) ON i.item_id = inv.parameter_id
+            AND ISNULL(inv.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
             AND inv.location_id IN (SELECT location_id FROM " . LOCATIONS_MASTER_TABLE . " WITH (NOLOCK) WHERE location_type = 'STORE')
          WHERE (i.sap_no LIKE '10%' OR i.sap_no LIKE '20%')
          GROUP BY i.item_id, i.sap_no, i.part_description"

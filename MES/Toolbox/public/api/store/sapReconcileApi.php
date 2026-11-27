@@ -72,7 +72,7 @@ function handleGetDiff(PDO $pdo): void {
                 MAX(ISNULL(I.Cost_Total, 0)) AS unit_cost,
                 SUM(ISNULL(O.quantity, 0)) AS mes_qty
             FROM dbo.ITEMS I WITH (NOLOCK)
-            LEFT JOIN dbo.INVENTORY_ONHAND O WITH (NOLOCK) ON O.parameter_id = I.item_id
+            LEFT JOIN dbo.INVENTORY_ONHAND O WITH (NOLOCK) ON O.parameter_id = I.item_id AND ISNULL(O.stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'
             WHERE ISNULL(LTRIM(RTRIM(I.sap_no)), '') != ''
             GROUP BY LTRIM(RTRIM(I.sap_no))
         ),
@@ -194,9 +194,9 @@ function handleApplyCutoff(PDO $pdo, array $payload): void {
 
     $stmtItem = $pdo->prepare("SELECT TOP 1 item_id, sap_no FROM dbo.ITEMS WITH (NOLOCK) WHERE LTRIM(RTRIM(sap_no)) = ?");
     $stmtSap  = $pdo->prepare("SELECT SUM(ISNULL(Quantity, 0)) FROM dbo.SAP_STG_ALL_STOCK WITH (NOLOCK) WHERE LTRIM(RTRIM(Mat_No)) = ?");
-    $stmtLocs = $pdo->prepare("SELECT location_id, quantity FROM dbo.INVENTORY_ONHAND WITH (UPDLOCK) WHERE parameter_id = ? ORDER BY quantity DESC, location_id ASC");
-    $stmtUpd  = $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ?");
-    $stmtIns  = $pdo->prepare("INSERT INTO dbo.INVENTORY_ONHAND (parameter_id, location_id, quantity, last_updated) VALUES (?, ?, ?, GETDATE())");
+    $stmtLocs = $pdo->prepare("SELECT location_id, quantity FROM dbo.INVENTORY_ONHAND WITH (UPDLOCK) WHERE parameter_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED' ORDER BY quantity DESC, location_id ASC");
+    $stmtUpd  = $pdo->prepare("UPDATE dbo.INVENTORY_ONHAND SET quantity = ?, last_updated = GETDATE() WHERE parameter_id = ? AND location_id = ? AND ISNULL(stock_type, 'UNRESTRICTED') = 'UNRESTRICTED'");
+    $stmtIns  = $pdo->prepare("INSERT INTO dbo.INVENTORY_ONHAND (parameter_id, location_id, stock_type, quantity, last_updated) VALUES (?, ?, 'UNRESTRICTED', ?, GETDATE())");
     $stmtTx   = $pdo->prepare(
         "INSERT INTO dbo.STOCK_TRANSACTIONS (parameter_id, quantity, transaction_type, transaction_timestamp, from_location_id, reference_id, created_by_user_id, notes)
          VALUES (?, ?, 'ADJUSTMENT', GETDATE(), ?, ?, ?, ?)"
