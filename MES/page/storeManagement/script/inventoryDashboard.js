@@ -1410,6 +1410,21 @@ window.exportInventoryData = async function() {
         const wb = XLSX.utils.book_new();
         const dateStr = new Date().toISOString().slice(0, 10);
 
+        const calcInventoryColWidths = (rows) => {
+            const minWidths = [16, 20, 50, 12, 15, 15, 15, 15, 18];
+            const headerRow = rows[3] && rows[3].length === 9 ? rows[3] : (rows[4] || []);
+            return minWidths.map((minW, colIdx) => {
+                let maxLen = String(headerRow[colIdx] ?? '').length;
+                for (let r = 4; r < rows.length; r++) {
+                    const cell = rows[r]?.[colIdx];
+                    const rawVal = (cell && typeof cell === 'object' && 'v' in cell) ? cell.v : cell;
+                    const text = String(rawVal ?? '').replace(/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g, '');
+                    if (text.length > maxLen) maxLen = text.length;
+                }
+                return { wch: Math.min(Math.max(maxLen + 4, minW), 68) };
+            });
+        };
+
         if (exportType === 'ALL') {
             // โหมด ALL: ดึงข้อมูลแต่ละคลังแยกกัน และดึงภาพรวมสำหรับ Summary
             const allLocs = Array.from(document.getElementById('locationFilter').options)
@@ -1444,11 +1459,12 @@ window.exportInventoryData = async function() {
                         ["Location:", loc.name],
                         ["Export Date:", new Date().toLocaleString('th-TH')],
                         [],
-                        ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+                        ["SAP No.", "Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
                     ];
                     
                     locRes.data.forEach(row => {
                         ws_data.push([
+                            row.sap_no || '-',
                             row.item_no || '',
                             row.part_description || '',
                             row.material_type || '',
@@ -1461,7 +1477,7 @@ window.exportInventoryData = async function() {
                     });
                     
                     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-                    ws['!cols'] = [{wch:20}, {wch:50}, {wch:12}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:18}];
+                    ws['!cols'] = calcInventoryColWidths(ws_data);
                     XLSX.utils.book_append_sheet(wb, ws, loc.name);
                 }
             }
@@ -1471,21 +1487,22 @@ window.exportInventoryData = async function() {
                 ["Location:", "Summary (All Locations)"],
                 ["Export Date:", new Date().toLocaleString('th-TH')],
                 [],
-                ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+                ["SAP No.", "Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
             ];
 
             masterRes.data.forEach((row, idx) => {
                 const rIdx = idx + 5; // Data starts at Excel row 5
                 
-                let formulaPending = actualSheets.map(s => `SUMIF('${s}'!A:A, $A${rIdx}, '${s}'!D:D)`).join(' + ');
-                let formulaAvail = actualSheets.map(s => `SUMIF('${s}'!A:A, $A${rIdx}, '${s}'!E:E)`).join(' + ');
-                let formulaTotal = actualSheets.map(s => `SUMIF('${s}'!A:A, $A${rIdx}, '${s}'!F:F)`).join(' + ');
+                let formulaPending = actualSheets.map(s => `SUMIF('${s}'!B:B, $B${rIdx}, '${s}'!E:E)`).join(' + ');
+                let formulaAvail = actualSheets.map(s => `SUMIF('${s}'!B:B, $B${rIdx}, '${s}'!F:F)`).join(' + ');
+                let formulaTotal = actualSheets.map(s => `SUMIF('${s}'!B:B, $B${rIdx}, '${s}'!G:G)`).join(' + ');
                 
                 if (actualSheets.length === 0) {
                     formulaPending = "0"; formulaAvail = "0"; formulaTotal = "0";
                 }
 
                 summary_data.push([
+                    row.sap_no || '-',
                     row.item_no || '',
                     row.part_description || '',
                     row.material_type || '',
@@ -1493,12 +1510,12 @@ window.exportInventoryData = async function() {
                     { f: formulaAvail, v: parseFloat(row.available_qty) || 0, t: 'n' },
                     { f: formulaTotal, v: parseFloat(row.total_qty) || 0, t: 'n' },
                     parseFloat(row.unit_price) || 0,
-                    { f: `F${rIdx}*G${rIdx}`, v: parseFloat(row.total_value) || 0, t: 'n' }
+                    { f: `G${rIdx}*H${rIdx}`, v: parseFloat(row.total_value) || 0, t: 'n' }
                 ]);
             });
 
             const wsSummary = XLSX.utils.aoa_to_sheet(summary_data);
-            wsSummary['!cols'] = [{wch:20}, {wch:50}, {wch:12}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:18}];
+            wsSummary['!cols'] = calcInventoryColWidths(summary_data);
             XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
             // ย้าย Summary มาไว้ชีทแรกสุด
@@ -1536,11 +1553,12 @@ window.exportInventoryData = async function() {
                 ["Search Filter:", reqSearchStr ? reqSearchStr : "None"],
                 ["Export Date:", new Date().toLocaleString('th-TH')],
                 [],
-                ["Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
+                ["SAP No.", "Item No.", "Description", "Type", "Pending Qty", "Available Qty", "Total Qty", "Cost/Unit", "Total Value"]
             ];
 
             result.data.forEach(row => {
                 ws_data.push([
+                    row.sap_no || '-',
                     row.item_no || '',
                     row.part_description || '',
                     row.material_type || '',
@@ -1553,7 +1571,7 @@ window.exportInventoryData = async function() {
             });
 
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
-            ws['!cols'] = [{ wch: 20 }, { wch: 50 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
+            ws['!cols'] = calcInventoryColWidths(ws_data);
 
             const safeLocName = exportLocName.replace(/[^a-zA-Z0-9_\u0E00-\u0E7F]/g, '_').substring(0,30);
             XLSX.utils.book_append_sheet(wb, ws, safeLocName || "Inventory");
